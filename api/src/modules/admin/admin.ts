@@ -1581,7 +1581,7 @@ admin.get("/admin/overview", async (c) => {
       at: string; actor: string | null; table_name: string;
       action: string; hotel: string | null;
     }>(
-      `select to_char(a.at,'DD Mon HH24:MI') as at,
+      `select to_char(a.at at time zone coalesce(h.timezone, 'Asia/Kolkata'), 'DD Mon HH24:MI') as at,
               s.full_name as actor, a.table_name, a.action, h.code as hotel
          from audit_log a
          left join staff s on s.id = a.actor

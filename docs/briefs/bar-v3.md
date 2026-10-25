@@ -47,7 +47,7 @@ breakages). Decisions: D27-361.
 - Requests for the restaurant's kitchen stores.
 
 ## Files
-- `db/migrations/237_bar_counter.sql`
+- `db/migrations/238_bar_counter.sql`
 - `api/src/modules/stores/barSheet.ts`, `barRequests.ts` (new), `stores.ts`
 - `api/src/modules/night-audit/nightAudit.ts`
 - `api/src/modules/reports/builders/flr.ts` (new), `document.ts`, `build.ts`

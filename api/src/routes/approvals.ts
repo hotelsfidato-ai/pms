@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { PoolClient as Client } from "pg";
 import { withSession } from "../auth.ts";
+import { performPosRequest, rejectPosRequest } from "../modules/pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    APPROVALS
@@ -96,7 +97,7 @@ approvals.get("/:code/approvals", async (c) => {
       requested_by: string; requested_by_name: string | null;
       decided_by_name: string | null;
       requested_by_colleague: string | null; decided_by_colleague: string | null;
-      decided_at: string | null; decision_note: string | null;
+      decided_at: string | null; decision_note: string | null; detail: string | null;
     }>(
       `select a.id::text, a.kind, a.subject_table, a.subject_id::text,
               a.reason, a.amount::text, a.status, a.approver_role,
@@ -106,8 +107,11 @@ approvals.get("/:code/approvals", async (c) => {
               dc.full_name as decided_by_name,
               app.colleague_name(a.requested_by, a.hotel_id) as requested_by_colleague,
               app.colleague_name(a.decided_by, a.hotel_id) as decided_by_colleague,
-              a.decided_at::text, a.decision_note
+              a.decided_at::text, a.decision_note,
+              pr.summary as detail
          from approvals a
+         /* A waiter's request to the GM: what exactly (D27-363). */
+         left join pos_requests pr on a.subject_table = 'pos_requests' and pr.id = a.subject_id
          /* ⚠ LEFT, NOT INNER (16 September). The staff table is row-secured: most
             roles read only their own row (027). An inner join therefore
             HID every request somebody else raised - the Inventory Manager,
@@ -146,6 +150,8 @@ approvals.get("/:code/approvals", async (c) => {
         kind: r.kind,
         subject: { table: r.subject_table, id: r.subject_id },
         reason: r.reason,
+        /* What a waiter's request is, in a line (D27-363); null on any other kind. */
+        detail: r.detail,
         /* Money stays a string all the way to the wire. A JS number
            cannot hold every numeric(12,2) without loss, and this is
            exactly the column where that matters. Null is a real answer:
@@ -216,16 +222,16 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
     );
   }
 
-  const result = await withSession(c.get("subject"), async (client) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const me = await meAt(client, hotelId);
 
     const { rows } = await client.query<{
       status: string; approver_role: string; also_decided_by: string[];
-      requested_by: string;
+      requested_by: string; kind: string; subject_table: string; subject_id: string;
     }>(
-      `select status, approver_role, also_decided_by, requested_by::text
+      `select status, approver_role, also_decided_by, requested_by::text, kind, subject_table, subject_id::text
          from approvals where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId],
     );
@@ -245,6 +251,18 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
     }
     if (!decides(me, row.approver_role, row.also_decided_by)) {
       return refuse(`This one is for the ${row.approver_role} to decide.`);
+    }
+
+    /* A waiter's request (D27-363): approving DOES it, as the approver,
+       with the till's own checks - asked before the approval is marked,
+       so a refusal leaves both waiting and says why. */
+    if (row.kind === "pos_request" && row.subject_table === "pos_requests") {
+      if (decision === "approved") {
+        const done = await performPosRequest(client, session, hotelId, row.subject_id);
+        if (!done.ok) return done;
+      } else {
+        await rejectPosRequest(client, session, row.subject_id, note!);
+      }
     }
 
     await client.query(

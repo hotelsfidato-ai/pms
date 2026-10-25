@@ -8,10 +8,13 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, ReadFailed,
 } from "@/components/ui";
 import {
-  addKotKind, renameKotKind, kotKindOff, setSectionKot, setThisComputer, removeKotStation,
-  type KotKind, type KotSetup,
+  addKotKind, renameKotKind, kotKindOff, setSectionKot, setThisComputer, removeKotStation, setStationSlip,
+  type KotKind, type KotSetup, type Docket, type Order,
 } from "@/modules/pos/data/till";
-import { kotDevice, kotSetupKey, useKotSetup, since, Reprints } from "@/modules/pos/components/KotStation";
+import { kotDevice, kotSetupKey, useKotSetup, since, Reprints, useSlipPrinter } from "@/modules/pos/components/KotStation";
+import { DocketSlip } from "@/modules/pos/components/DocketSlip";
+import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { DEFAULT_SLIP_MM } from "@/modules/pos/lib/printRoll";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KOT SECTION OF RESTAURANT SETUP (the owner's D27-292)
@@ -83,6 +86,7 @@ export function KotSection({ hotelId }: { hotelId: string }) {
         ) : (
           <div className="space-y-4">
             <ThisComputer hotelId={hotelId} setup={setup.data} run={run} />
+            {setup.data.me && <Printing hotelId={hotelId} setup={setup.data} run={run} />}
             <Kinds hotelId={hotelId} setup={setup.data} run={run} />
             <Computers hotelId={hotelId} setup={setup.data} run={run} />
             <Routing hotelId={hotelId} setup={setup.data} run={run} />
@@ -208,6 +212,74 @@ function ThisComputer({ hotelId, setup, run }: { hotelId: string; setup: KotSetu
             {nothing && me ? "Stop printing here" : "Save"}
           </Button>
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── 1b. How this computer prints, and a test (the owner's D27-363) ─
+   The BAR PC's KOTs came out sideways and its bills upright (MEMORY 427):
+   its printer turns a slip it takes for landscape. So each computer has its
+   shortest slip - a slip is as long as it needs and never shorter - tried
+   with a test KOT and a test bill, printed here as the real ones are. */
+const TEST_KOT: Docket = {
+  kotNo: 0, kind: { id: "test", name: "Test" }, orderNo: "TEST", table: "Test print", orderType: "dine_in",
+  outlet: "Test print", hotel: "Test print", sentAt: "Test print",
+  lines: [{ id: "t1", parentId: null, name: "Test dish", qty: 1, note: null, isAddon: false }],
+};
+const TEST_BILL: Order = {
+  id: "test", orderNo: "TEST", outlet: "REST", outletName: "Test print",
+  hotelName: "Test print", hotelCity: null, hotelGstin: null, hotelFssai: null, hotelSac: null,
+  table: "Test print", status: "open", businessDate: "2026-01-01", paymentMethod: null,
+  openedBy: null, settledBy: null, settledAt: null, abandonedReason: null, ticketId: null,
+  eventId: null, eventTitle: null,
+  lines: [{ id: "t1", name: "Test dish", qty: 1, unitPrice: 100, taxRate: 5, note: null, voided: false, kotStatus: "sent",
+    addedBy: null, parentLineId: null, isAddon: false, variationId: null }],
+  net: 100, discount: 0, discountType: null, discountValue: null, discountReason: null,
+  promotionId: null, promotionName: null, taxable: 100, tax: 5, taxes: [{ scheme: "gst", rate: 5, tax: 5 }],
+  gross: 105, roundOff: 0, payable: 105, tenders: [], covers: 1, waiter: null, orderType: "dine_in",
+  customerName: null, customerPhone: null, customerAddress: null, customerLocality: null, heldAt: null,
+};
+
+function Printing({ hotelId, setup, run }: { hotelId: string; setup: KotSetup; run: Run }) {
+  const me = setup.stations.find((s) => s.mine)!;
+  const [mm, setMm] = useState(me.slipMm ? String(me.slipMm) : "");
+  const [busy, setBusy] = useState(false);
+  const { print, node } = useSlipPrinter(hotelId);
+  const test = async (paper: "kot" | "bill") => {
+    try {
+      await print(paper === "kot" ? <DocketSlip d={TEST_KOT} /> : <BillSlip order={TEST_BILL} heading="interim" sample="TEST PRINT" />);
+    } catch (error) {
+      toast.error("The test did not print", (error as Error).message);
+    }
+  };
+  const save = async () => {
+    const value = mm.trim() === "" ? null : Number(mm);
+    setBusy(true);
+    await run(setStationSlip(hotelId, me.id, value),
+      value === null ? `Back to ${DEFAULT_SLIP_MM} mm` : `Slips on ${me.name} are at least ${value} mm`);
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <div>
+          <h3 className="text-md font-semibold text-ink-900">Printing on {me.name}</h3>
+          <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
+            Each slip is as long as it needs, and never shorter than this. If a KOT comes out sideways,
+            make it longer and print a test KOT again. Blank is {DEFAULT_SLIP_MM} mm.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="Shortest slip, mm" className="w-40">
+            {(f) => <Input {...fieldProps(f)} inputMode="numeric" value={mm} placeholder={String(DEFAULT_SLIP_MM)}
+                           onChange={(e) => setMm(e.target.value)} />}
+          </Field>
+          <Button variant="secondary" loading={busy} onClick={() => void save()}>Save</Button>
+          <Button variant="secondary" onClick={() => void test("kot")}><Printer className="size-4" aria-hidden /> Print a test KOT</Button>
+          <Button variant="secondary" onClick={() => void test("bill")}><Receipt className="size-4" aria-hidden /> Print a test bill</Button>
+        </div>
+        {node}
       </CardBody>
     </Card>
   );

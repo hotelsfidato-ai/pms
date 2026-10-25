@@ -608,7 +608,7 @@ posAdmin.get("/:code/pos/tickets", async (c) => {
               t.ticket_ref, t.status, t.reject_reason,
               t.amount::text, t.tax_amount::text,
               to_char(t.business_date,'YYYY-MM-DD') as business_date,
-              to_char(t.received_at, 'DD Mon, HH24:MI') as received_at,
+              app.hotel_clock(t.hotel_id, t.received_at, 'DD Mon, HH24:MI') as received_at,
               g.full_name as guest,
               (select rm.number from room_assignments ra
                  join rooms rm on rm.id = ra.room_id

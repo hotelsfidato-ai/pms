@@ -18,6 +18,8 @@ import { extrasFor, insertExtras, type ExtraInput } from "./extras.ts";
 /* The KOT section of Restaurant setup (D27-292): kinds, computers, routing,
    the bill printer. Registered below, behind the module gate. */
 import { registerKotSection, deviceOf } from "./kotSection.ts";
+import { registerTenderChanges, tenderChanges } from "./tenderChanges.ts";
+import { registerPosRequests } from "./posRequests.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -99,6 +101,10 @@ till.use("/:code/kitchen", receptionGate);
 till.use("/:code/kitchen/*", receptionGate);
 
 registerKotSection(till, hotelFor);
+/* A paid bill's payment mode changed before the night audit (D27-363). */
+registerTenderChanges(till, hotelFor);
+/* A waiter sends the GM what they may not do themselves (D27-363). */
+registerPosRequests(till, hotelFor);
 
 async function receptionGate(
   c: Context<{ Variables: { subject: string } }>,
@@ -1723,7 +1729,7 @@ async function readOrder(client: Client, orderId: string) {
             o.customer_locality, o.held_at::text,
             s1.full_name as opened_by_name,
             s2.full_name as settled_by_name,
-            to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
+            app.hotel_clock(o.hotel_id, o.settled_at, 'DD Mon, HH24:MI') as settled_at,
             o.abandoned_reason, o.ticket_id::text,
             o.event_id::text, e.title as event_title,
             (select v.number from vat_bills v where v.pos_order_id = o.id) as vat_bill,
@@ -1870,6 +1876,22 @@ async function readOrder(client: Client, orderId: string) {
     ncBy: h.nc_by_name,
     ncAt: h.nc_at,
     ncReason: h.nc_reason,
+    /* What was sent to the GM about it, and the answer (D27-363). */
+    requests: (await client.query<{ id: string; kind: string; line_id: string | null; summary: string; status: string;
+      decision_note: string | null; by: string | null }>(
+      `select r.id::text, r.kind, r.line_id::text, r.summary, r.status, r.decision_note, s.full_name as by
+         from pos_requests r left join staff s on s.id = r.decided_by
+        where r.order_id = $1 order by r.requested_at desc limit 10`, [orderId])).rows
+      .map((q) => ({ id: q.id, kind: q.kind, lineId: q.line_id, summary: q.summary, status: q.status,
+        note: q.decision_note, decidedBy: q.by })),
+    /* Its payment mode changed before the night audit (D27-363). */
+    modeChanges: (await client.query<{ from_method: string; to_method: string; amount: string; reason: string;
+      by: string | null; at: string }>(
+      `select c.from_method, c.to_method, c.amount::text, c.reason, s.full_name as by,
+              app.hotel_clock(c.hotel_id, c.changed_at, 'HH24:MI') as at
+         from pos_tender_changes c left join staff s on s.id = c.changed_by
+        where c.order_id = $1 order by c.changed_at`, [orderId])).rows
+      .map((m) => ({ from: m.from_method, to: m.to_method, amount: Number(m.amount), reason: m.reason, by: m.by, at: m.at })),
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two
@@ -1977,7 +1999,7 @@ till.get("/:code/till/orders", async (c) => {
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               o.payment_method,
-              to_char(o.opened_at,'HH24:MI') as opened_at,
+              app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
                 where l.order_id = o.id and not l.voided)::text as lines
          from pos_orders o
@@ -2034,7 +2056,7 @@ till.get("/:code/till/bills", async (c) => {
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               o.payment_method,
-              to_char(o.opened_at,'HH24:MI') as opened_at,
+              app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
                 where l.order_id = o.id and not l.voided)::text as lines
          from pos_orders o
@@ -2773,7 +2795,7 @@ export async function struckAfterKitchen(
     value: string; reason: string | null; struck_by: string | null; struck_at: string;
   }>(
     `select order_no, table_ref, name, qty::text, value::text, reason, struck_by,
-            to_char(struck_at, 'HH24:MI') as struck_at
+            app.hotel_clock($1::uuid, struck_at, 'HH24:MI') as struck_at
        from app.pos_struck_after_kitchen($1, $2::date)
       where $3::uuid is null or outlet_id = $3::uuid`,
     [hotelId, businessDate, outletId ?? null],
@@ -2875,15 +2897,13 @@ export async function outletSales(
   return rows.map((r) => ({ outletId: r.outlet_id, date: r.date, net: Number(r.net) }));
 }
 
-till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
-  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
-  const reason = input.reason?.trim() || undefined;
+type Act = { ok: true } | { ok: false; reason: string };
 
-  const result = await withSession(c.get("subject"), async (client, session) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const orderId = c.req.param("id");
-
+/** A line struck - by the till's X, or by the GM approving a waiter's
+    request (D27-363): the same checks either way, as `session`. */
+export async function strikeLine(
+  client: Client, session: Session, hotelId: string, orderId: string, lineId: string, reason: string | undefined,
+): Promise<Act> {
     const { rows: order } = await client.query<{ status: string }>(
       `select status from pos_orders where id = $1 and hotel_id = $2`,
       [orderId, hotelId],
@@ -2897,7 +2917,7 @@ till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
       `select kot_status <> 'pending' as sent from pos_order_lines
         where id = $1 and order_id = $2 and not voided
         for update`,
-      [c.req.param("lineId"), orderId],
+      [lineId, orderId],
     );
     if (!line[0]) return refuse("That line is already struck, or is not here.");
     if (line[0].sent) {
@@ -2912,10 +2932,22 @@ till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
       `update pos_order_lines
           set voided = true, voided_by = $1, voided_at = now(), void_reason = $4
         where id = $2 and order_id = $3 and not voided`,
-      [session.staffId, c.req.param("lineId"), orderId, reason ?? null],
+      [session.staffId, lineId, orderId, reason ?? null],
     );
     if (!rowCount) return refuse("That line is already struck, or is not here.");
+    return { ok: true };
+}
 
+till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
+  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
+  const reason = input.reason?.trim() || undefined;
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const done = await strikeLine(client, session, hotelId, orderId, c.req.param("lineId"), reason);
+    if (!done.ok) return done;
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -2928,40 +2960,26 @@ till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
    record one does not stop discounts happening — it moves them
    somewhere invisible, and the biller voids a line instead. */
 
-till.post("/:code/till/orders/:id/discount", async (c) => {
-  type DiscountBody = { type?: string; value?: number; reason?: string };
-  const input = await c.req.json<DiscountBody>().catch(() => ({}) as DiscountBody);
-
-  const type = input.type;
-  if (type !== "percent" && type !== "fixed") {
-    return c.json(refuse("A discount is a percentage or a fixed amount."), 409);
-  }
-
-  const value = Number(input.value);
-  if (!Number.isFinite(value) || value <= 0) {
-    return c.json(refuse("How much is the discount?"), 409);
-  }
-  if (type === "percent" && value > 100) {
-    return c.json(
-      refuse("More than 100% is a refund, not a discount."), 409);
-  }
-
+/** What is wrong with a discount as asked, or null. */
+export function discountProblem(type: unknown, rawValue: unknown, rawReason: unknown): string | null {
+  if (type !== "percent" && type !== "fixed") return "A discount is a percentage or a fixed amount.";
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) return "How much is the discount?";
+  if (type === "percent" && value > 100) return "More than 100% is a refund, not a discount.";
   /* The reason is the whole point. An amount with nobody's explanation
      attached is an unauditable hole in revenue, which is worse than
      not offering the feature at all. */
-  const reason = input.reason?.trim();
-  if (!reason) {
-    return c.json(
-      refuse("Why is this discounted? A staff meal, a complaint, a manager's call."),
-      409,
-    );
+  if (typeof rawReason !== "string" || !rawReason.trim()) {
+    return "Why is this discounted? A staff meal, a complaint, a manager's call.";
   }
+  return null;
+}
 
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const orderId = c.req.param("id");
-
+/** A discount put on an open bill - by a manager at the till, or by the GM
+    approving a waiter's request (D27-363). Checked by discountProblem first. */
+export async function discountOrder(
+  client: Client, orderId: string, hotelId: string, type: "percent" | "fixed", value: number, reason: string,
+): Promise<Act> {
     const { rows: order } = await client.query<{ status: string }>(
       `select status from pos_orders where id = $1 and hotel_id = $2`,
       [orderId, hotelId],
@@ -3017,7 +3035,22 @@ till.post("/:code/till/orders/:id/discount", async (c) => {
         where id = $5`,
       [type, value, amount, reason, orderId],
     );
+    return { ok: true };
+}
 
+till.post("/:code/till/orders/:id/discount", async (c) => {
+  type DiscountBody = { type?: string; value?: number; reason?: string };
+  const input = await c.req.json<DiscountBody>().catch(() => ({}) as DiscountBody);
+  const problem = discountProblem(input.type, input.value, input.reason);
+  if (problem) return c.json(refuse(problem), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const done = await discountOrder(client, orderId, hotelId, input.type as "percent" | "fixed",
+      Number(input.value), input.reason!.trim());
+    if (!done.ok) return done;
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -4155,7 +4188,7 @@ till.get("/:code/till/day-end", async (c) => {
          owner's, to a GM (MEMORY 283) - is null, not the whole movement. */
       `select m.id::text, m.kind, m.amount::text, m.reason,
               s.full_name as recorded_by_name,
-              to_char(m.recorded_at, 'HH24:MI') as recorded_at,
+              app.hotel_clock(m.hotel_id, m.recorded_at, 'HH24:MI') as recorded_at,
               ${PAID_OUT_DECISION("status")} as approval,
               ${PAID_OUT_DECISION("decision_note")} as approval_note
          from pos_cash_movements m
@@ -4171,7 +4204,7 @@ till.get("/:code/till/day-end", async (c) => {
       closed_by_name: string | null;
     }>(
       `select d.id::text, d.opening_cash::text, d.counted_cash::text,
-              d.variance_reason, to_char(d.closed_at, 'DD Mon, HH24:MI') as closed_at,
+              d.variance_reason, app.hotel_clock(d.hotel_id, d.closed_at, 'DD Mon, HH24:MI') as closed_at,
               s.full_name as closed_by_name
          from pos_day_ends d
          left join staff s on s.id = d.closed_by
@@ -4187,6 +4220,7 @@ till.get("/:code/till/day-end", async (c) => {
     const struck = await struckAfterKitchen(client, hotelId, businessDate, outlet[0].id);
     const voided = await voidedBills(client, hotelId, businessDate, outlet[0].id);
     const noCharge = await noChargeBills(client, hotelId, businessDate, outlet[0].id);
+    const modeChanges = await tenderChanges(client, hotelId, businessDate, outlet[0].id);
 
     const denominations = day[0]
       ? (await client.query<{ value: string; count: number }>(
@@ -4222,6 +4256,9 @@ till.get("/:code/till/day-end", async (c) => {
       voided,
       /* Bills given free, NC (D27-351): who, when and why, no value. */
       noCharge,
+      /* Paid bills whose payment mode was changed (D27-363), and whether
+         after the drawer was counted. */
+      modeChanges,
       movements: movements.map((m) => ({
         id: m.id, kind: m.kind, amount: Number(m.amount),
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
@@ -5019,20 +5056,11 @@ till.post("/:code/till/orders/:id/abandon", async (c) => {
    written for it, and nobody's front-desk drawer is touched. Its alcohol's
    VAT bill is cancelled in the same transaction (migration 222's trigger).
    Every refusal comes before the one write (MEMORY 243). */
-till.post("/:code/till/orders/:id/void", async (c) => {
-  const input = await c.req.json<{ reason?: string; reference?: string }>()
-    .catch(() => ({}) as { reason?: string; reference?: string });
-  const reason = input.reason?.trim();
-  if (!reason) {
-    return c.json(refuse("Say why this bill is being voided. The reason stays on the bill."), 409);
-  }
-  const reference = input.reference?.trim() || null;
-
-  const result = await withSession(c.get("subject"), async (client, session) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const orderId = c.req.param("id");
-
+/** A paid bill voided - by the owner, an Admin or the GM at the till, or by
+    one of them approving a request (D27-363), as `session`. */
+export async function voidBill(
+  client: Client, session: Session, hotelId: string, orderId: string, reason: string, reference: string | null,
+): Promise<Act> {
     /* Locked, as a settle is: two presses void it once. */
     const { rows: [o] } = await client.query<{
       status: string; payment_method: string | null; outlet_id: string;
@@ -5094,6 +5122,24 @@ till.post("/:code/till/orders/:id/void", async (c) => {
     /* Nothing is collected on it: its table is freed as Clear frees one
        (POS-33), so the floor never shows a voided bill. */
     await client.query(CLEAR_FINISHED, [orderId]);
+    return { ok: true };
+}
+
+till.post("/:code/till/orders/:id/void", async (c) => {
+  const input = await c.req.json<{ reason?: string; reference?: string }>()
+    .catch(() => ({}) as { reason?: string; reference?: string });
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse("Say why this bill is being voided. The reason stays on the bill."), 409);
+  }
+  const reference = input.reference?.trim() || null;
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const done = await voidBill(client, session, hotelId, orderId, reason, reference);
+    if (!done.ok) return done;
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -5108,18 +5154,11 @@ till.post("/:code/till/orders/:id/void", async (c) => {
    no prices, marked NC (heading 'nc'). No value anywhere: every sales figure
    reads `status = 'settled'`. Never a bill on a function's bill - the host
    pays it there. Every refusal comes before the one write (MEMORY 243). */
-till.post("/:code/till/orders/:id/no-charge", async (c) => {
-  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
-  const reason = input.reason?.trim();
-  if (!reason) {
-    return c.json(refuse("Say why this bill is no charge. The reason prints on the bill."), 409);
-  }
-
-  const result = await withSession(c.get("subject"), async (client, session) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const orderId = c.req.param("id");
-
+/** An open bill given free - by the owner, an Admin or the GM at the till,
+    or by one of them approving a request (D27-363), as `session`. */
+export async function noChargeBill(
+  client: Client, session: Session, hotelId: string, orderId: string, reason: string,
+): Promise<Act> {
     /* Locked, as a settle is: an NC and a payment pressed together cannot
        both close it. */
     const { rows: [o] } = await client.query<{
@@ -5155,6 +5194,22 @@ till.post("/:code/till/orders/:id/no-charge", async (c) => {
     );
     /* Nothing is collected on it: its table is freed as a void's is. */
     await client.query(CLEAR_FINISHED, [orderId]);
+    return { ok: true };
+}
+
+till.post("/:code/till/orders/:id/no-charge", async (c) => {
+  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse("Say why this bill is no charge. The reason prints on the bill."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const done = await noChargeBill(client, session, hotelId, orderId, reason);
+    if (!done.ok) return done;
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -5949,7 +6004,7 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
     }>(
       `select o.order_no, o.table_ref, o.order_type,
               ou.name as outlet_name, h.name as hotel_name,
-              to_char(min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
+              app.hotel_clock($2::uuid, min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          join hotels h on h.id = o.hotel_id

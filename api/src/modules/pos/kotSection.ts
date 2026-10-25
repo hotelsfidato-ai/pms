@@ -81,9 +81,9 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
 
       const { rows: stations } = await client.query<{
         id: string; name: string; mine: boolean; prints_bills: boolean;
-        seen_at: string | null; online: boolean;
+        seen_at: string | null; online: boolean; slip_mm: number | null;
       }>(
-        `select id::text, name, device = $2 as mine, prints_bills, seen_at::text,
+        `select id::text, name, device = $2 as mine, prints_bills, seen_at::text, slip_mm,
                 coalesce(seen_at > now() - interval '${ONLINE}', false) as online
            from pos_kot_stations
           where hotel_id = $1 and is_active
@@ -138,6 +138,8 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
         stations: stations.map((s) => ({
           id: s.id, name: s.name, mine: s.mine, online: s.online, seenAt: s.seen_at,
           printsBills: s.prints_bills,
+          /* Its shortest slip, mm (D27-363); null: the system's. */
+          slipMm: s.slip_mm,
           kinds: kinds.filter((k) => k.station_id === s.id).map((k) => k.id),
         })),
         sections: sections.map((s) => ({
@@ -353,6 +355,29 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
       }
       await client.query(`update pos_kot_stations set is_active = false where id = $1`, [c.req.param("id")]);
       return { ok: true as const };
+    });
+    if (!result) return c.json({ error: "No such property." }, 404);
+    return c.json(result, result.ok ? 200 : 409);
+  });
+
+  /* ── A computer's printing (D27-363) ───────────────────────────────
+     Its shortest slip: a KOT that came out sideways on the BAR PC is made
+     longer here, tried with the test print, on the computer itself. Null
+     (blank) puts it back to the system's. */
+  till.post("/:code/till/kot-setup/stations/:id/print", async (c) => {
+    if (!UUID.test(c.req.param("id"))) return c.json(refuse("No such computer."), 409);
+    const input = await c.req.json().catch(() => ({})) as { slipMm?: unknown };
+    const mm = input.slipMm === null || input.slipMm === undefined ? null : Number(input.slipMm);
+    if (mm !== null && !(Number.isInteger(mm) && mm >= 60 && mm <= 400)) {
+      return c.json(refuse("The shortest slip is whole mm, from 60 to 400."), 409);
+    }
+    const result = await withSession(c.get("subject"), async (client) => {
+      const hotelId = await hotelFor(client, c.req.param("code"));
+      if (!hotelId) return null;
+      const { rowCount } = await client.query(
+        "update pos_kot_stations set slip_mm = $3 where id = $2 and hotel_id = $1 and is_active",
+        [hotelId, c.req.param("id"), mm]);
+      return rowCount ? { ok: true as const } : refuse("No such computer.");
     });
     if (!result) return c.json({ error: "No such property." }, 404);
     return c.json(result, result.ok ? 200 : 409);

@@ -12,7 +12,7 @@ import {
 
    The bar register on paper, in the system: per drink, grouped by its menu
    section, the day's Opening, Received, Total, what was Sold (the issues the
-   sending of each line made, 235/237) split NIP / 30 / 60 / 90 ml and loose
+   sending of each line made, 235/238) split NIP / 30 / 60 / 90 ml and loose
    ml, Closing, the Rate and the Amount - and what was counted. Two formats,
    a setting (locations.bar_sheet): "paper", the register's columns;
    "simple", opening, received, sold, closing, counted.

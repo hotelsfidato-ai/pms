@@ -26,6 +26,11 @@ export { struckAfterKitchen } from "./till.ts";
 export { voidedBills } from "./till.ts";
 /* And the bills given free, NC (D27-351): who, when and why, no value. */
 export { noChargeBills } from "./till.ts";
+/* A waiter's request to the GM, done or refused when the GM decides it in
+   the Approvals inbox (D27-363): the approvals route comes through here. */
+export { performPosRequest, rejectPosRequest } from "./posRequests.ts";
+/* And the day's changes of payment mode, for the night audit (D27-363). */
+export { tenderChanges } from "./tenderChanges.ts";
 /* What each outlet sold per day, before GST: the Store's Days view sets the
    stock issued to an outlet against it (D27-238). */
 export { outletSales } from "./till.ts";

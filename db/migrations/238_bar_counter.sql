@@ -1,5 +1,5 @@
 -- =============================================================================
--- 237 · The bar as the excise registers keep it: a Bar store and a Bar counter
+-- 238 · The bar as the excise registers keep it: a Bar store and a Bar counter
 --       (the owner's D27-361, 22 October)
 -- =============================================================================
 -- From the owner's photos of FORM FLR-1A/2A/3A (daily, by brand and bottle
@@ -272,7 +272,7 @@ create trigger pos_order_lines_take_from_bar
   for each row execute function app.pos_line_takes_from_bar();
 
 
--- ── A test hotel's classes: 235's list, with the three new trading tables ──
+-- ── A test hotel's classes: 237's list (235's with release 12.1's two), with the three new trading tables ──
 create or replace function app.test_hotel_classes()
 returns table (table_name text, class text)
 language sql
@@ -319,6 +319,7 @@ as $$
   ('pos_tickets', 'trading'), ('pos_kot_prints', 'trading'), ('pos_kot_reprints', 'trading'),
   ('pos_bill_prints', 'trading'), ('bar_purchases', 'trading'), ('bar_purchase_lines', 'trading'),
   ('bar_requests', 'trading'), ('bar_request_lines', 'trading'), ('bar_closed_days', 'trading'),
+  ('pos_tender_changes', 'trading'), ('pos_requests', 'trading'),
   ('pos_cash_movements', 'trading'), ('pos_day_ends', 'trading'),
   ('pos_denominations', 'trading'), ('cashier_shifts', 'trading'),
   ('cashier_movements', 'trading'), ('cashier_denominations', 'trading'),

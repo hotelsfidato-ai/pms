@@ -121,7 +121,7 @@ cashier.get("/:code/cashier-shift", async (c) => {
       variance_reason: string | null;
     }>(
       `select id::text, opening_cash::text as opening,
-              to_char(opened_at,'HH24:MI') as opened_at,
+              app.hotel_clock(hotel_id, opened_at, 'HH24:MI') as opened_at,
               counted_cash::text as counted, variance_reason
          from cashier_shifts
         where hotel_id = $1 and staff_id = $2 and closed_at is null`,
@@ -137,7 +137,7 @@ cashier.get("/:code/cashier-shift", async (c) => {
       }>(
         /* The colleague's name through app.hotel_people (149): `staff` shows
            a clerk only their own row, so it read "handed to nobody". */
-        `select to_char(cs.closed_at,'DD Mon, HH24:MI') as closed_at,
+        `select app.hotel_clock(cs.hotel_id, cs.closed_at, 'DD Mon, HH24:MI') as closed_at,
                 cs.counted_cash::text as counted, cs.kept_cash::text as kept,
                 coalesce(s.full_name, hp.full_name) as handed_to
            from cashier_shifts cs
@@ -202,7 +202,7 @@ cashier.get("/:code/cashier-shift", async (c) => {
       recorded_by: string; at: string; approval: string | null; approval_note: string | null;
     }>(
       `select m.id::text, m.kind, m.amount::text, m.reason,
-              s.full_name as recorded_by, to_char(m.recorded_at,'HH24:MI') as at,
+              s.full_name as recorded_by, app.hotel_clock(m.hotel_id, m.recorded_at, 'HH24:MI') as at,
               ${EXPENSE_DECISION("status")} as approval,
               ${EXPENSE_DECISION("decision_note")} as approval_note
          from cashier_movements m join staff s on s.id = m.recorded_by
@@ -222,7 +222,7 @@ cashier.get("/:code/cashier-shift", async (c) => {
        took up, and from whose close. */
     const { rows: received } = await client.query<{ amount: string; from_name: string | null; at: string }>(
       `select cs.kept_cash::text as amount, coalesce(s.full_name, hp.full_name) as from_name,
-              to_char(cs.closed_at, 'DD Mon, HH24:MI') as at
+              app.hotel_clock(cs.hotel_id, cs.closed_at, 'DD Mon, HH24:MI') as at
          from cashier_float_claims c
          join cashier_shifts cs on cs.id = c.closed_shift_id
          left join staff s on s.id = cs.staff_id

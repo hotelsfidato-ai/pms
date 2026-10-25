@@ -220,7 +220,7 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
               v.seated_capacity::text, v.floating_capacity::text,
               v.default_rate::text,
               app.colleague_name(e.registered_by, e.hotel_id) as registered_by,
-              to_char(e.registered_at, 'YYYY-MM-DD"T"HH24:MI') as registered_at,
+              app.hotel_clock(e.hotel_id, e.registered_at) as registered_at,
               app.colleague_name(e.confirmed_by, e.hotel_id) as confirmed_by,
               f.id::text as folio_id
          from banquet_events e
@@ -270,8 +270,8 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
       settled_at: string | null; payable: string | null;
     }>(
       `select o.id::text, o.order_no, o.table_ref, po.name as outlet, o.status,
-              to_char(o.opened_at,  'YYYY-MM-DD"T"HH24:MI') as opened_at,
-              to_char(o.settled_at, 'YYYY-MM-DD"T"HH24:MI') as settled_at,
+              app.hotel_clock(o.hotel_id, o.opened_at) as opened_at,
+              app.hotel_clock(o.hotel_id, o.settled_at) as settled_at,
               t.payable::text
          from pos_orders o
          left join pos_outlets po on po.id = o.outlet_id

@@ -31,6 +31,8 @@ export function NotificationBell() {
   const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications", hotelId],
     queryFn: () => notificationsRepo.list(hotelId),
+    /* A request sent to the GM shows within half a minute (D27-363). */
+    refetchInterval: 30_000,
   });
 
   const unread = notifications?.filter((n) => !n.isRead).length ?? 0;

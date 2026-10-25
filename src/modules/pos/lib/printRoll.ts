@@ -17,16 +17,22 @@
 
 /* NEVER SHORTER THAN WIDE (the owner's photos, 22 October): a page 80 mm wide
    and 64 mm long is a landscape page, and the printer turned a short KOT
-   sideways on the roll; the bill, longer than 80 mm, came out upright. So the
-   paper is at least 90 mm long - always portrait. */
-const MIN_MM = 90;
+   sideways on the roll; the bill, longer than 80 mm, came out upright. 90 mm
+   was not enough for the BAR PC's printer in the Fidato Printer app (25
+   October, MEMORY 427): its KOTs still came out sideways and its bills - 150
+   mm and more - upright. So the shortest slip is 160 mm unless the computer
+   says otherwise (Restaurant setup, KOT section, its own setting and a test
+   print, D27-363). */
+export const DEFAULT_SLIP_MM = 160;
 
-/** The paper's length for a slip `heightPx` CSS pixels tall (96 to the inch). */
-export const rollMm = (heightPx: number) => Math.max(MIN_MM, Math.ceil((heightPx * 25.4) / 96) + 4);
+/** The paper's length for a slip `heightPx` CSS pixels tall (96 to the inch),
+    never shorter than `minMm`. */
+export const rollMm = (heightPx: number, minMm: number = DEFAULT_SLIP_MM) =>
+  Math.max(minMm, Math.ceil((heightPx * 25.4) / 96) + 4);
 
 /** The page rule for a slip `heightPx` CSS pixels tall. */
-export const rollPage = (heightPx: number) =>
-  `@media print { @page { size: 80mm ${rollMm(heightPx)}mm; margin: 0; } }`;
+export const rollPage = (heightPx: number, minMm: number = DEFAULT_SLIP_MM) =>
+  `@media print { @page { size: 80mm ${rollMm(heightPx, minMm)}mm; margin: 0; } }`;
 
 /* THE FIDATO PRINTER APP (the owner's D27-360): on a printing computer the
    PMS runs inside a small app that prints straight to the printer - no
@@ -40,14 +46,14 @@ declare global {
 
 /** Prints the page with the paper set to the roll and the slip's length -
     through the Fidato Printer app when the page runs in it. */
-export async function printRoll(slip: HTMLElement | null) {
+export async function printRoll(slip: HTMLElement | null, minMm: number = DEFAULT_SLIP_MM) {
   const height = slip?.getBoundingClientRect().height ?? 0;
   const style = document.createElement("style");
-  style.textContent = rollPage(height);
+  style.textContent = rollPage(height, minMm);
   document.head.appendChild(style);
   try {
     if (window.fidatoPrinter) {
-      const done = await window.fidatoPrinter.print(rollMm(height));
+      const done = await window.fidatoPrinter.print(rollMm(height, minMm));
       if (!done.ok) throw new Error(done.reason ?? "The printer did not take it.");
     } else {
       window.print();

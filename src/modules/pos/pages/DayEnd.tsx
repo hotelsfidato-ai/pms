@@ -339,6 +339,30 @@ function Overview({ day }: { day: DayEnd }) {
         </Card>
       )}
 
+      {/* D27-363: paid bills whose payment mode was changed - the cash above
+          already counts them as changed; one changed after the drawer was
+          counted is why it no longer matches. */}
+      {(day.modeChanges ?? []).length > 0 && (
+        <Card>
+          <CardHeader title="Payment mode changed"
+            description="Paid bills changed between cash, card and UPI. The cash above already counts them as changed." />
+          <CardBody>
+            <ul className="divide-y divide-grey-200">
+              {day.modeChanges!.map((m, i) => (
+                <li key={`${m.orderNo}-${i}`} className="py-3">
+                  <p className="text-base">
+                    {m.orderNo}{m.table ? ` · ${m.table}` : ""} - {m.from} to {m.to}, {moneyPrecise(m.amount)}
+                  </p>
+                  <p className="text-sm text-grey-500">
+                    {m.reason} · {m.by ?? "-"} · {m.at}{m.afterDayEnd ? " · after the drawer was counted" : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
       {/* D27-119: food taken off after the kitchen had it - who, and why. */}
       {(day.struck ?? []).length > 0 && (
         <Card>

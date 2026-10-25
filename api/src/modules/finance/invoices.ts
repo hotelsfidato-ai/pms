@@ -440,7 +440,7 @@ invoices.get("/:code/invoices/:number{.+}", async (c) => {
 export async function invoiceFacts(client: Client, hotelId: string, number: string) {
   const { rows } = await client.query<Record<string, string | null>>(
     `select i.id::text, i.number, i.fin_year,
-            to_char(i.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
+            app.hotel_clock(i.hotel_id, i.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
             to_char(i.business_date, 'YYYY-MM-DD') as business_date,
             i.gstin, i.recipient_name, i.recipient_gstin,
             i.recipient_address, i.place_of_supply, i.sac_code, i.sac_by_kind,
@@ -616,8 +616,8 @@ export async function stayFacts(client: Client, by: Of) {
             greatest(r.check_out - r.check_in, 0) as nights,
             -- The moment of check-in and check-out where the trail has it,
             -- else the booked day.
-            coalesce(to_char(cin.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_in, 'DD Mon YYYY')) as arrival,
-            coalesce(to_char(cout.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_out, 'DD Mon YYYY')) as departure,
+            coalesce(app.hotel_clock(r.hotel_id, cin.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_in, 'DD Mon YYYY')) as arrival,
+            coalesce(app.hotel_clock(r.hotel_id, cout.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_out, 'DD Mon YYYY')) as departure,
             app.booking_source_label(bs.name, co.name, r.source) as source,
             cin.who as checked_in_by, cout.who as checked_out_by
        from ${of.from}
@@ -899,7 +899,7 @@ invoices.get("/:code/vat-bills/:number{.+}", async (c) => {
        bill it cancels (`o`), as a credit note names its invoice. */
     const { rows } = await client.query<Record<string, string | null>>(
       `select v.number, v.fin_year,
-              to_char(v.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
+              app.hotel_clock(v.hotel_id, v.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
               to_char(v.business_date, 'YYYY-MM-DD') as business_date,
               v.recipient_name, v.taxable_value::text, v.vat_total::text,
               v.total::text, v.reason, o.number as cancels_number,

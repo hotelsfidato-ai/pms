@@ -23,7 +23,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -196,16 +196,33 @@ export default function TillPage() {
   };
 
   const [ask, setAsk] = useState<Ask | null>(null);
+  const role = useRole();
   const strike = async (lineId: string, reason?: string) => {
     if (!openId) return;
     const res = await voidLine(hotelId, openId, lineId, reason);
     if (!res.ok) return toast.error("Could not strike that line", res.reason);
     applyOrder(res.order);
   };
-  /* Once the kitchen has it, a manager's, with a reason (D27-119). */
+  /* Once the kitchen has it, a manager's, with a reason (D27-119); anyone
+     else SENDS it to the GM, who approves it from their own screen (D27-363). */
+  const mayStrikeSent = STRIKES_SENT.includes(role);
   const askStrike = (lineId: string) => {
     const line = current.data?.lines.find((l) => l.id === lineId);
     if (!line || line.kotStatus === "pending") return void strike(lineId);
+    if (!mayStrikeSent) return setAsk({
+      title: `Send to the GM: take off ${line.name}?`,
+      body: "The kitchen already has it, so the GM decides. They see it on their own screen; it comes off when they approve.",
+      field: { label: "Why is it coming off?", required: true },
+      confirm: "Send to the GM",
+      onConfirm: async (why): Promise<Reply | undefined> => {
+        if (!openId) return undefined;
+        const res = await sendToGm(hotelId, openId, { kind: "strike_line", lineId, reason: why });
+        if (!res.ok) return { refused: res.reason };
+        toast.success("Sent to the GM", `${line.name} comes off when they approve.`);
+        void current.refetch();
+        return undefined;
+      },
+    });
     setAsk({
       title: `Take off ${line.name}?`, body: SENT_STRIKE,
       field: { label: "Why is it coming off?", required: true },
@@ -627,14 +644,74 @@ function OrderRow({ order, active, onOpen, withDate = false }: {
    is shown in rupees against THIS bill, because "up to 10%" is a
    percentage a biller has to do arithmetic on while a guest waits.
    ══════════════════════════════════════════════════════════════════ */
+const METHOD_WORD: Record<string, string> = { cash: "Cash", card: "Card", upi: "UPI" };
+
+/* A PAID BILL'S PAYMENT MODE, CHANGED (the owner's D27-363): the GM, the
+   owner or an Admin, before the night audit, with a reason. Each part of a
+   split bill on its own, the amounts as they were; cash, card or UPI only. */
+function ModeChange({ order, hotelId, onDone }: { order: Order; hotelId: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const simple = order.tenders.filter((t) => t.method in METHOD_WORD);
+  const [methods, setMethods] = useState<Record<string, string>>({});
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (simple.length === 0) return null;
+  const changes = simple.filter((t) => (methods[t.id] ?? t.method) !== t.method)
+    .map((t) => ({ tenderId: t.id, method: methods[t.id]! }));
+  const save = async () => {
+    setBusy(true);
+    const res = await changePaymentMode(hotelId, order.id, changes, reason.trim());
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success("Payment mode changed", "The day end lists it.");
+    setOpen(false); setMethods({}); setReason("");
+    onDone();
+  };
+  return (
+    <>
+      <Button variant="secondary" size="lg" className="w-full" onClick={() => setOpen(true)}>
+        Change how it was paid
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent title={`Change how bill ${order.orderNo} was paid`}
+          description="Before the night audit only. The amounts stay; each change is kept with your reason, and the day end lists it."
+          size="sm"
+          footer={<>
+            <Button variant="secondary" size="lg" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="lg" loading={busy} disabled={changes.length === 0 || !reason.trim()}
+              onClick={() => void save()}>Change it</Button>
+          </>}>
+          <div className="space-y-3">
+            {simple.map((t) => (
+              <div key={t.id} className="flex items-center gap-3">
+                <span className="flex-1 tabular text-base text-ink-900">{moneyPrecise(t.amount)}</span>
+                <NativeSelect aria-label={`Paid by, ${moneyPrecise(t.amount)}`} className="w-36"
+                  value={methods[t.id] ?? t.method} onChange={(e) => setMethods((m) => ({ ...m, [t.id]: e.target.value }))}>
+                  {Object.entries(METHOD_WORD).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                </NativeSelect>
+              </div>
+            ))}
+            <Field label="Why" required>
+              {(f) => <Input {...fieldProps(f)} value={reason} placeholder="Paid by card, keyed as cash"
+                onChange={(e) => setReason(e.target.value)} />}
+            </Field>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function DiscountDialog({
-  order, hotelId, open, onOpenChange, onDone,
+  order, hotelId, open, onOpenChange, onDone, send = false,
 }: {
   order: Order;
   hotelId: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDone: () => void;
+  /** A waiter's or cashier's: sent to the GM, who approves it (D27-363). */
+  send?: boolean;
 }) {
   const [type, setType] = useState<"percent" | "fixed">(
     order.discountType ?? "percent");
@@ -648,7 +725,7 @@ function DiscountDialog({
   const promos = useQuery({
     queryKey: ["promotions", hotelId],
     queryFn: () => listPromotions(hotelId),
-    enabled: open,
+    enabled: open && !send,
   });
   const cap = promos.data?.freehandCapPercent ?? null;
   const live = (promos.data?.promotions ?? []).filter((p) => p.isActive);
@@ -681,10 +758,12 @@ function DiscountDialog({
 
   const apply = async () => {
     setBusy(true);
-    const res = await applyDiscount(hotelId, order.id, type, amount,
-      reason.trim());
+    const res = send
+      ? await sendToGm(hotelId, order.id, { kind: "discount", type, value: amount, reason: reason.trim() })
+      : await applyDiscount(hotelId, order.id, type, amount, reason.trim());
     setBusy(false);
-    if (!res.ok) return toast.error("Not discounted", res.reason);
+    if (!res.ok) return toast.error(send ? "Not sent" : "Not discounted", res.reason);
+    if (send) toast.success("Sent to the GM", "The discount goes on when they approve.");
     onOpenChange(false);
     onDone();
   };
@@ -701,12 +780,13 @@ function DiscountDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        title="Discount this bill"
-        description="Off the net, so the tax falls with it."
+        title={send ? "Ask the GM for a discount" : "Discount this bill"}
+        description={send ? "The GM decides, on their own screen. Off the net, so the tax falls with it."
+          : "Off the net, so the tax falls with it."}
         size="sm"
         footer={
           <div className="flex gap-2 w-full">
-            {order.discount > 0 && (
+            {order.discount > 0 && !send && (
               <Button variant="ghost" size="lg" loading={busy}
                 onClick={() => void remove()}>
                 Remove
@@ -728,7 +808,7 @@ function DiscountDialog({
                         || overCap}
               onClick={() => void apply()}
             >
-              Apply
+              {send ? "Send to the GM" : "Apply"}
             </Button>
           </div>
         }
@@ -1117,7 +1197,25 @@ function OrderPanel({
      GM - the same three as a void, as the server asks - gives an open bill
      free, with a reason; their name on it is the approval. It prints at
      once: the dishes, no prices, marked NC. */
-  const giveNc = () => setAsk({
+  /* A waiter's or cashier's is sent to the GM, who approves it on their own
+     screen and that gives it (D27-363). */
+  const send = async (body: Parameters<typeof sendToGm>[2], done: string): Promise<Reply | undefined> => {
+    setBusy(true);
+    const res = await sendToGm(hotelId, order.id, body);
+    setBusy(false);
+    if (!res.ok) return { refused: res.reason };
+    toast.success("Sent to the GM", done);
+    onChanged();
+    return undefined;
+  };
+  const giveNc = () => mayVoid ? giveNcNow() : setAsk({
+    title: `Send to the GM: no charge for bill ${order.orderNo}?`,
+    body: "The GM decides. When they approve, the bill is NC: it prints the dishes with no prices.",
+    field: { label: "Why is it no charge?", required: true },
+    confirm: "Send to the GM",
+    onConfirm: (reason) => send({ kind: "no_charge", reason }, `Bill ${order.orderNo} is NC when they approve.`),
+  });
+  const giveNcNow = () => setAsk({
     title: `No charge for bill ${order.orderNo}?`,
     body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
       + "name as the approval. It is no sale and carries no value, and it cannot be undone.",
@@ -1150,6 +1248,10 @@ function OrderPanel({
     const cash = order.tenders.filter((t) => t.method === "cash").reduce((s, t) => s + t.amount, 0);
     const needsReference = order.tenders.some((t) => t.method !== "cash");
     const go = async (reason: string, reference?: string): Promise<Reply | undefined> => {
+      if (!mayVoid) {
+        return send({ kind: "void_bill", reason, ...(reference ? { reference } : {}) },
+          `Bill ${order.orderNo} is void when they approve.`);
+      }
       setBusy(true);
       const res = await voidPaidBill(hotelId, order.id, reason, reference);
       setBusy(false);
@@ -1160,20 +1262,21 @@ function OrderPanel({
       return undefined;
     };
     setAsk({
-      title: `Void bill ${order.orderNo}?`,
+      title: mayVoid ? `Void bill ${order.orderNo}?` : `Send to the GM: void bill ${order.orderNo}?`,
       body: [
+        !mayVoid && "The GM decides, on their own screen.",
         cash > 0 && `${moneyPrecise(cash)} in cash goes back to the guest out of the restaurant's tin.`,
         needsReference && "Refund the card or UPI payment on its machine or app first: its reference is asked next.",
         "The bill keeps its number and prints VOID. The kitchen's KOTs stay as they are.",
       ].filter(Boolean).join(" "),
       field: { label: "Why is it being voided?", required: true },
-      confirm: needsReference ? "Next" : "Void the bill",
+      confirm: needsReference ? "Next" : mayVoid ? "Void the bill" : "Send to the GM",
       onConfirm: (reason) => needsReference
         ? {
             next: {
               title: `Void bill ${order.orderNo}?`,
               field: { label: "The refund's reference: the UPI reference or the card approval", required: true },
-              confirm: "Void the bill",
+              confirm: mayVoid ? "Void the bill" : "Send to the GM",
               onConfirm: (reference: string) => go(reason, reference),
             },
           }
@@ -1394,6 +1497,12 @@ function OrderPanel({
                     + `${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                 : `Closed unpaid - ${order.abandonedReason}`}
             </p>
+            {(order.modeChanges ?? []).map((m, i) => (
+              <p key={i} className="text-sm text-grey-600">
+                Payment mode changed: {METHOD_WORD[m.from] ?? m.from} to {METHOD_WORD[m.to] ?? m.to}, {moneyPrecise(m.amount)}
+                {m.by ? `, by ${m.by}` : ""} at {m.at} - {m.reason}.
+              </p>
+            ))}
             {(order.status === "settled" || order.status === "void" || order.status === "no_charge") && (
               <Button
                 variant="secondary"
@@ -1405,13 +1514,17 @@ function OrderPanel({
                 Print the bill
               </Button>
             )}
-            {/* D27-324: the owner, an administrator or the GM only. */}
-            {order.status === "settled" && mayVoid && (
+            {/* D27-363: the GM, the owner or an Admin, before the night audit. */}
+            {order.status === "settled" && mayVoid && voidBlock === null && (
+              <ModeChange order={order} hotelId={hotelId} onDone={onChanged} />
+            )}
+            {/* D27-324: the owner, an administrator or the GM; anyone else sends it to the GM (D27-363). */}
+            {order.status === "settled" && (
               <>
                 <Button variant="ghost" size="lg" className="w-full"
                   disabled={voidBlock !== null} onClick={voidBill} loading={busy}>
                   <Ban className="size-4" />
-                  Void this paid bill
+                  {mayVoid ? "Void this paid bill" : "Ask the GM to void this bill"}
                 </Button>
                 {voidBlock && <p className="text-sm text-grey-600">{voidBlock}</p>}
               </>
@@ -1441,18 +1554,16 @@ function OrderPanel({
             </Button>
             {/* Before the payment buttons, because the bill has to be
                 right before it is taken. */}
-            <div className={cn("grid gap-2", mayDiscount ? "grid-cols-2" : "grid-cols-1")}>
-              {mayDiscount && (
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  disabled={live.length === 0}
-                  onClick={() => setDiscounting(true)}
-                >
-                  <Percent className="size-4" />
-                  {order.discount > 0 ? "Change discount" : "Discount"}
-                </Button>
-              )}
+            <div className="grid gap-2 grid-cols-2">
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={live.length === 0}
+                onClick={() => setDiscounting(true)}
+              >
+                <Percent className="size-4" />
+                {!mayDiscount ? "Ask for a discount" : order.discount > 0 ? "Change discount" : "Discount"}
+              </Button>
               <Button
                 variant="secondary"
                 size="lg"
@@ -1543,20 +1654,33 @@ function OrderPanel({
               Part - pay two ways
             </Button>
 
-            {/* D27-351: the owner, an administrator or the GM only. */}
-            {mayVoid && (
-              <Button variant="secondary" size="lg" className="w-full"
-                disabled={onFunction || live.length === 0} onClick={giveNc} loading={busy}>
-                <Gift className="size-4" />
-                No charge (NC)
-              </Button>
-            )}
+            {/* D27-351: the owner, an administrator or the GM; anyone else sends it (D27-363). */}
+            <Button variant="secondary" size="lg" className="w-full"
+              disabled={onFunction || live.length === 0} onClick={giveNc} loading={busy}>
+              <Gift className="size-4" />
+              {mayVoid ? "No charge (NC)" : "Ask the GM for NC"}
+            </Button>
 
             <Button variant="ghost" size="lg" className="w-full"
               onClick={abandon} loading={busy}>
               Close unpaid
             </Button>
           </div>
+        )}
+        {/* What was sent to the GM about this bill, and the answer (D27-363). */}
+        {(order.requests ?? []).length > 0 && (
+          <ul className="mt-3 space-y-1.5" aria-label="Sent to the GM">
+            {(order.requests ?? []).map((r) => (
+              <li key={r.id} className={cn("text-sm rounded-md px-3 py-2",
+                r.status === "pending" ? "bg-brand-yellow-50 text-ink-900"
+                  : r.status === "approved" ? "bg-grey-50 text-grey-700" : "bg-brand-red-50 text-ink-900")}>
+                {r.status === "pending" ? "Sent to the GM, waiting: "
+                  : r.status === "approved" ? `Approved${r.decidedBy ? ` by ${r.decidedBy}` : ""}: `
+                  : `Not approved${r.decidedBy ? ` by ${r.decidedBy}` : ""}${r.note ? ` (${r.note})` : ""}: `}
+                {r.summary}
+              </li>
+            ))}
+          </ul>
         )}
         {/* An open order's KOTs, reprinted at their station (D27-329 (5)). */}
         {order.status === "open" && (
@@ -1571,6 +1695,7 @@ function OrderPanel({
         open={discounting}
         onOpenChange={setDiscounting}
         onDone={onChanged}
+        send={!mayDiscount}
       />
     </Card>
   );

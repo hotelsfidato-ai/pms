@@ -473,6 +473,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/kot-setup/sections/:id`]: KOT_SWITCH,
   [`POST ${H}/till/kot-setup/this-computer`]: KOT_SWITCH,
   [`POST ${H}/till/kot-setup/stations/:id/remove`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/stations/:id/print`]: KOT_SWITCH,  // D27-363
+  [`POST ${H}/till/orders/:id/tenders/change`]: own("pos/tenderChanges.ts: MODE_CHANGERS"),  // D27-363
+  [`POST ${H}/till/orders/:id/requests`]: TILL,  // D27-363: whoever works the till sends the GM
   /* A bill asked of the bill printer, or printed here: whoever prints one. */
   [`POST ${H}/till/orders/:id/bill-print`]: TILL,
   [`POST ${H}/till/orders/:id/bill-print/here`]: TILL,

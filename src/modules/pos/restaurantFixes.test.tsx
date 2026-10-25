@@ -5,7 +5,15 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn } from "@/test/app";
+import { HOTEL, AGRA_HOTEL, startSignedIn } from "@/test/app";
+import { useSession } from "@/lib/session";
+import type { Role } from "@/lib/permissions";
+
+/** Signed in with this role at the hotel (D27-363: a waiter sends, a manager strikes). */
+function asRole(role: Role) {
+  const s = useSession.getState();
+  useSession.setState({ scope: { ...s.scope!, hotels: [{ hotelId: AGRA_HOTEL, role }] } });
+}
 import type { Order } from "@/modules/pos/data/till";
 import TillPage from "@/modules/pos/pages/Till";
 
@@ -148,6 +156,7 @@ describe("the Till's questions are asked on screen", () => {
   });
 
   it("a dish the kitchen has asks why before it comes off, and sends the reason (D27-119)", async () => {
+    asRole("gm");
     const posts = till();
     fireEvent.click(await screen.findByRole("button", { name: "Strike Paneer Tikka" }));
     const dialog = await screen.findByRole("dialog");
@@ -158,6 +167,18 @@ describe("the Till's questions are asked on screen", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Take it off" }));
     await vi.waitFor(() => expect(posts).toEqual([
       { path: `${API}/till/orders/o-5/lines/l-1/void`, body: { reason: "Dropped at the pass" } }]));
+  });
+
+  it("a waiter sends the GM a dish the kitchen has, with the reason (D27-363)", async () => {
+    asRole("pos");
+    const posts = till();
+    fireEvent.click(await screen.findByRole("button", { name: "Strike Paneer Tikka" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("the GM decides");
+    typeInto(dialog, "Guest changed their mind");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send to the GM" }));
+    await vi.waitFor(() => expect(posts).toEqual([{ path: `${API}/till/orders/o-5/requests`,
+      body: { kind: "strike_line", lineId: "l-1", reason: "Guest changed their mind" } }]));
   });
 });
 

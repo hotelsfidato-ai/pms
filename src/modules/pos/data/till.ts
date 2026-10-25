@@ -292,6 +292,10 @@ export interface Order {
   ncBy?: string | null;
   ncAt?: string | null;
   ncReason?: string | null;
+  /** What was sent to the GM about this bill, and the answer (D27-363). */
+  requests?: PosRequest[];
+  /** Its payment mode changed before the night audit (D27-363). */
+  modeChanges?: { from: string; to: string; amount: number; reason: string; by: string | null; at: string }[];
   /** Null when the reader may not see that person: a GM reading an order
       the group owner opened (D27-1). Printed as a dash. */
   openedBy: string | null;
@@ -989,6 +993,51 @@ export function voidPaidBill(
     { reason, ...(reference ? { reference } : {}) });
 }
 
+/* ── Sent to the GM (the owner's D27-363) ──────────────────────────── */
+/** Who may strike a dish the kitchen has, as the server asks (till.ts
+    STRIKES_SENT); anyone else sends it to the GM. */
+export const STRIKES_SENT: readonly string[] = ["owner", "admin", "gm", "hotel_manager", "kitchen_manager"];
+export type PosRequestKind = "strike_line" | "discount" | "no_charge" | "void_bill";
+export interface PosRequest {
+  id: string; kind: PosRequestKind; lineId: string | null; summary: string;
+  status: "pending" | "approved" | "rejected"; note: string | null; decidedBy: string | null;
+}
+
+/** A waiter or cashier sends the GM what they may not do themselves. */
+export async function sendToGm(
+  hotelId: string, orderId: string,
+  body: { kind: PosRequestKind; reason: string; lineId?: string; type?: "percent" | "fixed"; value?: number; reference?: string },
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/till/orders/${orderId}/requests`, { method: "POST", body: JSON.stringify(body) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/** A paid bill's payment mode changed before the night audit: the GM, the
+    owner or an Admin, with a reason (D27-363). */
+export async function changePaymentMode(
+  hotelId: string, orderId: string, changes: { tenderId: string; method: string }[], reason: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/till/orders/${orderId}/tenders/change`,
+      { method: "POST", body: JSON.stringify({ changes, reason }) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
 /** NC, NO CHARGE (D27-351): the owner, an administrator or the GM closes an
     open bill as given free, with a reason. The server refuses everyone else
     and says why. */
@@ -1615,7 +1664,8 @@ export interface KotKind {
 
 export interface KotSetup {
   kinds: KotKind[];
-  stations: (KotStationRef & { printsBills: boolean; kinds: string[] })[];
+  /** slipMm: the computer's shortest slip in mm (D27-363); null, the system's. */
+  stations: (KotStationRef & { printsBills: boolean; kinds: string[]; slipMm?: number | null })[];
   /** Each menu section: the kind it names (`own`, or null to follow its
       heading) and the kind it prints on. */
   sections: { id: string; name: string; heading: SectionHeading | null; own: string | null; kind: string | null }[];
@@ -1660,6 +1710,10 @@ export const setSectionKot = (hotelId: string, sectionId: string, kindId: string
 export const setThisComputer = (
   hotelId: string, device: string, name: string, kindIds: string[], bills: boolean,
 ): Plain => plainPost(`${KOT(hotelId)}/this-computer`, { device, name, kindIds, bills });
+/** A computer's shortest slip (D27-363); null puts back the system's. */
+export const setStationSlip = (hotelId: string, id: string, slipMm: number | null): Plain =>
+  plainPost(`/api/hotels/${hotelId}/till/kot-setup/stations/${id}/print`, { slipMm });
+
 export const removeKotStation = (hotelId: string, id: string): Plain =>
   plainPost(`${KOT(hotelId)}/stations/${id}/remove`, {});
 
@@ -1809,6 +1863,9 @@ export interface DayEnd {
   /** Bills given free, NC, that day (D27-351): no value, left out of every
       figure in `summary`. */
   noCharge?: NoChargeBill[];
+  /** Paid bills whose payment mode was changed (D27-363); afterDayEnd: after the drawer was counted. */
+  modeChanges?: { orderNo: string; table: string | null; from: string; to: string; amount: number;
+    reason: string; by: string | null; at: string; afterDayEnd: boolean }[];
   movements: {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */

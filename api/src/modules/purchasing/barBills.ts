@@ -85,7 +85,7 @@ barBills.get("/:code/bar/purchases", async (c) => {
     }>(
       `select p.id::text, p.supplier, p.bill_no, to_char(p.bill_date, 'YYYY-MM-DD') as bill_date, p.tp_no,
               p.handling::text, p.tcs::text, p.bill_total::text,
-              s.full_name as recorded_by, to_char(p.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
+              s.full_name as recorded_by, app.hotel_clock(p.hotel_id, p.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
               (select a.id::text from attachments a
                 where a.hotel_id = p.hotel_id and a.subject_table = 'bar_purchases'
                   and a.subject_id = p.id order by a.uploaded_at desc limit 1) as photo_id,
