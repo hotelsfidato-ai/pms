@@ -1807,15 +1807,17 @@ hold `const USER = "front desk"`** (MEMORY 256) — named, not yet fixed.
 ## 7 · Working on this machine — the traps
 
 ```
-this PC         Since 9 Oct the project is C:\Users\rozar.ROZARIO\pms (was D:\fidato pms).
-                Docs still say D:; read them with this folder in its place. The database
-                scripts default PGBIN to D: (MEMORY 390): by hand, run them with
-                PGBIN=C:/Users/rozar.ROZARIO/pms/.local/pg/pgsql/bin; the gates set it.
+this PC         Since 12 Oct the project is back on the desktop, D:\fidato pms
+                (LAPTOP-HANDOVER.md; 9-11 Oct it was on the laptop, C:\Users\rozar.ROZARIO\pms).
+                The database scripts default PGBIN to .local\pg\pgsql\bin (MEMORY 390).
                 git is C:\Program Files\Git (not on PowerShell's PATH; Git Bash has it).
 Postgres        .local\pg, 17.11, port 55432, password pw, UTF8, C collation. Does NOT
-                restart after a reboot. Start it through WMI (MEMORY 325), PowerShell on
-                this PC, then pg_isready -h 127.0.0.1 -p 55432:
-                Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '"C:\Users\rozar.ROZARIO\pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "C:\Users\rozar.ROZARIO\pms\.local\pg\data" -l "C:\Users\rozar.ROZARIO\pms\.local\pg\pg.log" -w -t 120 start' }
+                restart after a reboot. Only the master starts it: through WMI under a
+                keeper that stays alive, with -t 900 (recovery after an unclean stop takes
+                minutes), PowerShell on this PC, then poll pg_isready -h localhost -p 55432:
+                $cmd = 'powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -Command "& ''D:\fidato pms\.local\pg\pgsql\bin\pg_ctl.exe'' -D ''D:\fidato pms\.local\pg\data'' -l ''D:\fidato pms\.local\pg\pg.log'' -t 900 start; while ($true) { Start-Sleep -Seconds 86400 }"'
+                Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = 'D:\fidato pms\.local\pg' }
+                Never from a background shell command: it dies with it (MEMORY 325).
                 From Git Bash pg_ctl never returns — the server IS up; check with psql.
                 PostgreSQL 16.15 for the pg16 gate: .local\pg16 (its own cluster, 55433).
 servers         In the Claude desktop app, start them with the Browser pane's
@@ -1836,6 +1838,16 @@ browser pane    An emulated viewport breaks screenshots and click coordinates.
                 Measure with JS instead, and reset to "desktop" before clicking.
 console         The pane keeps old errors across reloads. Log a MARK, reload,
                 and read only what comes after it before calling anything broken.
+printing PC     A browser marked as a printing computer (localStorage pms.kot-device,
+                set by a manual picture or a test of the KOT section) prints by itself
+                on the Kitchen screen, and the print dialog freezes the pane's tab.
+                Open /signin and run localStorage.removeItem("pms.kot-device") (25 Oct).
+pictures        shoot.mjs starts its own headless Chrome; once in a while it says
+                "Chrome did not start". Nothing holds the port: run it again (25 Oct).
+                Run release.mjs ONCE per release: each run rebuilds dist and renames
+                the website's bundle; name it from dist/index.html (MEMORY 431).
+long scripts    A long bash heredoc breaks in the Bash tool ("unexpected EOF"):
+                write the script to the scratchpad with the file tool, then run it.
 skills          impeccable and the taste skills are installed locally and
                 gitignored. Written guidance only — never run impeccable's binary.
 ```

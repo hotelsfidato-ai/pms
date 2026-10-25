@@ -29,6 +29,21 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-39 · The "Download Fidato Printer" button downloaded the app's web page - FIXED on release 13 (not live yet), the owner's D27-362
+
+**Found** - 25 October, by the master, hosting the installer for release 13: since release 12 took the
+installer out of the website (MEMORY 426), `KotSection.tsx`'s link `/downloads/Fidato-Printer-Setup.exe`
+reached Firebase's catch-all rewrite and got the app's `index.html`, 200 text/html, saved under the
+installer's name (MEMORY 430).
+
+**What was done** - `deploy/nginx.conf` serves that one file from `/var/www/fidato-downloads/` on the API's
+server; the button reads the API's address from `config.json` (`apiBase()`). The owner copies each build
+of `printer/dist/Fidato-Printer-Setup.exe` there, as a step of the release.
+
+**The rule it leaves** - a download link is checked for what it returns, not for being there: behind a
+single-page rewrite a missing file answers 200. `kotSetup.test.tsx` reads the link's address from the
+API base.
+
 ### POS-38 · With a discount or a round off, the printed bill did not add up - FIXED 15 October (the owner's D27-334)
 
 **Found** - 15 October, by the master, reading `BillSlip.tsx` for the owner's "a normal
@@ -538,6 +553,10 @@ it is quoted here so the lesson is visible without opening the file.
 - **250** · Any clerk could switch a hotel's modules on or off
 - **251** · A refused receptionist was told "There is no menu yet"
 - **260** · The restaurant's own roles could not see the restaurant — The rule: a comment that says who a screen is for is a claim — test it against that role's actual menu.
+- **424, 427** · KOTs sideways from the roll fix, and a printer app "tested" through the PDF path — The rule: test printing through the path the printer takes; each printing computer has its shortest slip and a test KOT.
+- **428** · KOT times and about 40 other clock times printed in GMT — The rule: a clock time shown to a person goes through `app.hotel_clock`, and a test reads it back in a UTC database.
+- **430** · The live download button fetched the app's web page — The rule: when a file leaves the website, check what its old link returns.
+- **433** · New tables cleared after their parent in the property reset — The rule: place a new table above every table it references; run `resetOrder.test.ts`.
 
 ---
 

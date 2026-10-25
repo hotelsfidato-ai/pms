@@ -6539,6 +6539,67 @@ copy will see of theirs.**
 
 ---
 
+### 434 · MINE: a running balance whose rows did not add up - the Bar store's sheet (25 October)
+
+Release 13 gave the Bar store a sheet: Opening, Received, To the counter, Closing. Its Closing is the book, so a
+breakage, wastage or count correction in the store changed it with no column to show why: 60 in, 10 to the
+counter, closing 46. The Simple counter sheet had the same gap (Opening, From the store, Sold, Closing) since
+D27-356. Found setting up the manual's test stock; the owner chose a column (D27-364). **Fixed on release/r13
+(3816198f), not live yet:** "Other moves" = other + corrections - (sold or sent), so opening + received - the third
+column + other moves = closing, every row; `barStock.test.tsx` reads a store row with a breakage cell by cell.
+The paper layout keeps the paper's columns. **The rule:** a row that ends in a running balance shows every
+move that makes it; test it with a row that has a breakage and a correction, not only sales.
+
+---
+
+### 433 · MINE: two new tables cleared after the table they belong to, in the property reset (25 October)
+
+Release 12.1's `pos_tender_changes` and `pos_requests` both reference `pos_orders`. I put them after it in
+`reset-property.ts`'s CLEAR list, so the reset deleted the parent first and the foreign keys refused it;
+`resetOrder.test.ts` caught it before any commit. Same family as 422 (a new table left out of the reset): the reset
+is the one place every new trading table has to be named, and in the right place. **Fixed** (in release 12.1):
+both cleared before `pos_orders`. **The rule:** a new table goes into the CLEAR list above every table its foreign
+keys point at; read its `references` lines, then place it; run `resetOrder.test.ts`.
+
+---
+
+### 432 · MINE: a migration numbered before knowing which release ships first (25 October)
+
+Release 13's migration was written as 237 on cp6 (3048dbe7). Release 12.1 then had to ship first, from release 12,
+and I first named its migration 238 to stay out of the way: `migrationNumbers.test.ts` refused the gap (no 237 on
+that branch). Named 237, it then met release 13's 237 when 12.1 joined cp6. **Fixed:** 12.1 is 237, release 13
+renumbered 238 with its test class list (`app.test_hotel_classes`) taking 237's tables. **The rule:** a migration's
+number is the next free one on the branch it SHIPS from; when a smaller release jumps the queue, the waiting
+release's migration is renumbered in the same commit that joins them, and its class list re-read.
+
+---
+
+### 431 · MINE: the release script run twice, and the second run renamed the website's bundle (25 October)
+
+For release 12.1 I ran `node scripts/release.mjs release/r12-1` a second time to re-read its output. Every run
+rebuilds `dist`, so the website's bundle went from `index-Cz4sjL9T.js` to `index-DB0xQJQz.js`. The first printout
+was still on screen; steps written from it would have told the owner to expect a file the site never loads, and
+the "is the new site live" check would have failed on a good deploy. Caught by reading `dist/index.html` in the
+copy before writing the steps. **The rule:** the owner's steps name the bundle read from the release copy's
+`dist/index.html` AFTER the last run of the script, never from a printout; run it once, or re-read after each run.
+
+---
+
+### 430 · FOUND: since release 12 the live "Download Fidato Printer" button has downloaded the app's web page (25 October)
+
+Release 12's A7 failed because Firebase's free plan refuses an `.exe` (MEMORY 426), so the installer was taken out
+of the website. The button in Restaurant setup, KOT section, still pointed at
+`/downloads/Fidato-Printer-Setup.exe` on the website, and `firebase.json` rewrites every unknown path to
+`/index.html`: checked read-only on 25 October, that address answers **200, text/html**. A person pressing the
+button gets the app's page saved under the installer's name, which will not open. The app went to the BAR PC by
+hand, so nobody had pressed it. **Fixed on release/r13 (8179e629), not live yet:** nginx on the API's server
+serves `/downloads/Fidato-Printer-Setup.exe` from `/var/www/fidato-downloads/` and the button takes the API's
+address from `config.json`; the owner copies each build there. Until release 13 is live, send the app by hand.
+**The rule:** when a file leaves the website, check what its old link returns now; behind a single-page rewrite
+a missing file is not a 404, it is the app's page with a 200.
+
+---
+
 ### 429 · MINE: the bar's pour picker said "in the bar" for what the store holds (25 October)
 
 Release 13 (D27-361) split the one Bar store into the Bar store and the Bar counter, and every KOT now takes from
