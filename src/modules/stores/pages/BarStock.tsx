@@ -394,8 +394,12 @@ function PaperSheet({ sheet, draft, onDraft }: { sheet: BarSheet; draft: CountDr
   );
 }
 
+/* Other moves (the owner's D27-364): breakages, wastage, count corrections,
+   and whatever else left or came that the columns before it do not show - so
+   opening + received - the third column + other moves = closing, every row. */
 function SimpleSheet({ sheet, draft, onDraft }: { sheet: BarSheet; draft: CountDraft; onDraft: OnDraft }) {
   const store = sheet.place === "store";
+  const otherMoves = (d: SheetDrink) => d.other + d.corrected - (store ? d.sold : d.moved);
   return (
     <div className="overflow-x-auto scrollbar-quiet -mx-4 sm:mx-0" data-bar-sheet={store ? "store" : "simple"}>
       <table className="w-full border-collapse text-sm">
@@ -404,6 +408,7 @@ function SimpleSheet({ sheet, draft, onDraft }: { sheet: BarSheet; draft: CountD
             <th className={cn(TH, FIRST, "bg-grey-50 text-left")}>Drink</th>
             <th className={TH}>Opening</th><th className={TH}>{store ? "Received" : "From the store"}</th>
             <th className={TH}>{store ? "To the counter" : "Sold"}</th>
+            <th className={TH}>Other moves</th>
             <th className={TH}>Closing</th><th className={TH}>Counted</th><th className={TH}>Difference</th>
             <th className={TH}>Morning</th>
           </tr>
@@ -411,13 +416,14 @@ function SimpleSheet({ sheet, draft, onDraft }: { sheet: BarSheet; draft: CountD
         <tbody>
           {sheet.groups.map((g) => (
             <Fragment key={g.section}>
-              <SectionRow section={g.section} span={8} />
+              <SectionRow section={g.section} span={9} />
               {g.drinks.map((d) => (
                 <tr key={d.id} className="border-b border-grey-100">
                   <td className={cn(TD, FIRST, "text-ink-900 font-medium")}>{d.name}</td>
                   <td className={TD}>{held(d.opening, d, sheet.place)}</td>
                   <td className={TD}>{held(d.received, d, sheet.place)}</td>
                   <td className={TD}>{held(store ? d.moved : d.sold, d, sheet.place)}</td>
+                  <td className={TD}>{held(otherMoves(d), d, sheet.place)}</td>
                   <td className={cn(TD, "font-medium text-ink-900")}>{held(d.closing, d, sheet.place)}</td>
                   <td className={TD}>
                     {sheet.mayCount ? <CountBoxes d={d} draft={draft} onDraft={onDraft} place={sheet.place} />
@@ -637,7 +643,7 @@ function SheetLook({ code }: { code: string }) {
           <p className="text-base font-semibold text-ink-900">How the daily sheet looks</p>
           <p className="text-sm text-grey-600">
             {q.data.maySetFormat
-              ? "Like the paper register: NIP and ml, the 30, 60 and 90 ml sells, rate and amount. Simple: opening, received, sold, closing and the count."
+              ? "Like the paper register: NIP and ml, the 30, 60 and 90 ml sells, rate and amount. Simple: opening, received, sold, other moves, closing and the count."
               : "Set by the owner, an Admin or the GM."}
           </p>
         </div>

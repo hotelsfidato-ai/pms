@@ -50,6 +50,33 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-25 · Release 13: the bar's store and counter, as the excise registers keep it (D27-361); the printer installer from our server (D27-362)
+
+**Asked for:** the owner, 22 October, with photos of FORM FLR-1A/2A/3A and FLR-3: "2 places - the store where it's counted whole, and the counter ... the counter requested 5 bottles so the approval will be given to move ... closing count ... then the night audit, and the morning audit of stock". Answers (D27-361): a Bar store and a Bar counter, the counter asks and the GM or the Inventory Manager approves; counted three ways (poured, whole, packet); the night audit waits for the closing count, the GM may mark "Bar closed today"; a morning count by the bar manager; both registers like the paper; a NIP sold the day it is opened (to confirm with the CA); release 13, after 12. And D27-362: the Fidato Printer installer hosted on our server. Asked while the checks ran (D27-364): **"Other moves"** on the store's sheet and the Simple one, so every row adds up.
+
+**Shipped** (`release/r13`, on `release/r12-1`)
+- Migration 238: `locations.is_bar_counter` (one per hotel, made beside every Bar store, empty: it asks the store); `stock_items.count_as`, `pack_size`, `brand`, `liquor`, `imported`; `stock_count_lines.moment` (closing or morning); `bar_requests`, `bar_request_lines`, `bar_closed_days`; every KOT takes from the counter.
+- `barRequests.ts`: the counter asks; the GM or the Inventory Manager (owner, Admin) approves, never their own, and approving moves it store to counter in the same transaction. `barSheet.ts`: the sheet by place and moment. `stores.ts`: Add or change a drink. `nightAudit.ts`: a day with bar drinks waits for both places' closing count, unless the bar was marked closed.
+- Reports: Bar stock by place, with the counter's requests decided; `flr.ts`: FORM F.L.R.-1A/2A/3A (day) and F.L.R.-3 (month), screen and landscape PDF.
+- `BarStock.tsx`: Counter or Store, Closing or Morning count, Requests, "The bar did not open today", the register buttons, the drinks on Set up; Other moves on the store's and the Simple sheet (D27-364: opening + received - sold or sent + other moves = closing; the paper layout unchanged).
+- The installer: `deploy/nginx.conf` serves `/downloads/Fidato-Printer-Setup.exe` from `/var/www/fidato-downloads/` on the API's server; the KOT section's button takes the API's address from `config.json`.
+- Manual A9.11 (rewritten for two places), A11.9; pictures A9-42, A9-43 retaken, A9-44 new, A11-23 retaken, A11-24 new (the FLR-1A/2A/3A register).
+
+**Found**
+- The live download button has fetched the app's web page, not the installer, since release 12 took the file off Firebase (read-only: `pms.fidatohotels.com/downloads/Fidato-Printer-Setup.exe` answers 200 text/html). Fixed by the installer on our server, once the owner copies it there.
+- MEMORY 429: the pour picker said "in the bar" for the store's stock, and the pours' Saved message "off the bar's stock"; found on the manual's picture.
+- Live has no bar stock movement and no pours at any hotel (read-only), so nothing sits in a Bar store that the counter would have to ask for on the first day, and no night audit waits until a bar is used.
+
+**Proved**
+- In the browser (local, 5EL): the drinks set as whisky and strong beer; the store counted to whole bottles; the Inventory Manager asked twice, the GM approved one (the store 56 to 46, the counter 10 and 12); KOT 54 took 150 ml and two beers off the counter; the counter's sheet, the Bar stock report and FLR-1A/2A/3A read back (Imperial Blue: received 60, sold 5, closing 55 = 46 + 9 sealed); the download link reads the API's address.
+- The local store sheet with Other moves: every row adds up (60 - 10 - 4 = 46; 72 - 12 - 8 = 52; 6 - 0 - 1 = 5).
+- API bar stock 11/11 and 27 related API files 516/516 (3048dbe7); web bar stock 9/9 with the store row and the Simple row read cell by cell; the manual test and the stores screens 35/35; `kotSetup.test.tsx` 7/7. Full gates: below.
+
+**Left open**
+- The CA's word on a NIP counted as sold the day it is opened (D27-361).
+
+**Commits:** 3048dbe7, c40ebdb4, 8179e629 on cp6; a62a8c3b (`release/r13`)
+
 ## 2026-10-25 · Release 12.1: KOT times, the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
 
 **Asked for:** the owner, 25 October: the Fidato Printer app prints the KOTs sideways - find why, record it, and add a KOT testing and setting section; the KOT times are not accurate; the approvals: "if it is sent for approval the GM does not see it to approve"; and change a closed bill's payment mode before the night audit, by the GM, with a reason. "Plan all and fix all now." Answers (D27-363): KOTs sideways, bills fine; restaurant bills only; the GM, the owner or an Admin; a waiter SENDS the GM a strike of a sent dish, a discount, an NC or a void; the bell and Approvals at the top; release 12.1.

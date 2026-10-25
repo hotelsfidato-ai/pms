@@ -44,7 +44,10 @@ const SHEET = (place: Place = "counter"): BarSheet => ({
   format: sent.format, mayCount: true, maySetFormat: false, mayApprove: false, mayCloseBar: false,
   closedToday: null, pendingRequests: 0,
   groups: [{ section: "Deluxe Whisky", drinks: [
-    drink({ id: "d-blue", name: "Imperial Blue 180 ml", opening: 10, received: 48, sold: 3.667, closing: 54.333,
+    /* The store: 48 came, 3 went to the counter, one broke (D27-364). */
+    place === "store"
+      ? drink({ id: "d-blue", name: "Imperial Blue 180 ml", opening: 10, received: 48, moved: 3, other: -1, closing: 54, onHand: 54 })
+      : drink({ id: "d-blue", name: "Imperial Blue 180 ml", opening: 10, received: 48, sold: 3.667, closing: 54.333,
             sell: { nip: 2, p30: 3, p60: 2, p90: 1, ml: 300 }, rate: 900, amount: 3360, onHand: 54.333 }),
   ] }, { section: "Beer", drinks: [
     drink({ id: "d-kf", name: "Kingfisher Strong 650 ml", sizeMl: 650, countAs: "whole", poured: false, opening: 12, received: 24,
@@ -163,7 +166,10 @@ describe("today's sheet (D27-354)", () => {
     await screen.findByText("Imperial Blue 180 ml");
     fireEvent.click(screen.getByRole("tab", { name: "Bar store" }));
     await screen.findByText("To the counter");
-    expect(document.querySelector("[data-bar-sheet=store]")).toBeTruthy();
+    const store = document.querySelector("[data-bar-sheet=store]") as HTMLElement;
+    /* Other moves: the breakage, so the row adds up - 10 + 48 - 3 - 1 = 54 (D27-364). */
+    expect([...within(store).getByText("Imperial Blue 180 ml").closest("tr")!.querySelectorAll("td")]
+      .slice(0, 6).map((td) => td.textContent)).toEqual(["Imperial Blue 180 ml", "10", "48", "3", "-1", "54"]);
     expect(screen.queryByLabelText("Counted, Imperial Blue 180 ml, ml in the open one"), "the store counts whole").toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Morning count" }));
     fireEvent.change(screen.getByLabelText("Counted, Imperial Blue 180 ml, NIPs"), { target: { value: "54" } });
@@ -189,8 +195,8 @@ describe("today's sheet (D27-354)", () => {
     await screen.findByText("Imperial Blue 180 ml");
     const sheet = document.querySelector("[data-bar-sheet=simple]") as HTMLElement;
     const cells = [...within(sheet).getByText("Imperial Blue 180 ml").closest("tr")!.querySelectorAll("td")]
-      .slice(0, 5).map((td) => td.textContent);
-    expect(cells).toEqual(["Imperial Blue 180 ml", "10", "48", "3 + 120 ml", "54 + 60 ml"]);
+      .slice(0, 6).map((td) => td.textContent);
+    expect(cells).toEqual(["Imperial Blue 180 ml", "10", "48", "3 + 120 ml", "0", "54 + 60 ml"]);
   });
 });
 
