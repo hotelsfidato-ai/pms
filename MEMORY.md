@@ -6548,7 +6548,7 @@ The owner: *"the KOT times are not proper and accurate"*. Checked read-only on t
 The same bare `to_char(...HH24...)` is in about 40 places: when a bill was settled or opened, a struck line, the till's
 cash movements and day end, the front desk's drawer, deposits, company payments, a tax invoice's issue time, bar bills,
 banquet times. MEMORY 297 made this the rule a month ago (a time belongs to the PROPERTY; `app.hotel_clock`), and the API's
-test database runs in UTC to catch it - but no test ever read a printed time back. **The fix (25 Oct, in progress):** every one goes through
+test database runs in UTC to catch it - but no test ever read a printed time back. **Fixed (25 Oct, release 12.1, 5b4ea3a8):** every one goes through
 `app.hotel_clock(hotel, moment, format)`, and a test reads the source and fails on any `to_char` of a clock time that does
 not convert to the hotel's zone. **The rule:** a clock time shown to a person is formatted in the hotel's zone, always
 through `app.hotel_clock`; and a feature that prints a time has a test that reads the printed time back in a UTC database.

@@ -50,6 +50,33 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-25 · Release 12.1: KOT times, the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
+
+**Asked for:** the owner, 25 October: the Fidato Printer app prints the KOTs sideways - find why, record it, and add a KOT testing and setting section; the KOT times are not accurate; the approvals: "if it is sent for approval the GM does not see it to approve"; and change a closed bill's payment mode before the night audit, by the GM, with a reason. "Plan all and fix all now." Answers (D27-363): KOTs sideways, bills fine; restaurant bills only; the GM, the owner or an Admin; a waiter SENDS the GM a strike of a sent dish, a discount, an NC or a void; the bell and Approvals at the top; release 12.1.
+
+**Found** (MEMORY 427, 428)
+- KOT times 5 h 30 min behind on the live server (KOT 79 printed 18:21 at 23:51): the database there runs in GMT and the KOT's time, with about 40 other clock times, was formatted with no zone. Here, in Asia/Kolkata, every test looked right.
+- My test of the Fidato Printer app (22 Oct) saved PDFs - a path the printer never takes - and I called it tested end to end.
+- On the live server the approvals table had never held a row: most "ask the GM" acts (a strike after the KOT, a discount, NC, a void) simply refused the waiter, and nothing told the GM when a request did exist.
+
+**Shipped** (`release/r12-1`, on 11acb6d3)
+- Every clock time a person reads through `app.hotel_clock` (14 files); `hotelClock.test.ts` reads a KOT's time back in a UTC database and fails on any bare `to_char` of a clock time.
+- Migration 237: `pos_kot_stations.slip_mm` - each printing computer's shortest slip, 160 mm by default; Restaurant setup, KOT section: "Printing on <computer>", Print a test KOT, Print a test bill (`KotSection.tsx`, `printRoll.ts`, `KotStation.tsx`).
+- `pos_tender_changes` and `tenderChanges.ts`: a paid restaurant bill's cash, card or UPI changed before the night audit, kept, listed on the bill and the day end (`Till.tsx` "Change how it was paid", `DayEnd.tsx`).
+- `pos_requests`, `posRequests.ts`, approval kind `pos_request` with a rule for every hotel: the Till and the Terminal send the GM a strike, a discount, an NC or a void; `routes/approvals.ts` does it on approval through the till's own `strikeLine`, `discountOrder`, `noChargeBill`, `voidBill` (pulled out of their routes); the bell counts waiting requests (`notifications.ts`); Approvals moved to the home group and refreshes every 15 s.
+- `release.mjs` puts no installer in the website and refuses any executable in `dist` (MEMORY 426).
+- Manual A1.10, A8.7, A8.10, A12; pictures A8-41, A8-42, A12-16, A12-01 retaken.
+
+**Proved**
+- In the browser (local): the waiter's strike sent ("Sent to the GM, waiting"), the GM's menu with Approvals second, the bell "2 requests waiting for your approval", the card with the request, Approve struck the dish; the GM changed a paid bill UPI to card and the bill and the day end showed it; the printing card on a printing computer.
+- API: `sentToTheGm` 6/6, `hotelClock` 2/2, KOT section 88/88, pos, finance, purchasing, equipment, role gate, reset 750/750. Web: printing 4/4, KOT section, the Till's strike as the GM and a waiter's send; types clean.
+- **Full gates** on `release/r12-1` at e754c8be in its clean copy, ONE complete run alone (run 1580-13754-1, finished): web types, API types, strip, web tests 1,414, API tests 2,838, database 1,779 assertions, replay (237 migrations), Postgres 16 - all exit 0. `release.mjs`: no executable in `dist`, website `index-DB0xQJQz.js` (a second run of the script rebuilt it; the first build was `index-Cz4sjL9T.js`). Steps `.local/release-12-1-steps.md` sent.
+
+**Left open**
+- Release 13 (the bar's store and counter, D27-361) joined into cp6 with its migration renumbered 238; its manual is still to write.
+
+**Commits:** 5b4ea3a8, 3bea7a02, 66841077, c9819f3d, e754c8be (release/r12-1); 0d3e3f96 and c2d38cc9 on cp6
+
 ## 2026-10-22 · The Fidato Printer app: KOTs and bills with no window (D27-360)
 
 **Asked for:** the owner: *"use the KOT as a native system ... don't want the windows to show up ... it needs to just print, but the Google print things come"* - the KOT station's Chrome (`--kiosk-printing`) prints by itself but flashes its print screen. Answers (D27-360): a Fidato Printer app, the unknown-publisher warning accepted for now, named "Fidato Printer" (the old shortcut too), out with release 12.

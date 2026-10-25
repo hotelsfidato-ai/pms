@@ -759,6 +759,14 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **25 October: RELEASE 12.1 READY, the owner's to type** - `release/r12-1` at **e754c8be** on live 11acb6d3 (D27-363:
+> KOT times on the hotel's clock, MEMORY 428; each printing computer's shortest slip, 160 mm, with a test KOT and bill;
+> a waiter sends the GM a strike, discount, NC or void, approving does it, the bell and Approvals at the top; a paid
+> bill's cash/card/UPI changed before the night audit; migration 237). ONE complete gate run green (run 1580-13754-1),
+> website `index-DB0xQJQz.js`, no executable in dist; steps `.local/release-12-1-steps.md` (sent). Release 13 (the
+> bar's store and counter) is joined into cp6 with its migration renumbered 238; its manual text is drafted, its
+> pictures and gates are next.
+
 > **22 October, evening: RELEASE 12 LIVE, typed by the owner (D27-350).** Checked read-only: GitHub `main` and the
 > server at `11acb6d3`, API restarted 15:59 IST and healthy, migration 236 applied, Amrapali fresh (business date 22 Oct,
 > 0 bookings, 0 orders), website `index-BioGCyra.js` (seen loading live after the service worker updated). The first A7

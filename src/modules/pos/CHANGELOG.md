@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-25 · Release 12.1: the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
+
+**Shipped** Each printing computer's shortest slip (160 mm by default) with a test KOT and a test bill in the KOT section. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void (`posRequests.ts`); approving in Approvals does it through `strikeLine`, `discountOrder`, `noChargeBill`, `voidBill`. A paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin (`tenderChanges.ts`), listed on the bill and the day end. The KOT's time on the hotel's clock. **Proved** `sentToTheGm.test.ts`, `kotSection.test.ts`, `printRoll.test.ts`, `kotSetup.test.tsx`, `restaurantFixes.test.tsx`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-22 · The Fidato Printer app (D27-360)
 
 **Shipped** `printRoll` prints through `window.fidatoPrinter` when the page runs in the Fidato Printer app (`printer/` at the root): no window, no print screen; `KotStation` awaits each slip. Restaurant setup's KOT section offers the app's download first, the setup file second; the setup file's shortcut is called Fidato Printer. **Proved** `printRoll.test.ts`, `kotSetup.test.tsx`; the built app printed four slips by itself on this PC. The root `CHANGELOG.md` has the whole entry.
