@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Plus, Printer, Receipt } from "lucide-react";
 import { downloadKotSetup } from "@/modules/pos/lib/kotSetupFile";
+import { apiBase } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
   Section, Card, CardBody, Button, Checkbox, Skeleton, StatusPill, toast,
@@ -103,14 +104,16 @@ export function KotSection({ hotelId }: { hotelId: string }) {
 type Run = (write: Promise<Done>, done: string) => Promise<boolean>;
 
 /* ── 1a. Setting up the computer (D27-299, D27-360) ───────────────── */
-/* The Fidato Printer app (printer/, put into the website's /downloads/ by
-   scripts/release.mjs) prints with no window and no print screen. The one
+/* The Fidato Printer app (printer/) prints with no window and no print
+   screen. It is downloaded from the API's server, not the website, whose
+   host refuses executables (MEMORY 426, D27-362; deploy/nginx.conf). The one
    Windows file, made for this hotel, stays as the other way: a Chrome
    shortcut, the receipt printer as the default, Startup, no sleep - then
    this section. lib/kotSetupFile.ts. */
 const PRINTER_APP = "/downloads/Fidato-Printer-Setup.exe";
 
 function OneClickSetup({ code }: { code: string }) {
+  const base = useQuery({ queryKey: ["api-base"], queryFn: apiBase, staleTime: Infinity });
   const get = () => {
     try {
       const name = downloadKotSetup(window.location.origin, code);
@@ -129,7 +132,7 @@ function OneClickSetup({ code }: { code: string }) {
         and tick what it prints. Pick the receipt printer from its icon by the clock: Printer.
       </p>
       <Button asChild className="w-full sm:w-auto">
-        <a href={PRINTER_APP} download>
+        <a href={base.data ? `${base.data}${PRINTER_APP}` : undefined}>
           <Download className="size-4" aria-hidden /> Download Fidato Printer for Windows
         </a>
       </Button>

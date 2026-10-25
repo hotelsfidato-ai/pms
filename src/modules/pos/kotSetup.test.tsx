@@ -72,6 +72,7 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
 
   it("downloads the file made for the hotel in view", async () => {
     const setup: KotSetup = { kinds: [], stations: [], sections: [], billPrinter: null, me: null };
+    vi.spyOn(apiModule, "apiBase").mockResolvedValue("https://api.example.test");
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
       if (url.split("?")[0] === `/api/hotels/${HOTEL}/till/kot-setup`) return setup as never;
       throw new apiModule.ApiError(500, "Request failed (500).");
@@ -92,9 +93,9 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    /* The Fidato Printer app first (D27-360); the setup file is the other way. */
+    /* The Fidato Printer app first (D27-360), from the API's server (D27-362); the setup file is the other way. */
     expect((await screen.findByRole("link", { name: /Download Fidato Printer for Windows/ })).getAttribute("href"))
-      .toBe("/downloads/Fidato-Printer-Setup.exe");
+      .toBe("https://api.example.test/downloads/Fidato-Printer-Setup.exe");
     fireEvent.click(await screen.findByRole("button", { name: /download the setup file/i }));
 
     expect(click).toHaveBeenCalledTimes(1);
