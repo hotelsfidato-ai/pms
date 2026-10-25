@@ -211,6 +211,10 @@ closed; its API is not), `PUT /:code/room-types/:id/rate`,
 `rate: READ`), and `POST /:code/restrictions`. Brought to the owner as one
 question.
 
+**Closed (checked 25 October):** every one of them is gated now - `PRICE` (`rate: edit`) for the pricing,
+room-type rate and rate-plan writes, `RESTRICTION` for restrictions (`api/src/roleGate.ts` 545-556); the role
+gate refuses any write it has no rule for.
+
 **The rule** — A screen that WRITES may not be gated on a grant that only says
 `view`, and a guard on the screen is half a guard: the write refuses too.
 
