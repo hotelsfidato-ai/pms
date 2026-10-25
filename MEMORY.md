@@ -6,7 +6,7 @@ Every entry here cost something. Read it before you repeat it.
 `src/modules/<service>/DEFECTS.md` — every defect found in that service, what
 was done about it, and the rule it leaves. Read it before editing that service;
 it is how a solved problem stays solved. This file keeps the lessons that apply
-to the whole project, numbered plainly; 276 is the last. Each service's file
+to the whole project, numbered plainly; 434 is the last (25 October). Each service's file
 also indexes the entries here that concern it, with their rules quoted.
 
 ```
@@ -20,24 +20,32 @@ reputation REV · loyalty LOY · guest-services GS · equipment EQ
 
 ---
 
-## Ten faults that repeat
+## The faults that repeat
 
-167 entries below is a reference, not a reading list. These are the patterns
-that have recurred, with the count and the check that would have caught each.
+Over four hundred entries below are a reference, not a reading list. These are the patterns
+that have recurred, with the entries and the check that would have caught each. Rows 1-10 were
+written at about entry 122; the audit of 25 October re-read every entry, added the later ones and
+rows 11-16.
 **If you read nothing else here, read this.**
 
 | # | The fault | Seen | The check |
 |---|-----------|------|-----------|
-| 1 | **Answered from memory instead of the file.** Quoted a function, a screen, a limit or a schema I had not opened. | 32 · 64 · 78 · 85 · 87 · 90 · 91 · 108 | Open the file in the same turn you describe it. |
+| 1 | **Answered from memory instead of the file.** Quoted a function, a screen, a limit or a schema I had not opened. | 32 · 64 · 78 · 85 · 87 · 90 · 91 · 108 · 217 · 262 · 275 · 309 · 311 · 312 · 358 · 385 · 396 | Open the file in the same turn you describe it. |
 | 2 | **Claimed it worked without opening the screen.** Typecheck, tests and build all clean; the page was blank, inert, clipped, or signed the clerk out. | 19 defects | Open the screen. Every time, at 375px, and with the server stopped. |
-| 3 | **Test debris left in the shared demo database.** Phantom guests and bookings nobody can tell from real ones. | 27 · 41 · 54 · 79 · 100 · 112 · 114 · 115 · 116 | Count rows before and after a run — do not grep for teardowns. |
-| 4 | **A test that could not fail.** Vacuous assertion, swallowed error, filtered exit status, wrong verb. | 8 · 18 · 22 · 25 · 34 · 37 · 47 · 84 · 97 · 111 | Break it on purpose and watch it go red. |
-| 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 | A dash is honest; a zero is a claim. Derive it or show a dash. |
-| 6 | **A rule written in N places, wrong in one.** The copy nobody remembered was the one that ran. | 30 · 65 · 96 · 102 | Grep the constant before you write the second copy. One definition. |
-| 7 | **Order of operations against a guard.** Resized before moving, deleted a parent before a child, re-enabled a trigger mid-teardown. | 101 · 103 · 104 · 115 | A teardown is a migration run backwards, with the same ordering rules. |
+| 3 | **Test debris left in the shared demo database**, or the API tests run with plain `vitest` against it. Phantom guests and bookings nobody can tell from real ones. | 27 · 41 · 54 · 79 · 80 · 100 · 112 · 114 · 115 · 116 · 120 · 289 · 292 · 319 · 361 · 372 · 393 · 394; plain vitest: 196 · 221 · 277 · 373 | Count rows before and after a run — do not grep for teardowns. |
+| 4 | **A test that could not fail.** Vacuous assertion, swallowed error, filtered exit status, wrong verb. | 8 · 18 · 22 · 25 · 34 · 37 · 47 · 84 · 97 · 111 · 141 · 166 · 173 · 178 · 195 · 204 · 207 · 210 · 234 · 259 · 270 · 295 · 304 · 308 · 318 · 342 · 367 · 419 | Break it on purpose and watch it go red. |
+| 5 | **Invented a number.** A price, a total, an occupancy, a zero standing in for "nobody knows". | 5 · 35 · 43 · 58 · 63 · 65 · 68 · 106 · 138 · 246 · 266 | A dash is honest; a zero is a claim. Derive it or show a dash. |
+| 6 | **A rule written in N places, wrong in one.** The copy nobody remembered was the one that ran. | 30 · 65 · 96 · 102 · 143 · 164 · 179 · 184 · 186 · 188 · 205 · 219 · 249 · 306 · 307 · 371 | Grep the constant before you write the second copy. One definition. |
+| 7 | **Order of operations against a guard.** Resized before moving, deleted a parent before a child, re-enabled a trigger mid-teardown; a new table left out of the property reset, or put above its parent. | 101 · 103 · 104 · 115 · 239 · 368 · 404 · 422 · 433 | A teardown is a migration run backwards, with the same ordering rules; `resetOrder.test.ts`. | A teardown is a migration run backwards, with the same ordering rules. |
 | 8 | **Blamed the code for the environment**, or broke the environment myself. Empty database, stale API, TLS interception, a contaminated reproduction, a destructive measurement. | 72 · 77 · 92 · 94 · 95 · 109 · 119 | Reproduce twice from clean. Measure on a scratch copy, never the live one. |
 | 9 | **Guessed the schema instead of querying it.** Constraint values, column names, a uuid column fed a slug. | 13 · 28 · 67 · 82 · 83 · 113 | `\d table` costs one command. Column POSITION is not column NAME. |
-| 10 | **Built every piece and never wired the act.** The endpoint, the function and the screen all existed; nothing called them. | 16 · 24 · 81 · 118 | Trace the click through to the write before calling it done. |
+| 10 | **Built every piece and never wired the act.** The endpoint, the function and the screen all existed; nothing called them, or the link led nowhere. | 16 · 24 · 81 · 118 · 135 · 213 · 222 · 224 · 225 · 227 · 261 · 306 · 308 · 310 · 375 · 430 | Trace the click through to the write before calling it done; open every link a change touches. |
+| 11 | **A migration that cannot replay, or a number taken twice.** A constraint narrowed again on replay, an object made by the wrong owner, two chats or two releases on one number. | 117 · 123 · 124 · 162 · 175 · 179 · 284 · 293 · 299 · 317 · 364 · 403; numbers: 282 · 301 · 302 · 314 · 324 · 350 · 370 · 432 | `db/tests/rerun.sh` replays every migration twice; `migrationNumbers.test.ts`; the number is the next free one on the branch it SHIPS from. |
+| 12 | **The wrong clock.** The wall clock for the business date; a time printed in the server's zone; a test that passes only at some hours. | 19 · 20 · 26 · 44 · 98 · 147 · 158 · 253; zone: 297 · 428; hours: 150 · 395 · 416 | The business date from `app.business_date`; a printed time through `app.hotel_clock`, read back in the UTC test database; tests pin their clock. |
+| 13 | **A gate result misread, stale or mixed.** A red run read as green, a figure from before the last edit, two runs added together, a bundle named from an old printout. | 196 · 203 · 274 · 285 · 300 · 327 · 335 · 337 · 344 · 368 · 376 · 378 · 425 · 431 | One complete `scripts/gates.sh` run, alone, on the commit that ships; read every exit code; name the bundle from `dist/index.html` after the last build. |
+| 14 | **A server script first run on the real server.** Not executable, Linux paths, SELinux, the wrong user, TLS lost on upgrade. | 90 · 187 · 188 · 189 · 190 · 191 · 192 · 197 · 198 · 209 · 211 · 212 · 233 · 235 · 236 · 237 · 238 · 239 · 240 · 245 · 380 | Run every command the owner will type in a Linux copy first, or say plainly it was not run. |
+| 15 | **Parallel chats stepping on each other.** Another chat's files committed, a shared number or folder, a helper writing over unfinished work. | 281 · 286 · 320 · 330 · 338 · 343 · 346 · 348 · 370 · 387 · 409 · 421 | Each chat in its own copy; stage files by name, never a folder; ask what each tool in a copy will see of the others. |
+| 16 | **Printing tested off the printer's path.** The app shell on the invoice, the page size not set, a slip turned sideways, a PDF taken for the printer. | 39 · 423 · 424 · 427 | Test through the path the printer takes, on the computer that prints: Restaurant setup, KOT section, Print a test KOT. |
 
 Two habits sit under all ten: **read the source in the turn you describe it**,
 and **measure rather than infer**. Nine of the ten were caught by an audit or by
@@ -4405,6 +4413,8 @@ checking what actually ran.
 
 ### 198 · The API gate cannot run on the server it tests
 
+**Closed (checked against the code, 25 October audit):** the API gate finds `psql` wherever it is (`api/scripts/with-test-db.sh`, the same search as `migrate.sh`).
+
 Found while confirming 196. `api/scripts/with-test-db.sh` hardcodes:
 
 ```sh
@@ -5106,6 +5116,8 @@ how I searched — 196 was the first.
 
 ### 218 · Housekeeping never refreshes itself — DEFERRED by the owner
 
+**Closed (checked against the code, 25 October audit):** HK-1 (`src/modules/housekeeping/DEFECTS.md`): the board refreshes itself every 30 seconds since 17 September.
+
 Reported as *"the housekeeping thing in the backend is very slow"*, on
 the **deployed** system.
 
@@ -5260,6 +5272,8 @@ file — `npm test -- <path>` passes the path through.
 
 ### 222 · The approvals engine has never had a caller, and still does not
 
+**Closed (checked against the code, 25 October audit):** the approvals engine has callers: equipment, cashier, purchasing, the till, and the restaurant's requests to the GM (`app.request_approval` in `api/src/modules/*`, release 12.1).
+
 Asked to wire "approvals for discounts above a threshold", I went looking
 for where a discount would raise one and found that **nothing anywhere
 raises one at all**:
@@ -5413,6 +5427,8 @@ it is a guess about what is in between.
 ---
 
 ### 227 · Deleting a menu entry opened an admin route — the guard fails open
+
+**Closed (checked against the code, 25 October audit):** `mayReach` refuses a path no menu entry covers (`src/components/app/navigation.ts`, 195f45d7, D27-275).
 
 Found by auditing the navigation against itself: **two entries read
 "Properties"** after the two screens were merged. I removed one. A test
@@ -6149,6 +6165,8 @@ administrator — and a refusal answers 403, not 200 (defect 231).
 
 ### 251 · A refused receptionist was told "There is no menu yet"
 
+**Closed (checked against the code, 25 October audit):** POS-4 (`src/modules/pos/DEFECTS.md`): a server fault on the till's reads says so, not "no menu".
+
 The till's reads (`getMenu`, `listOrders`, `getFloor`…) end in
 `catch { return [] }`, so EVERY failure is an empty list — including the
 server's 403 with a sentence in it. With the reception switch off, the till
@@ -6213,6 +6231,8 @@ file in the scratchpad and `git commit -F <that file>`, which is what landed
 ---
 
 ### 256 · Every report printed one hotel's name, and the wrong person's
+
+**Closed (checked against the code, 25 October audit):** the document's identity comes from the property in view and the person signed in (`src/lib/documentIdentity.ts`); no literal hotel name or `USER` is left in `src`.
 
 `ReportShell` defaulted `property` to the literal `"5 Elements By Fidato
 Hotels"` and its footer printed the literal `"front desk"`. **No caller has
@@ -6485,6 +6505,8 @@ wrong — the break or the test — before calling it either way.**
 ---
 
 ### 271 · Every deploy re-creates the placeholder administrator once it has been deleted
+
+**Closed (checked against the code, 25 October audit):** ADM-3 (`src/modules/admin/DEFECTS.md`).
 
 `008_seed.sql` seeds `REPLACE@fidato.in` as an active group administrator,
 guarded by `on conflict (email) do nothing` — and every deploy replays every
@@ -8028,6 +8050,8 @@ take one nobody names, write it in your claim).**
 
 ### 313 · MINE: I proved the spa bills a treatment with a GST rate no screen can set
 
+**Closed (checked against the code, 25 October audit):** `tax.ts` sets a rate for `spa` (`TAX_KINDS`).
+
 21 September. Closing a treatment (D18-22) bills it under the spa's OWN GST
 rule (D18-21), and refuses where a property has none — both proved by my
 test that morning. To get the rule, the test inserted a `tax_rules` row with
@@ -8680,6 +8704,8 @@ line of its own. And after a push, `git log -1` must show the commit you meant.*
 
 ### 287 · A demo script, run from a chat's copy, began tearing down the main database
 
+**Closed (checked against the code, 25 October audit):** `load-demo.ts` takes its database from `databaseForScript` (`api/scripts/scriptDatabase.ts`).
+
 17 September. The Channel manager chat ran `scripts/load-demo.ts` in its own
 copy (`D:\fidato-channel-manager`). The script never reads the copy's
 `api/.env`. It connects to `SUPER_DATABASE_URL`, or else to
@@ -8968,7 +8994,9 @@ summary line is not the result.**
 
 ---
 
-### Open · two "in house" numbers for the same moment
+### Closed · two "in house" numbers for the same moment
+
+**Closed (25 October audit):** FD-1 (`src/modules/front-desk/DEFECTS.md`), fixed 17 September: one definition.
 
 The property page (`getTodaySnapshot`) said **In house now 11, Vacant 9** while
 the Dashboard and the Rooms screen (stay-view counts) said **10** and **7**,

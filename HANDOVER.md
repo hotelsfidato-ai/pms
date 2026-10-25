@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **25 October: RELEASE 12 IS LIVE** (11acb6d3, migration 236, website `index-BioGCyra.js`). **Release 12.1** is
+> with the owner to type (`release/r12-1`, e754c8be, migration 237, `.local/release-12-1-steps.md`). **Release 13**
+> (the bar's store and counter and the FLR registers, D27-361; the installer from our server, D27-362; Other moves,
+> D27-364) is `release/r13` (705d8e8c, migration 238), its full gates running. The notes below are older; § 3 is
+> the order of work. The records' audit of 25 October: open defects are in each service's `DEFECTS.md`; MEMORY's
+> "faults that repeat" table is current to 434; `PENDING.md` is stale and says so.
+
 > **20 October, 16:20: RELEASE 9 LIVE, typed by the owner (D27-350).** Checked read-only: GitHub `main` and
 > the server at `4854a272`, API restarted 16:16 and healthy, website `index-Dv6Uhg03.js`, backup
 > `fidato-20261020-104520.dump`. Every older release copy recycled (r2-r4, r6-r8, rooms, final, pos); r9's kept. The server's checkout
