@@ -444,7 +444,7 @@
   </div>
 
   <h3>Voiding a paid bill</h3>
-  <p>A bill paid by mistake (the wrong table, paid twice) can be voided by the owner, an Admin or the GM, on the day it was paid and before <span class="ui">Close restaurant day</span>. Nobody else sees the button.</p>
+  <p>A bill paid by mistake (the wrong table, paid twice) can be voided by the owner, an Admin or the GM, on the day it was paid and before <span class="ui">Close restaurant day</span>. Anyone else sees <span class="ui">Ask the GM to void this bill</span> and sends it (below).</p>
   <ol class="steps">
     <li>On the Till, tap the bill under <span class="ui">Settled today</span>.</li>
     <li>Tap <span class="ui">Void this paid bill</span> and type why.</li>
@@ -454,7 +454,7 @@
   <p>The bill keeps its number and reads <b>VOID</b>, with the reason, who and when; <span class="ui">Print the bill</span> prints it headed <b>Bill · VOID</b>. The kitchen's KOTs stay as they were: the food was made. The day's sales, the reports and the Day book leave a voided bill out, and its alcohol's VAT bill is cancelled with it. <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">Paid bills voided</span>. Its cash comes out of the restaurant's tin, so the tin's Expected leaves it out (A8.9); nobody's front-desk drawer is touched.</p>
 
   <h3>Giving a bill free: No charge (NC)</h3>
-  <p>A bill the hotel gives free - the owner's guests, a staff meal - is closed as NC by the owner, an Admin or the GM. Their name on it is the approval. Nobody else sees the button.</p>
+  <p>A bill the hotel gives free - the owner's guests, a staff meal - is closed as NC by the owner, an Admin or the GM. Their name on it is the approval. Anyone else sees <span class="ui">Ask the GM for NC</span> and sends it (below).</p>
   <ol class="steps">
     <li>On the Till (or the Terminal), open the bill. It must still be open.</li>
     <li>Tap <span class="ui">No charge (NC)</span> and type why.</li>
@@ -481,6 +481,31 @@
     <ol class="callouts"><li>NC · No charge at its head</li><li>Who approved it, and when</li></ol>
   </figure>
 
+  <h3>Sent to the GM: what a waiter or cashier may not do</h3>
+  <p>Four things are the owner's, an Admin's or the GM's: taking off a dish the kitchen already has, a discount, giving a bill free (NC), and voiding a paid bill. A waiter or a cashier does not wait for the GM to come to their screen: they <b>send it to the GM</b>, with a reason, and carry on.</p>
+  <ol class="steps">
+    <li>On the Till (or the Terminal), tap what you need: the dish's <span class="ui">X</span>, <span class="ui">Ask for a discount</span>, <span class="ui">Ask the GM for NC</span>, or, on a paid bill, <span class="ui">Ask the GM to void this bill</span>.</li>
+    <li>Type why. A discount: the percentage or amount, and why. A void paid by card or UPI: refund it on the card machine or the UPI app first, and type the refund's reference.</li>
+    <li>Tap <span class="ui">Send to the GM</span>. The bill says <span class="msg">“Sent to the GM, waiting: Strike 2 x Paneer Tikka (KOT 51) - Table 4 · bill …”</span>.</li>
+  </ol>
+  <p>The GM's bell counts it and <span class="ui">Approvals</span>, at the top of their menu, shows it (A12.3). When they <span class="ui">Approve</span>, it is done at once, as if they had pressed the button themselves: the dish comes off, the discount goes on, the bill is NC or void. The waiter's bill then says <span class="msg">“Approved by …”</span>. When they <span class="ui">Refuse</span>, with a reason, it says <span class="msg">“Not approved by … (the reason)”</span> and nothing changes.</p>
+
+  <h3>Changing how a paid bill was paid</h3>
+  <p>A bill paid by card but keyed as cash, or the other way round, is put right by the owner, an Admin or the GM, before the night audit closes its day. The amounts stay the same; only cash, card and UPI change into one another.</p>
+  <ol class="steps">
+    <li>On the Till, tap the bill under <span class="ui">Settled today</span>, then <span class="ui">Change how it was paid</span>.</li>
+    <li>For each part of the payment (a split bill has more than one), pick <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>.</li>
+    <li>Type why, and tap <span class="ui">Change it</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-42">
+    <img src="img/A8-42.png" alt="The Till: Change how bill 20261011-127 was paid, the payment of ₹336.00 set to Card, the reason box and Change it">
+    <figcaption><b>Figure A8-42.</b> Changing how a paid bill was paid.</figcaption>
+    <ol class="callouts"><li>Each part of the payment: cash, card or UPI</li><li>Why</li><li>Change it</li></ol>
+  </figure>
+
+  <p>The bill then reads, under <span class="msg">“Paid by card”</span>, <span class="msg">“Payment mode changed: UPI to Card, ₹336.00, by … at 18:50 - the reason.”</span> <span class="ui">Close restaurant day</span> lists it under <span class="ui">Payment mode changed</span>, marked <span class="msg">“after the drawer was counted”</span> where it was.</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -494,12 +519,14 @@
       <li><b>A bill charged to a room is never voided here</b>: <span class="msg">“This bill went to room 201 - reverse it on the guest's bill.”</span> A bill on a banquet function is reversed on the function's bill.</li>
       <li><b>The same day only</b>: a void on a later day, or once the day is closed, is refused: <span class="msg">“The restaurant's day is closed and its drawer counted. A bill of a closed day cannot be voided.”</span></li>
       <li><b>NC is for an open bill</b>, and cannot be undone. A paid bill is voided instead; a bill on a banquet function is paid on the function's bill and is never NC. An NC bill always says why: <span class="msg">“Say why this bill is no charge. The reason prints on the bill.”</span></li>
+      <li><b>Sent to the GM, asked again when they approve</b>: if the dish was struck meanwhile, or the bill paid, the GM is told why and it stays waiting: <span class="msg">“That line is already struck, or is not here.”</span> The same thing twice is refused: <span class="msg">“This is already with the GM.”</span> Nobody approves their own.</li>
+      <li><b>A payment mode</b> changes only on a paid bill of the day the night audit has not closed, and never to or from a room or a function, which are changed on the guest's or the function's bill. Cash of ₹2,00,000 or more on one bill is refused; more than ₹1,00,000 in cash needs the PAN the bill has: void it and settle it again with the PAN.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>.</p>
   </div>
 
   <!-- A8.8 -->
@@ -660,6 +687,20 @@
     <li><b>The other way, with Chrome:</b> <span class="ui">download the setup file</span> (<code>KOT-station-setup-&lt;code&gt;.cmd</code>). It lists the printers (type the receipt printer's number), makes it the default printer, puts a <b>Fidato Printer</b> shortcut that opens Chrome on the desktop and in Startup, stops the computer sleeping, and opens this section. Chrome prints without asking but shows its print screen for a moment.</li>
   </ul>
   <p>By hand instead, step by step: <code>src/modules/pos/KOT-STATION-SETUP.md</code>. If slips come out too wide, set the printer's paper to 80 mm once in its Printing preferences.</p>
+
+  <h3>Printing on this computer: the shortest slip, and a test</h3>
+  <p>On a computer that prints, the KOT section shows <span class="ui">Printing on</span> and its name. Each slip is as long as it needs, and never shorter than its <span class="ui">Shortest slip</span>: 160 mm unless you change it. A receipt printer turns a slip it takes for a landscape page, so a short KOT can come out sideways while the longer bills come out upright.</p>
+  <ol class="steps">
+    <li>On the printing computer, open <span class="ui">Restaurant setup</span>, the KOT section.</li>
+    <li>Tap <span class="ui">Print a test KOT</span>, and <span class="ui">Print a test bill</span>. They print exactly as the real ones do, marked as tests.</li>
+    <li>If the test KOT comes out sideways, type a longer <span class="ui">Shortest slip, mm</span> (180, 200), tap <span class="ui">Save</span>, and print the test KOT again. Blank puts it back to 160 mm.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-41">
+    <img src="img/A8-41.png" alt="The KOT section on Bar PC: Printing on Bar PC, the Shortest slip, mm box showing 160, Save, Print a test KOT and Print a test bill">
+    <figcaption><b>Figure A8-41.</b> Printing on this computer.</figcaption>
+    <ol class="callouts"><li>This computer's printing</li><li>The shortest slip, in mm</li><li>A test KOT</li><li>A test bill</li></ol>
+  </figure>
   <ul>
     <li><b>One computer per kind.</b> Ticking a kind on another computer moves it there; the old one stops printing it by itself. A reprint still waiting for the old one moves with the kind and prints on the new one, marked REPRINT (<span class="d">D27-330</span>); a new KOT sent before the move does not print there.</li>
     <li><b>One computer can print everything:</b> tick every kind and the bills on it. Each slip still says what it is.</li>
