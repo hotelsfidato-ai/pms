@@ -25,7 +25,7 @@
    ══════════════════════════════════════════════════════════════════ */
 import { spawnSync } from "node:child_process";
 import {
-  closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+  closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -209,16 +209,15 @@ function main() {
   }
   ok("npm run build:app passed (.env.production.local removed again)");
 
-  // The Fidato Printer installer (D27-360), built in printer/ and never
-  // committed, goes out with the website at /downloads/.
-  const installer = join(root, "printer", "dist", "Fidato-Printer-Setup.exe");
-  if (!existsSync(installer)) refuse(`${installer} is missing; build it first: cd printer; npm run dist`);
-  mkdirSync(join(copy, "dist", "downloads"), { recursive: true });
-  copyFileSync(installer, join(copy, "dist", "downloads", "Fidato-Printer-Setup.exe"));
-  ok("the Fidato Printer installer is in dist/downloads");
 
   // 5 · what the build holds
   const dist = join(copy, "dist");
+  // NO INSTALLER IN THE WEBSITE (MEMORY 426, D27-362): Firebase's free plan
+  // refuses an .exe, and release 12's A7 failed on it. The Fidato Printer
+  // installer goes to a printing computer by hand until our own server hosts
+  // it. Nothing executable may reach dist.
+  const executable = readdirSync(dist, { recursive: true }).map(String).filter((f) => /\.(exe|dll|msi|bat|cmd)$/i.test(f));
+  if (executable.length) refuse(`dist holds ${executable.join(", ")}; Firebase's free plan refuses executables. Take them out.`);
   const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
   const apiUrl = (() => { try { return JSON.parse(read(join(dist, "config.json"))).apiUrl; } catch { return "nothing"; } })();
   const js = readdirSync(join(dist, "assets")).filter((f) => f.endsWith(".js"))
