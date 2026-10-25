@@ -6539,6 +6539,18 @@ copy will see of theirs.**
 
 ---
 
+### 429 · MINE: the bar's pour picker said "in the bar" for what the store holds (25 October)
+
+Release 13 (D27-361) split the one Bar store into the Bar store and the Bar counter, and every KOT now takes from
+the counter. Bar stock, Set up, "What each drink takes from the bar" still labelled each drink
+"A9 Imperial Blue 180 ml - 46 bottles **in the bar**", but the 46 is the STORE's figure (the same `onHand` the
+drinks table shows under "In the store"); the counter held 9 + 30 ml. Not shipped: found on the A9-42 picture,
+taking the manual's pictures with real counter and store stock. Fixed in `BarStock.tsx`: "in the store"; and the search the rule below asks for found the pours' "Saved" message, "takes these off the bar's stock", now "off the Bar counter".
+**The rule:** when one place becomes two, search every screen for the old place's name ("the bar") and ask of
+each which place it now means.
+
+---
+
 ### 428 · FOUND: KOT times, and about 40 other clock times, printed in GMT - 5 h 30 min behind (25 October)
 
 The owner: *"the KOT times are not proper and accurate"*. Checked read-only on the live server: Amrapali's KOT 79 printed

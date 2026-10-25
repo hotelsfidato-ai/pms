@@ -579,13 +579,23 @@ export const SHOTS = [
   {
     id: "A9-42", title: "Bar stock, Set up", as: "General Manager",
     path: "/pos/5EL/bar-stock?part=setup",
-    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:What each drink takes from the bar", ms: 30000 }, { wait: 600 }],
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-bar-drinks]", ms: 30000 }, { wait: 600 }],
     marks: [
       { n: 1, at: "css:[role=tab][aria-selected=true]", side: "right" },
       { n: 2, at: "text:How the daily sheet looks", side: "left" },
-      { n: 3, at: "label:Poured from, A9 Imperial Blue 60 ml", side: "left" },
-      { n: 4, at: "label:ml or whole, A9 Imperial Blue 60 ml", side: "right" },
-      { n: 5, at: "css:main button[data-variant=primary]", side: "left" },
+      { n: 3, at: "css:[data-bar-drinks] thead th:nth-child(3)", side: "top" },
+      { n: 4, at: "text:Add a drink", side: "left" },
+    ],
+  },
+  /* D27-361: the counter asks the store. The Inventory Manager's ask waits; the GM sees both. */
+  {
+    id: "A9-44", title: "The counter asks the store", as: "General Manager",
+    path: "/pos/5EL/bar-stock?part=requests",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-bar-requests]", ms: 30000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "label:Drink, line 1", side: "left" },
+      { n: 2, at: "text:Waiting", nth: 0, side: "left" },
+      { n: 3, at: "text:Approve and move", nth: 0, side: "bottom" },
     ],
   },
   {
@@ -593,17 +603,17 @@ export const SHOTS = [
     path: "/pos/5EL/bar-stock",
     steps: [
       { clickIf: "text:Got it" }, { waitFor: "css:[data-bar-sheet]", ms: 30000 }, { wait: 600 },
-      { type: ["label:Counted, A9 Imperial Blue 180 ml, NIPs", "56"] },
+      { type: ["label:Counted, A9 Imperial Blue 180 ml, NIPs", "9"] },
       { type: ["label:Counted, A9 Imperial Blue 180 ml, ml in the open one", "0"] },
-      { type: ["label:Counted, A9 Kingfisher Strong 650 ml", "64"] }, { wait: 400 },
+      { type: ["label:Counted, A9 Kingfisher Strong 650 ml", "10"] }, { wait: 400 },
     ],
     marks: [
-      { n: 1, at: "css:#bar-sheet-day", side: "top" },
-      { n: 2, at: "css:[data-bar-sheet] thead tr:first-child th:nth-child(5)", side: "top" },
-      { n: 3, at: "css:[data-bar-sheet] thead tr:first-child th:nth-child(6)", side: "top" },
+      { n: 1, at: "text:Bar counter", side: "top" },
+      { n: 2, at: "text:Closing count", side: "top" },
+      { n: 3, at: "css:[data-bar-sheet] thead tr:first-child th:nth-child(5)", side: "top" },
       { n: 4, at: "label:Counted, A9 Imperial Blue 180 ml, NIPs", side: "top" },
       { n: 5, at: "text:-30 ml", side: "top" },
-      { n: 6, at: "css:main button[data-variant=primary]", side: "left" },
+      { n: 6, at: "css:main button[data-variant=primary]", side: "bottom" },
     ],
   },
 

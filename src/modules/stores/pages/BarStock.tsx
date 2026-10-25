@@ -831,7 +831,7 @@ function WhatEachTakes({ code, data }: { code: string; data: BarPours }) {
     }));
     setSaving(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
-    toast.success("Saved", "Each KOT sent now takes these off the bar's stock.");
+    toast.success("Saved", "Each KOT sent now takes these off the Bar counter.");
     void qc.invalidateQueries({ queryKey: ["bar-pours", code] });
     void qc.invalidateQueries({ queryKey: ["bar-sheet", code] });
   };
@@ -893,7 +893,7 @@ function WhatEachTakes({ code, data }: { code: string; data: BarPours }) {
                   <option value="">Nothing set</option>
                   {data.drinks.map((k) => (
                     <option key={k.id} value={k.id}>
-                      {k.name}{k.onHand !== null ? ` - ${bottlesAndMl(k.onHand, k.unit, k.sizeMl)} in the bar` : ""}
+                      {k.name}{k.onHand !== null ? ` - ${bottlesAndMl(k.onHand, k.unit, k.sizeMl)} in the store` : ""}
                     </option>
                   ))}
                 </NativeSelect>
