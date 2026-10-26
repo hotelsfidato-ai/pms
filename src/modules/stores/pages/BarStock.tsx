@@ -11,6 +11,7 @@ import {
   Segmented, StatusPill, toast, Dialog, DialogContent, Field, fieldProps, Checkbox,
 } from "@/components/ui";
 import { BarBills, BAR_RECORDERS } from "@/modules/purchasing";
+import { getModules } from "@/data/repositories";
 import { getBarPours, saveBarPours, type BarDish, type BarPours, type Pour } from "@/modules/stores/data/barPours";
 import {
   getBarSheet, saveBarCount, setSheetFormat, markBarClosed, undoBarClosed, downloadRegister,
@@ -62,6 +63,14 @@ export function BarStockBody({ code }: { code: string }) {
     if (p === "sheet") next.delete("part"); else next.set("part", p);
     return next;
   }, { replace: true });
+  /* Bar stock switched off at this hotel (D27-367): say so, not "did not load". */
+  const modules = useQuery({ queryKey: ["modules", code], queryFn: () => getModules(code), staleTime: 5 * 60_000 }).data;
+  if (modules?.["bar_stock"] === false) {
+    return (
+      <EmptyState icon={<GlassWater />} title="Bar stock is switched off at this property"
+        description="The owner or an administrator turns it on in Admin, Properties." />
+    );
+  }
 
   return (
     <div className="space-y-4">

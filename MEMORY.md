@@ -6561,6 +6561,20 @@ copy will see of theirs.**
 
 ---
 
+### 436 · MINE: a middleware imported across a circular import was undefined at load, and every bar bill route answered 404 (26 October)
+
+The Bar stock switch (D27-367) put one gate on every `/:code/bar/*` route. Purchasing's `barBills.ts` took it from the
+Store's front door (`../stores/index.ts`) and registered it at load time: `barBills.use("/:code/bar/*", barStockGate)`.
+The Store's front door imports purchasing back, so under vitest's module order `barStockGate` was still undefined when
+that line ran: Hono registered an empty middleware and `/bar/purchases` answered "No route for ..." (404). A direct
+`tsx` probe loaded the modules in another order and every route worked - the same code, two answers. Caught by
+`barStock.test.ts` before any commit. **Fixed:** `barBills.use("/:code/bar/*", (c, next) => barStockGate(c, next))` -
+the name is looked up when a request comes, by which time every module has loaded. **The rule:** never pass a
+function imported from another service's front door straight into a load-time call (`use`, `route`, a table of
+handlers); wrap it so it is read at request time, or keep it in the service that registers it.
+
+---
+
 ### 435 · MINE: release 13's database checks were first run in the full gates, and failed there (26 October)
 
 Release 13's work (3048dbe7) was proved with the API tests (bar stock 11/11, 27 files 516/516) and the web tests

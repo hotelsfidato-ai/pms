@@ -3,8 +3,9 @@ import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import {
-  buildReport, BUILT_KEYS, REPORT_KEYS, STORE_REPORT_KEYS, type ReportParams,
+  buildReport, BUILT_KEYS, REPORT_KEYS, STORE_REPORT_KEYS, switchedOff, type ReportParams,
 } from "../modules/reports/index.ts";
+import { BAR_STOCK_OFF } from "../modules/stores/index.ts";
 import { renderPdf, renderXlsx, renderCsv } from "../reportRender.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -119,6 +120,7 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
       ...(q["from"] ? { from: q["from"] } : {}),
       ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
     };
+    if (await switchedOff(client, hotel.id, key)) return { status: 403 as const, error: BAR_STOCK_OFF };
     /* A builder that fails is a fault, not "no such report": it is left to
        throw, so the server's error handler answers it and it is logged. */
     const doc = await buildReport(client, hotel.id, key, params);

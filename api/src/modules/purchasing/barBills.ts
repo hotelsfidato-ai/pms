@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { barStockGate } from "../stores/index.ts";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
@@ -32,6 +33,9 @@ import { BAR_RECORDERS, BAR_VIEW, PURCHASING_REFUSED, hasRoleAt } from "./purcha
    ══════════════════════════════════════════════════════════════════ */
 
 export const barBills = new Hono<{ Variables: { subject: string } }>();
+/* Bar stock switched off: every route here refused (D27-367). Looked up per request:
+   the Store's front door imports this service back, so at load time it may not be there yet. */
+barBills.use("/:code/bar/*", (c, next) => barStockGate(c, next));
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 const forbid = (reason: string) => ({ forbidden: reason });

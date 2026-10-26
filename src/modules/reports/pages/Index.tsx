@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
@@ -10,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
 import { mayReach } from "@/components/app/navigation";
+import { getModules } from "@/data/repositories";
 import { Page, PageHeader, Card, CardBody, StatusPill, SearchInput, EmptyState, IconChip } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -169,6 +171,14 @@ const GROUPS: Group[] = [
 
 const BUILT = GROUPS.flatMap((g) => g.reports).filter((r) => r.path).length;
 
+/** The hotel's switches, from the sidebar's own cache entry: a report behind one that is
+    off (Bar stock, D27-367) is not offered. */
+function useModules() {
+  const hotelId = useUi((s) => s.hotelId) ?? "";
+  return useQuery({ queryKey: ["modules", hotelId], queryFn: () => getModules(hotelId),
+    enabled: Boolean(hotelId), staleTime: 5 * 60_000 }).data;
+}
+
 /** The Store and equipment group alone, at its own address (STOCK_REPORTS_PATH):
     the Store page's "Reports" button lands here, open to D27-240's readers,
     the Inventory Manager included, who cannot open All reports. */
@@ -176,8 +186,9 @@ export function StoreReportsPage() {
   const favourites = useUi((s) => s.favouriteReports);
   const toggle = useUi((s) => s.toggleFavouriteReport);
   const role = useRole();
+  const modules = useModules();
   const group = GROUPS.find((g) => g.title === "Store and equipment")!;
-  const reports = group.reports.filter((r) => r.path && mayReach(role, r.path));
+  const reports = group.reports.filter((r) => r.path && mayReach(role, r.path, modules));
   return (
     <Page>
       <PageHeader title="Store reports" description={group.note} />
@@ -198,10 +209,11 @@ export default function ReportsIndexPage() {
   const toggle = useUi((s) => s.toggleFavouriteReport);
 
   const role = useRole();
+  const modules = useModules();
   const q = search.trim().toLowerCase();
   /* A report the menu hides from this role is not offered here either
      (D25-38: the C-Form's passports are the check-in roles' only). */
-  const matches = (r: ReportLink) => (!r.path || mayReach(role, r.path)) && (
+  const matches = (r: ReportLink) => (!r.path || mayReach(role, r.path, modules)) && (
     !q ||
     r.title.toLowerCase().includes(q) ||
     r.description.toLowerCase().includes(q));
@@ -210,7 +222,7 @@ export default function ReportsIndexPage() {
     .filter((g) => g.reports.length > 0);
 
   const starred = GROUPS.flatMap((g) => g.reports).filter(
-    (r) => r.path && favourites.includes(r.path) && mayReach(role, r.path),
+    (r) => r.path && favourites.includes(r.path) && mayReach(role, r.path, modules),
   );
 
   return (

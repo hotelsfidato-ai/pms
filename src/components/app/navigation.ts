@@ -59,6 +59,12 @@ export interface NavItem {
   /** Hidden outside a development build, whatever the role. */
   devOnly?: boolean;
   /**
+   * The per-hotel switch this one entry sits behind, where its section does
+   * not (Bar stock, D27-367, inside the Restaurant, Inventory and Reports).
+   * Absent where that switch is off; kept while the answer is unknown.
+   */
+  module?: string;
+  /**
    * `false` keeps the entry OUT OF THE SIDEBAR while it stays reachable —
    * by "Find a screen" and by its address — for anybody allowed to open
    * it. The owner's rule, 15 September: a shorter menu, nothing lost.
@@ -118,10 +124,14 @@ const visible = (role: Role, item: NavItem): boolean => {
  * guarded route whose entry was deleted or renamed opened to every role
  * (MEMORY 227, 375).
  */
-export function mayReach(role: Role, path: string): boolean {
+export function mayReach(role: Role, path: string, modules?: Record<string, boolean>): boolean {
   const entry = entryFor(path);
-  return entry ? visible(role, entry) : false;
+  return entry ? visible(role, entry) && switchedOn(entry, modules) : false;
 }
+
+/** An entry behind a per-hotel switch (D27-367): off only when the answer says off. */
+const switchedOn = (item: { module?: string }, modules?: Record<string, boolean>) =>
+  !item.module || modules === undefined || modules[item.module] !== false;
 
 /* The two records whose list is not above them in the address (D27-271). */
 const LIST_OF: Record<string, string> = {
@@ -487,6 +497,7 @@ export function navigationFor(
     .map((section) => ({
     ...section,
     items: section.items
+      .filter((item) => switchedOn(item, modules))
       .map((item) => ({
         ...item,
         to: resolve(item.to, code),

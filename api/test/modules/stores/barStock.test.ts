@@ -124,6 +124,7 @@ afterAll(async () => {
     await db.query("delete from pos_menu_items where name like $1", [`${TAG}%`]);
     await db.query("delete from pos_menu_categories where name like $1", [`${TAG}%`]);
     await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, barman, inventory]]);
+    await db.query("delete from hotel_modules where hotel_id = $1 and module = 'bar_stock'", [hotel]);
   } finally {
     await db.query("alter table pos_order_lines enable trigger pos_order_lines_frozen");
     await db.query("alter table stock_count_lines enable trigger stock_count_lines_append_only");
@@ -359,5 +360,56 @@ describe("bar stock (D27-354)", () => {
     expect((await call(gm, "PUT", "/bar/sheet-format", { format: "simple" })).status).toBe(200);
     expect(((await (await call(barman, "GET", "/bar/sheet")).json()) as { format: string }).format).toBe("simple");
     expect((await call(gm, "PUT", "/bar/sheet-format", { format: "paper" })).status).toBe(200);
+  });
+
+  it("Bar stock switched off (D27-367): its screens, bills and reports refused, a KOT takes nothing, the night audit does not wait", async () => {
+    const OFF = "Bar stock is switched off at this property. The owner or an administrator turns it on in Admin, Properties.";
+    const pg = new (await import("pg")).default.Client({ connectionString: SUPER });
+    await pg.connect();
+    const waits = async () => (await blockersFor(pg as never, hotel, businessDate)).some((x) => x.id === "bar-not-counted");
+    try {
+      /* A move after the night's count: the audit waits while Bar stock is on. */
+      await sql(
+        `insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, moved_by)
+         select $1, i.id, l.id, $2::date, 'receipt', 1, $3 from stock_items i, locations l
+          where i.name = $4 and l.hotel_id = $1 and l.is_bar_counter`, [hotel, businessDate, gm, `${TAG} Lager`]);
+      expect(await waits(), "on: the audit waits for the count").toBe(true);
+
+      expect((await call(gm, "POST", "/modules/bar_stock", { enabled: false })).status, "the GM does not switch it").toBe(403);
+      const off = await call("dev-owner", "POST", "/modules/bar_stock", { enabled: false });
+      expect(off.status, await off.clone().text()).toBe(200);
+      const listed = (await (await call("dev-owner", "GET", "/modules")).json()) as { modules: { module: string; enabled: boolean }[] };
+      expect(listed.modules.find((m) => m.module === "bar_stock")).toEqual({ module: "bar_stock", enabled: false });
+
+      for (const [method, path] of [["GET", "/bar/sheet"], ["GET", "/bar/requests"], ["GET", "/bar/pours"],
+                                    ["GET", "/bar/purchases"], ["POST", "/bar/count"]] as const) {
+        const res = await call(gm, method, path, method === "POST" ? { lines: [] } : undefined);
+        expect(res.status, `${method} ${path}`).toBe(403);
+        expect(((await res.json()) as { reason: string }).reason).toBe(OFF);
+      }
+      for (const path of ["/reports/bar-stock", "/reports/flr-daily", "/reports/flr-monthly", "/reports/bar-stock.pdf"]) {
+        const res = await call(gm, "GET", path);
+        expect(res.status, path).toBe(403);
+        expect(((await res.json()) as { error: string }).error).toBe(OFF);
+      }
+      expect(await waits(), "off: the audit does not wait").toBe(false);
+
+      /* A beer sent while off takes nothing off the counter. */
+      const before = await onHand(`${TAG} Lager`);
+      const opened = await call(waiter, "POST", "/till/orders", { outlet: "REST", table: `${TAG} 9` });
+      const order = ((await opened.json()) as { id: string }).id;
+      await sql(
+        `insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+         values ($1, $2, $3, $4, 2, 270, 18, $5)`, [order, hotel, lager, `${TAG} Lager`, waiter]);
+      expect((await call(waiter, "POST", `/till/orders/${order}/kot`, {})).status).toBe(200);
+      expect(await onHand(`${TAG} Lager`), "off: nothing taken").toBeCloseTo(before, 3);
+
+      /* On again: the sheet answers and the audit waits again. */
+      expect((await call("dev-owner", "POST", "/modules/bar_stock", { enabled: true })).status).toBe(200);
+      expect((await call(gm, "GET", "/bar/sheet")).status).toBe(200);
+      expect(await waits()).toBe(true);
+    } finally {
+      await pg.end();
+    }
   });
 });

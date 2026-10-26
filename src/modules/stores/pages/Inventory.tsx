@@ -1,4 +1,6 @@
 import { Link, useParams, useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getModules } from "@/data/repositories";
 import { FileText } from "lucide-react";
 import { Page, PageHeader, Card, CardBody, Button, Segmented } from "@/components/ui";
 import { BarStockBody } from "@/modules/stores/pages/BarStock";
@@ -15,7 +17,10 @@ import { BarStockBody } from "@/modules/stores/pages/BarStock";
 export default function InventoryPage() {
   const { code = "" } = useParams<{ code: string }>();
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") === "restaurant" ? "restaurant" : "bar";
+  /* Bar stock switched off at this hotel (D27-367): no Bar tab. */
+  const modules = useQuery({ queryKey: ["modules", code], queryFn: () => getModules(code), staleTime: 5 * 60_000 }).data;
+  const barOn = modules?.["bar_stock"] !== false;
+  const tab = params.get("tab") === "restaurant" || !barOn ? "restaurant" : "bar";
 
   return (
     <Page>
@@ -32,7 +37,8 @@ export default function InventoryPage() {
       />
       <Segmented className="mb-4" value={tab}
         onChange={(t) => setParams(t === "restaurant" ? { tab: "restaurant" } : {}, { replace: true })}
-        options={[{ value: "bar", label: "Bar" }, { value: "restaurant", label: "Restaurant" }]} />
+        options={barOn ? [{ value: "bar", label: "Bar" }, { value: "restaurant", label: "Restaurant" }]
+          : [{ value: "restaurant", label: "Restaurant" }]} />
 
       {tab === "restaurant" ? (
         <Card><CardBody className="text-sm text-grey-600">

@@ -497,6 +497,13 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "the tax card, and one VAT line on the bill. Off means no menu section " +
       "can sell it and the till refuses it.",
   },
+  /* D27-367, 26 October: on at every property until turned off (239). */
+  bar_stock: {
+    label: "Bar stock",
+    note: "The bar's store and counter, their counts, the counter's requests, the bar bills and the FLR " +
+      "registers; every KOT takes its drinks off the counter and the night audit waits for the count. " +
+      "Off means those screens go, the API refuses them, KOTs take nothing and the night audit does not wait.",
+  },
   /* D27-179, 30 September: off at every property until turned on (L2). */
   loyalty: {
     label: "Loyalty",

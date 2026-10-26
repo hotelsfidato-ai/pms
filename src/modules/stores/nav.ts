@@ -30,5 +30,5 @@ export const nav: ServiceNavEntry[] = [
   { section: "point-of-sale", order: 45, workingMenus: ["bar"],
     label: "Bar stock", to: "/pos/:code/bar-stock", icon: Wine, resource: "stock",
     keywords: ["bar register", "liquor", "nip", "pegs", "bar count", "bar bill"],
-    canSee: (role) => BAR_STOCK.includes(role) },
+    canSee: (role) => BAR_STOCK.includes(role), module: "bar_stock" },
 ];

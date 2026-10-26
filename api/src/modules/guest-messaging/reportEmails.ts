@@ -167,7 +167,9 @@ interface Owed {
 export async function reportsOwed(client: Client, hotelId: string | null = null): Promise<Owed[]> {
   const { rows } = await client.query<Record<string, string>>(
     `select hotel_id::text, hotel_code, hotel_name, timezone, business_date, report, address, built_by::text
-       from app.daily_reports_owed($1, $2::uuid)`, [MOST_ATTEMPTS, hotelId]);
+       from app.daily_reports_owed($1, $2::uuid) o
+      /* Bar stock switched off (D27-367): its report is not sent. */
+      where not (o.report = 'bar-stock' and not app.module_enabled(o.hotel_id, 'bar_stock'))`, [MOST_ATTEMPTS, hotelId]);
   return rows.map((r) => ({
     hotelId: r["hotel_id"]!, hotelCode: r["hotel_code"]!, hotelName: r["hotel_name"]!, timezone: r["timezone"]!,
     businessDate: r["business_date"]!, report: r["report"] as DailyReport, address: r["address"]!,

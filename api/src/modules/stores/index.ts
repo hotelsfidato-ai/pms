@@ -28,6 +28,8 @@ export const mounts: readonly Mount[] = [
    write, because a refusal returned inside `withSession` is a COMMIT
    (MEMORY 243). */
 export { receiveIntoStore, mayDeliverInto } from "./stores.ts";
+/* The Bar stock switch's gate (D27-367), for purchasing's bar bills too. */
+export { barStockGate, BAR_STOCK_OFF } from "./barGate.ts";
 /* And for Purchasing's bar bills (D27-354): the bar's store, its drinks, and
    a drink added to its list - the Store's rules, lent the same way. */
 export { barStore, barDrinks, addBarDrink } from "./stores.ts";

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { barStockGate } from "./barGate.ts";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
@@ -24,6 +25,8 @@ import { barCounter, barStore } from "./stores.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export const barRequests = new Hono<{ Variables: { subject: string } }>();
+/* Bar stock switched off: every route here refused (D27-367). */
+barRequests.use("/:code/bar/*", barStockGate);
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 export const BAR_APPROVERS: readonly string[] = ["owner", "admin", "gm", "stores"];

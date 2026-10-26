@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import { BUILT_KEYS, buildReport } from "./build.ts";
+import { BUILT_KEYS, buildReport, switchedOff } from "./build.ts";
+import { BAR_STOCK_OFF } from "../stores/index.ts";
 import { propertyFor, isoDateParam } from "./figures.ts";
 import type { ReportParams } from "./document.ts";
 
@@ -42,9 +43,11 @@ for (const key of BUILT_KEYS) {
         ...(from ? { from } : {}),
         ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
       };
+      if (await switchedOff(client, property.id, key)) return "off" as const;
       return buildReport(client, property.id, key, params);
     });
 
+    if (doc === "off") return c.json({ error: BAR_STOCK_OFF }, 403);
     return doc ? c.json(doc) : c.json({ error: "No such property." }, 404);
   });
 }

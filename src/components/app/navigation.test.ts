@@ -428,3 +428,19 @@ describe("the menu assembled from the services", () => {
     expect(clashes).toEqual([]);
   });
 });
+
+describe("Bar stock behind its switch (D27-367)", () => {
+  const entries = (modules?: Record<string, boolean>) =>
+    navigationFor("gm", "5EL", modules).flatMap((s) => s.items).map((i) => i.to);
+
+  it("leaves the menu and every report list where the hotel has it off, and stays while unknown or on", () => {
+    expect(entries({ bar_stock: true })).toContain("/pos/5EL/bar-stock");
+    expect(entries(undefined), "unknown: kept, not flickered away").toContain("/pos/5EL/bar-stock");
+    expect(entries({ bar_stock: false })).not.toContain("/pos/5EL/bar-stock");
+    for (const path of ["/reports/bar-stock", "/reports/flr-daily", "/reports/flr-monthly", "/pos/:code/bar-stock"]) {
+      expect(mayReach("gm", path, { bar_stock: true }), path).toBe(true);
+      expect(mayReach("gm", path, { bar_stock: false }), path).toBe(false);
+    }
+    expect(mayReach("gm", "/reports/stock-on-hand", { bar_stock: false }), "the Store's own reports stay").toBe(true);
+  });
+});

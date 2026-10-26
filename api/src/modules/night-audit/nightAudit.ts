@@ -270,6 +270,7 @@ export async function blockersFor(
        left join last_move lm on lm.item_id = i.id and lm.location_id = p.id
       where i.hotel_id = $1 and i.category = 'Bar' and i.is_active
         and not exists (select 1 from bar_closed_days d where d.hotel_id = $1 and d.business_date = $2::date)
+        and app.module_enabled($1, 'bar_stock')   -- D27-367: Bar stock off, no count waited for
         and (lm.at is not null or app.stock_on_hand(i.id, p.id) <> 0)
         and not exists (
           select 1 from stock_count_lines cl

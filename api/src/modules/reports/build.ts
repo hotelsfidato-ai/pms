@@ -59,6 +59,15 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
 };
 
+/** The Bar stock switch (D27-367): its three reports are refused where it is off -
+    by the screen's route, the file route, and left out of the nightly email. */
+const BAR_REPORTS: readonly string[] = ["bar-stock", "flr-daily", "flr-monthly"];
+export async function switchedOff(client: Client, hotelId: string, key: string): Promise<boolean> {
+  if (!BAR_REPORTS.includes(key)) return false;
+  const { rows } = await client.query<{ on: boolean }>("select app.module_enabled($1, 'bar_stock') as on", [hotelId]);
+  return !rows[0]!.on;
+}
+
 /** The reports built so far, each with its route (documents.ts). */
 export const BUILT_KEYS = Object.keys(BUILDERS) as ReportKey[];
 

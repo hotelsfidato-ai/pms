@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { barStockGate } from "./barGate.ts";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
@@ -39,6 +40,8 @@ import {
    ══════════════════════════════════════════════════════════════════ */
 
 export const barSheet = new Hono<{ Variables: { subject: string } }>();
+/* Bar stock switched off: every route here refused (D27-367). */
+barSheet.use("/:code/bar/*", barStockGate);
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 const SHEET_REFUSED = "Counting the bar is for the owner, an administrator, the general manager, "
