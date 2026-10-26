@@ -765,6 +765,19 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **26 October, afternoon: RELEASE 14 IN PROGRESS (D27-365 to D27-368).** On cp6: fc3c679c (an NC bill's screen
+> without prices, Complimentary counts NC bills; Remove takes a connecting door off; A8-37/38 retaken). Helpers, each
+> in its own copy, stopped by the account's usage limit (resets 19:00) - resume each with SendMessage, not a new agent:
+> the printer app's self-update DONE (`worktree-agent-ae5f221f5f1d6231f`, 3d7f5ea4: 1.1.0, electron-updater 6.8.10,
+> nginx serves the exe, blockmap and latest.yml; `npm ci` in printer/ after merging; owner questions: the claim-to-print
+> window, the version in the tray tooltip, Electron 44.9.3); the guest's proforma like the desk's (`...a3690ea5330aeacfa`,
+> its migration renumbered to 240); the dashboard charts (`...a011853c140d93183`). Still to build, the master's: the Bar
+> stock switch (D27-367, migration 239: `bar_stock` in `SWITCHABLE` and `hotel_modules_known`, on by default in
+> `app.module_enabled`, item-level `module` in navigation, the bar routes refused, the KOT trigger and the night audit
+> asking it); the owner's allowance (D27-355, D27-365, D27-366; migration 241); the Taxes card in Restaurant setup and
+> the KOT's design (D27-368). MRP of NC bills goes with Inventory's Restaurant tab (release 16). The local virtual
+> printers (`node .local/virtual-printer/printer.mjs`) must run for the NC pictures.
+
 > **26 October, about 01:00: RELEASE 13 LIVE (with 12.1), typed by the owner (D27-350).** Checked read-only:
 > GitHub `main` and the server at `2e7a5b4a`; API restarted 19:28 GMT (00:58 IST) and healthy; website
 > `index-o38e-K4q.js`; backups 19:27 and 19:28 GMT; migrations 237 and 238's tables and columns present; a Bar
