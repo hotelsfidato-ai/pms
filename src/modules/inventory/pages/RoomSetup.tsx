@@ -697,7 +697,8 @@ function RoomDialog({
     const res = await removeRoom(hotelId, room!.number);
     setBusy(false);
     if (!res.ok) { setRemoving(false); return toast.error("Not removed", res.reason); }
-    toast.success(`Room ${room!.number} removed`);
+    toast.success(`Room ${room!.number} removed`,
+      res.unlinked ? `Its connecting door to room ${res.unlinked} was taken off.` : undefined);
     onDone();
   };
 

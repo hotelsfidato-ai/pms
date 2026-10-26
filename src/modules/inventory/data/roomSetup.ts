@@ -163,7 +163,8 @@ export async function amendRoom(
 }
 
 /** Only a room nothing has used (D27-336); the server says what has. */
-export const removeRoom = (hotelId: string, number: string): Promise<Result> =>
+/** `unlinked`: the room on the other side of a connecting door, taken off with it (D27-365 (6)). */
+export const removeRoom = (hotelId: string, number: string): Promise<Result<{ unlinked: string | null }>> =>
   call(`/api/hotels/${hotelId}/rooms/${encodeURIComponent(number)}`, "DELETE");
 
 

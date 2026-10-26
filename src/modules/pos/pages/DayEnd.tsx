@@ -266,8 +266,9 @@ function Overview({ day }: { day: DayEnd }) {
                     note={`${s.abandonedOrders} abandoned`} />
         <FigureTile icon={<Percent />} label="Discount given" value={money(s.discountGiven)}
                     note="Off the settled bills" />
-        <FigureTile icon={<Gift />} label="Complimentary" value={String(s.compOrders)}
-                    note={s.compOrders === 1 ? "bill, nothing to pay" : "bills, nothing to pay"} />
+        {/* The NC bills given free (D27-365 (4)); it counted 100%-discounted bills. */}
+        <FigureTile icon={<Gift />} label="Complimentary" value={String((day.noCharge ?? []).length)}
+                    note={(day.noCharge ?? []).length === 1 ? "NC bill, given free" : "NC bills, given free"} />
       </FigureRow>
 
       <Card>

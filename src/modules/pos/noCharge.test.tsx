@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -125,6 +125,10 @@ describe("the Till - NC, no charge", () => {
     await vi.waitFor(() => expect(calls.some((c) => c.path.endsWith("/bill-print"))).toBe(true));
     expect(screen.getByText("NC · No charge"), "no value: the total says NC").toBeTruthy();
     expect(screen.queryByRole("button", { name: "No charge (NC)" }), "NC for good").toBeNull();
+    /* The screen as the paper: the dish and its quantity, no price (D27-365 (4)). */
+    const line = screen.getAllByText("Paneer Tikka").map((e) => e.closest("li")).find((li) => li?.textContent?.includes("×"));
+    expect(line, "the order's line").toBeTruthy();
+    expect(line!.textContent, "no price on an NC bill's line").not.toMatch(/320|640/);
   });
 
   it("a waiter, reception or the hotel manager never sees it", async () => {
@@ -170,8 +174,9 @@ describe("Close restaurant day - the NC bills", () => {
     as("gm");
     const day: DayEnd = {
       outlet: { code: "REST", name: "Fidato Restaurant" }, businessDate: "2026-08-25",
+      /* compOrders counts 100%-discounted bills; the tile counts NC bills (D27-365 (4)). */
       summary: { settledOrders: 0, settledValue: 0, abandonedOrders: 0, abandonedValue: 0,
-                 compOrders: 0, discountGiven: 0, byMethod: {} },
+                 compOrders: 3, discountGiven: 0, byMethod: {} },
       blockers: [], struck: [], voided: [],
       noCharge: [{ orderNo: "20260825-5", table: "4", outlet: "Fidato Restaurant",
                    reason: "Owner's guests", by: "Hotel Manager GM", at: "21:05" }],
@@ -189,5 +194,8 @@ describe("Close restaurant day - the NC bills", () => {
     expect(await screen.findByText("No charge (NC)")).toBeTruthy();
     expect(screen.getByText("20260825-5 · 4 - Owner's guests")).toBeTruthy();
     expect(screen.getByText("Approved by Hotel Manager GM · 21:05")).toBeTruthy();
+    const tile = screen.getByText("Complimentary").closest("div")!.parentElement!;
+    expect(within(tile).getByText("NC bill, given free")).toBeTruthy();
+    expect(within(tile).getByText("1"), "one NC bill, not the three 100% discounts").toBeTruthy();
   });
 });

@@ -861,12 +861,15 @@ export default function TerminalPage() {
                       )}>
                         {l.extra ? `+ ${l.name}` : l.name}
                       </span>
-                      <span className="tabular text-base text-ink-900">
-                        {moneyPrecise(l.qty * l.unitPrice)}
-                      </span>
+                      {/* An NC bill shows no prices, as its paper (D27-365 (4)). */}
+                      {order.status !== "no_charge" && (
+                        <span className="tabular text-base text-ink-900">
+                          {moneyPrecise(l.qty * l.unitPrice)}
+                        </span>
+                      )}
                     </div>
                     {/* The owner's breakdown (D27-289), under the one line. */}
-                    {l.numberedAddons && (
+                    {l.numberedAddons && order.status !== "no_charge" && (
                       <p className="text-2xs text-grey-600 tabular mt-0.5 pl-0.5 truncate">
                         {addonBreakdown(l.numberedAddons)}
                       </p>
@@ -953,7 +956,8 @@ export default function TerminalPage() {
                     ) : (
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-2xs text-grey-500 tabular">
-                          {l.qty} × {l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}
+                          {order.status === "no_charge" ? `Qty ${l.qty}`
+                            : `${l.qty} × ${l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}`}
                         </p>
                         {/* An add-on line comes off by itself (D27-291). */}
                         {l.extra && !l.voided && order.status === "open" && (

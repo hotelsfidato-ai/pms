@@ -31,7 +31,7 @@ const exists = async (number: string) => (await sql(
   "select 1 from rooms r join hotels h on h.id = r.hotel_id where h.code = '5EL' and r.number = $1", [number])).length > 0;
 
 let typeId = "";
-const MINE = ["RM1", "RM2", "RM3", "RM4"];
+const MINE = ["RM1", "RM2", "RM3", "RM4", "RM5", "RM6"];
 
 beforeAll(async () => {
   typeId = (await sql<{ id: string }>(
@@ -86,6 +86,22 @@ describe("Remove a room (D27-336)", () => {
     const busy = await call("DELETE", "/rooms/RM3");
     expect(busy.status).toBe(409);
     expect(await reasonOf(busy)).toMatch(/^Room RM3 has been used \(somebody is in it\)/);
+  });
+
+  it("takes a connecting door off with the room, and names the room on its other side (D27-365 (6))", async () => {
+    expect((await call("POST", "/rooms", { number: "RM5", roomTypeId: typeId })).status).toBe(200);
+    expect((await call("POST", "/rooms", { number: "RM6", roomTypeId: typeId })).status).toBe(200);
+    await sql(
+      `update rooms set connected_room_id = (select id from rooms where number = 'RM6' and hotel_id = hotel_id limit 1)
+        where number = 'RM5' and hotel_id = (select id from hotels where code = '5EL')`);
+    expect(await sql("select 1 from rooms where number = 'RM6' and connected_room_id is not null"), "043 points back")
+      .toHaveLength(1);
+    const res = await call("DELETE", "/rooms/RM5");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, unlinked: "RM6" });
+    expect(await exists("RM5")).toBe(false);
+    expect(await sql("select 1 from rooms where number = 'RM6' and connected_room_id is null"), "RM6 no longer points back")
+      .toHaveLength(1);
   });
 
   it("removes a type once its only room is removed", async () => {

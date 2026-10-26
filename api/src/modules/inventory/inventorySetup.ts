@@ -343,13 +343,14 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
    EVERY table that points at a room is asked by name, the CASCADE ones too
    (housekeeping assignments, key cards, blocks): left to the foreign key
    they would be deleted with the room, silently. A used room is only
-   switched off, so old bills and Form C keep it. */
+   switched off, so old bills and Form C keep it. A connecting door goes with
+   the room, and the answer names the room on its other side (D27-365 (6)). */
 inventorySetup.delete("/:code/rooms/:number", async (c) => {
   const number = c.req.param("number");
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const { rows } = await client.query<{ id: string; uses: string | null }>(
+    const { rows } = await client.query<{ id: string; uses: string | null; connected: string | null }>(
       `select r.id::text,
               case
                 when r.occupancy_status <> 'vacant' then 'somebody is in it'
@@ -364,9 +365,8 @@ inventorySetup.delete("/:code/rooms/:number", async (c) => {
                 when exists (select 1 from equipment_history where room_id = r.id)
                   or exists (select 1 from equipment_moves where r.id in (from_room_id, to_room_id)) then 'equipment'
                 when exists (select 1 from guest_links where room_id = r.id) then 'a guest link'
-                /* 043 keeps a connection mutual, so one side says it. */
-                when r.connected_room_id is not null then 'a connecting room'
-              end as uses
+              end as uses,
+              (select n.number from rooms n where n.id = r.connected_room_id) as connected
          from rooms r where r.hotel_id = $1 and r.number = $2`, [hotelId, number]);
     if (!rows[0]) return "missing" as const;
     if (rows[0].uses) {
@@ -375,6 +375,8 @@ inventorySetup.delete("/:code/rooms/:number", async (c) => {
     }
     try {
       await client.query("savepoint gone");
+      /* Clearing this side clears the other (043's trigger keeps it mutual). */
+      if (rows[0].connected) await client.query("update rooms set connected_room_id = null where id = $1", [rows[0].id]);
       await client.query("delete from rooms where id = $1 and hotel_id = $2", [rows[0].id, hotelId]);
     } catch (error) {
       await client.query("rollback to savepoint gone");
@@ -383,7 +385,7 @@ inventorySetup.delete("/:code/rooms/:number", async (c) => {
       }
       throw error;
     }
-    return { ok: true as const };
+    return { ok: true as const, unlinked: rows[0].connected };
   });
   if (result === null) return c.json({ error: "No such property." }, 404);
   if (result === "missing") return c.json({ error: "No such room." }, 404);

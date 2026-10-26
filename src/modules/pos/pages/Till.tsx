@@ -1386,15 +1386,18 @@ function OrderPanel({
                   </span>
                   {/* The owner's breakdown (D27-289): what the dish and each
                       numbered add-on cost, under the one line. */}
-                  {line.numberedAddons && (
+                  {line.numberedAddons && order.status !== "no_charge" && (
                     <span className="block truncate text-2xs text-grey-600 tabular">
                       {addonBreakdown(line.numberedAddons)}
                     </span>
                   )}
                 </span>
-                <span className="tabular text-base text-ink-900 shrink-0">
-                  {money(line.qty * line.unitPrice)}
-                </span>
+                {/* An NC bill shows no prices, as its paper (D27-365 (4)). */}
+                {order.status !== "no_charge" && (
+                  <span className="tabular text-base text-ink-900 shrink-0">
+                    {money(line.qty * line.unitPrice)}
+                  </span>
+                )}
                 {/* Customise on any dish (D27-289); once the kitchen has it, its
                     add-ons are lines of their own for the next Send (D27-291). */}
                 {!settled && !line.voided && line.parentLineId === null && !line.packing && (

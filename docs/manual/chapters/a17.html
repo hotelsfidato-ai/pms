@@ -456,7 +456,7 @@
     <li>Tap the room's tile, then <span class="ui">Remove</span> at the foot of its window.</li>
     <li>The window asks first. Tap <span class="ui">Remove room 309</span> to remove it, or <span class="ui">Keep it</span>. It then says <span class="msg">“Room 309 removed”</span>.</li>
   </ol>
-  <p>Only a room nothing has used can be removed: no booking, stay, housekeeping, key card, block, work order, lost item, wake-up call, equipment or guest link, and nobody in it. A used room is refused and says what used it: <span class="msg">“Room 101 has been used (a booking or stay), so it cannot be removed. Switch Sellable off instead.”</span> Untick <span class="ui">Sellable</span> instead, so old bills and Form C keep it. A room type whose rooms are all removed can then be removed too.</p>
+  <p>Only a room nothing has used can be removed: no booking, stay, housekeeping, key card, block, work order, lost item, wake-up call, equipment or guest link, and nobody in it. A used room is refused and says what used it: <span class="msg">“Room 101 has been used (a booking or stay), so it cannot be removed. Switch Sellable off instead.”</span> Untick <span class="ui">Sellable</span> instead, so old bills and Form C keep it. A room type whose rooms are all removed can then be removed too. A room with a connecting door is removed with its door: the other room is no longer connected, and the window says so: <span class="msg">“Room 309 removed. Its connecting door to room 310 was taken off.”</span></p>
 
   <h3>To add several rooms at once</h3>
   <ol class="steps">
@@ -493,7 +493,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>. Room numbers with letters, both kinds of range, and always in capitals, so 111a can never be a second room beside 111A: <span class="d">D27-335</span>. A range as loose as each hotel's numbering, at most 100 rooms at a time, and a room nothing has used removed (a used one only switched off, so old bills and Form C keep it): <span class="d">D27-336</span>.</p>
+    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>. Room numbers with letters, both kinds of range, and always in capitals, so 111a can never be a second room beside 111A: <span class="d">D27-335</span>. A range as loose as each hotel's numbering, at most 100 rooms at a time, and a room nothing has used removed (a used one only switched off, so old bills and Form C keep it): <span class="d">D27-336</span>; a connecting door removed with its room: <span class="d">D27-365</span>.</p>
   </div>
 
   <!-- A17.6 -->
