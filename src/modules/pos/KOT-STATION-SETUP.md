@@ -41,8 +41,18 @@ window, sign in, open the KOT section and do step 3 below (name, ticks,
 printer. Go to the Kitchen screen and close the window: it prints from the
 clock, with no window and no print screen. A slip the printer refuses shows a
 Windows message, "Fidato Printer: not printed": reprint it from the KOT
-section. The app is `printer/` in the code; its installer is put on the
-website by `scripts/release.mjs`.
+section. The app is `printer/` in the code; its installer, with the
+`latest.yml` and `.blockmap` its update reads, is served from the API's server
+(`deploy/nginx.conf`, `/downloads/`), where the owner copies each build.
+
+**It updates itself (D27-365, D27-366, 26 October).** From version 1.1.0, when
+it starts and once a day it reads
+`https://api.fidatohotels.com/downloads/latest.yml`; a newer version downloads
+and installs at once, silently, never in the middle of a slip, and the app is
+back by the clock with no window in a few seconds. KOTs and bills sent
+meanwhile wait on the server and print when it is back, oldest first. If the
+server cannot be reached it keeps printing and looks again the next day.
+Version 1.0.0 has no updater: install 1.1.0 over it once, by hand.
 
 ## The other way: one setup file (D27-299, 10 October)
 

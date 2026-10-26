@@ -12,6 +12,7 @@
 // (preload.js); this answers once the printer has it.
 // =============================================================================
 const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, nativeImage, powerSaveBlocker, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -26,6 +27,7 @@ const SETTINGS = () => path.join(app.getPath("userData"), "settings.json");
 let win = null;
 let tray = null;
 let quitting = false;
+let printing = 0;   // slips with the printer right now: an update waits for them
 
 function readSettings() {
   try { return JSON.parse(fs.readFileSync(SETTINGS(), "utf8")); } catch { return {}; }
@@ -126,7 +128,7 @@ function failed(reason) {
 
 /* THE PRINT: silent, to the default printer, on 80 mm paper as long as the
    slip, with no margin - the page has already drawn the slip alone. */
-ipcMain.handle("fidato-print", (event, input) => {
+function printSlip(event, input) {
   if (!ours(event.senderFrame && event.senderFrame.url)) return { ok: false, reason: "Not the PMS." };
   const heightMm = Math.max(90, Math.min(3000, Math.round(Number(input && input.heightMm) || 90)));
   if (PDF_DIR) {
@@ -148,7 +150,24 @@ ipcMain.handle("fidato-print", (event, input) => {
       resolve({ ok, reason: why });
     });
   });
+}
+ipcMain.handle("fidato-print", async (event, input) => {
+  printing += 1;
+  try { return await printSlip(event, input); } finally { printing -= 1; }
 });
+
+/* THE UPDATE (the owner's D27-365, D27-366): at start and once a day it asks
+   our server (package.json, build.publish: api.fidatohotels.com/downloads/
+   latest.yml); a newer version downloads and installs straight away, silently,
+   and the app starts again in a few seconds. The KOTs sent meanwhile wait on
+   the server: the page asks for every unprinted KOT of the day when it is back.
+   Never in the middle of a slip. The server unreachable, it asks again the
+   next day; printing goes on. Not when run from the source (npm start). */
+autoUpdater.on("update-downloaded", function install() {
+  if (printing > 0) return void setTimeout(install, 1000);
+  autoUpdater.quitAndInstall(true, true);   // silent, then started again with --updated
+});
+const checkForUpdate = () => autoUpdater.checkForUpdates().then((r) => r && r.downloadPromise).catch(() => {});
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -162,9 +181,14 @@ if (!app.requestSingleInstanceLock()) {
       writeSettings({ started: new Date().toISOString() });
     }
     createTray();
-    createWindow(!first && process.argv.includes("--hidden"));
+    /* Started by Windows (--hidden) or after an update (--updated): no window. */
+    createWindow(!first && (process.argv.includes("--hidden") || process.argv.includes("--updated")));
     /* The computer does not go to sleep while it prints (the screen may). */
     powerSaveBlocker.start("prevent-app-suspension");
+    if (app.isPackaged) {
+      void checkForUpdate();
+      setInterval(checkForUpdate, 24 * 60 * 60 * 1000);
+    }
   });
   /* No window is not "quit": it lives in the tray. */
   app.on("window-all-closed", () => {});

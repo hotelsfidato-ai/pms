@@ -683,6 +683,7 @@
   </ol>
   <ul>
     <li><b>A slip the printer did not take</b> (paper out, printer off) shows a Windows message, <span class="msg">“Fidato Printer: not printed”</span>; print it again from <span class="ui">Reprint</span> below.</li>
+    <li><b>It updates itself.</b> When it starts and once a day it looks for a new version on the Fidato server; when there is one, it downloads it and installs it straight away, by itself. It is gone for a few seconds and comes back by the clock with no window; KOTs and bills sent meanwhile wait and print when it is back. If it cannot reach the server it keeps printing and looks again the next day.</li>
     <li><b>The icon's menu:</b> <span class="ui">Open Fidato Printer</span>, <span class="ui">Printer</span>, <span class="ui">Start with Windows</span>, and <span class="ui">Quit (stops printing)</span>.</li>
     <li><b>The other way, with Chrome:</b> <span class="ui">download the setup file</span> (<code>KOT-station-setup-&lt;code&gt;.cmd</code>). It lists the printers (type the receipt printer's number), makes it the default printer, puts a <b>Fidato Printer</b> shortcut that opens Chrome on the desktop and in Startup, stops the computer sleeping, and opens this section. Chrome prints without asking but shows its print screen for a moment.</li>
   </ul>
@@ -712,7 +713,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>. The Fidato Printer app, printing with no window, and the shortcut's new name: <span class="d">D27-360</span>.</p>
+    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>. The Fidato Printer app, printing with no window, and the shortcut's new name: <span class="d">D27-360</span>. The app updating itself, straight away: <span class="d">D27-365</span>, <span class="d">D27-366</span>.</p>
   </div>
 
   <!-- A8.11 -->
