@@ -12,7 +12,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+## 2026-10-26 · The guest's proforma bill is the desk's, whole (the owner's D27-365 (5))
+
+**Asked for:** "make the guest's proforma identical to the desk's" - the stay's facts, the payments and the HSN/SAC, which the guest's page left out because it reads through a no-session function (root CHANGELOG, 19 October, "Left open").
+
+**Shipped**
+- Migration **241** (`241_guest_proforma.sql`; numbered 241 by the master, 239-240 are theirs on cp6): finance's own reads moved into the database, not copied - `app.stay_facts` (was `stayFacts`'s query), `app.bill_payments` (was `paymentsOn`'s), `app.stay_proforma` (`app.stay_bill` with those, the hotel's contacts, PAN and FSSAI number, and each line's HSN/SAC - was the desk's bill route). All three invoker rights, like `app.stay_bill`. `app.guest_bill` (124) replaced in place, same signature: `app.stay_proforma` for the stay `app.guest_unlocked` answers.
+- Finance's API reads the same functions: `stayFacts` and `paymentsOn` (the tax invoice, the registration card) are now one query each; the desk's `/stays/:id/bill` reads `app.stay_proforma` and adds only `nightsToCome` and `tonight` - which stay off the guest's copy (D27-205).
+- The door and the page are unchanged: `/bill` already called `app.guest_bill`, and finance's `BillPrint` already drew the facts, the payments and the HSN/SAC when they came.
+- Manual: B6.7 and B3's proforma row say so; book rebuilt. No picture shows the guest's bill.
+
+**Proved**
+- `guestDoorBehindTheCode.test.ts` 39/39: the desk's bill less `nightsToCome`/`tonight` now EQUALS the guest's (was "contains"); a new test takes a payment, then: the facts are this stay's, the payment is there, every line has its HSN/SAC; another stay's link with this phone's unlock, and this link with theirs, are refused; theirs shows their own reference; a link nobody was given and an unlock past its day get the one sentence. With the finance tests run beside it: 55/55, then 63/63 (invoices, stayBill, registrationCard, invoicePdf, billSac) after the renumber, and 199/199 across twelve more files that read the bill or the stay's facts.
+- `onlineCheckin.test.tsx` (with the module, `billPrint`, `manual`): 94/94 - the page shows the G.R. card number, the room, the arrival, "Reception (C/I)", the payment and the line's HSN/SAC.
+- **Guards seen to fail:** `app.guest_bill` put back to the plain `app.stay_bill` (2 failed); `app.guest_bill` reaching the stay by the link alone (OCI-5's database test failed); the page dropping the facts, payments and HSN/SAC (the web test failed).
+- `db/tests/run.sh` 1,780 assertions passed; `rerun.sh` every migration re-runnable. Types: web and api, exit 0. `migrationNumbers.test.ts` reports the gap at 239-240 in this copy - expected, the master's numbers.
+
+**Left open** - the owner's: the guest's copy prints "Reception (C/I)" and "Cashier (C/O)" with the staff member's name, as the desk's print does.
+
+**Commits:** this commit
+
 
 **Shipped** The guest's own page shows the desk's **proforma bill** (the interim bill until D27-344), drawn by finance's `BillPrint` as before (`pages/GuestPage.tsx`). **Proved** `onlineCheckin.test.tsx`. The root `CHANGELOG.md` has the whole entry and the gate numbers.
 

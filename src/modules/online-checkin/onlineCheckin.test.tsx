@@ -621,13 +621,20 @@ describe("behind the code", () => {
      BillPrint from what the door sends, and asks for it with this tab's
      unlock like everything behind the code. */
   it("shows the desk's own bill, as a proforma bill, and says where to pay", async () => {
+    /* The whole proforma since D27-365 (5): the stay's facts, the payments and
+       each line's HSN/SAC, as the desk's print (app.stay_proforma, 241). */
     const BILL = {
       hotel: { name: "5 Elements Akkalkot", address: null, city: "Akkalkot", state: "Maharashtra",
-        phone: null, gstin: null },
+        phone: null, gstin: null, email: null, website: null, pan: null, fssai: null },
       stay: { reference: "FH-2609-5001", guest: "A. Guest", checkIn: "2026-08-25",
         checkOut: "2026-08-27", room: "204" },
+      details: { reference: "FH-2609-5001", grCardNo: 41, guest: "A. Guest", roomType: "Deluxe",
+        room: "204", adults: 2, children: 0, plan: "CP", nights: 2,
+        arrival: "25 Aug 2026, 13:05", departure: "27 Aug 2026", source: "Walk-in",
+        checkedInBy: "Reception One", checkedOutBy: null },
+      payments: [{ date: "2026-08-25", description: "Received - UPI", amount: 500 }],
       lines: [{ date: "2026-08-25", description: "Room charge", category: "room", amount: 1800,
-        tax: 90, rate: 5, billTo: "guest", company: null }],
+        tax: 90, rate: 5, billTo: "guest", company: null, sac: "996311" }],
       taxes: [{ rate: 5, taxable: 1800, cgst: 45, sgst: 45 }],
       net: 1800, tax: 90, total: 1890, rounded: 1890, roundOff: 0, paid: 500, balance: 1390,
     };
@@ -648,6 +655,14 @@ describe("behind the code", () => {
     expect(print.textContent, "not the final invoice").not.toContain("Tax Invoice");
     expect(print.textContent).toContain("Room charge");
     expect(print.textContent).toContain("Balance due");
+    /* The stay's facts, the payment and the line's HSN/SAC. */
+    expect(print.textContent).toContain("G.R. card no");
+    expect(print.textContent).toContain("Deluxe / 204");
+    expect(print.textContent).toContain("25 Aug 2026, 13:05");
+    expect(print.textContent).toContain("Reception One");
+    expect(print.querySelector("[data-invoice-payments]")?.textContent).toContain("Received - UPI");
+    const row = [...print.querySelectorAll("tr")].find((tr) => tr.textContent?.includes("Room charge"));
+    expect(row?.querySelectorAll("td")[2]?.textContent, "the line's HSN/SAC").toBe("996311");
     expect(screen.getByText("Pay at the desk before you leave.")).toBeTruthy();
     expect(unlockSent(billAsked), "asked for with this tab's unlock").toBe(UNLOCK);
   });

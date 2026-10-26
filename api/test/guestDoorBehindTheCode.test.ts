@@ -760,18 +760,78 @@ describe("the guest's bill", () => {
     const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
     /* `nightsToCome` is the desk's Bill-tab count (FIN-24, 1 October), added
        by the staff route beside the bill; it is not part of the bill. */
-    const { nightsToCome, details, payments, ...desksBill } =
-      (await desks.json()) as { nightsToCome?: number; details?: unknown; payments?: unknown };
+    const { nightsToCome, tonight: _tonight, ...desksBill } =
+      (await desks.json()) as { nightsToCome?: number; tonight?: unknown };
     expect(typeof nightsToCome).toBe("number");
-    /* Since D27-344 the desk's proforma bill also prints the stay's facts,
-       the payments, the hotel's contacts and each line's HSN/SAC, read beside
-       the bill; every figure and line is still the one definition's. */
-    expect(details).toBeTruthy();
-    expect(Array.isArray(payments)).toBe(true);
-    expect(desksBill).toMatchObject(guestBill as object);
-    expect(Object.keys(desksBill).sort()).toEqual(Object.keys(guestBill).sort());
+    expect(desksBill).toEqual(guestBill);
     expect(guestBill.stay.reference).toBeTruthy();
     expect(typeof guestBill.balance).toBe("number");
+  });
+
+  /* D27-365 (5): the guest's proforma is the desk's, whole - the stay's
+     facts, the payments and each line's HSN/SAC (D27-344) - and only ever
+     their own stay's. A payment is taken first, so there is something on the
+     bill to leak (OCI-12). */
+  it("is the desk's proforma whole - facts, payments, HSN/SAC - for this stay and no other", async () => {
+    const paid = await asStaff(deskId, `/5EL/stays/${stayId}/payments`, "POST", { method: "UPI", amount: 1 });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+    const unlock = await unlockWith(link);
+
+    type Proforma = {
+      details: { reference: string; guest: string; arrival: string } | null;
+      payments: { description: string; amount: number }[];
+      lines: { category: string; sac?: string | null }[];
+      hotel: Record<string, unknown>;
+      tonight?: unknown; nightsToCome?: unknown;
+    };
+    const res = await asGuest(`/${link}/bill`, "GET", undefined, unlock);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const bill = (await res.json()) as Proforma;
+    const { rows: [mine] } = await sql(
+      "select r.reference, g.full_name from reservations r join guests g on g.id = r.guest_id where r.id = $1",
+      [stayId]);
+    expect(bill.details?.reference, "the stay's facts are this stay's").toBe(mine.reference);
+    expect(bill.details?.guest).toBe(mine.full_name);
+    expect(bill.payments.some((p) => p.amount === 1), "the payment just taken").toBe(true);
+    expect(bill.lines.length).toBeGreaterThan(0);
+    expect(bill.lines.every((l) => "sac" in l), "every line says its HSN/SAC").toBe(true);
+    for (const l of bill.lines.filter((x) => x.category === "room")) expect(l.sac).toMatch(/^\d{4,8}$/);
+    for (const k of ["email", "website", "pan", "fssai"]) expect(bill.hotel, `the hotel's ${k}`).toHaveProperty(k);
+    /* The desk's print only (D27-205): never on the guest's copy. */
+    expect(bill).not.toHaveProperty("tonight");
+    expect(bill).not.toHaveProperty("nightsToCome");
+
+    /* ANOTHER GUEST'S STAY, with its own link and unlock: each phone reaches
+       only its own bill, and this phone's unlock opens nothing on theirs. */
+    const { rows: [other] } = await sql(
+      `select r.id::text as id, r.reference from reservations r
+        where r.hotel_id = $1 and r.status = 'checked_in' and r.id <> $2 order by r.reference limit 1`,
+      [hotelId, stayId]);
+    const made = await asStaff(ownerId, `/5EL/stays/${other.id}/guest-link`, "POST", {});
+    expect(made.status, await made.clone().text()).toBe(200);
+    const theirLink = tokenOf(((await made.json()) as { link: string }).link);
+    try {
+      expect((await asGuest(`/${theirLink}/bill`, "GET", undefined, unlock)).status,
+        "this phone's unlock, on another stay's link").toBe(404);
+      const theirUnlock = await unlockWith(theirLink);
+      const theirs = (await (await asGuest(`/${theirLink}/bill`, "GET", undefined, theirUnlock)).json()) as Proforma;
+      expect(theirs.details?.reference).toBe(other.reference);
+      expect(theirs.details?.reference).not.toBe(mine.reference);
+      expect((await asGuest(`/${link}/bill`, "GET", undefined, theirUnlock)).status,
+        "their unlock, on this stay's link").toBe(404);
+    } finally {
+      await sql("delete from guest_links where token_hash = $1", [hashForTests(theirLink)]);
+    }
+
+    /* A link nobody was given, and this phone's unlock once its day is over. */
+    const unknown = await asGuest(`/${"x".repeat(43)}/bill`, "GET", undefined, unlock);
+    expect(unknown.status).toBe(404);
+    expect(((await unknown.json()) as { error: string }).error).toBe(NOTHING);
+    await sql("update guest_unlocks set expires_at = now() - interval '1 second' where unlock_hash = $1",
+      [hashForTests(unlock)]);
+    const expired = await asGuest(`/${link}/bill`, "GET", undefined, unlock);
+    expect(expired.status, "an unlock past its day").toBe(404);
+    expect(((await expired.json()) as { error: string }).error).toBe(NOTHING);
   });
 });
 
