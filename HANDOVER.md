@@ -765,6 +765,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **26 October, evening: release 14 so far on cp6** - fc3c679c (NC screen, Remove), 7f10528d (the Bar stock switch,
+> migration 239, MEMORY 436), the printer's self-update merged (its copy recycled; `npm install` done in printer/),
+> 939c3e15 (the owner's allowance, migration 240). Helpers resumed after the limit: the guest's proforma (its migration
+> now 241) and the dashboard charts. Left for the master: the Taxes card in Restaurant setup and the KOT's design
+> (D27-368), then the merge, the full gates and release 14's steps (the printer's three files to the server).
+
 > **26 October, afternoon: RELEASE 14 IN PROGRESS (D27-365 to D27-368).** On cp6: fc3c679c (an NC bill's screen
 > without prices, Complimentary counts NC bills; Remove takes a connecting door off; A8-37/38 retaken). Helpers, each
 > in its own copy, stopped by the account's usage limit (resets 19:00) - resume each with SendMessage, not a new agent:
