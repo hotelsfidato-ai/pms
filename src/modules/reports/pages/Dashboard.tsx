@@ -1,6 +1,10 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Rectangle, usePlotArea,
+  type BarShapeProps,
+} from "recharts";
 import {
   Check, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
   LogIn, LogOut, Users, SprayCan, Wallet, ReceiptText,
@@ -8,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort, dateLong, addDays } from "@/lib/format";
+import { money, percent, dateShort, dateCompact, dateLong, addDays } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useRole, useSession } from "@/lib/session";
 import { hotelLabel } from "@/lib/testHotel";
@@ -23,7 +27,7 @@ import type { TermKey } from "@/lib/glossary";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { getStayView, fetchStays, isCancelledOrVoid, type ChartRoom } from "@/modules/front-desk";
 import type { DayStatistics } from "@/data/repositories";
-import { listDailyStatistics } from "@/modules/reports/data/statistics";
+import { listDailyStatistics, monthOf } from "@/modules/reports/data/statistics";
 import { getReport, type ReportDoc } from "@/modules/reports/data/document";
 import { getDueOut } from "@/modules/reports/data/dueOut";
 
@@ -90,6 +94,9 @@ const NOTES = {
   house: "Every room on the business date, in the Rooms board's colours.",
   money: "From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.",
   nights: "Tonight and the 13 nights after it: rooms sold, as a share of the rooms to sell, as the Calendar's footer shows them. A night with no figures shows a dash. Each opens the Calendar.",
+  /* The charts (the owner's D27-365): the words as rendered and approved. */
+  days: "Each night of the month, from the same figures as the Monthly statistics report. Nights after the business date show what is booked so far.",
+  revenue: "From the Manager report's Revenue Summary, without tax.",
 };
 
 export default function DashboardPage() {
@@ -181,6 +188,25 @@ export default function DashboardPage() {
     enabled: Boolean(code),
   });
 
+  /* THE CHARTS' ONE MORE READ (D27-365): the Monthly statistics report for
+     the business date's month - the chart's nights and the "Last 14 days"
+     lines. While those 14 days cross a month start, the month before as well. */
+  const month = date.slice(0, 7);
+  const before = addDays(date, -(LAST_DAYS - 1)) < monthStart(date) ? addDays(monthStart(date), -1).slice(0, 7) : null;
+  const thisMonth = useQuery({
+    queryKey: ["dashboard-month", code, month],
+    queryFn: () => getReport(code, "monthly-statistics", { month }),
+    enabled: Boolean(code),
+  });
+  const lastMonth = useQuery({
+    queryKey: ["dashboard-month", code, before],
+    queryFn: () => getReport(code, "monthly-statistics", { month: before! }),
+    enabled: Boolean(code) && before != null,
+  });
+  const monthRows = monthDays(thisMonth.data, month);
+  const lastRows = lastDays([...monthDays(lastMonth.data, before ?? ""), ...monthRows], date);
+  const sparking = thisMonth.isLoading || lastMonth.isLoading;
+
   /* TODAY'S WORK — only counts the system holds (the owner's yes, 27
      September, kept in D27-243). Arrivals: today's, of which still to come
      (no-shows and cancellations are not work). Due out: today's
@@ -219,12 +245,12 @@ export default function DashboardPage() {
     );
   }
 
-  const figures: Array<{ icon: LucideIcon; label: string; term?: TermKey; f?: Figure }> = [
+  const figures: Array<{ icon: LucideIcon; label: string; term?: TermKey; f?: Figure; line: LineKey }> = [
     /* "ARR" on the screen (the owner's D27-243); the printed Manager report
        keeps its "Average Daily Rate (ADR)", which `pick` reads above. */
-    { icon: IndianRupee, label: "Average rate (ARR)", term: "adr", f: adr },
-    { icon: TrendingUp, label: "RevPAR", term: "revpar", f: revpar },
-    { icon: Banknote, label: "Room revenue", f: roomRev },
+    { icon: IndianRupee, label: "Average rate (ARR)", term: "adr", f: adr, line: "adr" },
+    { icon: TrendingUp, label: "RevPAR", term: "revpar", f: revpar, line: "revpar" },
+    { icon: Banknote, label: "Room revenue", f: roomRev, line: "room" },
   ];
   const fig = (value: string, wide = "w-24") => (loading ? <Skeleton className={cn("h-7", wide)} /> : value);
 
@@ -347,7 +373,7 @@ export default function DashboardPage() {
             one card of blocks (the Data Rule) ─────────────────────── */}
         <div className="col-span-12 min-[1440px]:col-span-7 grid gap-3 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto]
                         max-sm:gap-0 max-sm:bg-white max-sm:border max-sm:border-grey-200 max-sm:rounded-lg max-sm:divide-y max-sm:divide-grey-200">
-          {figures.map(({ icon: Icon, label, term, f }) => (
+          {figures.map(({ icon: Icon, label, term, f, line }) => (
             <div
               key={label}
               className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3.5
@@ -364,7 +390,12 @@ export default function DashboardPage() {
               )}>
                 {fig(cash(f?.today))}
               </div>
-              <dl className="col-span-2 mt-2 grid grid-cols-2 gap-x-4 sm:col-span-1 sm:mt-0 sm:grid-cols-1 sm:border-t sm:border-grey-100 sm:pt-1.5">
+              <dl className="col-span-2 mt-2 grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 sm:col-span-1 sm:mt-0 sm:grid-cols-1 sm:border-t sm:border-grey-100 sm:pt-1.5">
+                {/* THE SMALL LINE (D27-365): a row like the others, its line where a value would be. */}
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:leading-[22px]">
+                  <dt className="text-xs sm:text-sm text-grey-500 whitespace-nowrap">Last 14 days</dt>
+                  <dd><Spark name={label.replace(/ \(.*/, "")} days={lastRows} line={line} loading={sparking} /></dd>
+                </div>
                 {([["Month so far", f?.ptd], ["Year so far", f?.ytd]] as const).map(([name, v]) => (
                   <div key={name} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3 sm:leading-[22px]">
                     <dt className="text-xs sm:text-sm text-grey-500">{name}</dt>
@@ -377,6 +408,26 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* ── The charts (D27-217 to D27-219, D27-365): the month, night by
+            night, beside where its revenue came from. 8 + 4 columns from
+            1440 px, 7 + 5 from 1280, one under the other below that. ───── */}
+        <Card className="col-span-12 min-[1280px]:col-span-7 min-[1440px]:col-span-8 flex flex-col">
+          <CardBody className="flex flex-1 flex-col sm:px-[18px] sm:py-4">
+            <CardTitle title="Occupancy by day" info={NOTES.days} meta={`${monthOf(date).name} ${monthOf(date).year}`} />
+            {thisMonth.isError ? (
+              <ReadFailed compact error={readError(thisMonth)!} what="the month's occupancy" onRetry={() => void thisMonth.refetch()} />
+            ) : (
+              <OccupancyByDay days={monthRows} date={date} loading={thisMonth.isLoading} monthName={`${monthOf(date).name} ${monthOf(date).year}`} />
+            )}
+          </CardBody>
+        </Card>
+        <Card className="col-span-12 min-[1280px]:col-span-5 min-[1440px]:col-span-4">
+          <CardBody className="sm:px-[18px] sm:py-4">
+            <CardTitle title="Revenue" info={NOTES.revenue} meta="Without tax" />
+            <RevenueSplit doc={r} loading={report.isLoading} />
+          </CardBody>
+        </Card>
 
         {/* ── The nights ahead: a bar under each date (D27-243) ───────── */}
         <Card className="col-span-12">
@@ -399,7 +450,14 @@ export default function DashboardPage() {
               <MoneyItem
                 icon={Wallet} tone="green" label="Collected today" loading={loading}
                 value={cash(payToday?.today)}
-                note={methods.length ? methods.map((m) => `${m.label} ${money(m.today)}`) : ["Nothing taken yet today"]}
+                note={methods.length
+                  ? methods.map((m, i) => (
+                    <span key={m.label} className="flex items-center gap-1.5"><Swatch i={i} />{m.label} {money(m.today)}</span>
+                  ))
+                  : ["Nothing taken yet today"]}
+                /* CHART 4 (D27-365): how it was paid, as a split bar under the methods. */
+                bar={methods.length > 0 && !loading
+                  ? <SplitBar parts={methods.map((m) => ({ name: m.label, value: m.today }))} /> : undefined}
               />
               <MoneyItem
                 icon={ReceiptText} tone={(owedByGuests?.today ?? 0) > 0 ? "orange" : "neutral"}
@@ -493,9 +551,12 @@ function Gauge({ label, value, loading }: { label: string; value: number | null 
 
 /* ── Money: four levelled columns on a desktop, rows on a phone ──── */
 
-function MoneyItem({ icon: Icon, tone = "neutral", label, term, value, note, loading, warn, to }: {
+function MoneyItem({ icon: Icon, tone = "neutral", label, term, value, note, bar, loading, warn, to }: {
   icon: LucideIcon; tone?: "neutral" | "orange" | "green";
-  label: string; term?: TermKey; value: string; note: string[]; loading: boolean;
+  label: string; term?: TermKey; value: string; note: ReactNode[]; loading: boolean;
+  /** A split bar under the note: inside it on a desktop (the third line of the
+      levelled columns), a row of its own on a phone. */
+  bar?: ReactNode;
   warn?: boolean; to?: string;
 }) {
   const body = (
@@ -516,8 +577,10 @@ function MoneyItem({ icon: Icon, tone = "neutral", label, term, value, note, loa
         {loading ? <Skeleton className="h-7 w-24 inline-block" /> : value}
       </span>
       <span className="text-xs leading-[17px] text-grey-500 max-sm:col-start-2 max-sm:row-start-2 max-sm:self-start">
-        {note.map((line) => <span key={line} className="block">{line}</span>)}
+        {note.map((line, i) => <span key={i} className="block">{line}</span>)}
+        {bar && <span className="mt-2 block max-sm:hidden">{bar}</span>}
       </span>
+      {bar && <span className="sm:hidden col-span-2 col-start-2 mt-1.5">{bar}</span>}
     </>
   );
   const cls = cn(
@@ -712,5 +775,370 @@ function NightsAhead({ from, days, loading, to }: {
         );
       })}
     </ul>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE CHARTS (the owner's D27-217 to D27-219 and D27-365, 26 October)
+
+   Four small drawings, none of them animated, none inventing a figure:
+
+     1. Occupancy by day: the month, night by night (Recharts, the one
+        chart that needs axes and a reading tooltip). Nights so far in
+        the blue of "in house", nights after the business date in the
+        same blue at half strength, today's number marked in navy.
+     2. "Last 14 days": a line inside each of the three figures.
+     3. Revenue: the month so far without tax, split by where it came from.
+     4. Collected today: a split bar under the methods Money lists.
+
+   Charts 1 and 2 read the Monthly statistics report; 3 and 4 read the
+   Manager report the page has already loaded. The rules are DESIGN.md's
+   "Charts": a gap is never a zero, one value is written on the chart
+   (today's), the rest are read by hover, tap or the arrow keys.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** The days "Last 14 days" covers, today included. */
+const LAST_DAYS = 14;
+
+/** The width of the occupancy chart's % axis. */
+const AXIS = 44;
+
+type LineKey = "adr" | "revpar" | "room";
+
+/** One day of the Monthly statistics report. A figure the report cannot work
+    out for that day is null: a gap, never a zero. */
+export interface MonthDay {
+  date: string;
+  available: number | null;
+  /** Percent, 0 to 100. */
+  occupancy: number | null;
+  adr: number | null;
+  revpar: number | null;
+  room: number | null;
+}
+
+/** The days of a Monthly statistics report, as `MonthDay`s. The report prints
+    0 for a rate over no rooms (its `ratio`); this turns those into gaps: no
+    room sold has no average rate, and no room to sell has no RevPAR. */
+export function monthDays(doc: ReportDoc | null | undefined, month: string): MonthDay[] {
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  return (doc?.sections.find((s) => s.key === "days")?.rows ?? [])
+    .filter((r) => r.kind === "row")
+    .map((r) => {
+      const c = r.cells;
+      const available = num(c["available"]);
+      const occupancy = num(c["occupancy"]);
+      return {
+        /* The row's label is "7 Mon": the day, then its weekday. */
+        date: `${month}-${String(parseInt(String(c["label"]), 10)).padStart(2, "0")}`,
+        available,
+        occupancy,
+        adr: occupancy ? num(c["adr"]) : null,
+        revpar: available ? num(c["revpar"]) : null,
+        room: num(c["room"]),
+      };
+    });
+}
+
+/** The 14 days ending on `date`, in order. A day the reads do not hold is a gap. */
+export function lastDays(days: MonthDay[], date: string, n = LAST_DAYS): MonthDay[] {
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  return Array.from({ length: n }, (_, i) => {
+    const d = addDays(date, i - (n - 1));
+    return byDate.get(d) ?? { date: d, available: null, occupancy: null, adr: null, revpar: null, room: null };
+  });
+}
+
+/** The Manager report's Revenue Summary (without tax): each part of the
+    month's revenue (room, extras, each restaurant) and the total. */
+export function revenueSplit(doc: ReportDoc | null | undefined) {
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  const words: Record<string, string> = { "Room Revenue": "Room revenue", "Extra Revenue": "Extra revenue" };
+  const parts = (doc?.sections.find((s) => s.key === "revenue-summary")?.rows ?? [])
+    .filter((r) => r.kind === "row")
+    .map((r) => {
+      const label = String(r.cells["label"]);
+      return { name: words[label] ?? label, value: num(r.cells["ptd"]) };
+    });
+  return { parts, total: pick(doc, "revenue-summary", "Total Revenue") };
+}
+
+const weekdayOf = (date: string) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" });
+
+/* ── A split bar: ink and greys, so no colour gets a second meaning ──
+   The first three parts are ink-900, grey-600 and grey-400 (they pass the
+   chart palette check); a fourth and later share grey-300. Each row beside
+   the bar names its part, so the bar is never read by colour alone. */
+
+const SPLIT = ["bg-ink-900", "bg-grey-600", "bg-grey-400", "bg-grey-300"];
+const splitColour = (i: number) => SPLIT[Math.min(i, SPLIT.length - 1)]!;
+
+function Swatch({ i }: { i: number }) {
+  return <i className={cn("size-2 shrink-0 rounded-[2px]", splitColour(i))} aria-hidden />;
+}
+
+function SplitBar({ parts, className }: { parts: Array<{ name: string; value: number | null }>; className?: string }) {
+  return (
+    <div
+      role="img"
+      aria-label={parts.map((p) => `${p.name} ${p.value == null ? DASH : money(p.value)}`).join(", ")}
+      className={cn("flex h-2 gap-0.5 overflow-hidden rounded-full", className)}
+    >
+      {parts.map((p, i) => (p.value != null && p.value > 0 ? (
+        <span
+          key={p.name}
+          title={`${p.name} ${money(p.value)}`}
+          className={cn("block min-w-0.5", splitColour(i))}
+          style={{ flex: p.value }}
+        />
+      ) : null))}
+    </div>
+  );
+}
+
+/* ── Chart 3: Revenue ───────────────────────────────────────────── */
+
+function RevenueSplit({ doc, loading }: { doc: ReportDoc | null | undefined; loading: boolean }) {
+  const { parts, total } = revenueSplit(doc);
+  const share = (v: number | null) => (v == null || !total?.ptd ? DASH : percent((v / total.ptd) * 100, 2));
+  const num = (v: number | null | undefined) => (loading ? <Skeleton className="inline-block h-4 w-16" /> : cash(v));
+  return (
+    <>
+      {/* Leads with the month so far; today is a row under it (the owner, D27-365 (4)). */}
+      <div className="flex items-baseline justify-between gap-3">
+        <div className={cn(
+          "text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em]",
+          total?.ptd == null && !loading ? "text-grey-500" : "text-ink-900",
+        )}>
+          {loading ? <Skeleton className="h-7 w-28" /> : cash(total?.ptd)}
+        </div>
+        <span className="text-xs leading-[17px] text-grey-500">Month so far</span>
+      </div>
+      {!loading && parts.length > 0 && (
+        <>
+          <SplitBar parts={parts} className="my-3" />
+          <div className="grid grid-cols-[8px_minmax(0,1fr)_auto_auto] items-center gap-x-2 text-sm leading-[22px]">
+            {parts.map((p, i) => (
+              <div key={p.name} className="contents">
+                <Swatch i={i} />
+                <span className="min-w-0 truncate text-grey-600">{p.name}</span>
+                <span className="pl-1 text-right tabular text-grey-500">{share(p.value)}</span>
+                <b className={cn("pl-1 text-right font-medium tabular", p.value == null ? "text-grey-500" : "text-grey-700")}>{cash(p.value)}</b>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <dl className="mt-2 border-t border-grey-100 pt-1.5 text-sm leading-[22px]">
+        {([["Today", total?.today], ["Year so far", total?.ytd]] as const).map(([name, v]) => (
+          <div key={name} className="flex justify-between gap-3">
+            <dt className="text-grey-500">{name}</dt>
+            <dd className={cn("font-medium tabular", v == null ? "text-grey-500" : "text-grey-700")}>{num(v)}</dd>
+          </div>
+        ))}
+      </dl>
+    </>
+  );
+}
+
+/* ── Chart 2: the small line in each figure ─────────────────────────
+   Plain SVG in a 100 x 100 box stretched over its row, so it needs no
+   measuring; the end dot is a span at the same percentages. A day with no
+   figure breaks the line: it is a gap, and a day on its own is a dot. */
+
+function Spark({ name, days, line, loading }: {
+  name: string; days: MonthDay[]; line: LineKey; loading: boolean;
+}) {
+  const [at, setAt] = useState(-1);
+  if (loading) return <Skeleton className="inline-block h-4 w-16" />;
+  const n = days.length;
+  const values = days.map((d) => d[line]);
+  const max = Math.max(...values.map((v) => v ?? 0)) || 1;
+  const px = (i: number) => (i * 100) / (n - 1);
+  const py = (v: number) => 88 - 76 * (v / max);
+  let path = "";
+  let pen = false;
+  values.forEach((v, i) => {
+    if (v == null) { pen = false; return; }
+    path += `${pen ? "L" : "M"}${px(i).toFixed(1)},${py(v).toFixed(1)}${pen ? "" : `L${px(i).toFixed(1)},${py(v).toFixed(1)}`}`;
+    pen = true;
+  });
+  if (!path) return <span className="text-sm text-grey-500">{DASH}</span>;
+
+  const last = values[n - 1];
+  const gaps = days.filter((_, i) => values[i] == null).map((d) => dateCompact(d.date));
+  const show = (v: number | null | undefined) => (v == null ? DASH : money(v));
+  const label = `${name}, last ${n} days: ${show(values[0])} on ${dateCompact(days[0]!.date)}, ${show(last)} today.`
+    + (gaps.length ? ` ${line === "adr" ? "No rooms were sold on" : "No figure on"} ${gaps.join(", ")}.` : "");
+  const point = at >= 0 ? days[at]! : null;
+  const move = (e: PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setAt(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left - 4) / (r.width - 8)) * (n - 1)))));
+  };
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className="relative h-5 w-full touch-pan-y sm:h-[22px] sm:w-24 sm:min-w-12 sm:shrink"
+      onPointerMove={move}
+      onPointerDown={move}
+      onPointerLeave={() => setAt(-1)}
+    >
+      <div className="absolute inset-x-1 inset-y-0">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden>
+          <path d={path} fill="none" stroke="var(--color-grey-400)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+        {point && values[at] != null && at < n - 1 && (
+          <i className="absolute size-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-grey-600 ring-2 ring-white" style={{ left: `${px(at)}%`, top: `${py(values[at]!)}%` }} />
+        )}
+        {last != null && (
+          <i className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink-900 ring-2 ring-white" style={{ left: "100%", top: `${py(last)}%` }} />
+        )}
+      </div>
+      {point && (
+        <div className="pointer-events-none absolute right-0 bottom-full z-10 mb-1 whitespace-nowrap rounded-lg bg-white px-2.5 py-1.5 text-xs leading-[17px] text-grey-600 tabular ring-1 ring-grey-200 shadow-popover">
+          <b className="block text-sm leading-5 font-semibold text-ink-900">{show(values[at])}</b>
+          {weekdayOf(point.date)} {dateCompact(point.date)}{values[at] == null && line === "adr" ? " · no rooms sold" : ""}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Chart 1: Occupancy by day ──────────────────────────────────── */
+
+interface Night {
+  day: string; date: string; wd: string;
+  occ: number | null; rooms: number | null; avail: number | null;
+  ahead: boolean; today: boolean; weekend: boolean; last: boolean;
+  /** How many nights the chart holds, for the width of a night's band. */
+  count: number;
+}
+
+/** A bar: its blue, a wash behind a weekend, and, on today's, the one value written on the chart. */
+function NightBar(p: BarShapeProps) {
+  const n = p.payload as Night;
+  const r = Math.min(4, p.width / 2, p.height);
+  /* The night's whole band, not the bar's own width: the plot's width over the nights. */
+  const plot = usePlotArea();
+  const band = plot ? plot.width / n.count : 0;
+  return (
+    <g>
+      {n.weekend && (
+        <rect x={p.x + p.width / 2 - band / 2} y={plot?.y ?? 0} width={band} height={plot?.height ?? 0} fill="var(--color-grey-50)" />
+      )}
+      {n.occ != null && p.height > 0 && (
+        <Rectangle
+          x={p.x} y={p.y} width={p.width} height={p.height} radius={[r, r, 0, 0]}
+          fill={n.ahead ? "var(--color-info-ahead)" : "var(--color-info)"}
+        />
+      )}
+      {n.today && n.occ != null && (
+        <text
+          x={n.last ? p.x + p.width : p.x + p.width / 2} y={p.y - 6} textAnchor={n.last ? "end" : "middle"}
+          fontSize={12} fontWeight={600} fill="var(--color-ink-900)" className="tabular"
+        >
+          {pct(n.occ)}
+        </text>
+      )}
+    </g>
+  );
+}
+
+/** The one reading tooltip: the value leads, the night follows. */
+function NightTip({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload?: Night }> }) {
+  const n = payload?.[0]?.payload;
+  if (!active || !n) return null;
+  return (
+    <div className="whitespace-nowrap rounded-lg bg-white px-2.5 py-1.5 text-xs leading-[17px] text-grey-600 tabular ring-1 ring-grey-200 shadow-popover">
+      <b className="block text-sm leading-5 font-semibold text-ink-900">{pct(n.occ)}</b>
+      {n.wd} {dateCompact(n.date)}
+      {n.rooms != null && n.avail != null ? ` · ${n.rooms} of ${n.avail} rooms` : ""}
+      {n.ahead ? " · booked so far" : ""}
+    </div>
+  );
+}
+
+function OccupancyByDay({ days, date, loading, monthName }: {
+  days: MonthDay[]; date: string; loading: boolean; monthName: string;
+}) {
+  const [width, setWidth] = useState(0);
+  if (loading) return <Skeleton className="h-[150px] w-full flex-1 rounded-md" />;
+  if (!days.length) return <p className="py-6 text-center text-2xl text-grey-500">{DASH}</p>;
+
+  const nights: Night[] = days.map((d, i) => {
+    const wd = weekdayOf(d.date);
+    return {
+      day: String(Number(d.date.slice(8, 10))), date: d.date, wd,
+      occ: d.occupancy, avail: d.available,
+      /* Rooms sold as the hotel's switches count them, worked back from the
+         share (a day use may be half a room), so the two always agree. */
+      rooms: d.occupancy == null || d.available == null ? null : Math.round((d.occupancy / 100) * d.available * 2) / 2,
+      ahead: d.date > date, today: d.date === date, weekend: wd === "Sat" || wd === "Sun",
+      last: i === days.length - 1, count: days.length,
+    };
+  });
+  const todayAt = nights.findIndex((x) => x.today);
+  /* Every day number when there is room, else 1, 5, 10 ... and always today's. */
+  const every = (width - AXIS) / nights.length >= 18;
+  const kinds = new Set(nights.filter((x) => (x.occ ?? 0) > 0).map((x) => x.ahead));
+  const todayNight = nights[todayAt];
+
+  return (
+    <>
+      <div
+        role="group"
+        aria-label={`Occupancy by day, ${monthName}. ${todayNight?.occ != null ? `${pct(todayNight.occ)} today. ` : ""}Use the left and right arrow keys to read each night.`}
+        className="relative h-[150px] flex-none sm:max-xl:h-[168px] xl:h-auto xl:min-h-[150px] xl:flex-1
+                   [&_.recharts-surface:focus-visible]:outline-2 [&_.recharts-surface:focus-visible]:outline-offset-2 [&_.recharts-surface:focus-visible]:outline-brand-orange"
+      >
+        <div className="absolute inset-0">
+          <ResponsiveContainer width="100%" height="100%" onResize={(w) => setWidth(w)}>
+            <BarChart data={nights} margin={{ top: 22, right: 0, bottom: 0, left: 0 }} barCategoryGap="19%" maxBarSize={24}>
+              <CartesianGrid vertical={false} stroke="var(--color-grey-100)" />
+              <XAxis
+                dataKey="day" interval={0} height={24} tickLine={false} tickMargin={0}
+                axisLine={{ stroke: "var(--color-grey-300)" }}
+                tick={({ index, x, y }: { index: number; x: number | string; y: number | string }) => {
+                  const t = { index, x: Number(x), y: Number(y) };
+                  const night = nights[t.index]!;
+                  const num = Number(night.day);
+                  if (night.today) {
+                    const w = Math.max(18, night.day.length * 7 + 10);
+                    return (
+                      <g>
+                        <rect x={t.x - w / 2} y={t.y - 1} width={w} height={18} rx={9} fill="var(--color-ink-900)" />
+                        <text x={t.x} y={t.y + 12} textAnchor="middle" fontSize={12} fontWeight={600} fill="#fff" className="tabular">{night.day}</text>
+                      </g>
+                    );
+                  }
+                  if (!every && !((num === 1 || num % 5 === 0) && (todayAt < 0 || Math.abs(t.index - todayAt) > 2))) return <g />;
+                  return <text x={t.x} y={t.y + 12} textAnchor="middle" fontSize={12} fill="var(--color-grey-500)" className="tabular">{night.day}</text>;
+                }}
+              />
+              <YAxis
+                domain={[0, 100]} ticks={[0, 50, 100]} width={AXIS} tickMargin={8} tickLine={false} axisLine={false}
+                tickFormatter={(v: number) => `${v}%`}
+                tick={{ fontSize: 12, fill: "var(--color-grey-500)", className: "tabular" }}
+              />
+              <Tooltip
+                content={<NightTip />} isAnimationActive={false}
+                cursor={{ fill: "var(--color-ink-900)", fillOpacity: 0.06 }}
+                wrapperStyle={{ outline: "none", zIndex: 3 }}
+              />
+              <Bar dataKey="occ" shape={NightBar} isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Two kinds of bar get a key; one kind gets none (DESIGN.md, Charts). */}
+      {kinds.size > 1 && (
+        <p className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-xs leading-[17px] text-grey-500" aria-hidden>
+          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-[2px] bg-info" />Nights so far</span>
+          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-[2px] bg-info-ahead" />Booked ahead</span>
+        </p>
+      )}
+    </>
   );
 }

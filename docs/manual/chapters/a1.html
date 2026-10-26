@@ -62,8 +62,16 @@
   <h3>The figures</h3>
   <ul>
     <li><span class="ui">Occupancy</span> (the dark card): today's share of rooms sold, then <span class="ui">Month so far</span> and <span class="ui">Year so far</span>. The year runs from 1 April.</li>
-    <li><span class="ui">Average rate (ARR)</span>, <span class="ui">RevPAR</span> and <span class="ui">Room revenue</span>: today in large figures, the month so far and the year so far under each.</li>
+    <li><span class="ui">Average rate (ARR)</span>, <span class="ui">RevPAR</span> and <span class="ui">Room revenue</span>: today in large figures. Under each, <span class="ui">Last 14 days</span> (a small line, from the day 13 days ago to today, today marked with a dark dot), then the month so far and the year so far. Point at the line, or tap it, to read a day. A night with no room sold has no average rate, so the Average rate line breaks there: it is a gap, never a zero.</li>
+    <li>Narrower than 1440 pixels wide, Occupancy has a row of its own and the three figures sit under it, each as wide as the page allows. On a phone each figure is a block: its name and today's figure on a line, then <span class="ui">Last 14 days</span>, <span class="ui">Month so far</span> and <span class="ui">Year so far</span> side by side.</li>
     <li>A word with a dotted underline explains itself: click or tap it. The small (i) beside a heading explains the whole card.</li>
+  </ul>
+
+  <h3>Occupancy by day, and Revenue</h3>
+  <p>Under the figures, two cards side by side (one under the other on a narrower screen).</p>
+  <ul>
+    <li><span class="ui">Occupancy by day</span>: one bar for every night of the month, from the same figures as the Monthly statistics report. Nights up to today are in the blue of <span class="ui">In house</span>; nights after today are the same blue, paler, and show what is booked so far. Today's day number is in a dark mark, and today's share is written above its bar. Saturdays and Sundays are shaded. Every other night is read by pointing at its bar (or tapping it): a small box gives the share, the day and the rooms, with <span class="msg">“booked so far”</span> for a night to come. Press Tab to reach the chart, and the left and right arrow keys then move from night to night. Under the chart, <span class="ui">Nights so far</span> and <span class="ui">Booked ahead</span> say which blue is which; the key is left out when the month has only one kind of night.</li>
+    <li><span class="ui">Revenue</span> (<span class="ui">Without tax</span>): the month so far, then a bar split into room revenue, extra revenue and each restaurant, with each part's share and amount. The bar is dark navy and greys, so no colour means anything else. Under it, <span class="ui">Today</span> and <span class="ui">Year so far</span>. The figures are the Manager report's Revenue Summary.</li>
   </ul>
 
   <h3>Nights ahead</h3>
@@ -71,7 +79,7 @@
 
   <h3>Money</h3>
   <ul>
-    <li><span class="ui">Collected today</span>: payments taken today, by method. <span class="msg">“Nothing taken yet today”</span> before the first.</li>
+    <li><span class="ui">Collected today</span>: payments taken today, by method, with a small bar under them that splits the day's total by method (navy, then greys). <span class="msg">“Nothing taken yet today”</span> before the first.</li>
     <li><span class="ui">Owed by guests, less refunds</span>: what every open guest bill still owes.</li>
     <li><span class="ui">City ledger</span>: what companies and booking sites owe on their accounts, with <span class="msg">“Paid today ₹…”</span>.</li>
     <li><span class="ui">No-shows</span>: today's, with the month so far. Click it for the No show report.</li>
@@ -88,13 +96,13 @@
         <dt>Open</dt><dd><code>/</code></dd>
         <dt>Sign in as</dt><dd>General Manager</dd>
         <dt>Window</dt><dd>1280 × 800, desk; the top of the page</dd>
-        <dt>Arrows</dt><dd>1 → “Business date · …” above the heading; 2 → the line under the heading (hotel name · month so far from …); 3 → the four tiles Arrivals, Due out, In house, Needs cleaning; 4 → a “· n left” beside a tile's number; 5 → the dark Occupancy card; 6 → Average rate (ARR), RevPAR, Room revenue; 7 → one (i) button</dd>
+        <dt>Arrows</dt><dd>1 → “Business date · …” above the heading; 2 → the line under the heading (hotel name · month so far from …); 3 → the four tiles Arrivals, Due out, In house, Needs cleaning; 4 → a “· n left” beside a tile's number; 5 → the dark Occupancy card; 6 → Average rate (ARR), RevPAR, Room revenue, each with its Last 14 days line; 7 → one (i) button</dd>
         <dt>Before taking it</dt><dd>Best with at least one arrival still to come and one departure owing money, so the tiles show yellow and orange.</dd>
         <dt>File</dt><dd><code>img/A1-2.png</code></dd>
       </dl>
     </div>
     <figcaption><b>Figure A1-2.</b> The top of the Dashboard: today's work, then the figures.</figcaption>
-    <ol class="callouts"><li>Business date</li><li>Which hotel, which month</li><li>Today's work</li><li>Still to do</li><li>Occupancy</li><li>Rate and revenue</li><li>What a card means</li></ol>
+    <ol class="callouts"><li>Business date</li><li>Which hotel, which month</li><li>Today's work</li><li>Still to do</li><li>Occupancy</li><li>Rate and revenue, with the last 14 days</li><li>What a card means</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A1-3">
@@ -104,12 +112,12 @@
         <dt>Open</dt><dd><code>/</code>, scrolled down</dd>
         <dt>Sign in as</dt><dd>General Manager</dd>
         <dt>Window</dt><dd>1280 × 800, desk; the lower half of the page</dd>
-        <dt>Arrows</dt><dd>1 → Nights ahead, on the dark “Tonight”; 2 → the Money card; 3 → the arrow beside No-shows; 4 → The house now, its squares and the key under them; 5 → the Quick reports buttons</dd>
+        <dt>Arrows</dt><dd>1 → Occupancy by day, on today's dark day number; 2 → the key under it (Nights so far, Booked ahead); 3 → Revenue and its split bar; 4 → Nights ahead, on the dark “Tonight”; 5 → the Money card, on the split bar under Collected today; 6 → the arrow beside No-shows; 7 → The house now, its squares and the key under them; 8 → the Quick reports buttons</dd>
         <dt>File</dt><dd><code>img/A1-3.png</code></dd>
       </dl>
     </div>
-    <figcaption><b>Figure A1-3.</b> The lower half: the nights ahead, money, the house and quick reports.</figcaption>
-    <ol class="callouts"><li>Nights ahead</li><li>Money</li><li>Opens the No show report</li><li>Every room, now</li><li>Quick reports</li></ol>
+    <figcaption><b>Figure A1-3.</b> The lower half: the month's occupancy and revenue, the nights ahead, money, the house and quick reports.</figcaption>
+    <ol class="callouts"><li>Occupancy by day</li><li>Which blue is which</li><li>Revenue, split by where it came from</li><li>Nights ahead</li><li>Money, with how it was paid</li><li>Opens the No show report</li><li>Every room, now</li><li>Quick reports</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A1-4">
@@ -136,12 +144,13 @@
       <li>Housekeeping, the kitchen manager, the chef, the Inventory Manager and the waiter have no Dashboard. The Revenue Manager sees it, but not what departing guests owe.</li>
       <li>A brand-new system with no property shows <span class="msg">“No property yet”</span> and an <span class="ui">Add a property</span> button.</li>
       <li>The Dashboard's figures come from the same place as the Manager report, for the same business date, so the two always agree.</li>
+      <li>If the month's figures could not be read, <span class="ui">Occupancy by day</span> says <span class="msg">“did not load”</span> with <span class="ui">Try again</span>, and the <span class="ui">Last 14 days</span> rows show a dash. A dash there means “not loaded”, not “no figure”.</li>
     </ul>
   </div>
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>The page is called Dashboard and carries quick reports: the owner, 14 September. Built as sketched, with today's four tiles first, colours by what staff must do, “ARR” on screens, Nights ahead and the Due out tile showing what departing guests owe: <span class="d">D27-243</span>.
-       No Dashboard for the working roles: <span class="d">D27-141</span>. Money hidden from roles that do not handle bills: <span class="d">D27-143</span>, <span class="d">D27-147</span>. A fresh system asks for a property first: <span class="d">D27-248</span>.</p>
+       No Dashboard for the working roles: <span class="d">D27-141</span>. Money hidden from roles that do not handle bills: <span class="d">D27-143</span>, <span class="d">D27-147</span>. A fresh system asks for a property first: <span class="d">D27-248</span>. The charts, the calendar month, the paler blue for nights to come, a gap and never a zero, Revenue leading with the month, navy-and-grey split bars, and Occupancy on its own row under 1440 pixels: <span class="d">D27-217</span> to <span class="d">D27-219</span>, <span class="d">D27-365</span>.</p>
   </div>
 
   <!-- A1.3 -->
