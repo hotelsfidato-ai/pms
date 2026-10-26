@@ -95,15 +95,17 @@ export function useSlipPrinter(hotelId: string) {
   /* This computer's shortest slip (D27-363), else the system's. */
   const setup = useKotSetup(hotelId);
   const minMm = setup.data?.stations.find((s) => s.mine)?.slipMm ?? DEFAULT_SLIP_MM;
-  const print = async (paper: ReactNode) => {
+  /* A KOT prints at its design's width (D27-368); a bill stays on 80 mm. */
+  const print = async (paper: ReactNode, widthMm: 58 | 80 = 80) => {
     flushSync(() => setSlip(paper));
-    try { await printRoll(document.querySelector<HTMLElement>("body > .kot-print"), minMm); } finally { setSlip(null); }
+    try { await printRoll(document.querySelector<HTMLElement>("body > .kot-print"), minMm, widthMm); } finally { setSlip(null); }
   };
+  const design = setup.data?.design;
   const node = slip && createPortal(
     <div className="kot-print"><style>{PRINT_CSS}</style>{slip}</div>,
     document.body,
   );
-  return { print, node };
+  return { print, node, design };
 }
 
 /** Mounted by PosGate on every restaurant screen. Anywhere but a printing
@@ -119,7 +121,7 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
      computer's "last seen". */
   useLive(hotelId, "orders", [queueKey(hotelId)]);
   const queue = useStationQueue(hotelId);
-  const { print, node } = useSlipPrinter(hotelId);
+  const { print, node, design } = useSlipPrinter(hotelId);
   const busy = useRef(false);
   const mine = queue.data?.station ? queue.data : null;
   const slip = mine?.due[0];
@@ -139,13 +141,13 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
         if (slip) {
           const d = await getDocket(hotelId, slip.orderId, slip.kotNo, slip.kindId);
           if (d && await claimKot(hotelId, slip.orderId, slip.kotNo, slip.kindId, kotDevice())) {
-            await print(<DocketSlip d={d} />);
+            await print(<DocketSlip d={d} design={design} />, design?.widthMm);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         } else if (again) {
           const d = await getDocket(hotelId, again.orderId, again.kotNo, again.kindId);
           if (d && await claimKotReprint(hotelId, again.id, kotDevice())) {
-            await print(<DocketSlip d={{ ...d, reprint: true }} />);
+            await print(<DocketSlip d={{ ...d, reprint: true }} design={design} />, design?.widthMm);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         } else if (bill) {
@@ -286,11 +288,11 @@ export function KotsSent({ hotelId, orderId, lines, className }: {
     REPRINT: the KOT section's last 20, on the computer that prints them.
     A reprint asked anywhere else goes to the station (`KotsSent`). */
 export function useKotReprint(hotelId: string) {
-  const { print, node } = useSlipPrinter(hotelId);
+  const { print, node, design } = useSlipPrinter(hotelId);
   const reprint = async (orderId: string, kotNo: number, kindId: string | null, label: string) => {
     const d = await getDocket(hotelId, orderId, kotNo, kindId ?? undefined).catch(() => null);
     if (!d) return toast.error("Not printed", `${label} did not load. Try again.`);
-    print(<DocketSlip d={{ ...d, reprint: true }} />);
+    print(<DocketSlip d={{ ...d, reprint: true }} design={design} />, design?.widthMm);
   };
   return { reprint, node };
 }

@@ -31,9 +31,12 @@ describe("printing in the Fidato Printer app", () => {
     const slip = document.createElement("div");
     slip.getBoundingClientRect = () => ({ height: 377.9 }) as DOMRect;
     await printRoll(slip, 90);
-    expect(print).toHaveBeenCalledWith(104);
+    expect(print).toHaveBeenCalledWith(104, 80);
     await printRoll(slip);
-    expect(print).toHaveBeenLastCalledWith(160);
+    expect(print).toHaveBeenLastCalledWith(160, 80);
+    /* The KOT's design on 58 mm paper (D27-368): the app is told the width. */
+    await printRoll(slip, 90, 58);
+    expect(print).toHaveBeenLastCalledWith(104, 58);
     expect(screen).not.toHaveBeenCalled();
     expect(document.head.querySelector("style")?.textContent ?? "").not.toContain("80mm");
   });

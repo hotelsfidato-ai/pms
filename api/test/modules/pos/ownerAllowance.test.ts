@@ -122,17 +122,17 @@ describe("the owner's allowance (D27-355, D27-366)", () => {
   });
 
   it("above what is left: the rest gets the % off, paid by UPI, and the free part is what was left", async () => {
-    const [{ id }] = await sql<{ id: string }>("select id::text from pos_orders where table_ref = $1", [`${TAG} no pct`]);
-    const p = await plan(id!);
+    const id = (await sql<{ id: string }>("select id::text from pos_orders where table_ref = $1", [`${TAG} no pct`]))[0]!.id;
+    const p = await plan(id);
     expect(p).toMatchObject({ ok: true, left: 164, before: 672, free: 164 });
-    const res = await settle(gm, id!, { method: "upi" });
+    const res = await settle(gm, id, { method: "upi" });
     expect(res.status, await res.clone().text()).toBe(200);
-    const paid = await tenders(id!);
+    const paid = await tenders(id);
     expect(paid.find((t) => t.method === "allowance")!.amount).toBe(164);
     /* (672 - 164) x 80% = 406.40, within the paisa the tax rounds to. */
     expect(paid.find((t) => t.method === "upi")!.amount).toBeCloseTo(406.4, 0);
-    expect(await row(id!)).toMatchObject({ status: "settled", payment_method: "split", on_owner_allowance: true });
-    expect((await row(id!)).discount_reason).toBe("Owner's allowance: 20% off above the ₹164.00 left of this month's ₹500.00");
+    expect(await row(id)).toMatchObject({ status: "settled", payment_method: "split", on_owner_allowance: true });
+    expect((await row(id)).discount_reason).toBe("Owner's allowance: 20% off above the ₹164.00 left of this month's ₹500.00");
   });
 
   it("the month used up: the whole bill gets the % off, paid by card, and is still the owner's", async () => {
@@ -159,7 +159,7 @@ describe("the owner's allowance (D27-355, D27-366)", () => {
       monthly: number; offPct: number; used: number; left: number; bills: { orderNo: string; free: number; paid: number }[] };
     expect(before).toMatchObject({ monthly: 500, offPct: 20, used: 500, left: 0 });
     expect(before.bills.length).toBeGreaterThanOrEqual(3);
-    const [{ id: free }] = await sql<{ id: string }>("select id::text from pos_orders where table_ref = $1", [`${TAG} free`]);
+    const free = (await sql<{ id: string }>("select id::text from pos_orders where table_ref = $1", [`${TAG} free`]))[0]!.id;
     const voided = await call(gm, "POST", `/till/orders/${free}/void`, { reason: "Wrong bill" });
     expect(voided.status, await voided.clone().text()).toBe(200);
     const after = (await (await call(owner, "GET", "/till/owner-allowance")).json()) as { used: number; left: number };

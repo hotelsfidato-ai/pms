@@ -6561,6 +6561,18 @@ copy will see of theirs.**
 
 ---
 
+### 437 · MINE: the owner's allowance test was committed with type errors, because the API's type check was not run after it (27 October)
+
+`api/test/modules/pos/ownerAllowance.test.ts` went in with 939c3e15 (D27-366) reading rows as
+`const [{ id }] = await sql(...)`, which the API's TypeScript refuses ("possibly undefined"). Vitest strips the types and
+runs the file, so every test passed and I took that for done; the API's type check (`cd api && npx tsc --noEmit`), which
+covers `test/` as well as `src/`, was last run before the test was written. Found on 27 October while type-checking the
+KOT design. Nothing shipped: the release gates run the same check and would have stopped release 14. **Fixed:**
+`(await sql(...))[0]!.id`. **The rule:** a test file is code. After writing or changing an API test, run the API's
+type check as well as the test - a green vitest run says nothing about the types.
+
+---
+
 ### 436 · MINE: a middleware imported across a circular import was undefined at load, and every bar bill route answered 404 (26 October)
 
 The Bar stock switch (D27-367) put one gate on every `/:code/bar/*` route. Purchasing's `barBills.ts` took it from the

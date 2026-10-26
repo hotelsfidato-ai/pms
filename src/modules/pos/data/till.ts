@@ -1659,6 +1659,9 @@ export interface Docket {
   outlet: string;
   hotel: string;
   sentAt: string | null;
+  /** For the KOT's design to print (D27-368). Absent on an older docket. */
+  covers?: number | null;
+  waiter?: string | null;
   lines: {
     id: string;
     /** Set on a side, naming the dish it goes on. The paper indents. */
@@ -1718,7 +1721,25 @@ export interface KotSetup {
   billPrinter: KotStationRef | null;
   /** This computer's station, when it is one. */
   me: string | null;
+  /** The KOT's design (D27-368); absent from an older server: today's KOT. */
+  design?: KotDesign;
 }
+
+/* ── The KOT's design (the owner's D27-368) ── */
+export type KotSize = "small" | "normal" | "large";
+export interface KotDesign {
+  dishSize: KotSize; numberSize: KotSize;
+  show: { waiter: boolean; covers: boolean; time: boolean; kind: boolean; notes: boolean; orderNo: boolean };
+  heading: string | null; widthMm: 58 | 80;
+}
+/** Today's KOT, as the server reads a hotel with no design (kotDesign.ts KOT_TODAY). */
+export const KOT_TODAY: KotDesign = {
+  dishSize: "normal", numberSize: "normal",
+  show: { waiter: false, covers: false, time: true, kind: true, notes: true, orderNo: true },
+  heading: null, widthMm: 80,
+};
+export const setKotDesign = (hotelId: string, design: KotDesign): Plain =>
+  plainPost(`/api/hotels/${hotelId}/till/kot-setup/design`, design, "PUT");
 
 export async function getKotSetup(hotelId: string, device: string): Promise<KotSetup> {
   return api<KotSetup>(

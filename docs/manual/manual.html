@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    358 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    359 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -5400,9 +5400,32 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Every computer that prints keeps its last 20 KOTs here, with <span class="ui">Reprint</span>.</li>
   </ul>
 
+  <h3>The KOT's design</h3>
+  <p>How every KOT at this hotel prints: one design for the hotel, set by the GM, the owner or an Admin. Anyone else who opens the KOT section sees it but cannot change it. The KOT beside the choices is the preview, drawn as it will print.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">The KOT's design</span>.</li>
+    <li>Choose the size of <span class="ui">The dishes</span>, and of <span class="ui">The KOT number and table</span>: <span class="ui">Small</span>, <span class="ui">Normal</span> or <span class="ui">Large</span>.</li>
+    <li>Under <span class="ui">What it prints</span>, tick each line the kitchen needs: <span class="ui">Waiter</span>, <span class="ui">Covers</span>, <span class="ui">Time sent</span>, <span class="ui">The KOT kind (KITCHEN, BAR)</span>, <span class="ui">Notes</span>, <span class="ui">The order number</span>.</li>
+    <li>Type a heading line if you want one (“Fidato Kitchen”), at most 40 letters. Blank prints none.</li>
+    <li>Choose <span class="ui">The paper</span>: <span class="ui">80 mm</span> or <span class="ui">58 mm</span>, the width of the roll in the printer.</li>
+    <li>Tap <span class="ui">Save the design</span>. The next KOT prints this way on every computer that prints KOTs. <span class="ui">Print a test KOT</span> shows it on paper.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-44">
+    <img src="img/A8-44.png" alt="The KOT's design: the dishes Large, the KOT number and table, the paper 80 mm, What it prints with Waiter ticked, the heading Fidato Kitchen, Save the design, and the preview KOT beside it">
+    <figcaption><b>Figure A8-44.</b> The KOT's design.</figcaption>
+    <ol class="callouts"><li>The sizes, and the paper</li><li>What it prints</li><li>A heading line</li><li>The preview, as it will print</li></ol>
+  </figure>
+  <ul>
+    <li><b><span class="ui">As it was</span></b> puts back the KOT every hotel printed before: Normal sizes; the time, the kind, the notes and the order number; no waiter, covers or heading; 80 mm. Tap <span class="ui">Save the design</span> to keep it.</li>
+    <li>With the KOT kind off, the slip is headed <b>KOT - 14</b> instead of <b>KITCHEN KOT 14</b>. Each computer still prints only its own kinds.</li>
+    <li>If a 58 mm slip comes out too wide, set the printer's paper to 58 mm once in its Printing preferences.</li>
+    <li>The design is for KOTs only. The bill does not change.</li>
+  </ul>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>. The Fidato Printer app, printing with no window, and the shortcut's new name: <span class="d">D27-360</span>. The app updating itself, straight away: <span class="d">D27-365</span>, <span class="d">D27-366</span>.</p>
+    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>. The Fidato Printer app, printing with no window, and the shortcut's new name: <span class="d">D27-360</span>. The app updating itself, straight away: <span class="d">D27-365</span>, <span class="d">D27-366</span>. The KOT's design, one for each hotel, with a preview: <span class="d">D27-368</span>.</p>
   </div>
 
   <!-- A8.11 -->

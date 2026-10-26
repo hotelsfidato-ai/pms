@@ -1,4 +1,4 @@
-import type { Docket } from "@/modules/pos/data/till";
+import { KOT_TODAY, type Docket, type KotDesign, type KotSize } from "@/modules/pos/data/till";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
 
@@ -27,39 +27,56 @@ const TYPE_LABEL: Record<string, string> = {
   delivery: "Delivery",
 };
 
-export function DocketSlip({ d }: { d: Docket }) {
+/* THE KOT'S DESIGN (the owner's D27-368): sizes, the lines it prints, a
+   heading, the paper's width - one for the hotel, from Restaurant setup.
+   "normal" is the size every KOT printed before. */
+const DISH_PX: Record<KotSize, number> = { small: 12, normal: 13, large: 16 };
+const NUMBER_PX: Record<KotSize, number> = { small: 18, normal: 22, large: 28 };
+const TABLE_PX: Record<KotSize, number> = { small: 12, normal: 13, large: 18 };
+
+export function DocketSlip({ d, design = KOT_TODAY }: { d: Docket; design?: KotDesign }) {
   /* A TEST HOTEL'S KOT (the owner's D27-296 (8)): TEST · NOT VALID at its
      head and foot, so a practice docket on a real rail is never cooked.
      Nothing else changes, in a test hotel or a real one. */
   const test = useIsTestHotel();
+  const show = design.show;
   return (
-    <div className="mx-auto px-3 py-4 w-[80mm] font-mono text-[13px] leading-snug bg-white text-ink-900">
+    <div className="mx-auto px-3 py-4 font-mono leading-snug bg-white text-ink-900"
+         style={{ width: `${design.widthMm}mm`, fontSize: DISH_PX[design.dishSize] }} data-kot-width={design.widthMm}>
       {test && <TestDocumentMark slip />}
-      <p className="text-center tabular">{d.sentAt}</p>
+      {design.heading && <p className="text-center font-bold" data-kot-own-heading>{design.heading}</p>}
+      {show.time && <p className="text-center tabular">{d.sentAt}</p>}
       {/* The number, biggest thing on the paper. A chef finds a docket
           on a rail of twenty by its number and nothing else. */}
       {/* WHAT IT IS, BIG, between two rules (the owner's D27-292): one
           printer may take every kind, so the slip says which - "BAR KOT 14"
           - and a reprint says so too. A docket from before kinds is "KOT". */}
-      <p className="mt-1 border-y-2 border-ink-900 py-1 text-center text-[22px] font-bold tracking-wide"
-         data-kot-heading>
-        {d.kind ? `${d.kind.name.toUpperCase()} KOT ${d.kotNo}` : `KOT - ${d.kotNo}`}
+      <p className="mt-1 border-y-2 border-ink-900 py-1 text-center font-bold tracking-wide"
+         style={{ fontSize: NUMBER_PX[design.numberSize] }} data-kot-heading>
+        {d.kind && show.kind ? `${d.kind.name.toUpperCase()} KOT ${d.kotNo}` : `KOT - ${d.kotNo}`}
       </p>
       {d.reprint && (
         <p className="text-center font-bold tracking-wide mt-0.5">REPRINT</p>
       )}
       {/* A parcel (D27-359) is "Parcel · <customer>", big, in place of a table. */}
       {d.orderType === "takeaway" ? (
-        <p className="text-center font-bold text-[16px] mt-1">{d.table ?? "Parcel"}</p>
+        <p className="text-center font-bold mt-1"
+           style={{ fontSize: design.numberSize === "normal" ? 16 : TABLE_PX[design.numberSize] }}>{d.table ?? "Parcel"}</p>
       ) : (
         <>
           <p className="text-center font-bold mt-1">
             {TYPE_LABEL[d.orderType] ?? d.orderType}
           </p>
           {d.table && (
-            <p className="text-center font-bold">Table No: {d.table}</p>
+            <p className="text-center font-bold" style={{ fontSize: TABLE_PX[design.numberSize] }}>Table No: {d.table}</p>
           )}
         </>
+      )}
+      {((show.waiter && d.waiter) || (show.covers && d.covers)) && (
+        <p className="text-center">
+          {[show.waiter && d.waiter ? `Waiter: ${d.waiter}` : null,
+            show.covers && d.covers ? `Covers: ${d.covers}` : null].filter(Boolean).join(" · ")}
+        </p>
       )}
 
       {/* A border, not a row of dashes. Forty dashes is right at one
@@ -122,7 +139,7 @@ export function DocketSlip({ d }: { d: Docket }) {
                   <span className="w-10 text-right tabular">{x.qty}</span>
                 </div>
               ))}
-              {dish.note && (
+              {dish.note && show.notes && (
                 <div className="pl-4 italic">[Note] {dish.note}</div>
               )}
             </li>
@@ -157,7 +174,7 @@ export function DocketSlip({ d }: { d: Docket }) {
       )}
 
       <p className="mt-3 text-center text-[11px]">
-        {d.outlet} · {d.orderNo}
+        {show.orderNo ? `${d.outlet} · ${d.orderNo}` : d.outlet}
       </p>
       {test && <TestDocumentMark slip />}
     </div>

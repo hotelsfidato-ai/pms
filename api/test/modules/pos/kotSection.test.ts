@@ -329,4 +329,30 @@ describe("the bill printer", () => {
     expect((await set(null)).status).toBe(200);
     expect(((await setup(A)).stations.find((s) => s.mine) as unknown as { slipMm: number | null }).slipMm).toBeNull();
   });
+
+  it("the KOT's design: today's by default, saved by the GM and not the kitchen manager, checked; the KOT carries waiter and covers (D27-368)", async () => {
+    await sql("update hotels set kot_design = null where code = '5EL'");
+    type Design = { dishSize: string; numberSize: string; show: Record<string, boolean>; heading: string | null; widthMm: number };
+    const today = { dishSize: "normal", numberSize: "normal",
+      show: { waiter: false, covers: false, time: true, kind: true, notes: true, orderNo: true }, heading: null, widthMm: 80 };
+    expect(((await setup()) as unknown as { design: Design }).design).toEqual(today);
+    const gm = await person("gm");
+    const mine = { dishSize: "large", numberSize: "small",
+      show: { waiter: true, covers: true, time: false, kind: false, notes: true, orderNo: false }, heading: "  Fidato Kitchen ", widthMm: 58 };
+    expect((await call(kitchen, "PUT", "/till/kot-setup/design", mine)).status, "not the kitchen manager").toBe(403);
+    expect(await reason(await call(gm, "PUT", "/till/kot-setup/design", { ...mine, widthMm: 76 }))).toBe("The paper is 58 or 80 mm wide.");
+    expect(await reason(await call(gm, "PUT", "/till/kot-setup/design", { ...mine, dishSize: "huge" }))).toBe("A size is small, normal or large.");
+    expect(await reason(await call(gm, "PUT", "/till/kot-setup/design", { ...mine, heading: "x".repeat(41) })))
+      .toBe("The heading is at most 40 letters.");
+    const saved = await call(gm, "PUT", "/till/kot-setup/design", mine);
+    expect(saved.status, await saved.clone().text()).toBe(200);
+    expect(((await setup()) as unknown as { design: Design }).design).toEqual({ ...mine, heading: "Fidato Kitchen" });
+
+    const { orderId, kotNo } = await sendBoth();
+    await sql("update pos_orders set covers = 3, waiter_id = $2 where id = $1", [orderId, kitchen]);
+    const docket = (await (await call(owner, "GET", `/till/orders/${orderId}/kot/${kotNo}`)).json()) as { covers: number; waiter: string };
+    expect([docket.covers, docket.waiter]).toEqual([3, "KOTSEC kitchen_manager"]);
+    await sql("update hotels set kot_design = null where code = '5EL'");
+    await sql("delete from staff_hotels where staff_id = $1", [gm]);
+  });
 });

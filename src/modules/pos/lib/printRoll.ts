@@ -31,8 +31,8 @@ export const rollMm = (heightPx: number, minMm: number = DEFAULT_SLIP_MM) =>
   Math.max(minMm, Math.ceil((heightPx * 25.4) / 96) + 4);
 
 /** The page rule for a slip `heightPx` CSS pixels tall. */
-export const rollPage = (heightPx: number, minMm: number = DEFAULT_SLIP_MM) =>
-  `@media print { @page { size: 80mm ${rollMm(heightPx, minMm)}mm; margin: 0; } }`;
+export const rollPage = (heightPx: number, minMm: number = DEFAULT_SLIP_MM, widthMm: 58 | 80 = 80) =>
+  `@media print { @page { size: ${widthMm}mm ${rollMm(heightPx, minMm)}mm; margin: 0; } }`;
 
 /* THE FIDATO PRINTER APP (the owner's D27-360): on a printing computer the
    PMS runs inside a small app that prints straight to the printer - no
@@ -40,20 +40,20 @@ export const rollPage = (heightPx: number, minMm: number = DEFAULT_SLIP_MM) =>
    else the browser's own print is used, as before. */
 declare global {
   interface Window {
-    fidatoPrinter?: { print: (heightMm: number) => Promise<{ ok: boolean; reason: string | null }> };
+    fidatoPrinter?: { print: (heightMm: number, widthMm?: number) => Promise<{ ok: boolean; reason: string | null }> };
   }
 }
 
 /** Prints the page with the paper set to the roll and the slip's length -
     through the Fidato Printer app when the page runs in it. */
-export async function printRoll(slip: HTMLElement | null, minMm: number = DEFAULT_SLIP_MM) {
+export async function printRoll(slip: HTMLElement | null, minMm: number = DEFAULT_SLIP_MM, widthMm: 58 | 80 = 80) {
   const height = slip?.getBoundingClientRect().height ?? 0;
   const style = document.createElement("style");
-  style.textContent = rollPage(height, minMm);
+  style.textContent = rollPage(height, minMm, widthMm);
   document.head.appendChild(style);
   try {
     if (window.fidatoPrinter) {
-      const done = await window.fidatoPrinter.print(rollMm(height, minMm));
+      const done = await window.fidatoPrinter.print(rollMm(height, minMm), widthMm);
       if (!done.ok) throw new Error(done.reason ?? "The printer did not take it.");
     } else {
       window.print();

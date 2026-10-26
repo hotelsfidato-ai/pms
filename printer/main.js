@@ -127,13 +127,15 @@ function failed(reason) {
 }
 
 /* THE PRINT: silent, to the default printer, on 80 mm paper as long as the
-   slip, with no margin - the page has already drawn the slip alone. */
+   slip, with no margin - the page has already drawn the slip alone. A KOT
+   whose design says 58 mm paper prints 58 mm wide (D27-368); nothing else. */
 function printSlip(event, input) {
   if (!ours(event.senderFrame && event.senderFrame.url)) return { ok: false, reason: "Not the PMS." };
   const heightMm = Math.max(90, Math.min(3000, Math.round(Number(input && input.heightMm) || 90)));
+  const widthMm = Number(input && input.widthMm) === 58 ? 58 : 80;
   if (PDF_DIR) {
     return event.sender.printToPDF({
-      printBackground: true, margins: { marginType: "none" }, pageSize: { width: 80 / 25.4, height: heightMm / 25.4 },
+      printBackground: true, margins: { marginType: "none" }, pageSize: { width: widthMm / 25.4, height: heightMm / 25.4 },
     }).then((pdf) => {
       fs.writeFileSync(path.join(PDF_DIR, `slip-${Date.now()}.pdf`), pdf);
       return { ok: true, reason: null };
@@ -143,7 +145,7 @@ function printSlip(event, input) {
     event.sender.print({
       silent: true, printBackground: true, margins: { marginType: "none" },
       deviceName: readSettings().printer || undefined,
-      pageSize: { width: 80000, height: heightMm * 1000 },
+      pageSize: { width: widthMm * 1000, height: heightMm * 1000 },
     }, (ok, reason) => {
       const why = ok ? null : String(reason || "The printer did not take it.");
       if (why) failed(why);

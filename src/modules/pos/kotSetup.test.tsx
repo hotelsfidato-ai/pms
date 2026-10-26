@@ -3,7 +3,8 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn } from "@/test/app";
+import { HOTEL, AGRA_HOTEL, startSignedIn, signedIn } from "@/test/app";
+import { useSession } from "@/lib/session";
 import type { KotSetup } from "@/modules/pos/data/till";
 import { KotSection } from "@/modules/pos/components/KotSection";
 import { kotSetupScript, kotSetupFileName } from "@/modules/pos/lib/kotSetupFile";
@@ -136,5 +137,43 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
     await vi.waitFor(() => expect(sent).toContainEqual({
       url: `/api/hotels/${HOTEL}/till/kot-setup/stations/st-1/print`, body: { slipMm: 180 } }));
     delete window.fidatoPrinter;
+  });
+
+  it("the KOT's design: the preview follows each choice, and Save sends the design (D27-368)", async () => {
+    signedIn({ scope: { ...useSession.getState().scope!, hotels: [{ hotelId: AGRA_HOTEL, role: "gm" }] } });
+    const setup: KotSetup = { kinds: [], stations: [], sections: [], billPrinter: null, me: null };
+    const sent: { url: string; method?: string; body: unknown }[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.split("?")[0] === `/api/hotels/${HOTEL}/till/kot-setup`) return setup as never;
+      sent.push({ url, method: init?.method, body: init?.body ? JSON.parse(String(init.body)) : null });
+      return { ok: true } as never;
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[`/pos/${HOTEL}/setup`]}>
+          <Routes><Route path="/pos/:code/setup" element={<KotSection hotelId={HOTEL} />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("The KOT's design")).toBeTruthy();
+    const preview = screen.getByLabelText("The KOT, as it will print");
+    expect(preview.textContent, "today's KOT").toContain("KITCHEN KOT 14");
+    expect(preview.textContent).not.toContain("Waiter:");
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Waiter" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "The KOT kind (KITCHEN, BAR)" }));
+    fireEvent.change(screen.getByLabelText("A heading line, your own words (blank: none)"), { target: { value: "Fidato Kitchen" } });
+    fireEvent.click(screen.getByRole("tab", { name: "58 mm" }));
+    expect(preview.textContent).toContain("Waiter: Ramesh");
+    expect(preview.textContent).toContain("Fidato Kitchen");
+    expect(preview.textContent).toContain("KOT - 14");
+    expect(preview.querySelector("[data-kot-width]")!.getAttribute("data-kot-width")).toBe("58");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save the design" }));
+    await vi.waitFor(() => expect(sent.find((x) => x.url.endsWith("/till/kot-setup/design"))).toMatchObject({
+      method: "PUT",
+      body: { widthMm: 58, heading: "Fidato Kitchen", show: { waiter: true, kind: false, time: true }, dishSize: "normal" },
+    }));
   });
 });

@@ -6,11 +6,12 @@ import { apiBase } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
   Section, Card, CardBody, Button, Checkbox, Skeleton, StatusPill, toast,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, ReadFailed,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, ReadFailed, Segmented,
 } from "@/components/ui";
+import { useRole } from "@/lib/session";
 import {
   addKotKind, renameKotKind, kotKindOff, setSectionKot, setThisComputer, removeKotStation, setStationSlip,
-  type KotKind, type KotSetup, type Docket, type Order,
+  setKotDesign, KOT_TODAY, type KotDesign, type KotKind, type KotSetup, type Docket, type Order,
 } from "@/modules/pos/data/till";
 import { kotDevice, kotSetupKey, useKotSetup, since, Reprints, useSlipPrinter } from "@/modules/pos/components/KotStation";
 import { DocketSlip } from "@/modules/pos/components/DocketSlip";
@@ -88,6 +89,7 @@ export function KotSection({ hotelId }: { hotelId: string }) {
           <div className="space-y-4">
             <ThisComputer hotelId={hotelId} setup={setup.data} run={run} />
             {setup.data.me && <Printing hotelId={hotelId} setup={setup.data} run={run} />}
+            <KotDesignCard hotelId={hotelId} setup={setup.data} run={run} />
             <Kinds hotelId={hotelId} setup={setup.data} run={run} />
             <Computers hotelId={hotelId} setup={setup.data} run={run} />
             <Routing hotelId={hotelId} setup={setup.data} run={run} />
@@ -248,10 +250,11 @@ function Printing({ hotelId, setup, run }: { hotelId: string; setup: KotSetup; r
   const me = setup.stations.find((s) => s.mine)!;
   const [mm, setMm] = useState(me.slipMm ? String(me.slipMm) : "");
   const [busy, setBusy] = useState(false);
-  const { print, node } = useSlipPrinter(hotelId);
+  const { print, node, design } = useSlipPrinter(hotelId);
   const test = async (paper: "kot" | "bill") => {
     try {
-      await print(paper === "kot" ? <DocketSlip d={TEST_KOT} /> : <BillSlip order={TEST_BILL} heading="interim" sample="TEST PRINT" />);
+      await (paper === "kot" ? print(<DocketSlip d={TEST_KOT} design={design} />, design?.widthMm)
+        : print(<BillSlip order={TEST_BILL} heading="interim" sample="TEST PRINT" />));
     } catch (error) {
       toast.error("The test did not print", (error as Error).message);
     }
@@ -283,6 +286,93 @@ function Printing({ hotelId, setup, run }: { hotelId: string; setup: KotSetup; r
           <Button variant="secondary" onClick={() => void test("bill")}><Receipt className="size-4" aria-hidden /> Print a test bill</Button>
         </div>
         {node}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── The KOT's design, with a live preview (the owner's D27-368) ──────
+   One for the hotel, by the GM, the owner or an Admin; anyone who sees the
+   section sees it. The preview is the KOT itself, drawn as it will print. */
+const SIZE_OPTIONS = [{ value: "small", label: "Small" }, { value: "normal", label: "Normal" }, { value: "large", label: "Large" }] as const;
+const LINE_LABEL: Record<keyof KotDesign["show"], string> = {
+  waiter: "Waiter", covers: "Covers", time: "Time sent", kind: "The KOT kind (KITCHEN, BAR)",
+  notes: "Notes", orderNo: "The order number",
+};
+const PREVIEW_KOT: Docket = {
+  kotNo: 14, kind: { id: "p", name: "Kitchen" }, orderNo: "20261027-12", table: "4", orderType: "dine_in",
+  outlet: "Restaurant", hotel: "Hotel", sentAt: "27/10/26 13:05", covers: 3, waiter: "Ramesh",
+  lines: [
+    { id: "p1", parentId: null, name: "Paneer Tikka", qty: 2, note: "Less spicy", isAddon: false },
+    { id: "p2", parentId: null, name: "Butter Roti", qty: 4, note: null, isAddon: false },
+  ],
+};
+
+function KotDesignCard({ hotelId, setup, run }: { hotelId: string; setup: KotSetup; run: Run }) {
+  const role = useRole();
+  const mayEdit = role === "owner" || role === "admin" || role === "gm";
+  const saved = setup.design ?? KOT_TODAY;
+  const [draft, setDraft] = useState<KotDesign>(saved);
+  const [busy, setBusy] = useState(false);
+  const set = (patch: Partial<KotDesign>) => setDraft((d) => ({ ...d, ...patch }));
+  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
+  const save = async () => {
+    setBusy(true);
+    await run(setKotDesign(hotelId, { ...draft, heading: draft.heading?.trim() || null }), "The KOT's design is saved");
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <div>
+          <h3 className="text-md font-semibold text-ink-900">The KOT's design</h3>
+          <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
+            How every KOT at this hotel prints. The KOT beside it is the preview, as it will print.
+            {!mayEdit && " Set by the GM, the owner or an Admin."}
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]" data-kot-design>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-grey-600">The dishes</p>
+                <Segmented value={draft.dishSize} onChange={(v) => mayEdit && set({ dishSize: v })} options={[...SIZE_OPTIONS]} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-grey-600">The KOT number and table</p>
+                <Segmented value={draft.numberSize} onChange={(v) => mayEdit && set({ numberSize: v })} options={[...SIZE_OPTIONS]} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-grey-600">The paper</p>
+                <Segmented value={String(draft.widthMm) as "58" | "80"} onChange={(v) => mayEdit && set({ widthMm: v === "58" ? 58 : 80 })}
+                  options={[{ value: "80", label: "80 mm" }, { value: "58", label: "58 mm" }]} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs text-grey-600">What it prints</p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {(Object.keys(LINE_LABEL) as (keyof KotDesign["show"])[]).map((line) => (
+                  <Checkbox key={line} label={LINE_LABEL[line]} checked={draft.show[line]} disabled={!mayEdit}
+                    onCheckedChange={(v) => set({ show: { ...draft.show, [line]: v === true } })} />
+                ))}
+              </div>
+            </div>
+            <Field label="A heading line, your own words (blank: none)" className="max-w-md">
+              {(f) => <Input {...fieldProps(f)} value={draft.heading ?? ""} maxLength={40} disabled={!mayEdit}
+                             placeholder="Fidato Kitchen" onChange={(e) => set({ heading: e.target.value })} />}
+            </Field>
+            {mayEdit && (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="primary" loading={busy} disabled={!changed} onClick={() => void save()}>Save the design</Button>
+                <Button variant="ghost" disabled={JSON.stringify(draft) === JSON.stringify(KOT_TODAY)}
+                  onClick={() => setDraft(KOT_TODAY)}>As it was</Button>
+              </div>
+            )}
+          </div>
+          <div className="rounded-md border border-grey-200 bg-grey-50 p-2 overflow-x-auto" aria-label="The KOT, as it will print">
+            <DocketSlip d={PREVIEW_KOT} design={draft} />
+          </div>
+        </div>
       </CardBody>
     </Card>
   );

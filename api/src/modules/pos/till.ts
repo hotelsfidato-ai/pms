@@ -6049,16 +6049,20 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
     const { rows: head } = await client.query<{
       order_no: string; table_ref: string | null; order_type: string;
       outlet_name: string; hotel_name: string; sent_at: string | null;
+      covers: number | null; waiter: string | null;
     }>(
       `select o.order_no, o.table_ref, o.order_type,
               ou.name as outlet_name, h.name as hotel_name,
-              app.hotel_clock($2::uuid, min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
+              app.hotel_clock($2::uuid, min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at,
+              /* The KOT's design may print them (D27-368). */
+              o.covers, w.full_name as waiter
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          join hotels h on h.id = o.hotel_id
+         left join staff w on w.id = o.waiter_id
          join pos_order_lines l on l.order_id = o.id and l.kot_no = $3 and not l.packing
         where o.id = $1 and o.hotel_id = $2
-        group by o.order_no, o.table_ref, o.order_type, ou.name, h.name`,
+        group by o.order_no, o.table_ref, o.order_type, ou.name, h.name, o.covers, w.full_name`,
       [orderId, hotelId, kotNo],
     );
     if (!head[0]) return null;
@@ -6126,6 +6130,8 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
       outlet: head[0].outlet_name,
       hotel: head[0].hotel_name,
       sentAt: head[0].sent_at,
+      covers: head[0].covers,
+      waiter: head[0].waiter,
       lines: rows.map((r) => {
         const numbered = numberedOf.get(r.line_id);
         return {

@@ -496,4 +496,17 @@ export const SHOTS = [
       { n: 3, at: "css:[data-allowance-bills]", side: "left" },
     ],
   },
+  /* The KOT's design (D27-368): the sizes, the lines, a heading, the paper, and the preview. */
+  {
+    id: "A8-44", title: "The KOT's design, with its preview", as: "General Manager",
+    path: "/pos/5EL/setup",
+    steps: [{ eval: "location.href = '/pos/5EL/setup#kot'; true" }, { waitFor: "text:The KOT's design", ms: 30000 },
+            { scroll: "text:What it prints" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:The dishes", side: "left" },
+      { n: 2, at: "text:What it prints", side: "left" },
+      { n: 3, at: "text:A heading line, your own words (blank: none)", side: "left" },
+      { n: 4, at: "css:[data-kot-width]", side: "right" },
+    ],
+  },
 ];

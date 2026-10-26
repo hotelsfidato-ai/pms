@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import type { PoolClient as Client } from "pg";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
+import { registerKotDesign, kotDesignOf } from "./kotDesign.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KOT SECTION OF RESTAURANT SETUP (the owner's D27-292, 9 October)
@@ -72,6 +73,8 @@ async function headingFor(client: Client, orderId: string, status: string) {
 }
 
 export function registerKotSection(till: App, hotelFor: HotelFor): void {
+  /* The KOT's design (D27-368). */
+  registerKotDesign(till, hotelFor);
   /* ── The setup, as every screen reads it ─────────────────────────── */
   till.get("/:code/till/kot-setup", async (c) => {
     const device = c.req.query("device") ?? "";
@@ -147,6 +150,8 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
         })),
         billPrinter: bills ? station(bills.id) : null,
         me: stations.find((s) => s.mine)?.id ?? null,
+        /* The KOT's design (D27-368): today's where the hotel has none. */
+        design: await kotDesignOf(client, hotelId),
       };
     });
     return body ? c.json(body) : c.json({ error: "No such property." }, 404);
