@@ -199,3 +199,33 @@ describe("Close restaurant day - the NC bills", () => {
     expect(within(tile).getByText("1"), "one NC bill, not the three 100% discounts").toBeTruthy();
   });
 });
+
+describe("the Till - the owner's allowance (D27-366)", () => {
+  const setting = { monthly: 500, offPct: 20, month: "2026-08", used: 336, left: 164, mayEdit: false, maySettle: true, bills: [] };
+
+  it("is offered to the GM once it is set: what is free, the rest after the % off, the rest paid by UPI", async () => {
+    as("gm");
+    const calls = tillWith(() => open(), {
+      [`GET ${API}/till/owner-allowance`]: () => setting,
+      [`GET ${API}/till/orders/o-5/owner-allowance`]: () => ({ ok: true, monthly: 500, offPct: 20, left: 164,
+        before: 672, discountNet: 96.76, after: 570.4, free: 164, rest: 406.4, reason: "Owner's allowance: 20% off" }),
+      [`POST ${API}/till/orders/o-5/settle`]: () => ({ ok: true, ...open({ status: "settled", paymentMethod: "split",
+        tenders: [{ id: "t1", method: "allowance", amount: 164, tendered: null, change: null, reference: null },
+                  { id: "t2", method: "upi", amount: 406.4, tendered: null, change: null, reference: null }] as never }) }),
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Owner's allowance" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("Left this month")).toBeTruthy();
+    expect(within(dialog).getByText("To pay, after 20% off above it")).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "UPI" }));
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/settle")))
+      .toMatchObject({ method: "POST", body: { method: "allowance", rest: { method: "upi" } } }));
+  });
+
+  it("is not offered to a waiter", async () => {
+    as("pos");
+    tillWith(() => open(), { [`GET ${API}/till/owner-allowance`]: () => ({ ...setting, maySettle: false }) });
+    await screen.findByRole("button", { name: /No charge|Ask the GM for NC/ });
+    expect(screen.queryByRole("button", { name: "Owner's allowance" })).toBeNull();
+  });
+});

@@ -12,7 +12,8 @@ import {
 } from "@/components/ui";
 import {
   getTillSetup, getMenu, nameRestaurant, setPackingCharge, addSection, renameSection, takeSectionAway,
-  addTables, changeTable, takeTableAway, type TillSetup, type SetupTable, type MenuCategory,
+  addTables, changeTable, takeTableAway, getOwnerAllowance, setOwnerAllowance,
+  type TillSetup, type SetupTable, type MenuCategory,
 } from "@/modules/pos/data/till";
 import { getTableHours, setTableHours, type TableHours } from "@/modules/pos/data/tableBookings";
 import { can } from "@/lib/permissions";
@@ -108,6 +109,7 @@ export default function SetupPage() {
           <ReadyToOpen hotelId={hotelId} setup={setup.data} menu={menu} />
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
           {setup.data.restaurant && <Packing hotelId={hotelId} setup={setup.data} run={run} />}
+          {setup.data.restaurant && <OwnerAllowanceCard hotelId={hotelId} run={run} />}
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
           <KotSection hotelId={hotelId} />
           <TableBookingHours hotelId={hotelId} />
@@ -305,6 +307,85 @@ function Packing({ hotelId, setup, run }: { hotelId: string; setup: TillSetup; r
               Save
             </Button>
           </form>
+        </CardBody>
+      </Card>
+    </Section>
+  );
+}
+
+/* ── The owner's restaurant allowance (D27-355, D27-365, D27-366) ──
+   The owner or an Admin types the free amount a month and the % off above
+   it; blank is "not set" - nothing is built in. This month's bills below. */
+function OwnerAllowanceCard({ hotelId, run }: { hotelId: string; run: Run }) {
+  const q = useQuery({ queryKey: ["owner-allowance", hotelId], queryFn: () => getOwnerAllowance(hotelId) });
+  const a = q.data;
+  const [monthly, setMonthly] = useState<string | null>(null);
+  const [off, setOff] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!a) return null;
+  const shownMonthly = monthly ?? (a.monthly === null ? "" : String(a.monthly));
+  const shownOff = off ?? (a.offPct === null ? "" : String(a.offPct));
+  const typed = (v: string) => (v.trim() === "" ? null : Number(v.trim()));
+  const save = async () => {
+    setBusy(true);
+    if (await run(setOwnerAllowance(hotelId, typed(shownMonthly), typed(shownOff)), "Owner's allowance saved")) {
+      setMonthly(null); setOff(null); void q.refetch();
+    }
+    setBusy(false);
+  };
+  const rupees = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return (
+    <Section title="Owner's allowance"
+      description="What the owner takes free from the restaurant each month, and the % off a bill above it. The GM, the owner or an Admin settles the owner's bill to it on the Till. Blank: not set.">
+      <Card>
+        <CardBody className="space-y-4">
+          <form className="flex flex-col sm:flex-row sm:items-end gap-3"
+                onSubmit={(e) => { e.preventDefault(); void save(); }}>
+            <Field label="Free each month, ₹" className="max-w-xs">
+              {(f) => <Input {...fieldProps(f)} inputMode="decimal" value={shownMonthly} disabled={!a.mayEdit}
+                             onChange={(e) => setMonthly(e.target.value)} />}
+            </Field>
+            <Field label="% off above it" className="max-w-xs">
+              {(f) => <Input {...fieldProps(f)} inputMode="decimal" value={shownOff} disabled={!a.mayEdit}
+                             onChange={(e) => setOff(e.target.value)} />}
+            </Field>
+            {a.mayEdit && (
+              <Button type="submit" variant="secondary" loading={busy}
+                      disabled={typed(shownMonthly) === a.monthly && typed(shownOff) === a.offPct}>
+                Save
+              </Button>
+            )}
+          </form>
+          {!a.mayEdit && <p className="text-sm text-grey-600">Set by the owner or an Admin.</p>}
+          {a.monthly !== null && (
+            <div className="space-y-2">
+              <p className="text-sm text-ink-900 tabular">
+                This month ({a.month}): {rupees(a.used)} used, {rupees(a.left ?? 0)} left of {rupees(a.monthly)}.
+              </p>
+              {a.bills.length > 0 && (
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <table className="w-full text-sm" data-allowance-bills>
+                    <thead><tr className="text-left text-grey-600">
+                      <th className="py-1.5 pr-3 font-medium">Bill</th><th className="py-1.5 pr-3 font-medium">Day</th>
+                      <th className="py-1.5 pr-3 font-medium text-right">Free</th>
+                      <th className="py-1.5 pr-3 font-medium text-right">% off, before tax</th>
+                      <th className="py-1.5 font-medium text-right">Paid</th>
+                    </tr></thead>
+                    <tbody>
+                      {a.bills.map((b) => (
+                        <tr key={b.orderNo} className="border-t border-grey-100 tabular">
+                          <td className="py-1.5 pr-3">{b.orderNo}</td><td className="py-1.5 pr-3">{b.date}</td>
+                          <td className="py-1.5 pr-3 text-right">{rupees(b.free)}</td>
+                          <td className="py-1.5 pr-3 text-right">{b.discount > 0 ? rupees(b.discount) : "-"}</td>
+                          <td className="py-1.5 text-right">{b.paid > 0 ? rupees(b.paid) : "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </CardBody>
       </Card>
     </Section>

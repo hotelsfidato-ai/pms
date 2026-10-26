@@ -76,6 +76,8 @@ const METHOD_LABEL: Record<string, string> = {
   room: "To a room", due: "Due", comp: "Complimentary",
   /* D17-21: on a banquet function's bill. Business done, not in the tin. */
   function: "To a function",
+  /* D27-366: the owner's allowance paid it, free. Not in the tin either. */
+  allowance: "Owner's allowance",
 };
 
 /** The property this page is closing, by name.

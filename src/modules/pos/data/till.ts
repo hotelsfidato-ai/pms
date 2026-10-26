@@ -364,7 +364,8 @@ export interface Order {
 /** One payment against a bill. Several when the guest paid two ways. */
 export interface Tender {
   id: string;
-  method: "room" | "cash" | "card" | "upi";
+  /** "allowance": the owner's allowance paid this part, free (D27-366). */
+  method: "room" | "cash" | "card" | "upi" | "allowance";
   amount: number;
   /** Cash handed over. Null for every other method. */
   tendered: number | null;
@@ -946,6 +947,51 @@ export function settleOrder(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
     { method, room, folioId, ...cashId });
+}
+
+/* ── The owner's restaurant allowance (D27-355, D27-365, D27-366) ── */
+export interface OwnerAllowance {
+  monthly: number | null; offPct: number | null; month: string; used: number; left: number | null;
+  mayEdit: boolean; maySettle: boolean;
+  bills: { orderNo: string; date: string; free: number; discount: number; paid: number }[];
+}
+export interface AllowancePlan {
+  ok: true; monthly: number; offPct: number | null; left: number;
+  before: number; discountNet: number; after: number; free: number; rest: number; reason: string | null;
+}
+export const getOwnerAllowance = (hotelId: string) =>
+  api<OwnerAllowance>(`/api/hotels/${hotelId}/till/owner-allowance`);
+export async function setOwnerAllowance(hotelId: string, monthly: number | null, offPct: number | null): Done {
+  try {
+    await api(`/api/hotels/${hotelId}/till/owner-allowance`,
+      { method: "PUT", body: JSON.stringify({ monthly, offPct }) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, reason: (error.body as { reason?: string } | undefined)?.reason ?? error.message };
+    throw error;
+  }
+}
+export async function getAllowancePlan(hotelId: string, orderId: string): Promise<AllowancePlan | { ok: false; reason: string }> {
+  try {
+    return await api<AllowancePlan>(`/api/hotels/${hotelId}/till/orders/${orderId}/owner-allowance`);
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, reason: (error.body as { reason?: string } | undefined)?.reason ?? error.message };
+    throw error;
+  }
+}
+/** Settled to the owner's allowance: the server works out the free part; `rest` pays the part above it. */
+export function settleToAllowance(
+  hotelId: string, orderId: string, rest: { method: "cash" | "card" | "upi"; tendered?: number }, cashId: CashId = {},
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`, { method: "allowance", rest, ...cashId });
+}
+/** A bill on the owner's allowance, in words (D27-366): "₹900.00 free on the owner's allowance, ₹540.00 by cash". */
+export function allowanceWords(tenders: readonly { method: string; amount: number }[] | undefined): string | null {
+  if (!tenders?.some((t) => t.method === "allowance")) return null;
+  const by: Record<string, string> = { cash: "cash", card: "card", upi: "UPI" };
+  const rupees = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return tenders.map((t) => (t.method === "allowance" ? `${rupees(t.amount)} free on the owner's allowance`
+    : `${rupees(t.amount)} by ${by[t.method] ?? t.method}`)).join(", ");
 }
 
 /** What the biller is handing the till for one of several payments. */

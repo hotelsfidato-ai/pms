@@ -23,7 +23,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -702,6 +702,67 @@ function ModeChange({ order, hotelId, onDone }: { order: Order; hotelId: string;
   );
 }
 
+/* ── THE OWNER'S ALLOWANCE (the owner's D27-355, D27-365, D27-366) ──
+   The GM, the owner or an Admin settles the owner's bill to it: the server
+   works out what is free (what is left of this month) and the % off above it;
+   the rest is paid here by cash, card or UPI. */
+function AllowanceDialog({ order, hotelId, onClose, onDone }: {
+  order: Order; hotelId: string; onClose: () => void; onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const plan = useQuery({
+    queryKey: ["allowance-plan", hotelId, order.id, order.gross],
+    queryFn: () => getAllowancePlan(hotelId, order.id),
+  });
+  const p = plan.data;
+  const pay = async (method: "cash" | "card" | "upi") => {
+    setBusy(true);
+    const res = await settleToAllowance(hotelId, order.id, { method });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not settled", res.reason);
+    toast.success("On the owner's allowance", allowanceWords(res.order.tenders) ?? money(res.order.payable));
+    onClose();
+    onDone();
+  };
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent title={`Bill ${order.orderNo} on the owner's allowance`} size="sm"
+        description="What is left of this month's allowance pays first; the rest gets the % off and is paid now.">
+        {!p ? <p className="text-sm text-grey-600">Working it out...</p>
+          : !p.ok ? <p className="text-sm text-brand-red-700">{p.reason}</p>
+          : (
+            <div className="space-y-3">
+              <ul className="text-base text-ink-900 space-y-1 tabular">
+                <li className="flex justify-between"><span>This month's allowance</span><span>{moneyPrecise(p.monthly)}</span></li>
+                <li className="flex justify-between"><span>Left this month</span><span>{moneyPrecise(p.left)}</span></li>
+                <li className="flex justify-between"><span>This bill</span><span>{moneyPrecise(p.before)}</span></li>
+                <li className="flex justify-between font-medium"><span>Free</span><span>{moneyPrecise(Math.min(p.free, p.after))}</span></li>
+                {p.rest > 0 && (
+                  <li className="flex justify-between font-medium">
+                    <span>To pay, after {p.offPct}% off above it</span><span>{moneyPrecise(p.rest)}</span>
+                  </li>
+                )}
+              </ul>
+              {p.rest > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {(["cash", "card", "upi"] as const).map((m) => (
+                    <Button key={m} variant="secondary" size="lg" loading={busy} onClick={() => void pay(m)}>
+                      {m === "upi" ? "UPI" : m === "cash" ? "Cash" : "Card"}
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <Button variant="primary" size="lg" className="w-full" loading={busy} onClick={() => void pay("cash")}>
+                  Settle it free
+                </Button>
+              )}
+            </div>
+          )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function DiscountDialog({
   order, hotelId, open, onOpenChange, onDone, send = false,
 }: {
@@ -1108,6 +1169,8 @@ function OrderPanel({
 }) {
   const [room, setRoom] = useState("");
   const [discounting, setDiscounting] = useState(false);
+  /* The owner's allowance: offered once it is set (D27-366). */
+  const [onAllowance, setOnAllowance] = useState(false);
   const [splitting, setSplitting] = useState(false);
   const [cashId, setCashId] = useState<CashId>({});
   const [ask, setAsk] = useState<Ask | null>(null);
@@ -1237,6 +1300,8 @@ function OrderPanel({
      `approve` on a booking is exactly those three, as the server asks. A
      bill that reached a room's or a function's bill is reversed there. */
   const mayVoid = can(useRole(), "approve", "reservation");
+  const allowance = useQuery({ queryKey: ["owner-allowance", hotelId], queryFn: () => getOwnerAllowance(hotelId),
+    enabled: mayVoid, staleTime: 60_000 });
   /* A discount, too, is for those three only (the owner's D27-352). */
   const mayDiscount = mayVoid;
   const voidBlock = order.paymentMethod === "room"
@@ -1496,6 +1561,8 @@ function OrderPanel({
                 : order.status === "settled"
                 ? order.paymentMethod === "function"
                   ? `On ${order.eventTitle ?? "the function"}'s bill${order.settledBy ? `, settled by ${order.settledBy}` : ""}.`
+                  : allowanceWords(order.tenders)
+                  ? `${allowanceWords(order.tenders)}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                   : `Paid by ${order.paymentMethod}${order.paymentMethod === "room" && order.room ? ` (room ${order.room})` : ""}`
                     + `${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                 : `Closed unpaid - ${order.abandonedReason}`}
@@ -1664,6 +1731,15 @@ function OrderPanel({
               {mayVoid ? "No charge (NC)" : "Ask the GM for NC"}
             </Button>
 
+            {/* The owner's allowance (D27-366): the GM, the owner or an Admin, once it is set. */}
+            {allowance.data?.maySettle && allowance.data.monthly !== null && (
+              <Button variant="secondary" size="lg" className="w-full"
+                disabled={onFunction || live.length === 0} onClick={() => setOnAllowance(true)} loading={busy}>
+                <Gift className="size-4" />
+                Owner's allowance
+              </Button>
+            )}
+
             <Button variant="ghost" size="lg" className="w-full"
               onClick={abandon} loading={busy}>
               Close unpaid
@@ -1692,6 +1768,9 @@ function OrderPanel({
       </CardBody>
 
       <AskDialog ask={ask} onClose={() => setAsk(null)} />
+      {onAllowance && (
+        <AllowanceDialog order={order} hotelId={hotelId} onClose={() => setOnAllowance(false)} onDone={onDone} />
+      )}
       <DiscountDialog
         order={order}
         hotelId={hotelId}

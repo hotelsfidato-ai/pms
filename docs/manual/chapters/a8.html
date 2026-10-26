@@ -506,6 +506,20 @@
 
   <p>The bill then reads, under <span class="msg">“Paid by card”</span>, <span class="msg">“Payment mode changed: UPI to Card, ₹336.00, by … at 18:50 - the reason.”</span> <span class="ui">Close restaurant day</span> lists it under <span class="ui">Payment mode changed</span>, marked <span class="msg">“after the drawer was counted”</span> where it was.</p>
 
+  <h3>The owner's allowance</h3>
+  <p>The hotel's owner takes up to a set amount a month from the restaurant free; above it, a set % off. Both are this hotel's settings, typed by the owner or an Admin in <span class="ui">Restaurant setup</span>, <span class="ui">Owner's allowance</span>: <span class="ui">Free each month, ₹</span> and <span class="ui">% off above it</span>. Nothing is filled in to start with: until the amount is typed, no bill can go on the allowance. The month is the hotel's business month and starts again on the 1st; what is not used is not carried over. The card also lists this month's bills on the allowance: what was free, the % off given and what was paid.</p>
+  <figure class="shot" id="fig-A8-43">
+    <img src="img/A8-43.png" alt="Restaurant setup, Owner's allowance: Free each month 500, % off above it 20, Save, and this month's bills with what was free, the % off before tax and what was paid">
+    <figcaption><b>Figure A8-43.</b> The owner's allowance.</figcaption>
+    <ol class="callouts"><li>Free each month</li><li>The % off above it</li><li>This month's bills on the allowance</li></ol>
+  </figure>
+  <ol class="steps">
+    <li>On the Till, open the owner's bill and tap <span class="ui">Owner's allowance</span> (the GM, the owner or an Admin; nobody else sees it).</li>
+    <li>The window says this month's allowance, what is left, the bill, what is <b>free</b>, and, if the bill is more than what is left, what is <b>to pay</b> after the % off above it.</li>
+    <li>Tap how the rest is paid: <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>; or <span class="ui">Settle it free</span> when nothing is left to pay.</li>
+  </ol>
+  <p>The bill then reads, for example, <span class="msg">“₹164.00 free on the owner's allowance, ₹406.40 by UPI”</span>, and its discount line names the % off: <span class="msg">“Owner's allowance: 20% off above the ₹164.00 left of this month's ₹500.00”</span>. GST is charged on the menu price, the free part included, as for any sale. Close restaurant day lists the free part as <span class="ui">Owner's allowance</span> in how the money arrived; it is not cash in the drawer, and the night audit report counts it with the room and function postings, the Manager report as <span class="ui">Payment - Owner's allowance</span>. A void gives the allowance back.</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -526,7 +540,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. An NC bill's screen without prices, and Complimentary counting the NC bills: <span class="d">D27-365</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. An NC bill's screen without prices, and Complimentary counting the NC bills: <span class="d">D27-365</span>. The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>.</p>
   </div>
 
   <!-- A8.8 -->

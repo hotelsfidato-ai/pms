@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import { moneyPrecise, dateShort } from "@/lib/format";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
-import { BILL_TITLE, type BillHeading, type Order } from "@/modules/pos/data/till";
+import { BILL_TITLE, allowanceWords, type BillHeading, type Order } from "@/modules/pos/data/till";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
 
@@ -162,7 +162,7 @@ export function BillSlip({ order: o, heading, sample }: {
                 function's bill, and the host pays for it there. */}
             {o.paymentMethod === "function"
               ? `Charged to ${o.eventTitle ?? "the function"}'s bill`
-              : <>Paid by {o.paymentMethod}
+              : allowanceWords(o.tenders) ?? <>Paid by {o.paymentMethod}
                   {o.paymentMethod === "room" && " - charged to the guest's bill"}</>}
           </p>
         )}

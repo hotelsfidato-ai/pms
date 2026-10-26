@@ -476,6 +476,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/kot-setup/stations/:id/print`]: KOT_SWITCH,  // D27-363
   [`POST ${H}/till/orders/:id/tenders/change`]: own("pos/tenderChanges.ts: MODE_CHANGERS"),  // D27-363
   [`POST ${H}/till/orders/:id/requests`]: TILL,  // D27-363: whoever works the till sends the GM
+  [`PUT ${H}/till/owner-allowance`]: own("pos/ownerAllowance.ts: ALLOWANCE_SETTERS"),  // D27-355, D27-365
   /* A bill asked of the bill printer, or printed here: whoever prints one. */
   [`POST ${H}/till/orders/:id/bill-print`]: TILL,
   [`POST ${H}/till/orders/:id/bill-print/here`]: TILL,
@@ -974,6 +975,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-setup`]: KOT_READ,
+  /* The owner's allowance: its setting and this month's bills; what a bill would be (D27-366). */
+  [`GET ${H}/till/owner-allowance`]: TILL_READ,
+  [`GET ${H}/till/orders/:id/owner-allowance`]: own("pos/ownerAllowance.ts: ALLOWANCE_SETTLERS"),
   [`GET ${H}/till/floor`]: TILL_READ,
   [`GET ${H}/table-bookings`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,

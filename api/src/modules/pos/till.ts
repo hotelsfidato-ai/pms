@@ -20,6 +20,8 @@ import { extrasFor, insertExtras, type ExtraInput } from "./extras.ts";
 import { registerKotSection, deviceOf } from "./kotSection.ts";
 import { registerTenderChanges, tenderChanges } from "./tenderChanges.ts";
 import { registerPosRequests } from "./posRequests.ts";
+import { registerOwnerAllowance, allowancePlan, setDiscount, maySettleAllowance, SETTLE_REFUSED,
+  type AllowancePlan } from "./ownerAllowance.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -105,6 +107,8 @@ registerKotSection(till, hotelFor);
 registerTenderChanges(till, hotelFor);
 /* A waiter sends the GM what they may not do themselves (D27-363). */
 registerPosRequests(till, hotelFor);
+/* The owner's restaurant allowance (D27-355, D27-366). */
+registerOwnerAllowance(till, hotelFor);
 
 async function receptionGate(
   c: Context<{ Variables: { subject: string } }>,
@@ -4571,6 +4575,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
   };
   type SettleBody = {
     method?: string; room?: string; folioId?: string; tenders?: Tender[];
+    /* D27-366: method "allowance" - how the part above the free amount is paid. */
+    rest?: { method?: string; tendered?: number; reference?: string };
     /* D25-40: asked when more than ₹1,00,000 of the bill is cash. */
     pan?: string; form97?: boolean; nonResident?: boolean;
   };
@@ -4637,13 +4643,25 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     }
   }
 
-  const method = tenders
+  let method = tenders
     ? (tenders.length === 1 ? tenders[0]!.method : "split")
     : input.method;
 
   if (!method
-      || !(METHODS.includes(method) || method === "split" || method === "function")) {
+      || !(METHODS.includes(method) || method === "split" || method === "function" || method === "allowance")) {
     return c.json(refuse("How was this paid - room, cash, card or upi?"), 409);
+  }
+  /* THE OWNER'S ALLOWANCE (D27-355, D27-366): the free part is worked out here,
+     on the server, never sent; the rest is paid by cash, card or UPI, asked
+     always, because a bill can come to more than is left by the time it is settled. */
+  const rest = input.rest;
+  if (method === "allowance") {
+    if (!rest?.method || !["cash", "card", "upi"].includes(rest.method)) {
+      return c.json(refuse("How is the rest paid, above the free amount - cash, card or UPI?"), 409);
+    }
+    if (rest.tendered !== undefined && rest.method !== "cash") {
+      return c.json(refuse("Only cash is tendered - a card pays its own amount."), 409);
+    }
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -4716,8 +4734,22 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
         "This is a delivery with no phone number. It will be cooked and " +
         "then it cannot leave the building - take a number first.");
     }
-    if ((tenders ? tenders.some((t) => t.method === "cash") : method === "cash")
+    /* THE OWNER'S ALLOWANCE: its % off goes on behind a savepoint, so the totals
+       below are the discounted bill; every refusal after this undoes it first,
+       because a refusal returned here is still a COMMIT (MEMORY 243). */
+    let allowance: AllowancePlan | null = null;
+    const undo = async () => { if (allowance) await client.query("rollback to savepoint allowance"); };
+    if (method === "allowance") {
+      if (!(await maySettleAllowance(client, hotelId))) return refuse(SETTLE_REFUSED);
+      const plan = await allowancePlan(client, hotelId, orderId);
+      if (!plan.ok) return plan;
+      allowance = plan;
+      await client.query("savepoint allowance");
+      await setDiscount(client, orderId, plan.discountNet, plan.reason);
+    }
+    if ((tenders ? tenders.some((t) => t.method === "cash") : method === "cash" || rest?.method === "cash")
         && (await openingCash(client, order[0].outlet_id, order[0].business_date)) === null) {
+      await undo();
       return refuse(
         "Count this outlet's first float once (Close restaurant day, Open the day): cash is "
         + "taken after it. From then on the day opens by itself. Card, UPI and room charges go on.");
@@ -4753,9 +4785,24 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
        ticket on a folio and a zero row in the shift count, which is
        noise somebody has to explain later. */
     if (net <= 0) {
+      await undo();
       return refuse(
         "There is nothing on this order. Add an item, or abandon it.",
       );
+    }
+
+    /* The allowance pays what it can of the bill as it now stands (rounded, as any
+       bill here is); the rest, after its % off, is the cash, card or UPI asked for. */
+    if (allowance) {
+      const free = Math.min(allowance.left, payable);
+      const owed = Math.round((payable - free) * 100) / 100;
+      tenders = [
+        ...(free > 0 ? [{ method: "allowance", amount: free, tendered: null, reference: null }] : []),
+        ...(owed > 0 ? [{ method: rest!.method!, amount: owed,
+                          tendered: rest!.tendered === undefined ? null : Number(rest!.tendered),
+                          reference: rest!.reference?.trim() || null }] : []),
+      ];
+      method = tenders.length === 1 ? tenders[0]!.method : "split";
     }
 
     /* The tenders must equal the bill exactly. Short is a drawer that will
@@ -4783,9 +4830,9 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
        a guest from abroad above ₹1,00,000. Asked before anything is written. */
     const cash = rows.filter((t) => t.method === "cash").reduce((a, t) => a + t.amount, 0);
     const over = overCashLimit(0, cash, "card or UPI, or charge the bill to the room");
-    if (over) return refuse(over);
+    if (over) { await undo(); return refuse(over); }
     const kept = panFor(cash, { pan: input.pan, form97: input.form97, foreign: input.nonResident === true });
-    if (!kept.ok) return { ok: false as const, reason: kept.reason, needs: "pan" as const };
+    if (!kept.ok) { await undo(); return { ok: false as const, reason: kept.reason, needs: "pan" as const }; }
 
     const writeTenders = async () => {
       for (const t of rows) {
@@ -4806,10 +4853,11 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
         `update pos_orders
             set status='settled', settled_by=$1, settled_at=now(),
                 payment_method=$2, pan=$4, form_97=$5, non_resident=$6,
-                round_off = coalesce($7::numeric, round_off)
+                round_off = coalesce($7::numeric, round_off),
+                on_owner_allowance = $8
           where id = $3`,
         [session.staffId, method, orderId, kept.pan, kept.form97, kept.nonResident,
-         cashRoundOff],
+         cashRoundOff, allowance !== null],
       );
       await writeTenders();
       /* D22-44: paid here, so its alcohol gets its VAT bill now, in this
@@ -5098,7 +5146,7 @@ export async function voidBill(
 
     const { rows: [paid] } = await client.query<{ cash: string; other: boolean }>(
       `select coalesce(sum(amount) filter (where method = 'cash'), 0)::text as cash,
-              bool_or(method <> 'cash') as other
+              bool_or(method not in ('cash', 'allowance')) as other
          from pos_order_tenders where order_id = $1`,
       [orderId],
     );

@@ -485,4 +485,15 @@ export const SHOTS = [
       { n: 3, at: "text:Change it", side: "top" },
     ],
   },
+  /* The owner's allowance (D27-355, D27-366): the two figures and this month's bills. */
+  {
+    id: "A8-43", title: "The owner's allowance in Restaurant setup", as: "Owner",
+    path: "/pos/5EL/setup",
+    steps: [{ waitFor: "text:Free each month, ₹", ms: 30000 }, { scroll: "text:Free each month, ₹" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Free each month, ₹", side: "left" },
+      { n: 2, at: "text:% off above it", side: "top" },
+      { n: 3, at: "css:[data-allowance-bills]", side: "left" },
+    ],
+  },
 ];

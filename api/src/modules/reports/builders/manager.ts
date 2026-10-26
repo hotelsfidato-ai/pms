@@ -115,6 +115,8 @@ const POS_METHODS: Array<[string, string]> = [
   ["upi", "Payment - UPI"],
   ["room", "Payment - Room Posting"],
   ["function", "Payment - Function"],
+  /* The owner's allowance, its free part (D27-366): settled, not money taken. */
+  ["allowance", "Payment - Owner's allowance"],
 ];
 
 const bump = (m: Map<string, number>, k: string, v: number) => m.set(k, (m.get(k) ?? 0) + v);

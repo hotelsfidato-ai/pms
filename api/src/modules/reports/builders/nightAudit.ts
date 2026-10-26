@@ -713,9 +713,11 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
     const tax = round2(Number(t.tax));
     const roundOff = round2(Number(t.round_off));
     const paid = tenders.filter((x) => x.outlet === t.outlet);
-    const takings = round2(paid.filter((x) => x.method !== "room" && x.method !== "function")
+    /* The owner's allowance (D27-366) is settled on account, as a room or a function is: not takings. */
+    const onAccount = (m: string) => m === "room" || m === "function" || m === "allowance";
+    const takings = round2(paid.filter((x) => !onAccount(x.method))
       .reduce((s, x) => s + Number(x.amount), 0));
-    const posting = round2(paid.filter((x) => x.method === "room" || x.method === "function")
+    const posting = round2(paid.filter((x) => onAccount(x.method))
       .reduce((s, x) => s + Number(x.amount), 0));
     summary.push(row({
       outlet: t.outlet,
