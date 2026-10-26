@@ -596,82 +596,47 @@ export type InvoiceFacts = NonNullable<Awaited<ReturnType<typeof invoiceFacts>>>
 /** A bill's stay or a stay itself: by one of its folios (never a group's
     master), or by the booking. */
 type Of = { folioId: string } | { reservationId: string };
-const STAY_OF = (by: Of) => ("folioId" in by
-  ? { from: "folios f join reservations r on r.id = f.reservation_id", where: "f.id = $1 and f.group_id is null", id: by.folioId }
-  : { from: "reservations r", where: "r.id = $1", id: by.reservationId });
+
+/** The stay as `app.stay_facts` answers it (migration 241). */
+export interface StayFacts {
+  reference: string;
+  /** The registration card's number, given at check-in (230). */
+  grCardNo: number | null;
+  guest: string; roomType: string; room: string | null;
+  adults: number; children: number; plan: string | null;
+  /** 0 for a day use. */
+  nights: number;
+  arrival: string; departure: string;
+  source: string | null; checkedInBy: string | null; checkedOutBy: string | null;
+}
 
 /** THE STAY, AS THE PRINTED DOCUMENTS SHOW IT (the owner's D27-342 and
-    D27-344; the tax invoice and the proforma bill): the booking, the room, the
-    guests, the plan, the nights, arrival and departure with who checked the
-    guest in and out (the audit trail's status changes). Null where there is no
-    one stay. */
-export async function stayFacts(client: Client, by: Of) {
-  const of = STAY_OF(by);
-  const { rows } = await client.query<Record<string, string | number | boolean | null>>(
-    `select r.reference, r.gr_card_no, g.full_name as guest, rt.name as room_type,
-            (select rm.number from room_assignments ra join rooms rm on rm.id = ra.room_id
-              where ra.reservation_id = r.id
-              order by ra.released_at desc nulls first, ra.from_date desc limit 1) as room,
-            r.adults, r.children, r.meal_plan, r.is_day_use,
-            greatest(r.check_out - r.check_in, 0) as nights,
-            -- The moment of check-in and check-out where the trail has it,
-            -- else the booked day.
-            coalesce(app.hotel_clock(r.hotel_id, cin.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_in, 'DD Mon YYYY')) as arrival,
-            coalesce(app.hotel_clock(r.hotel_id, cout.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_out, 'DD Mon YYYY')) as departure,
-            app.booking_source_label(bs.name, co.name, r.source) as source,
-            cin.who as checked_in_by, cout.who as checked_out_by
-       from ${of.from}
-       join guests g on g.id = r.guest_id
-       join room_types rt on rt.id = r.room_type_id
-       left join booking_sources bs on bs.id = r.booking_source_id
-       left join companies co on co.id = r.company_id
-       left join lateral (
-         select a.at, s.full_name as who from audit_log a left join staff s on s.id = a.actor
-          where a.table_name = 'reservations' and a.row_id = r.id::text
-            and a.after->>'status' = 'checked_in' and a.before->>'status' is distinct from 'checked_in'
-          order by a.at desc limit 1) cin on true
-       left join lateral (
-         select a.at, s.full_name as who from audit_log a left join staff s on s.id = a.actor
-          where a.table_name = 'reservations' and a.row_id = r.id::text
-            and a.after->>'status' = 'checked_out' and a.before->>'status' is distinct from 'checked_out'
-          order by a.at desc limit 1) cout on true
-      where ${of.where}`,
-    [of.id],
+    D27-344; the tax invoice, the proforma bill, the registration card): the
+    booking, the room, the guests, the plan, the nights, arrival and departure
+    with who checked the guest in and out (the audit trail's status changes).
+    Null where there is no one stay. ONE DEFINITION, in the database since
+    D27-365 (5) (`app.stay_facts`, 241), because the guest's own page prints
+    it too and has no session to run a query here with. */
+export async function stayFacts(client: Client, by: Of): Promise<StayFacts | null> {
+  const { rows } = await client.query<{ facts: StayFacts | null }>(
+    "folioId" in by
+      ? "select app.stay_facts(f.reservation_id) as facts from folios f where f.id = $1 and f.group_id is null"
+      : "select app.stay_facts($1) as facts",
+    ["folioId" in by ? by.folioId : by.reservationId],
   );
-  const st = rows[0];
-  return st ? {
-    reference: st["reference"] as string,
-    /* The registration card's number, given at check-in (230). */
-    grCardNo: st["gr_card_no"] === null ? null : Number(st["gr_card_no"]),
-    guest: st["guest"] as string,
-    roomType: st["room_type"] as string,
-    room: st["room"] as string | null,
-    adults: Number(st["adults"]), children: Number(st["children"]),
-    plan: st["meal_plan"] as string | null,
-    nights: st["is_day_use"] ? 0 : Number(st["nights"]),
-    arrival: st["arrival"] as string,
-    departure: st["departure"] as string,
-    source: st["source"] as string | null,
-    checkedInBy: st["checked_in_by"] as string | null,
-    checkedOutBy: st["checked_out_by"] as string | null,
-  } : null;
+  return rows[0]?.facts ?? null;
 }
 
 /** Money in, net of refunds, on one bill or on every bill of a stay: each
     payment and refund not reversed (a receipt is a negative line; shown as
-    received). */
+    received). `app.bill_payments` (241), the one definition. */
 export async function paymentsOn(client: Client, by: Of) {
-  const { rows } = await client.query<{ date: string; description: string; amount: string }>(
-    `select to_char(fp.business_date, 'YYYY-MM-DD') as date, fp.description, (-fp.amount)::text as amount
-       from folio_postings fp
-      where ${"folioId" in by ? "fp.folio_id = $1" : "fp.folio_id in (select id from folios where reservation_id = $1)"}
-        and fp.category in ('payment', 'refund')
-        and fp.reverses_id is null
-        and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)
-      order by fp.business_date, fp.created_at, fp.id`,
+  const { rows } = await client.query<{ paid: { date: string; description: string; amount: number }[] }>(
+    `select app.bill_payments(${"folioId" in by
+      ? "array[$1::uuid]" : "array(select id from folios where reservation_id = $1)"}) as paid`,
     ["folioId" in by ? by.folioId : by.reservationId],
   );
-  return rows.map((p) => ({ date: p.date, description: p.description, amount: Number(p.amount) }));
+  return rows[0]!.paid;
 }
 
 /* ── List ─────────────────────────────────────────────────────────── */

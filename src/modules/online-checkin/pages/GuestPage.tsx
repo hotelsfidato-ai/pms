@@ -656,8 +656,10 @@ function IdPhotoSection(
 
 /* ── The bill as it stands (D21-10) ─────────────────────────────────
    EXACTLY THE BILL THE DESK PRINTS: finance's own `BillPrint`, drawing
-   finance's one definition of a bill (`app.stay_bill`, migration 123)
-   through the door. Nothing here adds, taxes or rounds.
+   finance's one definition of a bill (`app.stay_bill`, migration 123) with
+   the stay's facts, the payments and each line's HSN/SAC (`app.stay_proforma`,
+   241; the owner's D27-365 (5)) through the door. Nothing here adds, taxes or
+   rounds; only "to be posted tonight" stays the desk's (D27-205).
 
    Titled "Proforma Bill" (D27-344; "Interim bill" before), not "Tax Invoice": this is a bill with no invoice
    number, before check-out, and a guest reading "Tax Invoice" would take it

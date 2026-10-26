@@ -21,7 +21,8 @@ export interface StayBillLine {
   source?: string | null;
   billTo: string;
   company: string | null;
-  /** Its kind's SAC (D27-344); null: a dash. The desk's bill only. */
+  /** Its kind's HSN/SAC (D27-344); null: a dash. The desk's and the guest's
+      proforma (241, D27-365 (5)). */
   sac?: string | null;
 }
 
@@ -34,12 +35,12 @@ export interface StayBill {
     phone: string | null;
     /** Null when the hotel has not set one — printed as a dash, never made up. */
     gstin: string | null;
-    /** The desk's bill only (D27-344): how to reach the hotel, its PAN and FSSAI number. */
+    /** The proforma's (D27-344): how to reach the hotel, its PAN and FSSAI number. */
     email?: string | null; website?: string | null; pan?: string | null; fssai?: string | null;
   };
-  /** The stay as the tax invoice shows it (D27-344); the desk's bill only. */
+  /** The stay as the tax invoice shows it (D27-344), on the desk's and the guest's proforma. */
   details?: InvoiceDetail["stay"];
-  /** Money received on the stay's bills (D27-344); the desk's bill only. */
+  /** Money received on the stay's bills (D27-344), on the desk's and the guest's proforma. */
   payments?: InvoiceDetail["payments"];
   stay: {
     reference: string;

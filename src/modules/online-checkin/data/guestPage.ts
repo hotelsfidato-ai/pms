@@ -207,8 +207,9 @@ export const sendDetails = (token: string, details: Details): Promise<{ sent: tr
     body: JSON.stringify(details),
   }));
 
-/** The bill as it stands (D21-10): finance's one definition (`app.stay_bill`,
-    migration 123) for this stay, through the door. Nothing here adds a figure. */
+/** The bill as it stands (D21-10): the desk's proforma, whole (D27-365 (5)) -
+    finance's one definition (`app.stay_proforma`, migration 241, around
+    `app.stay_bill`, 123) for this stay, through the door. Nothing here adds a figure. */
 export const getBill = (token: string): Promise<StayBill> =>
   api<StayBill>(at(token, "/bill"), withUnlock(token));
 

@@ -20,9 +20,10 @@ import { InvoiceSheet, type Proforma } from "../pages/Invoice";
 
    It draws the bill `app.stay_bill` answers and computes nothing but the
    paise of tonight's night, as before: every figure, tax row and total
-   arrives from the server. The desk's bill also carries the stay, the
-   payments, the hotel's contacts and each line's SAC (D27-344); the guest's
-   own page reads the plain bill, and those parts are simply left out.
+   arrives from the server. The stay, the payments, the hotel's contacts and
+   each line's HSN/SAC (D27-344) come from `app.stay_proforma` (241), on the
+   desk's print and the guest's own page alike (D27-365 (5)); only tonight's
+   night "to be posted tonight" is the desk's alone (D27-205).
    ══════════════════════════════════════════════════════════════════ */
 
 const NO_GROUP: GroupSettings = { name: null, logo: null };

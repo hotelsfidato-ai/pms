@@ -3,7 +3,6 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { roomNightsDue, roomNightWords, nightsToCome, ORIGIN } from "../night-audit/index.ts";
-import { paymentsOn, stayFacts } from "./invoices.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FOLIOS — derived from the ledger, never stored
@@ -298,7 +297,8 @@ folios.get("/:code/stays/:id/postings", async (c) => {
 });
 
 /* THE BILL AS IT STANDS (D21-10) — what the desk prints and the guest's
-   page shows, from ONE definition: `app.stay_bill` in migration 123. The
+   page shows, from ONE definition: `app.stay_bill` in migration 123, inside
+   `app.stay_proforma` (241). The
    hotel's own name and GSTIN, the live lines, tax by each line's own rate.
    The printed bill used to build itself in the browser with a made-up
    GSTIN and a fixed 2.5% (21 September). Row security decides whose stay
@@ -308,15 +308,20 @@ folios.get("/:code/stays/:id/postings", async (c) => {
    guest staying on, before tonight's audit, is shown the night "to be posted
    tonight", counted in the amount due. It is the audit's own answer for this
    stay (night-audit/roomNight.ts) - the same rule, rate and GST the run will
-   post - and the desk's print only: app.stay_bill, which the guest's own page
-   reads, is unchanged (D27-205). */
+   post - and the desk's print only: the guest's own page shows no
+   "to be posted tonight" (D27-205), nor the nights to come. */
 folios.get("/:code/stays/:id/bill", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const stayId = c.req.param("id");
+    /* THE PROFORMA BILL (the owner's D27-344): `app.stay_proforma` (241) is
+       app.stay_bill with what the tax invoice carries - the stay as the
+       invoice shows it, the payments, the hotel's e-mail, website, PAN and
+       FSSAI number, and each line's HSN/SAC. The guest's own page reads the
+       same function through its door (D27-365 (5)). */
     const { rows } = await client.query<{ bill: Record<string, unknown> | null; staying: boolean }>(
-      `select app.stay_bill(r.id) as bill,
+      `select app.stay_proforma(r.id) as bill,
               r.check_out > app.business_date(r.hotel_id) as staying
          from reservations r
         where r.hotel_id = $1 and r.id = $2`,
@@ -324,33 +329,9 @@ folios.get("/:code/stays/:id/bill", async (c) => {
     );
     const found = rows[0]?.bill ?? null;
     if (!found) return null;
-    /* THE PROFORMA BILL'S FACTS (the owner's D27-344): drawn as the tax
-       invoice is, so it carries what the invoice does - the stay as the
-       invoice shows it, the payments, the hotel's e-mail, website and PAN (the
-       one inside its GSTIN where none is typed), and each line's SAC: the
-       hotel's code for its kind (Settings › Taxes), a room's 996311 where none
-       is typed (the invoices' own default). */
-    const { rows: h } = await client.query<{ email: string | null; website: string | null; pan: string | null; fssai: string | null; sac: Record<string, string> | null }>(
-      `select email::text as email, website, fssai_number as fssai,
-              coalesce(pan, case when length(gstin) = 15 then substr(gstin, 3, 10) end) as pan,
-              (select json_object_agg(t.kind, t.sac_code) from tax_sac t where t.hotel_id = h.id) as sac
-         from hotels h where h.id = $1`, [hotelId]);
-    const sac = h[0]?.sac ?? {};
-    const lines = ((found["lines"] ?? []) as Array<Record<string, unknown>>).map((l) => ({
-      ...l, sac: l["category"] === "room" ? sac["room"] ?? "996311" : sac[String(l["category"])] ?? null,
-    }));
     /* The nights still to come on this bill, by the run's own rule - the Bill
        tab's box and its Due count nothing themselves (FIN-24, 1 October). */
-    const bill = {
-      ...found, lines,
-      hotel: {
-        ...(found["hotel"] as object),
-        email: h[0]?.email ?? null, website: h[0]?.website ?? null, pan: h[0]?.pan ?? null, fssai: h[0]?.fssai ?? null,
-      },
-      details: await stayFacts(client, { reservationId: stayId }),
-      payments: await paymentsOn(client, { reservationId: stayId }),
-      nightsToCome: await nightsToCome(client, hotelId, stayId),
-    };
+    const bill = { ...found, nightsToCome: await nightsToCome(client, hotelId, stayId) };
     if (!rows[0]!.staying) return bill;
     const [night] = await roomNightsDue(client, hotelId, await businessDateFor(client, hotelId), stayId);
     if (!night || night.comp || night.gst === null) return bill;

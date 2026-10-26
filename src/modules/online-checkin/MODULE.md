@@ -25,6 +25,7 @@ api/src/routes/idPhotos.ts         everything that touches a photo: the checks, 
 api/src/aesZip.ts                  the encrypted zip 7-Zip opens, written and read here
 deploy/n8n/pms-id-photos-crs.json  the Drive workflow: store, fetch, delete - ciphertext only
 db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in; where a photo is
+db/migrations/241_guest_proforma   the guest's bill is the desk's whole proforma (D27-365 (5))
 OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID, ID photos
 ```
 
@@ -173,8 +174,10 @@ Coming soon page and its address are gone.
   `guest_documents`, the visit to `form_iii_stays` - a field left blank
   changes nothing already there,
   what was sent and whether the desk has checked it, with an Aadhaar as its
-  last four digits; **the bill as it stands**, exactly the desk's print,
-  titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
+  last four digits; **the bill as it stands**, exactly the desk's proforma
+  bill - the stay's facts, the payments and every line's HSN/SAC included
+  (D27-365 (5)) - titled "Proforma Bill", with "Pay at the desk before you
+  leave"; and a spa or
   laundry request **only where the hotel has
   that module switched on (D21-63)** — 5 Elements has neither.
 - **One-tap choices (D27-224, D27-225; guest services' `QuickChoices.tsx`)** -
@@ -265,7 +268,7 @@ list each unread message has "Reply", to its booking's list.
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
 | POST | `/api/guest/:token/google` | answers | Continue with Google (D27-207): Google's signed answer; the same unlock when its address is the stay's. Refused like an unknown link while `GOOGLE_CLIENT_ID` is unset |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
-| GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
+| GET | `/api/guest/:token/bill` | **refused** | the proforma bill as the desk prints it — `app.guest_bill` (124, 241), which is finance's `app.stay_proforma` (241, around `app.stay_bill`, 123) for the one stay the link and the unlock reach |
 | GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one; kind `desk` is a message to the front desk (D23-14) |
 | POST | `/api/hotels/:code/stays/:id/guest-link` | staff | a booking's link, shown once |
 | GET | `/api/hotels/:code/online-checkin` | staff | waiting details (Aadhaar masked), open requests, rooms and their cards |
@@ -333,14 +336,23 @@ itself: `guest_id_photo_begin` (the pending row, only while details wait),
 `guest_id_photo_state`. The desk's side is ordinary staff SQL under row
 security; WHICH staff is the route's rule.
 
-**The bill (D21-10, migration 124):** `app.guest_bill(token_hash,
-unlock_hash)` is one line — finance's `app.stay_bill` for the stay
-`app.guest_unlocked` answers — and adds no arithmetic. The page draws it with
-finance's own `BillPrint` (the front door), titled **"Interim bill"**: an
+**The bill (D21-10, migrations 124 and 241):** `app.guest_bill(token_hash,
+unlock_hash)` is one line — finance's `app.stay_proforma` for the stay
+`app.guest_unlocked` answers — and adds no arithmetic. Since 241 (the
+owner's D27-365 (5), 26 October) that is the whole proforma the desk prints:
+`app.stay_bill` with the stay's facts (`app.stay_facts`), the payments
+(`app.bill_payments`), the hotel's contacts, PAN and FSSAI number, and each
+line's HSN/SAC - the queries finance's API ran with a staff session, moved
+into the database (invoker rights) so the desk, the tax invoice, the
+registration card and this page share one definition. Only "to be posted
+tonight" and the nights to come stay the desk's (D27-205), added by the
+staff route. The page draws it with finance's own `BillPrint` (the front
+door), titled **"Proforma Bill"** (D27-344; "Interim bill" before): an
 unnumbered bill before check-out, which a guest reading "Tax Invoice" would
 take for the final one. It says "Pay at the desk before you leave" — paying
 online is not in this version. A test checks the guest's bill and the desk's
-print of the same stay are the same answer.
+print of the same stay are the same answer, less those two, and that one
+stay's unlock never opens another's.
 
 ⚠ **Every function behind the code is tested in the database itself**, with
 the link's hash and no unlock. Tests through the door cannot see a function
