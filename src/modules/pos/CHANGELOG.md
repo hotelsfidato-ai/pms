@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-26 · The Fidato Printer app updates itself (D27-365, D27-366)
+
+**Shipped** Fidato Printer 1.1.0 (`printer/`): `electron-updater` 6.8.10, generic provider at `https://api.fidatohotels.com/downloads/`; it checks at start and every 24 hours (packaged only), downloads a newer version and installs it at once, silently, after any slip in the printer's hands; restarted with `--updated` it stays by the clock with no window. `deploy/nginx.conf` serves exactly the installer, its `.blockmap` and `latest.yml` from `/var/www/fidato-downloads/`. The manual (A8) and `KOT-STATION-SETUP.md` say it updates itself. **Proved** `node --check printer/main.js`; `npm run dist` wrote the exe, `latest.yml` (checksum matches the exe) and the blockmap; the packaged app against a local feed logged "not available" for 1.1.0 and, with the feed down, logged `ERR_CONNECTION_REFUSED` and kept running; `manual.test.ts`. Not proved: a real install of a newer version (it would install the app on this PC), and `nginx -t` (no nginx here; launch.sh runs it before reloading). **Left open** Version 1.0.0 on the BAR PC has no updater: install 1.1.0 there once by hand.
+
 ## 2026-10-25 · Release 12.1: the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
 
 **Shipped** Each printing computer's shortest slip (160 mm by default) with a test KOT and a test bill in the KOT section. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void (`posRequests.ts`); approving in Approvals does it through `strikeLine`, `discountOrder`, `noChargeBill`, `voidBill`. A paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin (`tenderChanges.ts`), listed on the bill and the day end. The KOT's time on the hotel's clock. **Proved** `sentToTheGm.test.ts`, `kotSection.test.ts`, `printRoll.test.ts`, `kotSetup.test.tsx`, `restaurantFixes.test.tsx`. The root `CHANGELOG.md` has the whole entry.
