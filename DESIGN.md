@@ -44,6 +44,7 @@ colors:
   info: "#2b6cb0"
   info-100: "#d2e2f2"
   info-50: "#ebf2f9"
+  info-ahead: "#95b6d8"
   accent-from: "#fe611f"
   accent-to: "#f4bf54"
 typography:
@@ -313,6 +314,10 @@ lacked.
 - **Settled Teal** (`success`, text `success-600`, wash `success-50`):
   confirmed, paid, synced. Muted so it sits beside the warm palette.
 - **Ink Blue** (`info`, wash `info-50`): neutral information.
+- **Blue Ahead** (`info-ahead`, `#95b6d8`): Ink Blue at half strength, for a
+  mark only (never text): a night booked but not yet slept, in the Dashboard's
+  occupancy chart (the owner, D27-365 (2)). Not the pale `info-100`, which is
+  1.32:1 on white as a thin bar; this is 2.11:1.
 
 ### Neutral
 - **Fidato Black** (`ink-900`): all primary text, the sidebar, tooltips.
@@ -470,6 +475,28 @@ Quiet by default, one loud action per view.
   hairline. A tile that opens a list carries a chevron beside its number and
   a `grey-400` border on hover. A missing figure is a `grey-500` dash at full
   size.
+
+### Charts (the owner, D27-217 to D27-219 and D27-365, 26 October)
+The Dashboard's chart row and the small lines and split bars in its tiles.
+Recharts draws a bar chart (already installed; nothing else is added); a small
+line or a split bar is plain SVG and CSS.
+- **No animation.** A chart appears at its values (`isAnimationActive={false}`,
+  as the Monthly occupancy report does). No count-ups.
+- **Text only on the type ladder:** 12px for axes and captions, 14px and 16px
+  for a read-out.
+- **Colour is meaning.** Blue is rooms in house, as on Rooms and the Calendar;
+  its half-strength step (`info-ahead`) is a night booked but not yet slept.
+  Orange stays "something to do". A split bar is ink and greys (`ink-900`,
+  `grey-600`, `grey-400`, then `grey-300`), so no colour gets a second meaning.
+- **A gap is not a zero.** A figure the system does not hold, or that does not
+  exist for that day (an average rate on a night with no room sold), is a gap
+  in the line, never a zero.
+- **One value is written on the chart:** today's. Every other value is read by
+  hover, tap or the arrow keys, and is in the report.
+- **A key** under the chart when it has two or more kinds of bar; none for one.
+- **A chart card** has a 16px heading and its note behind the (i).
+- **On a phone** a chart fits its card with fewer day numbers, or scrolls
+  inside its card. The page never scrolls sideways and nothing is squeezed.
 
 ### Inputs and fields
 - **Style:** white, 1px `grey-300` border, 10px corners, 36px tall, 12px side

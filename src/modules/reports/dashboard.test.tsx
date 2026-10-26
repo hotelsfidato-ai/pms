@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from "vitest";
 import { render, screen, within, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import App from "@/App";
-import DashboardPage from "@/modules/reports/pages/Dashboard";
+import DashboardPage, { monthDays, lastDays } from "@/modules/reports/pages/Dashboard";
+import { useSession } from "@/lib/session";
 import * as apiModule from "@/lib/api";
 import { AGRA_HOTEL, HOTEL, go, startSignedIn, signedIn, withDemoHotel } from "@/test/app";
 import { flatNavigationFor, sidebarFor } from "@/components/app/navigation";
@@ -316,5 +317,223 @@ describe("D27-326 (1) - a voided booking is not one of today's arrivals", () => 
     const voided = { ...base!, id: "stay-voided", guest: "Voided Twice", roomNumber: "VOID",
       arrival: "2026-08-25", departure: "2026-08-27", status: "void" as Stay["status"] };
     expect(await tile([voided])).toBe(without);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE CHARTS (the owner's D27-217 to D27-219 and D27-365, 26 October)
+
+   Occupancy by day (Recharts), "Last 14 days" in each figure, Revenue
+   and the split bar under Collected today. jsdom has no layout, so the
+   bars themselves are measured in the browser; what is proved here is
+   what the charts are FED and how the page is arranged: a night with no
+   room sold is a gap, Revenue leads with the month, the split bar names
+   its parts, and the layout switches at 1440 px.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** One row of the Monthly statistics report: day, available, occupancy %, ADR, RevPAR, room charges. */
+const dayRow = (d: number, f: [number, number, number, number, number]) => ({
+  kind: "row",
+  cells: { label: `${d} Mon`, available: f[0], occupancy: f[1], adr: f[2], revpar: f[3], room: f[4] },
+});
+/** August 2026 as the report prints it: 17 rooms; half full at ₹3,000, except that
+    nothing was sold on 20 and 21 August (the report prints 0 for those rates). */
+const augustDoc = () => ({
+  sections: [{
+    key: "days",
+    rows: [
+      ...Array.from({ length: 31 }, (_, i) => dayRow(i + 1,
+        i + 1 === 20 || i + 1 === 21 ? [17, 0, 0, 0, 0] : [17, 50, 3000, 1500, 25500])),
+      { kind: "total", cells: { label: "Total", available: 527 } },
+    ],
+  }],
+});
+
+/** The Manager report's two sections the charts read. */
+const managerDoc = () => ({
+  sections: [
+    { key: "payment", rows: [
+      { kind: "row", cells: { label: "Cash", today: 7417, ptd: 20000, ytd: 90000 } },
+      { kind: "row", cells: { label: "UPI", today: 1001, ptd: 5000, ytd: 9000 } },
+      { kind: "total", cells: { label: "Total Payment", today: 8418, ptd: 25000, ytd: 99000 } },
+    ] },
+    { key: "revenue-summary", rows: [
+      { kind: "row", cells: { label: "Room Revenue", today: 25238, ptd: 417293, ytd: 5710112 } },
+      { kind: "row", cells: { label: "Extra Revenue", today: 0, ptd: 18181, ytd: 20000 } },
+      { kind: "total", cells: { label: "PMS Revenue", today: 25238, ptd: 435474, ytd: 5730112 } },
+      { kind: "row", cells: { label: "Fidato Restaurant", today: 5280, ptd: 5280, ytd: 9000 } },
+      { kind: "total", cells: { label: "POS Revenue", today: 5280, ptd: 5280, ytd: 9000 } },
+      { kind: "total", cells: { label: "Total Revenue", today: 30518, ptd: 440754, ytd: 5739112 } },
+    ] },
+  ],
+});
+
+describe("D27-365 - the charts are fed honestly", () => {
+  it("monthDays: a night with no room sold has no average rate (a gap); its RevPAR and revenue are real zeros", () => {
+    const days = monthDays(augustDoc() as never, "2026-08");
+    expect(days[18]).toMatchObject({ date: "2026-08-19", occupancy: 50, adr: 3000, revpar: 1500, room: 25500 });
+    expect(days[19]).toMatchObject({ date: "2026-08-20", occupancy: 0, adr: null, revpar: 0, room: 0 });
+  });
+
+  it("monthDays: a day with no rooms to sell has no RevPAR either; the total row is not a day", () => {
+    const days = monthDays({ sections: [{ key: "days", rows: [
+      dayRow(1, [0, 0, 0, 0, 0]), { kind: "total", cells: { label: "Total", available: 0 } },
+    ] }] } as never, "2026-08");
+    expect(days).toHaveLength(1);
+    expect(days[0]).toMatchObject({ adr: null, revpar: null });
+  });
+
+  it("lastDays: the 14 days ending today, across a month start; a day nobody read is a gap", () => {
+    const july = Array.from({ length: 31 }, (_, i) => ({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, available: 17, occupancy: 40, adr: 3000, revpar: 1200, room: 20400 }));
+    const days = lastDays(july.slice(25), "2026-08-05");
+    expect(days[0]!.date).toBe("2026-07-23");
+    expect(days.at(-1)!.date).toBe("2026-08-05");
+    expect(days).toHaveLength(14);
+    /* 23 to 25 July are not among the days given (the 26th on is), and August is not read at all. */
+    expect(days[0]!.adr).toBeNull();
+    expect(days[3]!.adr).toBe(3000);
+    expect(days.at(-1)!.adr).toBeNull();
+  });
+});
+
+describe("D27-365 - the Dashboard's chart row", () => {
+  /** The reads the charts make, answered; every other read is the fixture's. */
+  function spyReports(months: Record<string, unknown>) {
+    const real = apiModule.api;
+    const asked: string[] = [];
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
+      asked.push(url);
+      if (url.startsWith(`/api/hotels/${HOTEL}/reports/manager`)) return Promise.resolve(managerDoc());
+      const m = /reports\/monthly-statistics\?month=(\d{4}-\d{2})/.exec(url);
+      if (m) return months[m[1]!] ? Promise.resolve(months[m[1]!]) : Promise.reject(new apiModule.ApiError(404, "No such property."));
+      return real(url, init);
+    }) as typeof real);
+    return { asked, spy };
+  }
+  /* Recharts' container watches its size; jsdom has no ResizeObserver. */
+  beforeAll(() => { vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }); });
+  afterAll(() => { vi.unstubAllGlobals(); });
+
+  const card = (name: string) => screen.getByRole("heading", { name }).closest("div.col-span-12") as HTMLElement;
+
+  it("reads the month the business date falls in, and not the month before while the 14 days stay inside it", async () => {
+    const { asked, spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      await waitFor(() => expect(asked).toContain(`/api/hotels/${HOTEL}/reports/monthly-statistics?month=2026-08`));
+      expect(asked.filter((u) => u.includes("monthly-statistics"))).toHaveLength(1);
+    } finally { spy.mockRestore(); }
+  });
+
+  it("reads the month before as well when the 14 days cross a month start", async () => {
+    useSession.setState((s) => ({ hotels: s.hotels.map((h) => (h.code === HOTEL ? { ...h, businessDate: "2026-09-05" } : h)) }));
+    const { asked, spy } = spyReports({});
+    try {
+      renderDashboard();
+      await waitFor(() => expect(asked.filter((u) => u.includes("monthly-statistics")).sort()).toEqual([
+        `/api/hotels/${HOTEL}/reports/monthly-statistics?month=2026-08`,
+        `/api/hotels/${HOTEL}/reports/monthly-statistics?month=2026-09`,
+      ]));
+    } finally { spy.mockRestore(); }
+  });
+
+  it("Average rate's line breaks at the two nights nothing was sold, and says so; RevPAR's line does not break", async () => {
+    const { spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      await waitFor(() => expect(screen.getAllByRole("img", { name: /last 14 days/i })).toHaveLength(3));
+      const [arr, revpar, room] = screen.getAllByRole("img", { name: /last 14 days/i });
+      expect(arr!.getAttribute("aria-label")).toBe("Average rate, last 14 days: ₹3,000 on 12 Aug, ₹3,000 today. No rooms were sold on 20 Aug, 21 Aug.");
+      /* Two strokes, before the gap and after it. Never a line down to 0. */
+      expect(arr!.querySelector("path")!.getAttribute("d")!.match(/M/g)).toHaveLength(2);
+      /* RevPAR and room revenue held a real 0 on those nights: one unbroken line. */
+      expect(revpar!.querySelector("path")!.getAttribute("d")!.match(/M/g)).toHaveLength(1);
+      expect(room!.getAttribute("aria-label")).toContain("Room revenue, last 14 days: ₹25,500 on 12 Aug");
+      expect(room!.getAttribute("aria-label")).not.toMatch(/no figure/i);
+    } finally { spy.mockRestore(); }
+  });
+
+  it("Occupancy by day names the month and today's share, for the arrow keys and a screen reader", async () => {
+    const { spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      const chart = await screen.findByRole("group", { name: /^Occupancy by day, August 2026/ });
+      expect(chart.getAttribute("aria-label")).toContain("50% today");
+      expect(chart.getAttribute("aria-label")).toContain("arrow keys");
+      expect(within(card("Occupancy by day")).getByText("August 2026")).toBeTruthy();
+    } finally { spy.mockRestore(); }
+  });
+
+  it("a failed read of the month says so in the chart's card, and the page still stands", async () => {
+    const real = apiModule.api;
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) =>
+      url.includes("monthly-statistics") ? Promise.reject(new apiModule.ApiError(500, "boom")) : real(url, init)) as typeof real);
+    try {
+      renderDashboard();
+      await waitFor(() => expect(card("Occupancy by day").textContent).toMatch(/did not load/i));
+      expect(screen.getByRole("heading", { name: "Money" })).toBeTruthy();
+    } finally { spy.mockRestore(); }
+  });
+
+  it("Revenue leads with the month so far; today is a row under it; the parts name themselves", async () => {
+    const { spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      const rev = card("Revenue");
+      await waitFor(() => expect(rev.textContent).toContain("₹4,40,754"));
+      const text = rev.textContent!;
+      /* The month's total, its label, and only then today (₹30,518) and the year. */
+      expect(text.indexOf("₹4,40,754")).toBeLessThan(text.indexOf("Month so far"));
+      expect(text.indexOf("Month so far")).toBeLessThan(text.indexOf("Today"));
+      expect(text.indexOf("Today")).toBeLessThan(text.indexOf("₹30,518"));
+      expect(text).toContain("Without tax");
+      /* Room, extras, the restaurant: each with its share of the month. */
+      expect(text).toContain("Room revenue94.68%₹4,17,293");
+      expect(text).toContain("Extra revenue4.12%₹18,181");
+      expect(text).toContain("Fidato Restaurant1.20%₹5,280");
+      expect(within(rev).getByRole("img", { name: "Room revenue ₹4,17,293, Extra revenue ₹18,181, Fidato Restaurant ₹5,280" })).toBeTruthy();
+    } finally { spy.mockRestore(); }
+  });
+
+  it("Collected today gets a split bar that names each way of paying", async () => {
+    const { spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      const money = card("Money");
+      /* One bar for the desktop and one for the phone; the stylesheet shows one. */
+      const bars = await within(money).findAllByRole("img", { name: "Cash ₹7,417, UPI ₹1,001" });
+      expect(bars).toHaveLength(2);
+      expect(money.textContent).toContain("Cash ₹7,417");
+    } finally { spy.mockRestore(); }
+  });
+
+  it("no way of paying yet: no bar, and the note says so", async () => {
+    const { spy } = spyApi();
+    try {
+      renderDashboard();
+      const money = card("Money");
+      await waitFor(() => expect(money.textContent).toContain("Nothing taken yet today"));
+      expect(within(money).queryAllByRole("img")).toHaveLength(0);
+    } finally { spy.mockRestore(); }
+  });
+
+  /* The layout switch (the owner's D27-365 (7), which closes REP-16): jsdom reads no media
+     query, so this holds the classes that make it; the widths were measured in the browser. */
+  it("under 1440 px Occupancy has its own row above the three figures; the chart and Revenue are 8 + 4 from 1440, 7 + 5 from 1280", async () => {
+    const { spy } = spyReports({ "2026-08": augustDoc() });
+    try {
+      renderDashboard();
+      await screen.findByRole("group", { name: /^Occupancy by day/ });
+      const occupancy = screen.getAllByText("Occupancy")[0]!.closest("div.col-span-12")!;
+      expect(occupancy.className).toContain("min-[1440px]:col-span-5");
+      const figures = screen.getAllByText("Room revenue")[0]!.closest("div.col-span-12")!;
+      expect(figures.className).toContain("min-[1440px]:col-span-7");
+      expect(card("Occupancy by day").className).toMatch(/col-span-12 .*min-\[1280px\]:col-span-7 .*min-\[1440px\]:col-span-8/);
+      expect(card("Revenue").className).toMatch(/col-span-12 .*min-\[1280px\]:col-span-5 .*min-\[1440px\]:col-span-4/);
+      /* The row sits right under Occupancy and the figures, above Nights ahead. */
+      const heads = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+      expect(heads.indexOf("Occupancy by day")).toBeLessThan(heads.indexOf("Revenue"));
+      expect(heads.indexOf("Revenue")).toBeLessThan(heads.indexOf("Nights ahead"));
+    } finally { spy.mockRestore(); }
   });
 });

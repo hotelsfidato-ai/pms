@@ -14,6 +14,12 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### REP-20 · From 640 to about 690 wide the Dashboard's three figure tiles break "Month so far" and "Year so far" onto two lines
+
+**Found** - 26 October, measuring the chart row's build in the browser pane on the local demo. At 640 wide each tile is 149px: "Month so far ₹1,72,972" and "Year so far ₹58,14,872" are 42px tall (two lines) against 21px, so the amounts stop being level (the Level Rule). At 700 (169px) they fit. It is REP-16 again, one step lower: REP-16 moved Occupancy to its own row under 1440, but the three tiles still go three across from `sm` (640). **Not caused by the chart row** (the new "Last 14 days" row is one line at every width measured: 1440, 1366, 1280, 1024, 800, 768, 700, 640, 390, 375).
+
+**Not fixed - a question for the owner.** Cheapest fix: three across from `md` (768) instead of `sm`, and the phone layout (one card of blocks) up to 767. That moves the phone layout's edge, so it is the owner's call.
+
 ## Fixed
 
 ### REP-19 · The Dashboard read every booking ever made three times to count today's - FIXED 14 October (D27-316 (1))
@@ -53,6 +59,8 @@ on a loaded PC. **Fixed** - both read the day's board (`board=1`), 32 rows,
 **Done** (the owner's D27-243) - under 1440 px Occupancy takes its own row and the three figures the full width (`min-[1440px]:col-span-5` / `col-span-7` in `pages/Dashboard.tsx`, was `xl:` = 1280).
 
 **Proved** - measured in the browser pane on the local demo, 3 October: at 1280 each tile is 314px and at 1366 343px, Occupancy on its own row; at 1440, 211px beside Occupancy. At all three every "so far" row is 21px (one line) and the three amounts share one top. Screenshots `.local\screenshots\2026-10-02-dashboard-build\`.
+
+**Confirmed as the owner's answer** - the chart row's brief (D27-365 (7), 26 October) asked for exactly this layout, so nothing more was needed. Measured again with "Last 14 days" added to each tile: at 1440 Occupancy beside the tiles (462px), at 1366 and 1280 on its own row (1052px, 966px); every "Last 14 days", "Month so far" and "Year so far" row at one top, none wrapped.
 
 ### REP-15 · The Dashboard put a <div> inside a <p> on every load - FIXED 30 September (by the booking and bill lane; numbered for now)
 

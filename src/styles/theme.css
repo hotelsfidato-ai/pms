@@ -108,6 +108,11 @@
   --color-info: #2b6cb0;
   --color-info-50: #ebf2f9;
   --color-info-100: #d2e2f2;
+  /* Info at half strength: a night booked but not yet slept, in the
+     Dashboard's occupancy chart (the owner, D27-365 (2)). The pale info-100
+     is 1.32:1 on white as a thin bar; this is 2.11:1 and passes the chart
+     palette check. Only for a mark; never for text. */
+  --color-info-ahead: #95b6d8;
 
   /* ── Logo accent gradient (mark only, never on buttons) ───────── */
   --color-accent-from: #fe611f;
