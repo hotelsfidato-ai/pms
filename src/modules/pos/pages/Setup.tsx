@@ -8,8 +8,10 @@ import { useRole } from "@/lib/session";
 import { mayReach } from "@/components/app/navigation";
 import {
   Page, PageHeader, Section, Card, CardBody, Button, Skeleton, toast,
-  Dialog, DialogContent, Field, fieldProps, Input, Segmented, ReadFailed,
+  Dialog, DialogContent, Field, fieldProps, Input, Segmented, ReadFailed, Switch,
 } from "@/components/ui";
+import { getModules, setModule } from "@/data/repositories";
+import { TaxRulesCard } from "@/modules/finance";
 import {
   getTillSetup, getMenu, nameRestaurant, setPackingCharge, addSection, renameSection, takeSectionAway,
   addTables, changeTable, takeTableAway, getOwnerAllowance, setOwnerAllowance,
@@ -110,6 +112,7 @@ export default function SetupPage() {
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
           {setup.data.restaurant && <Packing hotelId={hotelId} setup={setup.data} run={run} />}
           {setup.data.restaurant && <OwnerAllowanceCard hotelId={hotelId} run={run} />}
+          {setup.data.restaurant && <Taxes hotelId={hotelId} />}
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
           <KotSection hotelId={hotelId} />
           <TableBookingHours hotelId={hotelId} />
@@ -388,6 +391,39 @@ function OwnerAllowanceCard({ hotelId, run }: { hotelId: string; run: Run }) {
           )}
         </CardBody>
       </Card>
+    </Section>
+  );
+}
+
+/* ── Taxes, from the restaurant's side (the owner's D27-368) ──────────
+   The SAME settings as Settings, Taxes - one card, two doors, so they cannot
+   disagree: the "Serves alcohol (VAT)" switch, then TaxRulesCard itself (the
+   GST and VAT rates, each menu section's tax, HSN/SAC). The owner or an Admin
+   changes them; the server asks on every write. */
+function Taxes({ hotelId }: { hotelId: string }) {
+  const qc = useQueryClient();
+  const role = useRole();
+  const mayFlip = role === "owner" || role === "admin";
+  const modules = useQuery({ queryKey: ["modules", hotelId], queryFn: () => getModules(hotelId), staleTime: 60_000 });
+  const vat = modules.data?.["alcohol"];
+  const flip = async (on: boolean) => {
+    const res = await setModule(hotelId, "alcohol", on);
+    if (!res.ok) return void toast.error("Not changed", res.reason);
+    toast.success(on ? "Alcohol is sold under VAT" : "Alcohol is switched off");
+    void qc.invalidateQueries({ queryKey: ["modules", hotelId] });
+    void qc.invalidateQueries({ queryKey: ["tax-setup", hotelId] });
+  };
+  return (
+    <Section title="Taxes"
+      description="The same settings as Settings, Taxes: changed here or there, they are one. The owner or an Admin changes them.">
+      <Card>
+        <CardBody>
+          <Switch checked={vat === true} disabled={!mayFlip || vat === undefined} onCheckedChange={(v) => void flip(v)}
+            label="Serves alcohol (VAT)"
+            description="Alcohol on the menu, taxed as VAT, not GST: its own rate below, one VAT line on the bill, kept off the GST invoice. Off, no menu section can sell it." />
+        </CardBody>
+      </Card>
+      <TaxRulesCard hotelId={hotelId} />
     </Section>
   );
 }
