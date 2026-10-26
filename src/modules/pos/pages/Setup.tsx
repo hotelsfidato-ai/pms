@@ -398,8 +398,9 @@ function OwnerAllowanceCard({ hotelId, run }: { hotelId: string; run: Run }) {
 /* ── Taxes, from the restaurant's side (the owner's D27-368) ──────────
    The SAME settings as Settings, Taxes - one card, two doors, so they cannot
    disagree: the "Serves alcohol (VAT)" switch, then TaxRulesCard itself (the
-   GST and VAT rates, each menu section's tax, HSN/SAC). The owner or an Admin
-   changes them; the server asks on every write. */
+   GST and VAT rates, each menu section's tax, HSN/SAC). The switch is the
+   owner's or an Admin's; the card keeps Settings' own rule (roleGate GST). The
+   server asks on every write. */
 function Taxes({ hotelId }: { hotelId: string }) {
   const qc = useQueryClient();
   const role = useRole();
@@ -415,7 +416,7 @@ function Taxes({ hotelId }: { hotelId: string }) {
   };
   return (
     <Section title="Taxes"
-      description="The same settings as Settings, Taxes: changed here or there, they are one. The owner or an Admin changes them.">
+      description="The same settings as Settings, Taxes: changed here or there, they are one. Alcohol is switched on or off by the owner or an Admin; the rates by whoever may change them in Settings.">
       <Card>
         <CardBody>
           <Switch checked={vat === true} disabled={!mayFlip || vat === undefined} onCheckedChange={(v) => void flip(v)}

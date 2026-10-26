@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -127,6 +127,38 @@ describe("the ready-to-open list", () => {
     await screen.findByText("Every dish has one");
     expect(screen.getAllByRole("link", { name: "Open Settings" }).map((a) => a.getAttribute("href")))
       .toEqual(["/settings/rates/taxes"]);
+  });
+});
+
+describe("Taxes in Restaurant setup (D27-368)", () => {
+  const renderAs = (role: Role) => {
+    as(role);
+    const posted: { url: string; body: unknown }[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      const path = url.split("?")[0]!;
+      if (init?.method === "POST") { posted.push({ url: path, body: JSON.parse(String(init.body)) }); return {} as never; }
+      if (path === `/api/hotels/${HOTEL}/till/setup`) return SET_UP as never;
+      if (path === `/api/hotels/${HOTEL}/till/menu`) return menu(dish("Dal Tadka", 5)) as never;
+      if (path === `/api/hotels/${HOTEL}/till/access`) return { ok: true } as never;
+      if (path === `/api/hotels/${HOTEL}/modules`) return { modules: [{ module: "alcohol", enabled: false }] } as never;
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt(`/pos/${HOTEL}/setup`, "/pos/:code/setup", <SetupPage />);
+    return posted;
+  };
+
+  it("the GM reads the alcohol switch; the owner turns it on", async () => {
+    renderAs("gm");
+    await screen.findByText("Every dish has one");
+    expect((await screen.findByRole("switch", { name: /Serves alcohol \(VAT\)/ })).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("the owner's tap sends it on", async () => {
+    const posted = renderAs("owner");
+    const sw = await screen.findByRole("switch", { name: /Serves alcohol \(VAT\)/ });
+    await vi.waitFor(() => expect(sw.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(sw);
+    await vi.waitFor(() => expect(posted).toEqual([{ url: `/api/hotels/${HOTEL}/modules/alcohol`, body: { enabled: true } }]));
   });
 });
 
