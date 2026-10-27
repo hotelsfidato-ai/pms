@@ -79,6 +79,9 @@ interface StayRow {
   market_segment: string | null;
   sales_person: string | null;
   void_reason: string | null;
+  guest_company_name: string | null;
+  guest_company_gstin: string | null;
+  guest_company_address: string | null;
 }
 
 const SELECT = `
@@ -122,6 +125,8 @@ const SELECT = `
          gu.id::text as guest_id, r.is_single_lady,
          r.business_source, r.market_segment, r.sales_person,
          r.void_reason,
+         /* The guest's own company (D27-371), for the tax invoice. */
+         r.guest_company_name, r.guest_company_gstin, r.guest_company_address,
          /* How to reach the guest, for the stay panel's header. The
             booking form has captured these since it was written and no
             screen that shows a stay ever asked for them. */
@@ -256,6 +261,10 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
     marketSegment: row.market_segment,
     salesPerson: row.sales_person,
     ...(row.void_reason ? { voidReason: row.void_reason } : {}),
+    /* The guest's own company (D27-371): null when none was typed. */
+    guestCompany: row.guest_company_name || row.guest_company_gstin || row.guest_company_address
+      ? { name: row.guest_company_name, gstin: row.guest_company_gstin, address: row.guest_company_address }
+      : null,
 
     /* Null when the guest gave nothing, which is most walk-ins. Never a
        placeholder -- a made-up number in a header gets dialled. */

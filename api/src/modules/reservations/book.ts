@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
-import { countProblem, countryProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
+import { countProblem, countryProblem, dateProblem, gstinProblem, MAX_NIGHTS } from "../../validate.ts";
 import { roomRateBeforeGst, overCreditLimit } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -122,7 +122,13 @@ export interface BookingRequest {
   isSingleLady?: boolean;
   /** The lead's campaign, from "Book this lead" (D27-170): reservations.campaign. */
   campaign?: string;
+  /** The guest's own company (D27-371), all optional: with a GSTIN, the tax
+      invoice for the guest's bill is addressed to it; the guest still pays.
+      Not a `companies` row, and not companyId (Bill to company). */
+  guestCompany?: GuestCompany;
 }
+
+export interface GuestCompany { name?: string; gstin?: string; address?: string }
 
 export interface BookingMade {
   ok: true;
@@ -299,6 +305,7 @@ interface DeskTerms {
   companyId: string | null;
   title: string | null;
   nationality: string | null;
+  guestCompany: { name: string | null; gstin: string | null; address: string | null };
 }
 
 const text = (v: string | undefined): string | null => v?.trim() || null;
@@ -386,7 +393,19 @@ async function deskTerms(
   const noCountry = countryProblem(nationality);
   if (noCountry) return refuse(noCountry);
 
-  return { discount, companyId, title, nationality };
+  /* THE GUEST'S COMPANY (D27-371): a typed GSTIN is checked, its check
+     digit too (validate.ts, the screen asks the same function first). */
+  const guestCompany = {
+    name: text(request.guestCompany?.name),
+    gstin: text(request.guestCompany?.gstin)?.toUpperCase() ?? null,
+    address: text(request.guestCompany?.address),
+  };
+  const badGstin = gstinProblem(guestCompany.gstin);
+  if (badGstin) return refuse(badGstin);
+  if ((guestCompany.name?.length ?? 0) > 200) return refuse("A company's name is at most 200 characters.");
+  if ((guestCompany.address?.length ?? 0) > 500) return refuse("A company's address is at most 500 characters.");
+
+  return { discount, companyId, title, nationality, guestCompany };
 }
 
 /* ── The booking itself ───────────────────────────────────────────── */
@@ -853,6 +872,16 @@ export async function makeBooking(
       await client.query(
         "update reservations set campaign = $1 where id = any($2::uuid[])",
         [campaign, reservationIds]);
+    }
+
+    /* THE GUEST'S COMPANY (D27-371), on every room of it - its own statement,
+       as the campaign's, and only when something was typed. */
+    const gc = terms.guestCompany;
+    if (gc.name || gc.gstin || gc.address) {
+      await client.query(
+        `update reservations set guest_company_name = $1, guest_company_gstin = $2,
+                guest_company_address = $3 where id = any($4::uuid[])`,
+        [gc.name, gc.gstin, gc.address, reservationIds]);
     }
 
     /* WHERE THEY LIVE, beside the ID documents where 013 keeps an address.

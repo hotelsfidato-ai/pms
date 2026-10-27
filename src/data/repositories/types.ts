@@ -90,6 +90,9 @@ export interface Stay {
   businessSource: string | null;
   marketSegment: string | null;
   salesPerson: string | null;
+  /** The guest's own company (D27-371), all three optional; with a GSTIN
+      the tax invoice is addressed to it. Null when none was typed. */
+  guestCompany?: { name: string | null; gstin: string | null; address: string | null } | null;
 
   /** Present only on a voided booking. */
   voidReason?: string;

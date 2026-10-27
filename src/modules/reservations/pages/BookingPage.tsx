@@ -7,7 +7,7 @@ import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useCurrentHotel, useRole, useSession } from "@/lib/session";
 import { payingWays } from "@/lib/rules";
-import { emailProblem, phoneProblem } from "../../../../api/src/validate.ts";
+import { emailProblem, gstinProblem, phoneProblem } from "../../../../api/src/validate.ts";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps,
   Input, NativeSelect, Skeleton, toast, Checkbox, Segmented, Switch, Textarea,
@@ -150,6 +150,11 @@ export default function BookingPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
+  /* The guest's own company (D27-371), all optional: with a GSTIN the tax
+     invoice is addressed to it, and the guest still pays. */
+  const [companyName, setCompanyName] = useState("");
+  const [companyGstin, setCompanyGstin] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
   const [whatsapp, setWhatsapp] = useState(false);
   const [offersAgreed, setOffersAgreed] = useState(false);
   /* A safety practice, not a demographic note: placed away from stairwells
@@ -486,7 +491,7 @@ export default function BookingPage() {
     !guestName.trim() ? "Type the guest's name."
       /* X-2 (round D): the server's own phone and email rules, said first. */
       : (missing ? `${required[missing]![0]} is needed for a booking at this hotel.` : null)
-      ?? phoneProblem(phone) ?? emailProblem(email)
+      ?? phoneProblem(phone) ?? emailProblem(email) ?? gstinProblem(companyGstin)
       ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
           : (dayUse && lines.some((l) => !l.comp && !(Number(l.rate) > 0)) ? "Type the day-use price." : null)
@@ -516,6 +521,7 @@ export default function BookingPage() {
   const reset = () => {
     setBooked(null);
     setTitle(rules?.defaultTitle ?? ""); setGuestName(""); setPhone(""); setEmail(""); setReturning(null);
+    setCompanyName(""); setCompanyGstin(""); setCompanyAddress("");
     setWhatsapp(false); setOffersAgreed(false); setSingleLady(false);
     setAddressLine(""); setCity(""); setStateName(""); setPincode(""); setCountry("");
     setGuestId(deskGuestId(rules));
@@ -566,6 +572,9 @@ export default function BookingPage() {
       ...(specialRequest.trim() ? { specialRequest: specialRequest.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
+      ...(companyName.trim() || companyGstin.trim() || companyAddress.trim()
+        ? { guestCompany: { name: companyName.trim(), gstin: companyGstin.trim(), address: companyAddress.trim() } }
+        : {}),
       lines: lines.map((l, i) => ({
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         adults: l.adults, children: l.children, rooms: l.rooms,
@@ -671,13 +680,26 @@ export default function BookingPage() {
           <Card>
             <CardHeader title="Guest" />
             <CardBody className="space-y-4">
-              <Field label="Guest or company" required>
-                {(f) => (
-                  <Input {...fieldProps(f)} value={guestName} autoFocus={!!walkRoom}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    placeholder="Sharma family" className="h-12 text-base" />
-                )}
-              </Field>
+              {/* D27-371: Salutation beside Full name; the hotel's default
+                  salutation fills in (D27-243). */}
+              <div className="grid gap-3 grid-cols-[6.5rem_minmax(0,1fr)]">
+                <Field label="Salutation">
+                  {(f) => (
+                    <NativeSelect {...fieldProps(f)} value={title}
+                      onChange={(e) => setTitle(e.target.value)} className="h-12 text-base">
+                      <option value="">None</option>
+                      {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </NativeSelect>
+                  )}
+                </Field>
+                <Field label="Full name" required>
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={guestName} autoFocus={!!walkRoom}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      placeholder="Anil Sharma" className="h-12 text-base" />
+                  )}
+                </Field>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Phone" hint="Needed for online check-in and WhatsApp.">
                   {(f) => (
@@ -696,6 +718,31 @@ export default function BookingPage() {
               </div>
               <ReturningGuest hotelId={hotelId} phone={phone} email={email}
                 chosen={returning} onChoose={setReturning} />
+              {/* D27-371: the guest's own company, all optional. With a GSTIN
+                  the tax invoice is made out to it; the guest still pays. */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Company name">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={companyName} maxLength={200}
+                      onChange={(e) => setCompanyName(e.target.value)} className="h-12 text-base" />
+                  )}
+                </Field>
+                <Field label="GSTIN"
+                  hint="With a GSTIN, the tax invoice is made out to the company. The guest still pays."
+                  error={companyGstin.trim().length === 15 ? gstinProblem(companyGstin) ?? undefined : undefined}>
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={companyGstin} maxLength={15}
+                      onChange={(e) => setCompanyGstin(e.target.value.toUpperCase())}
+                      className="h-12 text-base tabular uppercase" data-guest-gstin />
+                  )}
+                </Field>
+              </div>
+              <Field label="Company address">
+                {(f) => (
+                  <Input {...fieldProps(f)} value={companyAddress} maxLength={500}
+                    onChange={(e) => setCompanyAddress(e.target.value)} className="h-12 text-base" />
+                )}
+              </Field>
               {/* D27-176: WhatsApp stays in sight (vouchers and the check-in
                   code need it); offers and the single-lady tick fold away. */}
               <Switch checked={whatsapp} onCheckedChange={setWhatsapp}
@@ -869,23 +916,12 @@ export default function BookingPage() {
             <Switch checked={singleLady} onCheckedChange={setSingleLady}
               label="Woman travelling alone"
               description="Placed away from stairwells and service corridors. Not announced at the desk." />
-            <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
-              <Field label="Title">
-                {(f) => (
-                  <NativeSelect {...fieldProps(f)} value={title}
-                    onChange={(e) => setTitle(e.target.value)} className="h-12 text-base">
-                    <option value="">None</option>
-                    {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </NativeSelect>
-                )}
-              </Field>
-              <Field label="Address">
-                {(f) => (
-                  <Input {...fieldProps(f)} value={addressLine}
-                    onChange={(e) => setAddressLine(e.target.value)} className="h-12 text-base" />
-                )}
-              </Field>
-            </div>
+            <Field label="Address">
+              {(f) => (
+                <Input {...fieldProps(f)} value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)} className="h-12 text-base" />
+              )}
+            </Field>
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
               <Field label="City">
                 {(f) => (

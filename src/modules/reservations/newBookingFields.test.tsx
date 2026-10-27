@@ -76,8 +76,8 @@ describe("New booking's Phase 1 fields", () => {
     );
 
     await screen.findByRole("heading", { name: "Guest" });
-    pick(/^Title$/, "Ms");
-    type("Guest or company", "Anna Smith");
+    pick(/^Salutation$/, "Ms");
+    type("Full name", "Anna Smith");
     type("Email", "anna@example.test");
     type("Nationality", "gb");
     /* A foreign guest arriving today: Form III is asked on the same page. */

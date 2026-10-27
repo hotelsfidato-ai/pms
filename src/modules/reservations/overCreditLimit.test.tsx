@@ -80,7 +80,7 @@ const bookForTheCompany = async () => {
     </QueryClientProvider>,
   );
   await screen.findByText(/₹3,000\.00 a night/);
-  fireEvent.change(screen.getByLabelText((t) => t === "Guest or company" || t === "Guest or company*",
+  fireEvent.change(screen.getByLabelText((t) => t === "Full name" || t === "Full name*",
     { selector: "input" }), { target: { value: "Anna Smith" } });
   fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }), { target: { value: "src-1" } });
   fireEvent.click(screen.getByRole("tab", { name: "Company" }));
