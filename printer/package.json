@@ -14,17 +14,29 @@
     "electron-updater": "6.8.10"
   },
   "devDependencies": {
-    "electron": "44.7.0",
+    "electron": "44.9.3",
     "electron-builder": "26.15.3"
   },
   "build": {
     "appId": "com.fidatohotels.printer",
     "productName": "Fidato Printer",
     "artifactName": "Fidato-Printer-Setup.exe",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "icon.png"],
-    "win": { "target": "nsis", "icon": "icon.png" },
-    "publish": { "provider": "generic", "url": "https://api.fidatohotels.com/downloads/" },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://api.fidatohotels.com/downloads/"
+    },
     "nsis": {
       "oneClick": true,
       "perMachine": false,

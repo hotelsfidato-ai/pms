@@ -5373,6 +5373,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><b>A slip the printer did not take</b> (paper out, printer off) shows a Windows message, <span class="msg">“Fidato Printer: not printed”</span>; print it again from <span class="ui">Reprint</span> below.</li>
     <li><b>It updates itself.</b> When it starts and once a day it looks for a new version on the Fidato server; when there is one, it downloads it and installs it straight away, by itself. It is gone for a few seconds and comes back by the clock with no window; KOTs and bills sent meanwhile wait and print when it is back. If it cannot reach the server it keeps printing and looks again the next day.</li>
+    <li><b>Which version:</b> rest the mouse on the icon: it says <span class="msg">“Fidato Printer 1.1.0”</span>, so you can see which computers have updated.</li>
     <li><b>The icon's menu:</b> <span class="ui">Open Fidato Printer</span>, <span class="ui">Printer</span>, <span class="ui">Start with Windows</span>, and <span class="ui">Quit (stops printing)</span>.</li>
     <li><b>The other way, with Chrome:</b> <span class="ui">download the setup file</span> (<code>KOT-station-setup-&lt;code&gt;.cmd</code>). It lists the printers (type the receipt printer's number), makes it the default printer, puts a <b>Fidato Printer</b> shortcut that opens Chrome on the desktop and in Startup, stops the computer sleeping, and opens this section. Chrome prints without asking but shows its print screen for a moment.</li>
   </ul>
@@ -6169,7 +6170,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>The <b>Bar counter</b>: what is being sold. Every KOT sent takes from here, and the open bottle is counted in ml.</li>
   </ul>
   <p>The counter <b>asks the store</b> for stock, and the GM or the Inventory Manager approves; approving moves it.</p>
-  <p>Bar stock is a switch for each property, in Admin, Properties (A17.14): on unless the owner or an Admin turns it off. Off, none of this part is offered, KOTs take nothing off the bar's stock and the night audit does not wait for a bar count.</p>
+  <p>Bar stock is a switch for each property, in Admin, Properties (A17.14): on at every hotel open before release 14 unless the owner or an Admin turns it off; a hotel added since starts with it off until they turn it on. Off, none of this part is offered, KOTs take nothing off the bar's stock and the night audit does not wait for a bar count.</p>
 
   <h3>Set up: the bar's drinks</h3>
   <p>Each drink is on the bar's list once for each bottle size: <i>Blenders Pride 180 ml</i> and <i>Blenders Pride 750 ml</i> are two. The GM, the Inventory Manager, the owner and an Admin keep the list; the bar manager reads it.</p>
@@ -10555,7 +10556,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>The owner and an Admin only.</b> A switch saves at once: <span class="msg">“Turned on”</span> or <span class="msg">“Turned off”</span>.</li>
     <li>The modules: <span class="ui">Point of sale</span>, <span class="ui">Banquet hall</span>, <span class="ui">Reception can use the POS</span>, <span class="ui">Channel manager</span>, <span class="ui">Laundry</span>, <span class="ui">Spa</span>, <span class="ui">Serves alcohol</span>, <span class="ui">Loyalty</span>, <span class="ui">Bar stock</span>. Each says under it what Off does. For most, the screens go and the server refuses them: not just a hidden menu entry. Point of sale off also stops an outside till posting bills to this property.</li>
     <li><span class="ui">Reception can use the POS</span> off hides the point of sale from Reception only; every other role is unaffected.</li>
-    <li><span class="ui">Bar stock</span> is on at every property until it is turned off. Off, the Bar stock screen, Inventory's Bar tab, the bar bills, the Bar stock report and the FLR registers go and the server refuses them, KOTs take nothing off the bar's stock, and the night audit does not wait for a bar count. Bar KOTs still print at the bar (A9.11).</li>
+    <li><span class="ui">Bar stock</span> is on at every property open before release 14 until it is turned off; a property added since starts with it off (<span class="d">D27-369</span>). Off, the Bar stock screen, Inventory's Bar tab, the bar bills, the Bar stock report and the FLR registers go and the server refuses them, KOTs take nothing off the bar's stock, and the night audit does not wait for a bar count. Bar KOTs still print at the bar (A9.11).</li>
     <li>A second card, <span class="ui">New booking</span>, holds the sections that fold open on New booking (<span class="ui">Company section</span>, <span class="ui">Notes section</span>). Off hides one at this property; nothing already booked changes.</li>
   </ul>
 

@@ -497,7 +497,8 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "the tax card, and one VAT line on the bill. Off means no menu section " +
       "can sell it and the till refuses it.",
   },
-  /* D27-367, 26 October: on at every property until turned off (239). */
+  /* D27-367, 26 October: on at every property until turned off (239); a
+     hotel added after 27 October starts with it off (D27-369). */
   bar_stock: {
     label: "Bar stock",
     note: "The bar's store and counter, their counts, the counter's requests, the bar bills and the FLR " +

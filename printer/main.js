@@ -83,7 +83,7 @@ function createWindow(hidden) {
 
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }));
-  tray.setToolTip("Fidato Printer - prints the KOTs and bills");
+  tray.setToolTip(`Fidato Printer ${app.getVersion()} - prints the KOTs and bills`);
   /* Built each time it opens, so a printer plugged in since is listed. */
   const menu = async () => {
     const printers = win ? await win.webContents.getPrintersAsync() : [];

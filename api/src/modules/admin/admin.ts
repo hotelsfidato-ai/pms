@@ -157,6 +157,13 @@ admin.post("/admin/hotels", async (c) => {
          input.templateSet ?? "standard"],
       );
 
+      /* D27-369: a hotel added here starts with Bar stock off, until the
+         owner or an Admin turns it on in Admin, Properties. The hotels open
+         before it keep it on: no row reads on (239). */
+      await client.query(
+        `insert into hotel_modules (hotel_id, module, is_enabled, changed_by)
+         values ($1, 'bar_stock', false, app.current_user_id())`, [rows[0]!.id]);
+
       /* Neither room TYPES nor ROOMS arrive: provision_property() asks
          for no template (D27-263), and both are added in Set up this
          hotel. The count stays in the reply for callers that read it. */

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { createHash } from "node:crypto";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
@@ -71,6 +72,37 @@ afterAll(async () => {
     await db.end();
   }
   await closePool();
+});
+
+/* A NEW HOTEL STARTS WITH BAR STOCK OFF (the owner's D27-369): added
+   through Admin's door, with the provisioning key, by a group admin. The
+   hotels already open keep it on. */
+describe("adding a hotel", () => {
+  it("starts it with Bar stock off, and leaves the open hotels' on (D27-369)", async () => {
+    const key = "adding-a-hotel-d27-369";
+    const db = await admin();
+    try {
+      await db.query(
+        `insert into provisioning_keys (label, key_hash, created_by)
+         select 'adminWrites', $1, id from staff where email = 'owner@fidato.in'`,
+        [createHash("sha256").update(key).digest("hex")]);
+      const res = await app.request("/api/admin/hotels", {
+        method: "POST",
+        headers: { "x-dev-staff-id": ownerUid, "x-provisioning-key": key, "content-type": "application/json" },
+        body: JSON.stringify({ code: "ZBAR", name: "Bar Off Test", city: "Nowhere" }),
+      });
+      expect(res.status, await res.clone().text()).toBe(200);
+      const { id } = await res.json() as { id: string };
+      const on = await db.query<{ made: boolean; open: boolean }>(
+        `select app.module_enabled($1, 'bar_stock') as made,
+                app.module_enabled((select id from hotels where code = 'AGR'), 'bar_stock') as open`, [id]);
+      expect(on.rows[0]).toEqual({ made: false, open: true });
+    } finally {
+      await db.query("select * from app.delete_property('ZBAR')").catch(() => undefined);
+      await db.query("delete from provisioning_keys where label = 'adminWrites'");
+      await db.end();
+    }
+  });
 });
 
 /* ══════════════════════════════════════════════════════════════════
