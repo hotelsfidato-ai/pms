@@ -14,13 +14,15 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### REP-20 · From 640 to about 690 wide the Dashboard's three figure tiles break "Month so far" and "Year so far" onto two lines
+None.
+
+## Fixed
+
+### REP-20 · From 640 to about 690 wide the Dashboard's three figure tiles broke "Month so far" and "Year so far" onto two lines - FIXED 27 October (D27-369)
 
 **Found** - 26 October, measuring the chart row's build in the browser pane on the local demo. At 640 wide each tile is 149px: "Month so far ₹1,72,972" and "Year so far ₹58,14,872" are 42px tall (two lines) against 21px, so the amounts stop being level (the Level Rule). At 700 (169px) they fit. It is REP-16 again, one step lower: REP-16 moved Occupancy to its own row under 1440, but the three tiles still go three across from `sm` (640). **Not caused by the chart row** (the new "Last 14 days" row is one line at every width measured: 1440, 1366, 1280, 1024, 800, 768, 700, 640, 390, 375).
 
-**Not fixed - a question for the owner.** Cheapest fix: three across from `md` (768) instead of `sm`, and the phone layout (one card of blocks) up to 767. That moves the phone layout's edge, so it is the owner's call.
-
-## Fixed
+**Fixed** - the owner chose the cheapest fix, in release 14 (D27-369): three across from `md` (768) instead of `sm`, the phone layout (one card of blocks) up to 767 (`Dashboard.tsx`, the figures block only). Measured in the browser pane: 640 and 700 wide, one card, rows as on a 375 phone; 768 and 1024, three across (226 and 229 px), every so-far row one line (21 px). Manual A1 says so.
 
 ### REP-19 · The Dashboard read every booking ever made three times to count today's - FIXED 14 October (D27-316 (1))
 

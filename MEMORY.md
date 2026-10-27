@@ -6561,6 +6561,19 @@ copy will see of theirs.**
 
 ---
 
+### 438 · FOUND: the printer app would not build - Visual Studio Code holds the old build's app.asar open (27 October)
+
+`npm run dist` in `printer/` stopped twice with `EBUSY: resource busy or locked, unlink
+'printer\dist\win-unpacked\resources\app.asar'`, and `rm` could not delete it either. Windows' Restart Manager
+named the holder: **Visual Studio Code** (the owner's, open on the project; its file watcher opens an `.asar` as an
+archive). Nothing of ours was running from `dist`. Not closed - it is the owner's editor. **Built instead into a fresh
+folder:** `npx electron-builder --win nsis -c.directories.output=../.local/printer-r14` (ignored by git, inside the
+project). The release steps then copy from `.local\printer-r14`, not `printer\dist`. **The rule:** build the printer
+app into `.local/printer-r<N>` for each release, and name that folder in the steps; to see who holds a file, ask
+the Restart Manager (`RmGetList`), never kill a guess.
+
+---
+
 ### 437 · MINE: the owner's allowance test was committed with type errors, because the API's type check was not run after it (27 October)
 
 `api/test/modules/pos/ownerAllowance.test.ts` went in with 939c3e15 (D27-366) reading rows as

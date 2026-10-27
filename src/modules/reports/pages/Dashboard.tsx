@@ -369,36 +369,38 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── The figures: three tiles levelled by subgrid; on a phone,
-            one card of blocks (the Data Rule) ─────────────────────── */}
-        <div className="col-span-12 min-[1440px]:col-span-7 grid gap-3 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto]
-                        max-sm:gap-0 max-sm:bg-white max-sm:border max-sm:border-grey-200 max-sm:rounded-lg max-sm:divide-y max-sm:divide-grey-200">
+        {/* ── The figures: three tiles levelled by subgrid from 768 px;
+            below it, one card of blocks (the Data Rule). From 640 the
+            tiles were 149 px and Month so far broke onto two lines (REP-20,
+            the owner's D27-369). ───────────────────────────────────── */}
+        <div className="col-span-12 min-[1440px]:col-span-7 grid gap-3 md:grid-cols-3 md:grid-rows-[auto_auto_auto]
+                        max-md:gap-0 max-md:bg-white max-md:border max-md:border-grey-200 max-md:rounded-lg max-md:divide-y max-md:divide-grey-200">
           {figures.map(({ icon: Icon, label, term, f, line }) => (
             <div
               key={label}
               className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3.5
-                         sm:row-span-3 sm:grid-cols-1 sm:grid-rows-subgrid sm:items-start sm:gap-y-2.5
-                         sm:bg-white sm:border sm:border-grey-200 sm:rounded-lg sm:px-[18px] sm:py-4"
+                         md:row-span-3 md:grid-cols-1 md:grid-rows-subgrid md:items-start md:gap-y-2.5
+                         md:bg-white md:border md:border-grey-200 md:rounded-lg md:px-[18px] md:py-4"
             >
               <p className="flex items-start gap-2.5 text-sm font-medium leading-5 text-grey-600 min-w-0">
-                <IconChip className="-mt-1 max-sm:hidden"><Icon /></IconChip>
+                <IconChip className="-mt-1 max-md:hidden"><Icon /></IconChip>
                 <span className="min-w-0">{term ? <Term name={term}>{label}</Term> : label}</span>
               </p>
               <div className={cn(
-                "text-xl sm:text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em] text-right sm:text-left",
+                "text-xl md:text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em] text-right md:text-left",
                 f?.today == null && !loading ? "text-grey-500" : "text-ink-900",
               )}>
                 {fig(cash(f?.today))}
               </div>
-              <dl className="col-span-2 mt-2 grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 sm:col-span-1 sm:mt-0 sm:grid-cols-1 sm:border-t sm:border-grey-100 sm:pt-1.5">
+              <dl className="col-span-2 mt-2 grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 md:col-span-1 md:mt-0 md:grid-cols-1 md:border-t md:border-grey-100 md:pt-1.5">
                 {/* THE SMALL LINE (D27-365): a row like the others, its line where a value would be. */}
-                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:leading-[22px]">
-                  <dt className="text-xs sm:text-sm text-grey-500 whitespace-nowrap">Last 14 days</dt>
+                <div className="flex flex-col gap-0.5 md:flex-row md:items-center md:justify-between md:gap-3 md:leading-[22px]">
+                  <dt className="text-xs md:text-sm text-grey-500 whitespace-nowrap">Last 14 days</dt>
                   <dd><Spark name={label.replace(/ \(.*/, "")} days={lastRows} line={line} loading={sparking} /></dd>
                 </div>
                 {([["Month so far", f?.ptd], ["Year so far", f?.ytd]] as const).map(([name, v]) => (
-                  <div key={name} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3 sm:leading-[22px]">
-                    <dt className="text-xs sm:text-sm text-grey-500">{name}</dt>
+                  <div key={name} className="flex flex-col gap-0.5 md:flex-row md:justify-between md:gap-3 md:leading-[22px]">
+                    <dt className="text-xs md:text-sm text-grey-500">{name}</dt>
                     <dd className={cn("text-sm font-medium tabular", v == null ? "text-grey-500" : "text-grey-700")}>
                       {loading ? <Skeleton className="h-4 w-16 inline-block" /> : cash(v)}
                     </dd>
