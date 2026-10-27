@@ -8,6 +8,16 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-10-28 · Supplier dues: goods on credit, and paying for them (the owner's D27-370)
+
+**Asked for:** the owner's D27-370 (27 October): a delivery on credit records the supplier's bill (number, date, amount, due date); a Supplier dues list of what is owed to each supplier; a payment later (cash, cheque, bank, UPI), marked paid, with a report. The Accountant, GM, owner and Admin see the dues and pay; the Inventory Manager records the bill but does not pay. No cash drawer changes. Helper branch for the master.
+
+**Shipped:** migration 246 (`supplier_bills`: one bill on credit from a delivery OR a bar bill, its payment four columns all-or-none, paid once - a trigger; the app may insert a bill and update only its payment columns, never delete; RLS forced; trading for a test hotel). `api/src/modules/purchasing/supplierDues.ts` (`GET /:code/purchasing/dues`, `POST /:code/purchasing/dues/:id/payment`, `creditProblem`, `recordCredit`), mounted from `index.ts`. The delivery route takes `credit: { billNo, billDate, amount, dueOn }`; a bar bill takes `dueOn` and uses its own number, date and printed total (**bar bills are deliveries too: they count in the dues**). `DUES_ROLES` (owner, admin, gm, finance) in `purchasingGrants.ts`, held equal to `approve` on `invoice`. Screens: "On credit" in Record the delivery and Record a bar bill; the delivered order and the bar bill say "On credit, due ... - not paid yet / paid on ..."; a **Supplier dues** tab on Purchasing (`components/SupplierDues.tsx`) for the four, each supplier's bills and total, the total owed, overdue in red, Record payment. The **Supplier dues** report (reports service, below). Manual A9.11 and A11.6; picture plans A9-45, A9-46, A9-47, A11-25.
+
+**Proved:** `api/test/modules/purchasing/supplierDues.test.ts` 6/6; `supplierDues.test.tsx` 2/2, `purchasing.test.tsx` and `barBills.test.tsx` each one new test; "supplier dues" in `db/tests/modules/purchasing.sql` 12/12. Seen failing with each guard taken out, then restored: the payment's role check (the Inventory Manager's payment answered 200), the dues list's role check and the report's roleGate rule (200 for the hotel manager), the due-before-bill check (the database's constraint still refused it, as a 500), the tab's role check on screen, and the paid-once trigger ("a paid bill is not paid again: statement succeeded").
+
+**Left open (the owner's):** part payments; editing or deleting a recorded bill or payment; credit notes and returns; GST on the bill beyond the delivery's lines; a supplier with no due date; suppliers' own statements; TDS; whether a reference is required for cheque, bank and UPI. **Pictures:** A9-45 to A9-47 and A11-25 to be taken by the master.
+
 ## 2026-10-21 · Bar bills, with their photo (the owner's D27-354)
 
 **Shipped** Purchasing's two tabs, Restaurant and hotel (as before) and Bar; Record a bar bill: supplier, number, date, photo, drinks picked or added ("Add another drink"), bottles and cost per bottle; into the bar's store at once - migration 234, `barBills.ts`, `components/BarBills.tsx`. **Proved** `api/test/modules/purchasing/barBills.test.ts`, `barBills.test.tsx`, "bar bill" in `db/tests/modules/purchasing.sql`. The root `CHANGELOG.md` has the whole entry.

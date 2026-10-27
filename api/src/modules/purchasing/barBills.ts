@@ -7,6 +7,7 @@ import * as storage from "../../storage.ts";
 import { StorageRefused } from "../../storage.ts";
 import { addBarDrink, barDrinks, barStore, receiveIntoStore } from "../stores/index.ts";
 import { BAR_RECORDERS, BAR_VIEW, PURCHASING_REFUSED, hasRoleAt } from "./purchasingGrants.ts";
+import { creditProblem, recordCredit } from "./supplierDues.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BAR BILLS (the owner's D27-354, 21 October)
@@ -84,6 +85,7 @@ barBills.get("/:code/bar/purchases", async (c) => {
       id: string; supplier: string; bill_no: string; bill_date: string; tp_no: string | null;
       handling: string | null; tcs: string | null; bill_total: string | null;
       recorded_by: string | null; recorded_at: string; photo_id: string | null;
+      credit: { dueOn: string; paidOn: string | null } | null;
       lines: { item: string; unit: string; sizeMl: number | null; mrp: string | null; perCase: number;
                cases: number; bottles: number; ratePerCase: string; amount: string }[];
     }>(
@@ -93,6 +95,9 @@ barBills.get("/:code/bar/purchases", async (c) => {
               (select a.id::text from attachments a
                 where a.hotel_id = p.hotel_id and a.subject_table = 'bar_purchases'
                   and a.subject_id = p.id order by a.uploaded_at desc limit 1) as photo_id,
+              (select json_build_object('dueOn', to_char(sb.due_on, 'YYYY-MM-DD'),
+                                        'paidOn', to_char(sb.paid_on, 'YYYY-MM-DD'))
+                 from supplier_bills sb where sb.bar_purchase_id = p.id) as credit,
               coalesce((select json_agg(json_build_object(
                          'item', i.name, 'unit', i.unit, 'sizeMl', i.size_ml, 'mrp', l.mrp::text,
                          'perCase', l.per_case, 'cases', l.cases, 'bottles', l.bottles,
@@ -112,6 +117,8 @@ barBills.get("/:code/bar/purchases", async (c) => {
         id: r.id, supplier: r.supplier, billNo: r.bill_no, billDate: r.bill_date, tpNo: r.tp_no,
         handling: num(r.handling), tcs: num(r.tcs), total: num(r.bill_total),
         recordedBy: r.recorded_by, recordedAt: r.recorded_at, photoId: r.photo_id,
+        /* On credit (D27-370): when it is due, and when it was paid. Null: paid on the day. */
+        credit: r.credit,
         lines: r.lines.map((l) => ({ ...l, mrp: num(l.mrp), ratePerCase: Number(l.ratePerCase),
           amount: Number(l.amount) })),
       })),
@@ -140,7 +147,9 @@ export const lineAmount = (l: { perCase: number; cases: number; bottles: number;
 
 barBills.post("/:code/bar/purchases", async (c) => {
   type Body = { supplier?: string; billNo?: string; billDate?: string; tpNo?: string | null;
-                handling?: number | null; tcs?: number | null; total?: number; lines?: LineIn[] };
+                handling?: number | null; tcs?: number | null; total?: number; lines?: LineIn[];
+                /** On credit, its due date: the bill goes on the Supplier dues (D27-370). */
+                dueOn?: string | null };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const supplier = input.supplier?.trim() ?? "";
   const billNo = input.billNo?.trim() ?? "";
@@ -187,6 +196,10 @@ barBills.post("/:code/bar/purchases", async (c) => {
       `The lines, handling and TCS make ${rupees(made)}; the bill says ${rupees(input.total!)}. `
       + "Check the cases, the rates and the charges against the bill."), 409);
   }
+  /* On credit (D27-370): the bill's own number, date and total, and when it is due. */
+  const credit = input.dueOn ? { billNo, billDate, amount: input.total!, dueOn: input.dueOn } : null;
+  const creditWrong = credit && creditProblem(credit);
+  if (creditWrong) return c.json(refuse(creditWrong), 409);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -245,6 +258,9 @@ barBills.post("/:code/bar/purchases", async (c) => {
            (hotel_id, purchase_id, item_id, movement_id, mrp, per_case, cases, bottles, rate_per_case, amount)
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [hotelId, bill!.id, itemId, got.id, l.mrp ?? null, l.perCase, l.cases, l.bottles, l.ratePerCase, amounts[n]]);
+    }
+    if (credit) {
+      await recordCredit(client, { hotelId, staffId: session.staffId, supplier, credit, barPurchaseId: bill!.id });
     }
     return { ok: true as const, id: bill!.id };
   });

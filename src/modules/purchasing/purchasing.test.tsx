@@ -424,6 +424,33 @@ describe("purchasing", () => {
     });
   });
 
+  it("records a delivery on credit: the supplier's bill, its amount and due date (D27-370)", async () => {
+    as("stores");
+    go("/h/PU8/purchasing/ordered");
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Record the delivery" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /On credit/ }));
+    const record = within(dialog).getAllByRole("button", { name: "Record the delivery" })[0]!;
+    fireEvent.click(record);
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toBe("Type the supplier's bill number, as printed on it.");
+    expect(control.delivered).toHaveLength(0);
+
+    fireEvent.change(within(dialog).getByLabelText("Bill number"), { target: { value: "AT-771" } });
+    fireEvent.change(within(dialog).getByLabelText("Bill date"), { target: { value: "2026-09-18" } });
+    fireEvent.change(within(dialog).getByLabelText("Amount, as printed, ₹"), { target: { value: "3100" } });
+    fireEvent.change(within(dialog).getByLabelText("Due on"), { target: { value: "2026-10-18" } });
+    fireEvent.click(record);
+    await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
+    expect(control.delivered[0]).toEqual({
+      note: undefined,
+      credit: { billNo: "AT-771", billDate: "2026-09-18", amount: 3100, dueOn: "2026-10-18" },
+      lines: [{ lineId: "l1", receivedQuantity: 50, receivedUnitCost: 62 }],
+    });
+  });
+
   it("raises a request, and leaves the price blank where nothing is agreed", async () => {
     as("stores");
     go("/h/PU9/purchasing");

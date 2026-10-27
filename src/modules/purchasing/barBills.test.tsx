@@ -36,6 +36,7 @@ vi.mock("@/modules/purchasing/data/barBills", async (importOriginal) => ({
     id: "b-1", supplier: "Amit Traders", billNo: "A-1020", billDate: "2026-10-20", tpNo: "TP 88123",
     handling: 120, tcs: 95.5, total: 10215.5,
     recordedBy: "Store Keeper", recordedAt: "20 Oct, 18:05", photoId: null,
+    credit: { dueOn: "2026-11-04", paidOn: null },
     lines: [{ item: "Imperial Blue 180 ml", unit: "bottle", sizeMl: 180, mrp: 190, perCase: 48, cases: 1,
               bottles: 12, ratePerCase: 8000, amount: 10000 }],
   }],
@@ -114,6 +115,30 @@ describe("Purchasing · Bar (D27-354)", () => {
           perCase: 12, cases: 2, bottles: 0, ratePerCase: 1850, mrp: 160 },
       ],
     }]));
+  });
+
+  it("a bar bill on credit carries its due date, and the list says it is not paid yet (D27-370)", async () => {
+    as("stores");
+    open();
+    await screen.findByText("Amit Traders · Bill A-1020");
+    expect(document.querySelector("[data-credit]")!.textContent).toBe("On credit, due 4 Nov 2026 - not paid yet");
+    fireEvent.click(screen.getByRole("button", { name: "Record a bar bill" }));
+    await screen.findByText("The drinks on the bill");
+    const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+    fireEvent.change(field("Supplier"), { target: { value: "Bharat Wines" } });
+    fireEvent.change(field("Bill number"), { target: { value: "B-312" } });
+    fireEvent.change(field("Bill date"), { target: { value: "2026-10-21" } });
+    fireEvent.change(screen.getByLabelText("Drink on line 1"), { target: { value: "d-blue" } });
+    fireEvent.change(field("Cases on line 1"), { target: { value: "1" } });
+    fireEvent.change(field("Rate per case on line 1"), { target: { value: "8000" } });
+    fireEvent.change(field("Total, as printed, ₹"), { target: { value: "8000" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /On credit/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save the bill" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Pick the date the bill is due.");
+    fireEvent.change(field("Due on"), { target: { value: "2026-11-20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save the bill" }));
+    await vi.waitFor(() => expect(sent.bills).toHaveLength(1));
+    expect(sent.bills[0]).toMatchObject({ billNo: "B-312", total: 8000, dueOn: "2026-11-20" });
   });
 
   it("housekeeping and the hotel manager read the bills and do not see Record a bar bill", async () => {

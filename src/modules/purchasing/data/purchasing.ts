@@ -1,4 +1,5 @@
 import { api, ApiError, downloadFile } from "@/lib/api";
+import { can, type Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING — the seam
@@ -129,11 +130,14 @@ export async function getPurchasing(hotelId: string): Promise<PurchasingList> {
   return api<PurchasingList>(`/api/hotels/${hotelId}/purchasing`);
 }
 
+/** A supplier's bill on credit (D27-370): as printed, and when it is due. */
+export interface CreditBill { billNo: string; billDate: string; amount: number; dueOn: string }
+
 export async function getPurchaseRequest(
   hotelId: string, id: string,
-): Promise<{ request: PurchaseRequest; lines: PurchaseLine[] }> {
-  return api<{ request: PurchaseRequest; lines: PurchaseLine[] }>(
-    `/api/hotels/${hotelId}/purchasing/requests/${id}`);
+): Promise<{ request: PurchaseRequest; lines: PurchaseLine[];
+             credit: (Omit<CreditBill, "amount"> & { amount: string; paidOn: string | null }) | null }> {
+  return api(`/api/hotels/${hotelId}/purchasing/requests/${id}`);
 }
 
 export async function getRequesters(hotelId: string): Promise<RequesterSetting> {
@@ -199,6 +203,8 @@ export async function recordDelivery(
           (D27-238, D27-242 Q6). */
       gstRate?: number; gstAmount?: number; gstClaimable?: boolean; expiresOn?: string;
     }[];
+    /** On credit: the supplier's bill goes on the Supplier dues (D27-370). */
+    credit?: CreditBill;
   },
 ): Promise<Result<{
   received: { item: string; quantity: number; store: string; onHandHere: number }[];
@@ -216,6 +222,32 @@ export async function recordDelivery(
     orders. Nothing here sends anything, and nothing waits on n8n. */
 export async function downloadOrder(hotelId: string, requestId: string): Promise<string> {
   return downloadFile(`/api/hotels/${hotelId}/purchasing/orders/${requestId}.pdf`);
+}
+
+/* ── Supplier dues (the owner's D27-370) ────────────────────────────
+   What we owe suppliers: the bills taken on credit and not yet paid. Seen,
+   and paid, by the accountant, the GM, the owner and an administrator - the
+   server's DUES_ROLES, who are exactly who hold `approve` on `invoice`. */
+export const seesSupplierDues = (role: Role): boolean => can(role, "approve", "invoice");
+
+export interface SupplierDue {
+  id: string; supplier: string; billNo: string; billDate: string;
+  /** As printed on the bill. A string to the screen, as all money here. */
+  amount: string; dueOn: string;
+  from: { kind: "bar" } | { kind: "order"; id: string; reference: string };
+}
+
+export async function getSupplierDues(hotelId: string): Promise<{ today: string; bills: SupplierDue[] }> {
+  return api(`/api/hotels/${hotelId}/purchasing/dues`);
+}
+
+export type PayMethod = "cash" | "cheque" | "bank" | "upi";
+
+/** Paid in full: the bill leaves the dues. No cash drawer is touched. */
+export async function paySupplierDue(
+  hotelId: string, billId: string, input: { method: PayMethod; reference: string | null; paidOn: string },
+): Promise<Result<unknown>> {
+  return call(`/api/hotels/${hotelId}/purchasing/dues/${billId}/payment`, "POST", input);
 }
 
 async function call<T>(path: string, method: string, body?: unknown): Promise<Result<T>> {

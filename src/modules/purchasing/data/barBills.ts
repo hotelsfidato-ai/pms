@@ -33,6 +33,8 @@ export interface BarBill {
   id: string; supplier: string; billNo: string; billDate: string; tpNo: string | null;
   handling: number | null; tcs: number | null; total: number | null;
   recordedBy: string | null; recordedAt: string; photoId: string | null;
+  /** On credit (D27-370): when it is due, and when it was paid; null when paid on the day. */
+  credit: { dueOn: string; paidOn: string | null } | null;
   lines: BarBillLine[];
 }
 
@@ -57,6 +59,8 @@ export const barBills = async (hotelId: string) =>
 export async function recordBarBill(hotelId: string, bill: {
   supplier: string; billNo: string; billDate: string; tpNo: string | null;
   handling: number | null; tcs: number | null; total: number; lines: NewBillLine[];
+  /** On credit: its due date (D27-370). */
+  dueOn?: string;
 }): Promise<Result<{ id: string }>> {
   try {
     return await api<Result<{ id: string }>>(`/api/hotels/${hotelId}/bar/purchases`,

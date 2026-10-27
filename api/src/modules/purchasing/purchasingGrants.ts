@@ -57,6 +57,13 @@ export const BAR_RECORDERS: readonly string[] = ["owner", "admin", "gm", "stores
 /** Who sees the bar's bills and drinks: whoever sees Purchasing, and the Bar role. */
 export const BAR_VIEW: readonly string[] = [...VIEW_ROLES, "bar"];
 
+/** Who sees what is owed to suppliers and records a payment (the owner's
+    D27-370): the accountant, the GM, the owner and an administrator. Not the
+    Inventory Manager, who records the supplier's bill on a delivery but does
+    not pay it. The same four hold `approve` on `invoice`; the reports read
+    (roleGate) asks that, and purchasingGrants.test.ts holds the two equal. */
+export const DUES_ROLES: readonly string[] = ["owner", "admin", "gm", "finance"];
+
 /** The roles that may change who may raise a request. */
 export const SETTING_KEEPERS: readonly string[] = ["owner", "admin"];
 
@@ -72,6 +79,12 @@ export const PURCHASING_REFUSED = {
   setting:
     "Changing who may raise a purchase request is for the owner or an "
     + "administrator. Ask one of them.",
+  dues:
+    "What is owed to suppliers is for the owner, an administrator, the "
+    + "general manager or the accountant.",
+  pay:
+    "Recording a payment to a supplier is for the owner, an administrator, "
+    + "the general manager or the accountant.",
   barBill:
     "Recording a bar bill is for the owner, an administrator, the general "
     + "manager, the Inventory Manager or the bar manager.",

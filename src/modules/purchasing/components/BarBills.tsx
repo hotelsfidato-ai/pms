@@ -4,7 +4,7 @@ import { Camera, GlassWater, Image as ImageIcon, Plus, Trash2 } from "lucide-rea
 import { moneyPrecise as money, dateShort, bottlesAndMl } from "@/lib/format";
 import {
   Card, CardBody, Button, Skeleton, EmptyState, ErrorState, Dialog, DialogContent,
-  Field, fieldProps, Input, NativeSelect, toast,
+  Field, fieldProps, Input, NativeSelect, Checkbox, toast,
 } from "@/components/ui";
 import {
   barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto, lineAmount,
@@ -87,6 +87,12 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
                         </li>
                       )}
                     </ul>
+                    {b.credit && (
+                      <p className="text-sm text-grey-600" data-credit>
+                        On credit, due {dateShort(b.credit.dueOn)}
+                        {b.credit.paidOn ? ` - paid on ${dateShort(b.credit.paidOn)}` : " - not paid yet"}
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-3 text-sm text-grey-500">
                       <span className="flex-1">Recorded by {b.recordedBy ?? "-"} · {b.recordedAt}</span>
                       {b.photoId
@@ -153,6 +159,9 @@ function RecordDialog({ hotelId, drinks, onClose }: {
   const [handling, setHandling] = useState("");
   const [tcs, setTcs] = useState("");
   const [printed, setPrinted] = useState("");
+  /* On credit (D27-370): the bill goes on the Supplier dues, due on this date. */
+  const [onCredit, setOnCredit] = useState(false);
+  const [dueOn, setDueOn] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [lines, setLines] = useState<Draft[]>([{ ...EMPTY }]);
   const [saving, setSaving] = useState(false);
@@ -178,10 +187,12 @@ function RecordDialog({ hotelId, drinks, onClose }: {
         : { itemId: l.itemId, ...common });
     }
     if (printed.trim() === "") return setProblem("Type the bill's total, as printed on it.");
+    if (onCredit && !dueOn) return setProblem("Pick the date the bill is due.");
     setSaving(true);
     const res = await recordBarBill(hotelId, {
       supplier, billNo, billDate, tpNo: tpNo.trim() || null,
-      handling: num(handling), tcs: num(tcs), total: Number(printed), lines: out });
+      handling: num(handling), tcs: num(tcs), total: Number(printed), lines: out,
+      ...(onCredit ? { dueOn } : {}) });
     if (!res.ok) { setSaving(false); return setProblem(res.reason); }
     const photo = file ? await attachBarBillPhoto(hotelId, res.id, file) : { ok: true as const };
     setSaving(false);
@@ -327,6 +338,16 @@ function RecordDialog({ hotelId, drinks, onClose }: {
               ? <span className="text-success"> · matches the bill</span>
               : <span className="text-brand-red-700 font-medium"> · {money(Math.abs(off))} {off > 0 ? "more" : "less"} than the bill</span>}
           </p>
+
+          <div className="flex flex-wrap items-end gap-4">
+            <Checkbox checked={onCredit} onCheckedChange={setOnCredit}
+              label="On credit - the bill is paid later" />
+            {onCredit && (
+              <Field label="Due on">
+                {(p) => <Input {...fieldProps(p)} type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />}
+              </Field>
+            )}
+          </div>
 
           {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>

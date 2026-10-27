@@ -8,6 +8,7 @@ import {
   VIEW_ROLES, SETTING_KEEPERS, PURCHASING_REFUSED, hasRoleAt, mayRaise,
 } from "./purchasingGrants.ts";
 import { priceProblem } from "../../validate.ts";
+import { creditProblem, hotelToday, recordCredit, type CreditIn } from "./supplierDues.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING — a request, an approval, an order, a delivery
@@ -273,8 +274,17 @@ purchasing.get("/:code/purchasing/requests/:id", async (c) => {
         where pl.request_id = $1
         order by pl.line_no`, [c.req.param("id")]);
 
+    /* On credit (D27-370): the supplier's bill, and when it was paid. */
+    const { rows: credit } = await client.query<{
+      billNo: string; billDate: string; amount: string; dueOn: string; paidOn: string | null;
+    }>(
+      `select bill_no as "billNo", to_char(bill_date, 'YYYY-MM-DD') as "billDate", amount::text as amount,
+              to_char(due_on, 'YYYY-MM-DD') as "dueOn", to_char(paid_on, 'YYYY-MM-DD') as "paidOn"
+         from supplier_bills where purchase_request_id = $1`, [c.req.param("id")]);
+
     return {
       request: asRequest(rows[0]),
+      credit: credit[0] ?? null,
       lines: lines.map((l) => ({
         id: l.id, lineNo: l.line_no, itemId: l.item_id, item: l.item, unit: l.unit,
         quantity: l.quantity,
@@ -613,10 +623,15 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
       gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
       expiresOn?: string | null;
     }[];
+    /** On credit: the supplier's bill - number, date, amount, due date (D27-370). */
+    credit?: CreditIn | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const lines = input.lines ?? [];
   if (lines.length === 0) return c.json(refuse("What came?"), 409);
+  const credit = input.credit ?? null;
+  const creditWrong = credit && creditProblem(credit);
+  if (creditWrong) return c.json(refuse(creditWrong), 409);
 
   for (const l of lines) {
     if (!l.lineId) return c.json(refuse("Every line says which item it is."), 409);
@@ -661,6 +676,10 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
        be a COMMIT of half a delivery (MEMORY 243). */
     const refusal = await mayDeliverInto(client, hotelId, order.store_id);
     if (refusal) return forbid(refusal);
+    if (credit) {
+      if (!order.supplier) return refuse("This order names no supplier, so its bill cannot be put on credit.");
+      if (credit.billDate! > await hotelToday(client, hotelId)) return refuse("A bill is not dated in the future.");
+    }
 
     const known = new Map<string, { itemId: string }>();
     const { rows: mine } = await client.query<{ id: string; item_id: string }>(
@@ -739,6 +758,14 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
       const sentence = said(err);
       if (sentence) throw Object.assign(new Error(sentence), { refusal: sentence });
       throw err;
+    }
+
+    /* On credit: the supplier's bill goes on the Supplier dues (D27-370). */
+    if (credit) {
+      await recordCredit(client, {
+        hotelId, staffId: session.staffId, supplier: order.supplier!,
+        credit: credit as Required<CreditIn>, purchaseRequestId: c.req.param("id"),
+      });
     }
 
     return { ok: true as const, received };

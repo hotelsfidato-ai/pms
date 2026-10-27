@@ -515,6 +515,21 @@ export const SHOTS = [
       { n: 6, at: MAIN, side: "top" },
     ],
   },
+  /* D27-370: the same delivery, on credit - its bill goes on Supplier dues (A9-46). */
+  {
+    id: "A9-45", title: "A delivery on credit", as: IM,
+    steps: [
+      { click: "css:[role=dialog] button[role=checkbox]" }, { waitFor: "text:Due on" },
+      { eval: "(() => { const set = (t, v) => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith(t)); const i = document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, v); i.dispatchEvent(new Event('input', { bubbles: true })); }; set('Bill number', 'A9 Test KB-401'); set('Amount, as printed', '2152.50'); set('Due on', new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)); })()" },
+      { wait: 500 },
+    ],
+    marks: [
+      { n: 1, at: "text:On credit - the supplier's bill is paid later", side: "left" },
+      { n: 2, at: "text:Bill number", side: "top" },
+      { n: 3, at: "text:Amount, as printed", side: "top" },
+      { n: 4, at: "text:Due on", side: "top" },
+    ],
+  },
   { id: "A9-28b", title: "Record it", noShot: true, as: IM,
     steps: [{ click: MAIN }, { waitFor: TOAST, ms: 10000 }, { wait: 1500 }] },
   {
@@ -739,5 +754,36 @@ export const SHOTS = [
     ],
   },
   { id: "A9-39b", title: "Not this time: Cancel", noShot: true, as: IM,
+    steps: [{ click: "text:Cancel" }, { wait: 500 }] },
+
+  /* ── Supplier dues (D27-370): the bill A9-45 put on credit ── */
+  {
+    id: "A9-46", title: "Supplier dues", as: "Accountant",
+    path: "/h/5EL/purchasing?tab=dues",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-dues-total]", ms: 30000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[role=tab][aria-selected=true]", side: "bottom" },
+      { n: 2, at: "css:[data-dues-total]", side: "right" },
+      { n: 3, at: "css:[data-supplier-total]", nth: 0, side: "left" },
+      { n: 4, at: "text:Record payment", nth: 0, side: "left" },
+    ],
+  },
+  {
+    id: "A9-47", title: "Recording a payment", as: "Accountant",
+    steps: [
+      { click: "text:Record payment", nth: 0 }, { waitFor: "text:Mark paid" },
+      choose("How", "Cheque"),
+      { eval: "(() => { const set = (t, v) => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith(t)); const i = document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, v); i.dispatchEvent(new Event('input', { bubbles: true })); }; set('Reference', 'CHQ 004512'); })()" },
+      { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "text:How", side: "top" },
+      { n: 2, at: "text:Reference", side: "top" },
+      { n: 3, at: "text:Paid on", side: "top" },
+      { n: 4, at: MAIN, side: "top" },
+    ],
+  },
+  /* Not paid in the pictures: the bill stays on the dues for the report (A11-25). */
+  { id: "A9-47b", title: "Not this time: Cancel", noShot: true, as: "Accountant",
     steps: [{ click: "text:Cancel" }, { wait: 500 }] },
 ];
