@@ -11,9 +11,10 @@ import {
 } from "@/components/ui";
 import { useRole } from "@/lib/session";
 import { BarBills } from "@/modules/purchasing/components/BarBills";
+import { SupplierDues } from "@/modules/purchasing/components/SupplierDues";
 import { BAR_RECORDERS } from "@/modules/purchasing/data/barBills";
 import {
-  getPurchasing, raiseRequest,
+  getPurchasing, raiseRequest, seesSupplierDues,
   type PurchaseRequest, type PurchaseState, type PurchasingList,
 } from "@/modules/purchasing/data/purchasing";
 
@@ -78,8 +79,11 @@ export default function PurchasingPage() {
   /* Restaurant and hotel | Bar (the owner's D27-354): the tab lives in the
      address, so a link or a refresh keeps it. */
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") === "bar" ? "bar" : "hotel";
-  const mayRecordBar = BAR_RECORDERS.includes(useRole());
+  const role = useRole();
+  /* Supplier dues (D27-370): the accountant, the GM, the owner and an Admin. */
+  const seesDues = seesSupplierDues(role);
+  const tab = params.get("tab") === "bar" ? "bar" : params.get("tab") === "dues" && seesDues ? "dues" : "hotel";
+  const mayRecordBar = BAR_RECORDERS.includes(role);
   const [recordingBar, setRecordingBar] = useState(false);
 
   const q = useQuery({
@@ -215,8 +219,10 @@ export default function PurchasingPage() {
         title="Purchasing"
         description={tab === "bar"
           ? "The bar's bills as they come: the drinks go into the bar's store, with a photo of the bill."
+          : tab === "dues"
+          ? "What we owe suppliers: the bills taken on credit and not yet paid."
           : "Ask for what is needed, get it approved, order it, and receive it into a store."}
-        actions={tab === "bar" ? (
+        actions={tab === "dues" ? undefined : tab === "bar" ? (
           mayRecordBar && (
             <Button variant="primary" leadingIcon={<GlassWater />} onClick={() => setRecordingBar(true)}>
               Record a bar bill
@@ -239,10 +245,11 @@ export default function PurchasingPage() {
       />
 
       <Segmented className="mb-4" value={tab}
-        onChange={(t) => setParams(t === "bar" ? { tab: "bar" } : {}, { replace: true })}
-        options={[{ value: "hotel", label: "Restaurant and hotel" }, { value: "bar", label: "Bar" }]} />
+        onChange={(t) => setParams(t === "hotel" ? {} : { tab: t }, { replace: true })}
+        options={[{ value: "hotel", label: "Restaurant and hotel" }, { value: "bar", label: "Bar" },
+          ...(seesDues ? [{ value: "dues", label: "Supplier dues" }] : [])]} />
 
-      {tab === "bar" ? (
+      {tab === "dues" ? <SupplierDues hotelId={code} /> : tab === "bar" ? (
         <BarBills hotelId={code} mayRecord={mayRecordBar}
           recording={recordingBar} onRecording={setRecordingBar} />
       ) : (<>

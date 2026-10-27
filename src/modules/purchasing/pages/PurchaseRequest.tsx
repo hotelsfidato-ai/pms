@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { FileDown, Truck, Send, Ban, IndianRupee } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateTime } from "@/lib/format";
+import { money, dateTime, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState,
@@ -84,6 +84,7 @@ export default function PurchaseRequestPage() {
 
   const r = q.data?.request;
   const lines = q.data?.lines ?? [];
+  const credit = q.data?.credit ?? null;
   const mayAct = list.data?.me.mayRaise === true;
 
   const body = (() => {
@@ -169,6 +170,13 @@ export default function PurchaseRequestPage() {
                 {r.receivedAt ? ` on ${dateTime(r.receivedAt)}` : ""}
               </p>
               <p>{r.deliveryNote ?? "Nothing was noted about the delivery."}</p>
+              {credit && (
+                <p className="mt-1" data-credit>
+                  On credit: bill {credit.billNo} of {dateShort(credit.billDate)}, {rupees(credit.amount)},
+                  {" "}due {dateShort(credit.dueOn)}
+                  {credit.paidOn ? ` - paid on ${dateShort(credit.paidOn)}.` : " - not paid yet."}
+                </p>
+              )}
             </CardBody>
           </Card>
         )}
@@ -501,6 +509,9 @@ function DeliveryDialog({
   const [typedAmount, setTypedAmount] = useState<Record<string, string>>({});
   const [claimable, setClaimable] = useState<Record<string, string>>({});
   const [useBy, setUseBy] = useState<Record<string, string>>({});
+  /* On credit (D27-370): the supplier's bill, as printed, and when it is due. */
+  const [onCredit, setOnCredit] = useState(false);
+  const [bill, setBill] = useState({ billNo: "", billDate: new Date().toLocaleDateString("en-CA"), amount: "", dueOn: "" });
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -538,9 +549,17 @@ function DeliveryDialog({
       }
     }
 
+    if (onCredit) {
+      if (!bill.billNo.trim()) return setProblem("Type the supplier's bill number, as printed on it.");
+      if (!bill.billDate) return setProblem("Pick the date on the supplier's bill.");
+      if (!(Number(bill.amount) > 0)) return setProblem("Type the bill's amount, as printed on it: more than zero.");
+      if (!bill.dueOn) return setProblem("Pick the date the bill is due.");
+    }
+
     setSaving(true);
     const out = await recordDelivery(code, requestId, {
       note: note.trim() || undefined,
+      ...(onCredit ? { credit: { ...bill, amount: Number(bill.amount) } } : {}),
       lines: lines.map((l) => ({
         lineId: l.id,
         receivedQuantity: Number(came[l.id]),
@@ -686,6 +705,29 @@ function DeliveryDialog({
               />
             )}
           </Field>
+
+          <Checkbox checked={onCredit} onCheckedChange={setOnCredit}
+            label="On credit - the supplier's bill is paid later" />
+          {onCredit && (
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Field label="Bill number">
+                {(p) => <Input {...fieldProps(p)} value={bill.billNo}
+                  onChange={(e) => setBill((b) => ({ ...b, billNo: e.target.value }))} />}
+              </Field>
+              <Field label="Bill date">
+                {(p) => <Input {...fieldProps(p)} type="date" value={bill.billDate}
+                  onChange={(e) => setBill((b) => ({ ...b, billDate: e.target.value }))} />}
+              </Field>
+              <Field label="Amount, as printed, ₹">
+                {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={bill.amount}
+                  onChange={(e) => setBill((b) => ({ ...b, amount: e.target.value }))} />}
+              </Field>
+              <Field label="Due on">
+                {(p) => <Input {...fieldProps(p)} type="date" value={bill.dueOn}
+                  onChange={(e) => setBill((b) => ({ ...b, dueOn: e.target.value }))} />}
+              </Field>
+            </div>
+          )}
 
           {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>

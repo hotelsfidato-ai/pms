@@ -197,6 +197,17 @@ export const SHOTS = [
     ],
   },
 
+  /* D27-370: what the hotel owes suppliers (A9-45 put a bill on credit). */
+  {
+    id: "A11-25", title: "Supplier dues", as: "Accountant",
+    path: "/reports/supplier-dues", steps: [LOADED("Owed to each supplier")],
+    marks: [
+      { n: 1, at: "text:Owed to each supplier", side: "right" },
+      { n: 2, at: "text:Days overdue", nth: 0, side: "top" },
+      { n: 3, at: "text:Payments made", side: "right" },
+    ],
+  },
+
   /* ── Statutory ────────────────────────────────────────────────────── */
   {
     id: "A11-15", title: "GST sales register: the month's invoices and credit notes", as: "General Manager",

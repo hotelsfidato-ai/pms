@@ -29,7 +29,7 @@
     <thead><tr><th style="width:20%">Group</th><th style="width:36%">Reports</th><th>Who opens them</th></tr></thead>
     <tbody>
       <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
-      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger or Cashier shift</td></tr>
+      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger or Cashier shift; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
       <tr><td>Statutory</td><td>Lodging tax, GST sales register, Form III register (A11.7)</td><td>The same as The day; the Form III register only for the Owner, Admin, General Manager, Hotel Manager and Reception</td></tr>
       <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report, Bar stock, FLR-1A/2A/3A register, FLR-3 register (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
     </tbody>
@@ -118,7 +118,7 @@
     <thead><tr><th style="width:40%">Covers</th><th>Reports</th></tr></thead>
     <tbody>
       <tr><td>The business date</td><td>Manager report (with the month and the year so far), Night audit report, City ledger, No show, Cashier shift, Closing stock, Dead stock, Days of cover, Equipment report</td></tr>
-      <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend</td></tr>
+      <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend, Supplier dues (owed on the business date; paid in the month so far)</td></tr>
       <tr><td>The whole month</td><td>Monthly occupancy, Monthly statistics, Lodging tax</td></tr>
       <tr><td>The calendar year, January to December</td><td>Yearly statistics</td></tr>
       <tr><td>Any days you choose</td><td>Accounting export (A11.8)</td></tr>
@@ -301,7 +301,7 @@
   </div>
 
   <!-- A11.6 -->
-  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift</h2>
+  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues</h2>
 
   <h3>City ledger</h3>
   <p><span class="ui">City ledger</span> (<code>/reports/city-ledger</code>) is the bills sent to a company or a booking site, account by account, for the business date: <b>Opening Balance</b>, <b>Debit</b> (bills sent to the account), <b>Credit</b> (what the account paid, recorded on Company accounts), <b>Closing Balance</b>.</p>
@@ -357,6 +357,19 @@
       <li>The Revenue Manager does not see City ledger, Guest ledger or Cashier shift.</li>
     </ul>
   </div>
+
+  <h3>Supplier dues</h3>
+  <p><span class="ui">Supplier dues</span> (<code>/reports/supplier-dues</code>) is what the hotel owes, not what it is owed: the suppliers' bills taken on credit (A9.11). <b>Owed to each supplier</b> lists, under each supplier, every bill dated by the business date and not paid by it - its date, its due date, the days it is overdue and its amount - with the supplier's total, and the total owed at the foot. <b>Payments made</b> lists the bills paid from the 1st of the month to the business date: the day, the supplier, the bill, how it was paid, its reference, who recorded it and the amount, with the total paid. It is the Owner's, an Admin's, the General Manager's and the Accountant's only; it has <span class="ui">PDF</span>, <span class="ui">Excel</span> and <span class="ui">CSV</span> like the others.</p>
+
+  <figure class="shot" id="fig-A11-25">
+    <img src="img/A11-25.png" alt="Supplier dues: Owed to each supplier with a supplier band, its bills, days overdue and its total, and Payments made">
+    <figcaption><b>Figure A11-25.</b> Supplier dues.</figcaption>
+    <ol class="callouts">
+      <li>Owed to each supplier: a band per supplier, then its bills</li>
+      <li>Days overdue on the business date</li>
+      <li>Payments made in the month so far</li>
+    </ol>
+  </figure>
 
   <div class="box why">
     <h4>Why it works this way</h4>

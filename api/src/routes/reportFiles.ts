@@ -37,6 +37,11 @@ export const REPORT_EXPORTERS: readonly string[] = [
    asks the same, so the download is no way round the screen. */
 const MONEY_REPORTS: readonly string[] = ["city-ledger"];
 
+/* What we owe suppliers (the owner's D27-370): the accountant, the GM, the
+   owner and an administrator - who hold `approve` on `invoice`, as the
+   screen's own read asks (roleGate SUPPLIER_DUES). */
+const DUES_REPORTS: readonly string[] = ["supplier-dues"];
+
 /* The Store and equipment reports (phase 3A; the owner's D27-240): read by
    their own readers (roleGate STORE_REPORTS), downloaded by those of them
    who hold the Store's export. A COPY of that list, held to the matrix by
@@ -96,13 +101,18 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
               )) as may
          from staff s where s.id = app.current_user_id() and s.is_active`,
       [hotel.id, isStoreReport(key) ? STORE_EXPORTERS
+        : DUES_REPORTS.includes(key)
+          ? REPORT_EXPORTERS.filter((r) => can(r as Role, "approve", "invoice"))
         : MONEY_REPORTS.includes(key)
           ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "invoice"))
           : REPORT_EXPORTERS]);
     if (!me[0]?.may) {
       return {
         status: 403 as const,
-        error: isStoreReport(key)
+        error: DUES_REPORTS.includes(key)
+          ? "What is owed to suppliers is for the owner, an administrator, the general manager "
+            + "or the accountant. Ask one of them."
+          : isStoreReport(key)
           ? "Downloading the store's reports is for the owner, an administrator, the general manager, "
             + "the Inventory Manager or the accountant. Ask one of them."
           : MONEY_REPORTS.includes(key)

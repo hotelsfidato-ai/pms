@@ -92,7 +92,11 @@ receipt through `receiveIntoStore`. Checked by the Store's own
 
 Said on screen where somebody would look for them:
 
-- **Supplier bills and payments** — finance's, and waiting on the owner (S10).
+- ~~**Supplier bills and payments**~~ — built 28 October as **Supplier dues**
+  (the owner's D27-370, migration 246, `supplierDues.ts`, the `?tab=dues` tab,
+  the `supplier-dues` report): a bill on credit from a delivery or a bar bill,
+  paid whole once by the owner, an Admin, the GM or the accountant. No cash
+  drawer. Part payments, edits, credit notes and TDS are not decided.
 - Part deliveries against one order; a rate contract per supplier; reorder
   levels that raise a request by themselves.
 - **Equipment.** Every line is a `stock_items` row, so a delivery lands as stock.

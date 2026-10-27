@@ -692,6 +692,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/purchasing/requests/:id/delivery`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
   [`POST ${H}/bar/purchases/:id/photo`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
+  [`POST ${H}/purchasing/dues/:id/payment`]: own("purchasing/supplierDues.ts: DUES_ROLES"),  // D27-370
 
   /* laundry */
   [`POST ${H}/laundry/price-list`]: LAUNDRY_PRICE_ADD,
@@ -757,6 +758,11 @@ const REPORTS = see("report", "reports");
    took reports from them and these carry costs), the revenue manager or
    reception. */
 const STORE_REPORTS = grant("stock", "export", "Reading the store's reports", ["hotel_manager", "read_only"]);
+/* What we owe suppliers (the owner's D27-370): the accountant, the GM, the
+   owner and an administrator - exactly who holds `approve` on `invoice`, held
+   equal to purchasing's DUES_ROLES by purchasingGrants.test.ts. Not the
+   Inventory Manager, who records the bill but does not pay it. */
+const SUPPLIER_DUES = grant("invoice", "approve", "Reading what is owed to suppliers");
 const PRICES = see("rate", "prices");
 const SETUP = see("room_config", "the hotel's setup");
 const LAUNDRY = see("laundry", "laundry");
@@ -918,6 +924,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/stock-dead`]: STORE_REPORTS,
   [`GET ${H}/reports/stock-cover`]: STORE_REPORTS,
   [`GET ${H}/reports/supplier-spend`]: STORE_REPORTS,
+  [`GET ${H}/reports/supplier-dues`]: SUPPLIER_DUES,  // D27-370
   [`GET ${H}/reports/equipment`]: STORE_REPORTS,
   [`GET ${H}/reports/gst-sales`]: REPORTS,
   [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,
@@ -1001,6 +1008,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/purchasing`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requests/:id`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requesters`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/purchasing/dues`]: own("purchasing/supplierDues.ts: DUES_ROLES"),  // D27-370
   [`GET ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),
   [`GET ${H}/bar/purchases/:id/photo`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),
   [`GET ${H}/bar/drinks`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),

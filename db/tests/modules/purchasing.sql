@@ -328,3 +328,58 @@ begin
   perform test.raises('bar bill', 'the sheet is paper or simple',
     format($q$update locations set bar_sheet = 'fancy' where id = %L$q$, v_bar), '23514');
 end $$;
+
+
+-- =============================================================================
+-- SUPPLIER DUES (the owner's D27-370, 27 October; migration 246)
+-- =============================================================================
+-- A bill on credit comes from one delivery or one bar bill; it is due on its
+-- own date or later; its amount is more than zero; it is on the dues once. A
+-- payment is all of it or none, by cash, cheque, bank or UPI, and once: a paid
+-- bill is not paid again. The app writes a bill and its payment, never changes
+-- the bill's facts and never deletes one.
+-- =============================================================================
+do $$
+declare h uuid; v_staff uuid; v_bp uuid; v_bill uuid;
+  ins constant text := $q$insert into supplier_bills
+      (hotel_id, purchase_request_id, bar_purchase_id, supplier, bill_no, bill_date, amount, due_on, recorded_by)
+    values (%L, null, %L, 'Shah Wines', 'W-9', current_date, %s, %s, %L)$q$;
+begin
+  h := app.provision_property_unchecked('PSD', 'Supplier Dues Test', 'Nowhere');
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  insert into bar_purchases (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by, bill_total)
+  values (h, 'Shah Wines', 'W-9', current_date, current_date, v_staff, 5000) returning id into v_bp;
+
+  perform test.raises('supplier dues', 'a bill comes from a delivery or a bar bill',
+    format(ins, h, null, 5000, 'current_date', v_staff), '23514');
+  perform test.raises('supplier dues', 'a bill is due on its own date or later',
+    format(ins, h, v_bp, 5000, 'current_date - 1', v_staff), '23514');
+  perform test.raises('supplier dues', 'a bill''s amount is more than zero',
+    format(ins, h, v_bp, 0, 'current_date', v_staff), '23514');
+  execute format(ins, h, v_bp, 5000, 'current_date + 30', v_staff);
+  select id into v_bill from supplier_bills where bar_purchase_id = v_bp;
+  perform test.raises('supplier dues', 'a bar bill is on the dues once',
+    format(ins, h, v_bp, 5000, 'current_date + 30', v_staff), '23505');
+
+  perform test.raises('supplier dues', 'a payment is all of it or none',
+    format($q$update supplier_bills set paid_on = current_date where id = %L$q$, v_bill), '23514');
+  perform test.raises('supplier dues', 'paid by cash, cheque, bank or UPI',
+    format($q$update supplier_bills set paid_on = current_date, paid_method = 'card', paid_by = %L, paid_at = now()
+              where id = %L$q$, v_staff, v_bill), '23514');
+  update supplier_bills set paid_on = current_date, paid_method = 'upi', paid_reference = 'UTR 1',
+         paid_by = v_staff, paid_at = now() where id = v_bill;
+  perform test.raises('supplier dues', 'a paid bill is not paid again',
+    format($q$update supplier_bills set paid_method = 'cash', paid_reference = null where id = %L$q$, v_bill), '23514');
+
+  perform test.ok('supplier dues', 'the app records a payment',
+    has_column_privilege('pms_app', 'supplier_bills', 'paid_on', 'UPDATE'));
+  perform test.ok('supplier dues', 'the app cannot change a bill''s amount',
+    not has_column_privilege('pms_app', 'supplier_bills', 'amount', 'UPDATE'));
+  perform test.ok('supplier dues', 'the app cannot delete a bill',
+    not has_table_privilege('pms_app', 'supplier_bills', 'DELETE'));
+  perform test.ok('supplier dues', 'one hotel''s bills are kept from another''s',
+    (select relrowsecurity and relforcerowsecurity from pg_class where relname = 'supplier_bills'));
+  perform test.ok('supplier dues', 'a test hotel counts a supplier''s bill as trading',
+    exists (select 1 from app.test_hotel_classes() c
+             where c.table_name = 'supplier_bills' and c.class = 'trading'));
+end $$;

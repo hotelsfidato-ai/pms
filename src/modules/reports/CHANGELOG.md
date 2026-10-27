@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-28 · Supplier dues report (the owner's D27-370; the purchasing helper)
+
+**Shipped:** `supplier-dues` in `REPORT_KEYS` (both copies of the type), its builder `api/src/modules/reports/builders/supplierDues.ts` (owed on the as-on date, a band per supplier, its bills with days overdue and its total, the total owed; the payments made from `from` to the as-on date with how, reference and who recorded it), `build.ts`; the screen `SupplierDuesPage` (`pages/Ledgers.tsx`, owed on the business date, paid from the 1st of its month), its route, its menu entry (search only) and its card in All reports under Money owed. Read by the owner, an Admin, the GM and the accountant: roleGate `SUPPLIER_DUES` (`approve` on `invoice`), and `routes/reportFiles.ts` asks the same for the PDF, .xlsx and CSV. **Proved:** `api/test/modules/purchasing/supplierDues.test.ts` (the rows, the hotel manager and the Inventory Manager refused on screen and as a file). **Touches the master's:** `api/src/roleGate.ts`, `api/src/routes/reportFiles.ts`.
+
 ## 2026-10-26 · The Dashboard's chart row (the owner's D27-217 to D27-219 and D27-365; the render of 30 September)
 
 Branch `worktree-agent-a011853c140d93183`, copy `.claude\worktrees\agent-a011853c140d93183`.

@@ -14,6 +14,19 @@ import { BUSINESS_DATE } from "@/data/repositories";
    around.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ── Supplier dues (D27-370) ─────────────────────────────────────── */
+
+/* What we owed each supplier on the business date, and what was paid from
+   the 1st of its month to it. */
+export function SupplierDuesPage() {
+  const from = monthOf(BUSINESS_DATE).from;
+  return (
+    <DocumentReport report="supplier-dues" title="Supplier dues" what="the supplier dues"
+      period={`Owed on ${dateShort(BUSINESS_DATE)} · paid ${dateShort(from)} to ${dateShort(BUSINESS_DATE)}`}
+      query={{ from, asOn: BUSINESS_DATE }} />
+  );
+}
+
 /* ── City Ledger ─────────────────────────────────────────────────── */
 
 /* The bills transferred to a company or booking site (the owner's

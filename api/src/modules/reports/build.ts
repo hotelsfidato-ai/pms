@@ -14,6 +14,7 @@ import {
 import { equipmentReport } from "./builders/equipment.ts";
 import { barStockReport } from "./builders/barStock.ts";
 import { flrDaily, flrMonthly } from "./builders/flr.ts";
+import { supplierDuesReport } from "./builders/supplierDues.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    buildReport — the one door to every report's figures
@@ -57,6 +58,8 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   /* FORM F.L.R.-1A/2A/3A for a day, F.L.R.-3 for a month (D27-361). */
   "flr-daily": (c, h, p) => flrDaily(c, h, p.asOn),
   "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
+  /* Owed on the date, and paid in the window to it (D27-370). */
+  "supplier-dues": (c, h, p) => supplierDuesReport(c, h, from(p), p.asOn),
 };
 
 /** The Bar stock switch (D27-367): its three reports are refused where it is off -

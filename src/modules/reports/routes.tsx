@@ -8,7 +8,7 @@ import {
   MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
 } from "@/modules/reports/pages/Statistics";
 import {
-  CityLedgerPage, NoShowPage, LodgingTaxPage,
+  CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage,
 } from "@/modules/reports/pages/Ledgers";
 import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
 import {
@@ -61,6 +61,8 @@ export const routes = (
     <Route path="/reports/bar-stock" element={<RequireAccess path="/reports/bar-stock" resource="stock"><BarStockPage /></RequireAccess>} />
     <Route path="/reports/flr-daily" element={<RequireAccess path="/reports/flr-daily" resource="stock"><FlrDailyPage /></RequireAccess>} />
     <Route path="/reports/flr-monthly" element={<RequireAccess path="/reports/flr-monthly" resource="stock"><FlrMonthlyPage /></RequireAccess>} />
+    {/* What we owe suppliers (D27-370): its own menu entry names the four. */}
+    <Route path="/reports/supplier-dues" element={<RequireAccess path="/reports/supplier-dues" resource="invoice"><SupplierDuesPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );

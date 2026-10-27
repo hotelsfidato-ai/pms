@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -14,6 +14,11 @@ const seesMoney = (role: Role): boolean => can(role, "view", "invoice");
 /* The Store and equipment reports (phase 3A; the owner's D27-240 R-1): whoever
    holds the Store's export, and the hotel manager and the Viewer - the
    server's rule (roleGate STORE_REPORTS), asked the same way. */
+/* What we owe suppliers (the owner's D27-370): the accountant, the GM, the
+   owner and an Admin - who hold `approve` on `invoice`, which the server asks
+   (roleGate SUPPLIER_DUES). Not the Inventory Manager. */
+const seesSupplierDues = (role: Role): boolean => can(role, "approve", "invoice");
+
 export const mayReadStockReports = (role: Role): boolean =>
   can(role, "export", "stock") || role === "hotel_manager" || role === "read_only";
 
@@ -110,6 +115,10 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 230,
     label: "Equipment report", to: "/reports/equipment", icon: Refrigerator, resource: "stock",
     canSee: mayReadStockReports, keywords: ["warranty", "amc", "under repair", "out of store"], listed: false },
+  { section: "reports", order: 235,
+    label: "Supplier dues", to: "/reports/supplier-dues", icon: HandCoins, resource: "invoice",
+    canSee: seesSupplierDues, keywords: ["owed to suppliers", "credit", "payables", "creditors", "supplier bills"],
+    listed: false },
   /* The bar's day (D27-354). */
   { section: "reports", order: 240,
     label: "Bar stock", to: "/reports/bar-stock", icon: Wine, resource: "stock",

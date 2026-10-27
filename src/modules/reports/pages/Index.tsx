@@ -5,7 +5,7 @@ import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
   FileSpreadsheet, Plane, ScrollText, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck,
-  Hourglass, Gauge, Truck, Refrigerator, Wine, type LucideIcon,
+  Hourglass, Gauge, Truck, Refrigerator, Wine, HandCoins, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -108,6 +108,13 @@ const GROUPS: Group[] = [
         icon: Wallet,
         path: "/reports/cashier-shift",
         description: "What each cashier took today, by method. Reversed receipts excluded.",
+      },
+      /* D27-370: what we owe, not what we are owed. */
+      {
+        title: "Supplier dues",
+        icon: HandCoins,
+        path: "/reports/supplier-dues",
+        description: "What we owe each supplier on a date, bill by bill, and the payments made.",
       },
     ],
   },
