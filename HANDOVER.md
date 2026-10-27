@@ -765,6 +765,19 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **27 October, 16:30: RELEASE 14 GREW (D27-369, D27-370) - not ready yet.** On cp6 since release 13: everything
+> in fc3c679c ... 49a37b79 (NC, Bar stock switch 239, allowance 240, guest proforma 241, charts, Taxes card, KOT design
+> 242, printer 1.1.0, D27-369: a new hotel's Bar stock off, tray version + Electron 44.9.3, REP-20) and 810976ff (243:
+> a reprint and a bill print wake the printing computer at once - the owner's "reprint takes long"). `release/r14` is at
+> 49a37b79 in `.claude/worktrees/release-r14`; its gate runs were cut off twice by session ends and once stopped on
+> purpose; the last one's web tests had a vitest WORKER CRASH (not a failing test) - rerun clean. The printer 1.1.0
+> build is in `.local/printer-r14` (VS Code locks `printer/dist`, MEMORY 438); steps draft `.local/release-14-steps.md`.
+> **Five helpers building D27-370**, each in its own copy (`.claude/worktrees/agent-*`): table Move and Join (Opus,
+> migration 244), petty cash book (Opus, 245), supplier dues (Opus, 246), Bill history (Sonnet), Voids report (Sonnet).
+> When they report: merge each into cp6 (reconcile `app.test_hotel_classes()` across 244-246, roleGate, nav, the
+> reports list, manual.html rebuilt), put their questions to the owner, take their manual pictures, open every screen,
+> `db/tests/run.sh` + `rerun.sh`, fast-forward `release/r14`, ONE complete gate run, `release.mjs` once, then the steps.
+
 > **26 October, evening: release 14 so far on cp6** - fc3c679c (NC screen, Remove), 7f10528d (the Bar stock switch,
 > migration 239, MEMORY 436), the printer's self-update merged (its copy recycled; `npm install` done in printer/),
 > 939c3e15 (the owner's allowance, migration 240). Helpers resumed after the limit: the guest's proforma (its migration
