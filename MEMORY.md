@@ -6561,6 +6561,19 @@ copy will see of theirs.**
 
 ---
 
+### 439 · MINE: five helpers were started on release 13's code, not today's cp6 (27 October)
+
+The five D27-370 helpers (table Move/Join, petty cash book, supplier dues, Bill history, Voids report) were launched
+with the Agent tool's `isolation: "worktree"`. Every copy came up at **2e7a5b4a** (release 13), not cp6's 810976ff:
+the tool bases a new copy on the remote's branch, and `origin/cp6` has been frozen since the no-push rule (the same
+cause as MEMORY's lane-check note). Their copies lacked migrations 239-243, the allowance, the KOT design and the bar
+switch. Found 15 minutes in, when the owner asked "is release 14 ready" and I listed the branches; none had committed.
+**Fixed:** each was told to `git merge --ff-only cp6` (stash, merge, pop) before going on. **The rule:** after
+launching a helper in a worktree, check its base at once (`git log -1 worktree-agent-<id>`); every helper prompt says
+"first `git merge --ff-only cp6`" until pushes resume.
+
+---
+
 ### 438 · FOUND: the printer app would not build - Visual Studio Code holds the old build's app.asar open (27 October)
 
 `npm run dist` in `printer/` stopped twice with `EBUSY: resource busy or locked, unlink
