@@ -5,7 +5,7 @@ import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
 import { READ_RULES, whoMay } from "../../../src/roleGate.ts";
 import {
-  judge, readBackupStatus, readWalPush, firebaseFact, hotelFacts, type HotelFacts, type ServerFacts,
+  judge, readBackupStatus, readWalPush, readNightly, firebaseFact, hotelFacts, type HotelFacts, type ServerFacts,
 } from "../../../src/modules/connections-health/health.ts";
 import { runOnce } from "../../../src/modules/connections-health/alerts.ts";
 
@@ -40,7 +40,10 @@ const facts = (over: Partial<HotelFacts> = {}): HotelFacts => ({
 const server = (over: Partial<ServerFacts> = {}): ServerFacts => ({
   sending: true,
   firebase: { configured: false, answering: false, lastOk: null, lastError: null },
-  backup: { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null, wal: null, walPush: null },
+  backup: {
+    found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null,
+    wal: null, walPush: null, uploads: null, n8n: null,
+  },
   disk: { usedBytes: 50, freeBytes: 50 },
   ...over,
 });
@@ -145,7 +148,7 @@ describe("backups", () => {
       found: true,
       last: { at: "2026-10-03T21:30:00Z", ok: false, uploaded: false },
       lastOk: "2026-10-02T21:30:00Z", lastFailed: "2026-10-03T21:30:00Z", lastUploaded: "2026-10-02T21:30:00Z",
-      lastBase: null, lastBaseOk: null, wal: null, walPush: null,
+      lastBase: null, lastBaseOk: null, wal: null, walPush: null, uploads: null, n8n: null,
     });
   });
   it("is grey where there is no backup log at all", () => {
@@ -205,6 +208,49 @@ describe("backups", () => {
       expect(judged([base(ago(3000)), base(ago(60), "failed"), good].join("\n")).status).toBe("red");
       expect(judged([base(ago(8 * 24 * 60 + 1)), good].join("\n")).summary).toMatch(/No weekly base copy for over 8 days/);
       expect(judged([base(ago(7 * 24 * 60)), good].join("\n")).status).toBe("green");
+    });
+  });
+  describe("the uploaded files' nightly copy and n8n's own (D27-377)", () => {
+    const judged = (uploads = "", n8n = "", log = ok(ago(400))) => row("backups", facts(), server({ backup: {
+      ...readBackupStatus(log), uploads: readNightly("uploads-backup", uploads), n8n: readNightly("n8n-backup", n8n) } }));
+    it("reads each job's status file, the second line the why; another job's line or nothing is no fact", () => {
+      expect(readNightly("uploads-backup", `uploads-backup ${ago(5)} failed sent=2 waiting=7\nfidato-wal: uploads/fidato/a.jpg NOT copied (HTTP 401)\n`))
+        .toEqual({ at: ago(5), result: "failed", waiting: 7, why: "fidato-wal: uploads/fidato/a.jpg NOT copied (HTTP 401)" });
+      expect(readNightly("n8n-backup", `n8n-backup ${ago(5)} ok\n`)).toEqual({ at: ago(5), result: "ok", waiting: null, why: null });
+      expect(readNightly("n8n-backup", ""), "launch.sh's empty file: not run yet").toBeNull();
+      expect(readNightly("n8n-backup", `uploads-backup ${ago(5)} ok sent=0 waiting=0\n`)).toBeNull();
+    });
+    it("stays green when both went, and when neither has run here (no n8n, a fresh box)", () => {
+      expect(judged(`uploads-backup ${ago(400)} ok sent=3 waiting=0\n`, `n8n-backup ${ago(380)} ok\n`).status).toBe("green");
+      expect(judged().status).toBe("green");
+    });
+    it("is red when the uploaded files' copy failed, with how many wait and why", () => {
+      const r = judged(`uploads-backup ${ago(400)} failed sent=2 waiting=7\nfidato-wal: uploads/fidato/x.jpg NOT copied (HTTP 401)\n`);
+      expect(r.status).toBe("red");
+      expect(r.summary).toBe("The copy of the uploaded files (bills, receipts) to the bucket failed last night (7 waiting on this server).");
+      expect(r.lastError).toEqual({ at: ago(400), detail: "fidato-wal: uploads/fidato/x.jpg NOT copied (HTTP 401)" });
+    });
+    it("is red when n8n's own copy failed, with where it stopped", () => {
+      const r = judged("", `n8n-backup ${ago(380)} failed\nstopped at: podman exec n8n mkdir -p "$IN" (exit 125)\n`);
+      expect(r.status).toBe("red");
+      expect(r.summary).toBe("n8n's own nightly copy (its workflows and saved logins) failed last night.");
+      expect(r.lastError?.detail).toContain("exit 125");
+    });
+    it("is red when either has not run for over 26 hours", () => {
+      expect(judged(`uploads-backup ${ago(26 * 60 + 1)} ok sent=0 waiting=0\n`).summary)
+        .toBe("The copy of the uploaded files (bills, receipts) to the bucket has not run for over 26 hours.");
+      expect(judged("", `n8n-backup ${ago(26 * 60 + 1)} ok\n`).status).toBe("red");
+      expect(judged(`uploads-backup ${ago(25 * 60)} ok sent=0 waiting=0\n`).status, "within 26 hours").toBe("green");
+    });
+    it("is amber when either has no bucket link, naming what stays on this disk", () => {
+      const r = judged(`uploads-backup ${ago(400)} off sent=0 waiting=12\n`, `n8n-backup ${ago(380)} off\n`);
+      expect(r.status).toBe("amber");
+      expect(r.summary).toBe("Backed up and copied off the server, except the uploaded files (bills, receipts) and n8n's nightly copy: on this server's disk only.");
+      expect(judged("", `n8n-backup ${ago(380)} off\n`).summary).toMatch(/except n8n's nightly copy: on this server's disk only/);
+    });
+    it("leaves the database's own failure first", () => {
+      expect(judged(`uploads-backup ${ago(400)} failed sent=0 waiting=1\nwhy\n`, "", `backup-status ${ago(400)} failed uploaded=no`).summary)
+        .toBe("The last backup failed.");
     });
   });
 });

@@ -330,9 +330,23 @@ At 03:30 n8n's own backup (`/usr/local/bin/n8n-backup`, written by
 **copies them to the same bucket, under `n8n/`** (D27-373, A1). The key that
 opens those logins stays on the server (`/etc/n8n/encryption-key`): it is a
 master password and is never copied anywhere. Its output is in
-`/var/log/n8n-backup.log`.
+`/var/log/n8n-backup.log`, and its result in one line,
+`/var/log/n8n-backup.status` (`n8n-backup <time> ok|failed|off`), which
+Connection health reads (D27-377).
 
-Connection health (Settings) shows both the backups and the server's disk, and
+At 03:15 **the files uploaded into the PMS** (bill photos, petty-cash
+receipts, repair and bar bills: every attachment, `/var/lib/fidato/uploads`)
+that are not yet in the bucket are copied to it, under `uploads/fidato/`
+(`fidato-uploads-backup`, `db/uploads-backup.sh`, D27-377). It runs as
+`fidato`, the API's own account, whose folder it is. What it has copied is
+listed in `/var/lib/fidato/uploads.sent`, so each night sends only the new
+ones; its result is one line in `/var/lib/fidato/uploads.status`
+(`uploads-backup <time> ok|failed|off sent=… waiting=…`). **These never
+expire from the bucket** (step 1.4): a bill must outlive a month. Guests' ID
+photos from online check-in are not among them: they are kept encrypted in
+Google Drive and never on this server (D27-209).
+
+Connection health (Settings) shows the backups and the server's disk, and
 emails the owner when either turns red (below, "Watching it").
 
 The owner's choices, 27 September (D27-15): Oracle storage in Fidato's own
@@ -354,6 +368,11 @@ n8n's backup reads the same link from a file of its own, `/etc/n8n/backup.env`
 `postgres` account may write would let that account choose where n8n's saved
 logins go. Step 3 copies the line across.
 
+The uploaded files' copy reads a link of its own, for the same reason, from
+`/etc/fidato-uploads.env` (written by root, readable by `fidato` alone; made
+empty by `launch.sh`). That link can write under `uploads/` only (step 1.6):
+the API's account faces the internet, so it is given nothing more.
+
 ### Setting it up, once
 
 **1 · The bucket:** *the Oracle console, in your browser, signed in to
@@ -373,13 +392,27 @@ Fidato's account*
    Without it the next step's rule never runs, and nothing says so.
 4. **The bucket → Lifecycle Policy Rules → Create Rule.** Name
    `delete-after-31-days`, target Objects, action Delete, **31 days** (a day
-   after the retention rule lets go).
+   after the retention rule lets go). Under **Object name filters** add one
+   filter: type **Exclude**, pattern `uploads/*`. **The uploaded files (bills)
+   must never expire**: without the filter the rule deletes each one 31 days
+   after it was copied, and the nightly copy, which has already sent it, never
+   sends it again. *If the rule already exists*: the rule's ⋮ menu → Edit, add
+   the filter, Save. Check: the rule's details list the exclude filter
+   `uploads/*`. If the console offers no exclude filter, stop here and tell the
+   master chat; do not make step 6's link.
 5. **The bucket → Pre-Authenticated Requests → Create.** Name `nightly-upload`,
    target **Bucket**, access **Permit object writes**, expiry **a year from
    today**. Copy the URL: it is shown once. It can add files and nothing else:
    it cannot read, list or delete them. When it expires the nightly backup
    fails and you are told; make a new one and put it in both files of step 3.
    Note the expiry date in your calendar a week before.
+6. **Only after step 4's filter. The bucket → Pre-Authenticated Requests →
+   Create** again, for the uploaded files. Name `uploads-upload`, target
+   **Objects with prefix**, prefix `uploads/`, access **Permit object
+   writes**, expiry **a year from today**. Copy the URL: shown once, ending in
+   `/o/`. It can add files under `uploads/` and nothing else. Its expiry goes
+   in your calendar too; when it expires, the Backups row turns red the next
+   morning, and the new one goes into `/etc/fidato-uploads.env` (step 3).
 
 **2 · The alert:** *n8n, in your browser, n8n.fidatohotels.com*
 
@@ -443,6 +476,31 @@ sudo /opt/fidato/deploy/n8n.sh
 ```
 
 It should end its "Backups" step with *"copied to the bucket under n8n/"*.
+Where n8n is already installed and only its backup changed (release 15, its
+status line), `sudo /opt/fidato/deploy/n8n.sh backups` instead: it rewrites
+the backup and runs it once, and restarts nothing.
+
+Then the uploaded files' own link, the URL from step 1.6:
+
+```bash
+sudo nano /etc/fidato-uploads.env
+```
+
+Its last line becomes, the value in single quotes:
+
+```
+BACKUP_UPLOAD_URL='<the URL from step 1.6, ending in /o/>'
+```
+
+Save and leave as above, then a look at its start and who may read it:
+
+```bash
+sudo tail -n 1 /etc/fidato-uploads.env | cut -c1-45
+sudo ls -l /etc/fidato-uploads.env
+```
+
+The first should print `BACKUP_UPLOAD_URL='https://objectstorage.` and a few
+letters more, the second `-rw-r----- 1 root fidato`.
 
 **4 · Prove it:** *the server, over ssh as `opc`, after a `launch.sh` run
 that carries this change*
@@ -464,9 +522,22 @@ sudo /usr/local/bin/n8n-backup
 ```
 
 It should end *"copied off the box: n8n/n8n-…tar.gz, checksum matched"*, and
-the bucket should show a folder `n8n` with that file in it. *The PMS, in your
-browser*: Settings → Connection health → **Backups** should read *"Backed up
-and copied off the server"* after the next 03:00 run.
+the bucket should show a folder `n8n` with that file in it. Then
+`cat /var/log/n8n-backup.status` should print `n8n-backup … ok`.
+
+The uploaded files', *the same place*. The first run sends every file there
+is, a few minutes for each GB:
+
+```bash
+sudo -u fidato /usr/local/bin/fidato-uploads-backup /var/lib/fidato/uploads fidato; cat /var/lib/fidato/uploads.status
+```
+
+It should print `uploads-backup … ok sent=<how many> waiting=0`, and the
+bucket should show `uploads/fidato/` with one folder per hotel. A second run
+should print `sent=0`. If it says `failed`, the line under it says why; copy
+both to the master chat. *The PMS, in your browser*: Settings → Connection
+health → **Backups** should read *"Backed up and copied off the server"*
+after the next 03:00 run.
 
 ### Getting a copy back
 
@@ -480,6 +551,28 @@ n8n's: the bucket → Objects → `n8n/` → the night's `.tar.gz`. It holds
 `n8n import:workflow --input=…` and `n8n import:credentials --input=…` put them
 back. The logins open only with the key in `/etc/n8n/encryption-key`, which is
 on the server alone.
+
+**Uploaded files** (a bill photo or a receipt gone from the server, or all of
+them on a new server, `IF-THE-SERVER-DIES.md`). The database names every file
+it holds; this fetches each one missing from the folder, and leaves alone what
+is there:
+
+1. *The Oracle console*: a read link, as in "Getting a minute back", step 2
+   (target **Bucket**, **Permit object reads**, expiry **tomorrow**).
+2. *The server, over ssh as `opc`*, with that URL:
+
+   ```bash
+   sudo -u postgres psql -d fidato -tAc "select storage_key from attachments where storage_backend = 'disk'" | sudo -u fidato env RESTORE_FROM='<the read link>' /usr/local/bin/fidato-uploads-backup get /var/lib/fidato/uploads fidato
+   ```
+
+   It ends *"put back N file(s)"*. A file uploaded after the last 03:15 copy
+   is not in the bucket: it is named, with *"not in the bucket"*, and the
+   last line says those are not back. For a customer: `-d fidato_<code>`,
+   `/var/lib/fidato-<code>/uploads fidato_<code>`.
+
+After a new bucket or a new link (or to be sure), the next night can send
+everything again: `sudo truncate -s 0 /var/lib/fidato/uploads.sent`. What the
+bucket already has answers "already there", and is not sent twice.
 
 ### Bringing back one hotel
 
@@ -779,7 +872,9 @@ server, its network or n8n itself goes down, n8n cannot say so.
   - **Backups**: red when last night's backup failed, when none has run for 26
     hours, or, once a copy has ever gone to the bucket, when none has for 26
     hours; and, once restore to any minute is on, when the journal or the
-    weekly base copy is not reaching the bucket (above).
+    weekly base copy is not reaching the bucket (above). Also red when the
+    uploaded files' copy or n8n's own copy failed, or has not run for 26
+    hours, and amber while either has no bucket link (D27-377).
 - **UptimeRobot**, free, outside (*uptimerobot.com, in your browser*):
   commercial use is allowed on the free plan (its help centre, 27 Aug 2026).
   Add two HTTP(s) monitors at 5 minutes, `https://api.fidatohotels.com/health`
@@ -977,12 +1072,14 @@ database `fidato`, `/opt/fidato`, `fidato-api` on port 8787,
 | nginx | `conf.d/fidato.conf` | `conf.d/pms-abc.conf`, its own certificate |
 | uploads | `/var/lib/fidato/uploads` | `/var/lib/fidato-abc/uploads` |
 | backup | 03:00, `/var/log/fidato-backup.log` | 03:30, one customer after another, `/var/log/fidato-backup-abc.log` |
+| uploaded files' copy | 03:15, bucket `uploads/fidato/`, `/var/lib/fidato/uploads.status` | 03:15, bucket `uploads/fidato_abc/`, `/var/lib/fidato-abc/uploads.status` |
 | pool (`DB_POOL_MAX`) | 20 | 10 |
 
 **What every customer shares with Fidato, by the owner's choice (option a):**
 the `pms_app` login and its password, the `fidato` unix account, Postgres and
-its settings, the backup programs, `/etc/fidato-backup.env` (the same bucket;
-each file starts with its database's name, `fidato_abc-…`) and n8n. ⚠ So a
+its settings, the backup programs, `/etc/fidato-backup.env` and
+`/etc/fidato-uploads.env` (the same bucket; each file starts with its
+database's name, `fidato_abc-…`, or sits under `uploads/fidato_abc/`) and n8n. ⚠ So a
 break-in at one customer's API can reach every customer's data. What stops a
 *mistake* is the database's mark: `launch.sh` sets `app.customer = 'abc'` on
 `fidato_abc`, the customer's `api/.env` says `CUSTOMER=abc`, and an API whose

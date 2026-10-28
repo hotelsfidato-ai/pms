@@ -5,6 +5,7 @@ import { firebaseApp, withSession } from "../../auth.ts";
 import { withUser, type Client } from "../../db.ts";
 import { env } from "../../env.ts";
 import { canSend } from "../../sending.ts";
+import { storageRoot } from "../../storage.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CONNECTION HEALTH (the owner's D27-276, point 3)
@@ -25,7 +26,9 @@ import { canSend } from "../../sending.ts";
                 copy's line (db/base-backup.sh), the journal's archiving
                 (pg_stat_archiver) and its push to the bucket
                 (/var/log/fidato-wal.status), for restore to any minute
-                (D27-373, A3)
+                (D27-373, A3); the nightly copy of the uploaded files
+                (<UPLOAD_DIR>.status, db/uploads-backup.sh) and n8n's own
+                (/var/log/n8n-backup.status, deploy/n8n.sh) (D27-377)
      disk       the server's root file system: how full it is (resilience A2)
      rivals     rivals' prices: the last check day and the prices it kept
 
@@ -92,9 +95,15 @@ export interface BackupFacts {
   wal: { failing: boolean; lastArchived: string | null; lastFailed: string | null } | null;
   /** The spool's last push to the bucket (db/wal.sh, /var/log/fidato-wal.status). Null: none yet. */
   walPush: WalPush | null;
+  /** The nightly copy of the uploaded files (db/uploads-backup.sh, D27-377). Null: not run here yet. */
+  uploads: Nightly | null;
+  /** n8n's own nightly copy (/usr/local/bin/n8n-backup, deploy/n8n.sh, D27-377). Null: no n8n here. */
+  n8n: Nightly | null;
 }
 
 export interface WalPush { at: string; ok: boolean; waiting: number; why: string | null }
+/** A nightly job's status file: its result ("off": no bucket link, on this disk only). */
+export interface Nightly { at: string; result: "ok" | "failed" | "off"; waiting: number | null; why: string | null }
 
 /** The root file system, as `df` counts it: what is written, and what the
     database (not root) may still write. */
@@ -179,6 +188,12 @@ function firebase(f: FirebaseFacts): Omit<Row, "key" | "label"> {
     : { ...base, status: "red", summary: "It did not answer, so signing in may not work." };
 }
 
+/** The nightly copies beside the database's (D27-377): the fact, its name in a sentence, and on the disk only. */
+const NIGHTLY = [
+  ["uploads", "The copy of the uploaded files (bills, receipts) to the bucket", "the uploaded files (bills, receipts)"],
+  ["n8n", "n8n's own nightly copy (its workflows and saved logins)", "n8n's nightly copy"],
+] as const;
+
 function backups(f: BackupFacts, now: Date): Omit<Row, "key" | "label"> {
   const base = {
     lastSuccess: f.lastOk,
@@ -213,9 +228,24 @@ function backups(f: BackupFacts, now: Date): Omit<Row, "key" | "label"> {
   if (f.lastUploaded && minutesSince(f.lastUploaded, now) > BACKUP_STALE_HOURS * 60) {
     return { ...base, status: "red", summary: `Nothing copied off the server for over ${BACKUP_STALE_HOURS} hours, though it was before: check the bucket link in the server's backup settings.` };
   }
-  return f.last.uploaded
-    ? { ...base, status: "green", summary: "Backed up and copied off the server." }
-    : { ...base, status: "amber", summary: "Backed up, but on this server's disk only: nothing is copied off it." };
+  /* The other two nightly copies (D27-377), each once it has run here. */
+  for (const [key, job] of NIGHTLY) {
+    const n = f[key];
+    if (n?.result === "failed") {
+      return {
+        ...base, status: "red", lastError: { at: n.at, detail: n.why },
+        summary: `${job} failed last night${n.waiting ? ` (${n.waiting} waiting on this server)` : ""}.`,
+      };
+    }
+    if (n && minutesSince(n.at, now) > BACKUP_STALE_HOURS * 60) {
+      return { ...base, status: "red", summary: `${job} has not run for over ${BACKUP_STALE_HOURS} hours.` };
+    }
+  }
+  if (!f.last.uploaded) return { ...base, status: "amber", summary: "Backed up, but on this server's disk only: nothing is copied off it." };
+  const onDisk = NIGHTLY.filter(([key]) => f[key]?.result === "off").map(([, , what]) => what);
+  return onDisk.length
+    ? { ...base, status: "amber", summary: `Backed up and copied off the server, except ${onDisk.join(" and ")}: on this server's disk only.` }
+    : { ...base, status: "green", summary: "Backed up and copied off the server." };
 }
 
 const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
@@ -274,17 +304,31 @@ const STATUS_LINE = /^backup-status (\S+) (ok|failed) uploaded=(yes|no)$/gm;
 /* The weekly base copy writes into the same log (db/base-backup.sh). */
 const BASE_LINE = /^base-backup-status (\S+) (ok|failed)$/gm;
 
-const NONE = { last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null, wal: null, walPush: null };
+const NONE = {
+  last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null,
+  wal: null, walPush: null, uploads: null, n8n: null,
+};
 
-/* The journal's push to the bucket rewrites one small file every 5 minutes
-   (db/wal.sh): its first line the result, after a failure a second the why. */
+/* Three jobs rewrite one small status file each run: its first line
+   `<job> <ISO time> ok|failed|off …`, after a failure a second the why.
+   The journal's push every 5 minutes (db/wal.sh); the uploaded files'
+   copy nightly, beside their folder, so each customer's API reads its own
+   (db/uploads-backup.sh); n8n's own nightly copy (deploy/n8n.sh). */
 export const WAL_STATUS = "/var/log/fidato-wal.status";
-const PUSH_LINE = /^wal-push (\S+) (ok|failed) sent=\d+ waiting=(\d+)$/;
+const UPLOADS_STATUS = `${storageRoot().root}.status`;
+const N8N_STATUS = "/var/log/n8n-backup.status";
+
+export function readNightly(job: string, text: string): Nightly | null {
+  const [first = "", why = ""] = text.split(/\r?\n/);
+  const m = /^(\S+) (\S+) (ok|failed|off)(?: |$)/.exec(first);
+  if (m?.[1] !== job) return null;
+  const waiting = /\bwaiting=(\d+)/.exec(first);
+  return { at: m[2]!, result: m[3] as Nightly["result"], waiting: waiting ? Number(waiting[1]) : null, why: why.trim() || null };
+}
 
 export function readWalPush(text: string): WalPush | null {
-  const [first = "", why = ""] = text.split(/\r?\n/);
-  const m = PUSH_LINE.exec(first);
-  return m ? { at: m[1]!, ok: m[2] === "ok", waiting: Number(m[3]), why: why.trim() || null } : null;
+  const n = readNightly("wal-push", text);
+  return n && n.result !== "off" ? { at: n.at, ok: n.result === "ok", waiting: n.waiting ?? 0, why: n.why } : null;
 }
 
 export function readBackupStatus(text: string): BackupFacts {
@@ -316,14 +360,17 @@ const walFacts = (): Promise<BackupFacts["wal"]> => withUser("", async (client) 
 });
 
 async function backupFacts(path = BACKUP_LOG): Promise<BackupFacts> {
-  const [wal, walPush] = await Promise.all([
+  const status = (file: string, job: string) => readFile(file, "utf8").then((t) => readNightly(job, t), () => null);
+  const [wal, walPush, uploads, n8n] = await Promise.all([
     walFacts(),
     readFile(WAL_STATUS, "utf8").then(readWalPush, () => null),
+    status(UPLOADS_STATUS, "uploads-backup"),
+    status(N8N_STATUS, "n8n-backup"),
   ]);
   try {
-    return { ...readBackupStatus(await readFile(path, "utf8")), wal, walPush };
+    return { ...readBackupStatus(await readFile(path, "utf8")), wal, walPush, uploads, n8n };
   } catch {
-    return { found: false, ...NONE, wal, walPush };
+    return { found: false, ...NONE, wal, walPush, uploads, n8n };
   }
 }
 

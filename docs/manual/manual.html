@@ -10794,7 +10794,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span>, <span class="ui">Disk</span> and <span class="ui">Rivals' prices</span>. Backups, the disk and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
   <ul>
     <li><span class="ui">Disk</span> says how full the server's disk is and how much is free. Needs a look from 80% used; Not working from 90%, because the database stops when the disk is full. Tell whoever looks after the server at once.</li>
-    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours. Once restore to any minute is switched on, also when the database's change journal or its weekly base copy is not reaching the bucket.</li>
+    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours. Once restore to any minute is switched on, also when the database's change journal or its weekly base copy is not reaching the bucket. Also when the nightly copy of the uploaded files (bill photos, receipts) or n8n's own nightly copy failed or has not run for 26 hours; Needs a look while either has no bucket link, and the line says which stays on the server's disk only.</li>
   </ul>
   <p class="muted">The picture above was taken before the Disk row was added; the page now shows it between Backups and Rivals' prices.</p>
 
@@ -11956,7 +11956,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Emails, WhatsApp</td><td>The last three tries all failed.</td></tr>
       <tr><td>CRS bridge</td><td>The last read failed, or nothing has been read for 30 minutes (the reader runs every five).</td></tr>
       <tr><td>Firebase sign-in</td><td>It did not answer.</td></tr>
-      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>; or, with restore to any minute on, the change journal or the weekly base copy is not reaching the bucket. Amber when backed up but on the server's disk only.</td></tr>
+      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>; or, with restore to any minute on, the change journal or the weekly base copy is not reaching the bucket; or the nightly copy of the uploaded files, or n8n's own nightly copy, failed or has not run for 26 hours <span class="d">D27-377</span>. Amber when backed up but on the server's disk only, all of it or the uploaded files or n8n's copy.</td></tr>
       <tr><td>Disk</td><td>The server's disk is 90% used or more: the database stops when it is full. Amber from 80% <span class="d">D27-373</span>. The picture above was taken before this row was added.</td></tr>
       <tr><td>Rivals' prices</td><td>Never red; amber when switched on and nothing kept yet.</td></tr>
     </tbody>
@@ -13263,6 +13263,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Online check-in</td><td><code>GOOGLE_CLIENT_ID</code>; <code>DIGILOCKER_CLIENT_ID</code>, <code>DIGILOCKER_CLIENT_SECRET</code>, <code>DIGILOCKER_REDIRECT_URI</code>; <code>ID_PHOTO_N8N_URL</code>, <code>ID_PHOTO_N8N_SECRET</code>, and one ID-photo password per hotel</td><td>That way in, or the photo upload, is not offered.</td></tr>
       <tr><td>Other</td><td><code>SERPAPI_KEY</code> (rivals' prices), <code>HEALTH_ALERT_EMAIL</code> (connection alerts), <code>N8N_ATTACHMENT_WEBHOOK</code></td><td>That feature stays off.</td></tr>
       <tr><td>Backups (<code>/etc/fidato-backup.env</code>)</td><td><code>BACKUP_UPLOAD_URL</code>, <code>ALERT_URL</code>, <code>ALERT_SECRET</code></td><td>The backup stays on the server's own disk, and nobody is told how the night went (B9.6).</td></tr>
+      <tr><td>Uploaded files' copy (<code>/etc/fidato-uploads.env</code>, readable by the API's account alone)</td><td><code>BACKUP_UPLOAD_URL</code>: its own link, which can write under <code>uploads/</code> only</td><td>Bill photos and receipts stay on the server's own disk; Connection health says so in amber (B9.6).</td></tr>
     </tbody>
   </table>
   <div class="box watch">
@@ -13286,7 +13287,8 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Writes one status line to its log, which System health and Connection health read, and tells you, pass or fail, through n8n when the alert link is set.</li>
   </ol>
   <p>Each customer's database, when there are customers, is backed up at 03:30, one after another, each with its own log.</p>
-  <p>At 03:30 n8n's own backup saves its workflows and its saved logins (still locked) and copies them to the same bucket, in a folder <code>n8n</code>, when n8n's copy of the upload link is set. The key that unlocks those logins never leaves the server <span class="d">D27-373</span> (A1).</p>
+  <p>At 03:15 the files uploaded into the PMS (bill photos, petty-cash receipts, repair and bar bills) that are not yet in the bucket are copied to it, in a folder <code>uploads</code>, once their own upload link is set. Each night sends only the new ones, and <b>they never expire from the bucket</b>: the rule that deletes the database's copies after 31 days leaves that folder out, because a bill must be produced years later <span class="d">D27-377</span>. Guests' ID photos are not among them: they were never on the server (B5).</p>
+  <p>At 03:30 n8n's own backup saves its workflows and its saved logins (still locked) and copies them to the same bucket, in a folder <code>n8n</code>, when n8n's copy of the upload link is set. The key that unlocks those logins never leaves the server <span class="d">D27-373</span> (A1). Since <span class="d">D27-377</span> it writes its result where Connection health reads it, so a failed night turns the Backups row red.</p>
   <div class="box watch">
     <h4>Watch out: today the backups do not leave the server</h4>
     <ul>
@@ -13300,6 +13302,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>To check a backup without touching anything:</b> <code>db/verify-backup.sh &lt;file&gt;</code> restores it into a scratch database, compares it, and drops the scratch database.</li>
     <li><b>To put a backup back:</b> <code>db/restore.sh &lt;file&gt;</code> or <code>db/restore.sh --latest</code>. It says what it is about to overwrite, waits for the database's name to be typed, and first takes a safety backup of what it replaces. There is no undo; that is why it asks. A backup does not carry the application's database rights, so they are put back before the API uses the restored database: <code>deploy/README.md</code> does it by running <code>deploy/launch.sh</code> again, which applies the migrations.</li>
     <li><b>From the bucket</b> (once it exists): the Oracle console, the bucket, Objects, the file, Download.</li>
+    <li><b>An uploaded file</b> (a bill photo or a receipt gone from the server, or all of them on a new server): a read link made in the Oracle console on the day, then one command on the server fetches every file the database names that the server lacks, and names any the bucket does not have (<code>deploy/README.md</code>, "Getting a copy back"). A file uploaded since the last 03:15 copy is not in the bucket.</li>
     <li><b>From this PC's version of PostgreSQL (17) to the server's (16):</b> only with <code>db/backup.sh --portable</code>. A normal backup made on 17 cannot be read by 16 (MEMORY 190).</li>
   </ul>
   <h3>Getting back any minute of the last month</h3>
@@ -13311,7 +13314,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Reading it back needs a read link you make in the Oracle console on the day, expiring the next day; the server never holds one.</li>
   </ul>
   <h3>If the server itself is lost</h3>
-  <p><code>deploy/IF-THE-SERVER-DIES.md</code>: a new server, from nothing to working, in under two hours, each step labelled with where it runs <span class="d">D27-373</span> (A6). It lists what to keep off the server beforehand (the SSH key, your logins, the settings you typed in), and what does not come back today: the files uploaded into the PMS, which are on the server's disk only. The two hours are an estimate until you have rehearsed it once on a spare server, which is yours to do.</p>
+  <p><code>deploy/IF-THE-SERVER-DIES.md</code>: a new server, from nothing to working, in under two hours, each step labelled with where it runs <span class="d">D27-373</span> (A6). It lists what to keep off the server beforehand (the SSH key, your logins, the settings you typed in), and what comes back from where: the files uploaded into the PMS come back from the bucket as of the last night's copy. The two hours are an estimate until you have rehearsed it once on a spare server, which is yours to do.</p>
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>A backup that has never been restored is not a backup: the classic disaster is a nightly job that ran for years and produced an empty or wrong file. So the nightly job restores what it took and compares it. It used to compare against fixed demo figures, and once printed "would not give you your hotel back" over a perfectly sound backup; it now compares with the source, so it never needs editing when the data changes (MEMORY 30, 34, 151).</p>
@@ -13327,7 +13330,7 @@ figure.shot.phone img { max-width: 72mm; }
     <thead><tr><th style="width:28%">Watcher</th><th>What it watches</th><th style="width:26%">Who is told, how</th></tr></thead>
     <tbody>
       <tr><td>System health (inside the PMS, owner and admins)</td><td>Each request's time and result, errors and slow queries, kept 180 days on our own server; each hotel's business date; the last backup (<span class="d">D27-91</span>, <span class="d">D27-92</span>, <span class="d">D27-113</span>, <span class="d">D27-114</span>).</td><td>Whoever opens it. Nothing leaves the server.</td></tr>
-      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups, the server's disk and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>). The disk is amber from 80% used and red from 90% (<span class="d">D27-373</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
+      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups, the server's disk and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>). The disk is amber from 80% used and red from 90% (<span class="d">D27-373</span>). Backups also covers the uploaded files' nightly copy and n8n's own: red when either failed or has not run for 26 hours (<span class="d">D27-377</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
       <tr><td>The n8n workflow "PMS alerts"</td><td>The nightly backup's result, a night with no backup report, and whether the API answers (every 5 minutes).</td><td>A WhatsApp to you on a failure, and when the API goes down or comes back. Needs the alert link of B9.6.</td></tr>
       <tr><td>UptimeRobot (free, outside)</td><td>Whether the API and n8n answer at all, from outside the server.</td><td>Email. It is the backstop for the one case n8n cannot report: the server itself down (<span class="d">D27-20</span>).</td></tr>
     </tbody>
