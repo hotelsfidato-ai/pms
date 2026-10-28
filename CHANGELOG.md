@@ -50,6 +50,29 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15, plan A (D27-373): A3 restore to any minute
+
+**Asked for:** the master: A3 in the plan's words (the journal archived off-site with the write-only link, `archive_timeout = 3600`, a weekly compressed `pg_basebackup` to the bucket, restore into a NEW database `fidato_pitr` never over live, rehearsed locally with a folder as the bucket; the server's settings and timer as owner steps; checked against PostgreSQL 16), its failed-archive alert on the Backups row.
+
+**Shipped**
+- `db/wal.sh` (`fidato-wal`): `put` is the archive_command, gzip into a spool `/var/lib/pgsql/wal-out`; `push` (cron, every 5 minutes, under flock) copies the spool to `<link>/wal/<name>.gz` with `If-None-Match: *` and `Content-MD5`, 200 or 412 ("already there") is a copy, deletes only then, and rewrites `/var/log/fidato-wal.status`; `get` is the restore_command; `send` one file. **Deviation from the plan's words:** the plan had archive_command upload itself; it spools instead, because the database runs under SELinux (enforcing on Oracle Linux, MEMORY 191) and nothing shows its policy lets it reach the internet, while cron's jobs are not confined that way. Cost: up to 5 minutes more before a piece is off the box.
+- `db/base-backup.sh` (`fidato-base-backup`): `pg_basebackup -Ft -z -X stream -c fast`, one `.tar` to `base/base-<UTC>.tar`, a `base-backup-status` line into the backup log.
+- `db/pitr-restore.sh` (`fidato-pitr-restore <base> '<minute+05:30>'`): a temporary PostgreSQL in its own folder on a socket only, archiving off, replays to the minute (`recovery_target_action = promote`), `pg_dump` out, `pg_restore` into a new `fidato_pitr` (owners and rights kept), counts side by side; refuses if `fidato_pitr` or the work folder exists; nothing created when the minute is past the journal.
+- `deploy/launch.sh` installs the three scripts and creates `/var/log/fidato-wal.status`. `deploy/README.md` "Restore to any minute": switching it on, the two timers, the proof, a rehearsal, getting a minute back (a read link made on the day, expiring the next), switching or dropping.
+- Connection health's Backups row: red on `pg_stat_archiver` failing, the push failed (its reason as the last error) or silent 30 minutes, the base copy failed or none for 8 days. Manual A17.14, B5.10, B9.6 ("Getting back any minute of the last month").
+- `db/tests/pitr.sh`: the rehearsal. `db/wal.test.mjs`: the script's own tests.
+
+**Proved**
+- **On PostgreSQL 16.15** (the official binaries in `.local/pg16`, as the pg16 gate; a throwaway cluster on 55497/55498, removed after): `bash db/tests/pitr.sh` exit 0, 19 checks: archiving on; the base copy into the folder bucket (4,432 KB); 150 bookings, the minute, all deleted; restored to the minute, PostgreSQL stopped "before commit of transaction 734" (the delete): `fidato_pitr` 150, live 0; the copy archived nothing; past the journal refused with "recovery ended before configured recovery target was reached", nothing created; the link emptied, the push's line failed with its reason, back to ok; the spool unwritable, `pg_stat_archiver` failing, then well again.
+- Break-and-run: `archive_mode = off` taken out of the temporary copy → the rehearsal failed ("pieces the temporary copy archived: 2, expected 0"); the 200/412 check out of `send` → `db/wal.test.mjs` 3 failed; 412 not accepted → 1 failed; the API's three A3 red rules out → 3 failed (36 passed); the two staleness rules out → 2 failed (37 passed); all restored.
+- Clean: API connections-health + System health **49/49**, API types exit 0; web types exit 0; `npx vitest run db/wal.test.mjs deploy/n8n-backup.test.mjs deploy/customer.test.mjs src/modules/connections-health src/test` **24/24**; manual rebuilt.
+
+**Found**
+- The first rehearsal named bash `bash.exe.exe` (cygpath already adds `.exe`); a second was edited while it ran and bash read the new lines mid-run (helper's mistakes, reported for MEMORY).
+
+**Left open**
+- Not run on the server, so not under its SELinux: README step 3 is the proof. `db/tests/pitr.sh` is not in `scripts/gates.sh` (the master's file).
+
 ## 2026-10-28 · Release 15, plan A (D27-373): A1 off-site backups for n8n too, A2 disk and backup alerts
 
 **Asked for:** the master, for release 15: build A1 and A2 of `docs/plans/resilience-a.md` (the owner chose all of plan A, D27-373). A1: n8n's nightly backup goes to the PMS's bucket under `n8n/`, the same way and with the same status-code check; the owner's bucket steps complete and plain. A2: a Disk row on Connection health (amber 80%, red 90%, the hourly email on red); Backups red on a failed run or, once a bucket is set, no upload for 26 hours.

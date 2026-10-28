@@ -5,7 +5,7 @@ import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
 import { READ_RULES, whoMay } from "../../../src/roleGate.ts";
 import {
-  judge, readBackupStatus, firebaseFact, hotelFacts, type HotelFacts, type ServerFacts,
+  judge, readBackupStatus, readWalPush, firebaseFact, hotelFacts, type HotelFacts, type ServerFacts,
 } from "../../../src/modules/connections-health/health.ts";
 import { runOnce } from "../../../src/modules/connections-health/alerts.ts";
 
@@ -40,7 +40,7 @@ const facts = (over: Partial<HotelFacts> = {}): HotelFacts => ({
 const server = (over: Partial<ServerFacts> = {}): ServerFacts => ({
   sending: true,
   firebase: { configured: false, answering: false, lastOk: null, lastError: null },
-  backup: { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null },
+  backup: { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null, wal: null, walPush: null },
   disk: { usedBytes: 50, freeBytes: 50 },
   ...over,
 });
@@ -145,6 +145,7 @@ describe("backups", () => {
       found: true,
       last: { at: "2026-10-03T21:30:00Z", ok: false, uploaded: false },
       lastOk: "2026-10-02T21:30:00Z", lastFailed: "2026-10-03T21:30:00Z", lastUploaded: "2026-10-02T21:30:00Z",
+      lastBase: null, lastBaseOk: null, wal: null, walPush: null,
     });
   });
   it("is grey where there is no backup log at all", () => {
@@ -172,6 +173,39 @@ describe("backups", () => {
     expect(r.summary).toMatch(/Nothing copied off the server for over 26 hours/);
     expect(row("backups", facts(), server({
       backup: readBackupStatus([ok(ago(25 * 60)), ok(ago(400), "no")].join("\n")) })).status, "within 26 hours").toBe("amber");
+  });
+  describe("restore to any minute (D27-373, A3)", () => {
+    const good = ok(ago(400));
+    const base = (at: string, result = "ok") => `base-backup-status ${at} ${result}`;
+    const judged = (text: string, wal: ReturnType<typeof readBackupStatus>["wal"] = null, push = "") =>
+      row("backups", facts(), server({ backup: { ...readBackupStatus(text), wal, walPush: readWalPush(push) } }));
+    it("reads the weekly base copy's line from the same log, the last one winning", () => {
+      expect(readBackupStatus([base(ago(9000), "failed"), base(ago(3000)), good].join("\n")))
+        .toMatchObject({ lastBase: { at: ago(3000), ok: true }, lastBaseOk: ago(3000), last: { ok: true } });
+    });
+    it("is red while the database cannot set its journal aside, and green once it can again", () => {
+      const failing = judged(good, { failing: true, lastArchived: ago(90), lastFailed: ago(1) });
+      expect(failing.status).toBe("red");
+      expect(failing.summary).toMatch(/cannot set its change journal aside/);
+      expect(failing.lastError?.at).toBe(ago(1));
+      expect(judged(good, { failing: false, lastArchived: ago(1), lastFailed: ago(90) }).status).toBe("green");
+    });
+    it("reads the push's status file: red when it failed, with why; red when it has not run for 30 minutes", () => {
+      const failed = `wal-push ${ago(3)} failed sent=0 waiting=4\nfidato-wal: wal/0001.gz NOT copied (HTTP 401)\n`;
+      expect(readWalPush(failed)).toEqual({ at: ago(3), ok: false, waiting: 4, why: "fidato-wal: wal/0001.gz NOT copied (HTTP 401)" });
+      expect(readWalPush(""), "an empty file: not set up").toBeNull();
+      const r = judged(good, null, failed);
+      expect(r.status).toBe("red");
+      expect(r.summary).toMatch(/not reaching the bucket \(4 waiting on this server\)/);
+      expect(r.lastError?.detail).toContain("HTTP 401");
+      expect(judged(good, null, `wal-push ${ago(31)} ok sent=0 waiting=0\n`).summary).toMatch(/has not run for over 30 minutes/);
+      expect(judged(good, null, `wal-push ${ago(4)} ok sent=1 waiting=0\n`).status).toBe("green");
+    });
+    it("is red when the last base copy failed, or none has worked for over 8 days", () => {
+      expect(judged([base(ago(3000)), base(ago(60), "failed"), good].join("\n")).status).toBe("red");
+      expect(judged([base(ago(8 * 24 * 60 + 1)), good].join("\n")).summary).toMatch(/No weekly base copy for over 8 days/);
+      expect(judged([base(ago(7 * 24 * 60)), good].join("\n")).status).toBe("green");
+    });
   });
 });
 
@@ -290,6 +324,9 @@ describe("the page's read", () => {
     const body = await res.json() as { alertsTo: boolean; connections: Array<{ key: string; status: string }> };
     expect(body.connections.map((c) => c.key)).toEqual(["email", "whatsapp", "crs", "firebase", "backups", "disk", "rivals"]);
     expect(body.connections.find((c) => c.key === "email")!.status, "no sending settings in the tests").toBe("grey");
+    /* pg_stat_archiver read for real: archiving is off here, so the Backups
+       row is the log's alone (no log on this PC: grey). */
+    expect(body.connections.find((c) => c.key === "backups")!.status).toBe("grey");
     expect(body.alertsTo).toBe(false);
   });
 

@@ -1,5 +1,17 @@
 # Changelog - connections-health
 
+## 29 October 2026 - restore to any minute watched (D27-373, plan A: A3)
+
+- **Backups** also turns red when the database cannot set a piece of its
+  change journal aside (`pg_stat_archiver`: the last try failed after the
+  last success; read for real on every page load and sweep), when the
+  journal's push to the bucket failed (`/var/log/fidato-wal.status`, its
+  second line the reason, shown as the last error) or has not run for 30
+  minutes, or when the weekly base copy's last line in the backup log failed
+  or none has worked for 8 days. Each only once that part is switched on.
+- `readWalPush` and `WAL_STATUS` beside `readBackupStatus`; `BackupFacts`
+  gains `lastBase`, `lastBaseOk`, `wal`, `walPush`.
+
 ## 28 October 2026 - the disk and the off-site copies (D27-373, plan A: A2)
 
 - **Disk**, a new row (server's own, between Backups and Rivals' prices):

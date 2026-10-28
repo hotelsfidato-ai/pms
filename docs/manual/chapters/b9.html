@@ -157,6 +157,14 @@
     <li><b>From the bucket</b> (once it exists): the Oracle console, the bucket, Objects, the file, Download.</li>
     <li><b>From this PC's version of PostgreSQL (17) to the server's (16):</b> only with <code>db/backup.sh --portable</code>. A normal backup made on 17 cannot be read by 16 (MEMORY 190).</li>
   </ul>
+  <h3>Getting back any minute of the last month</h3>
+  <p>Once it is switched on (<code>deploy/README.md</code>, "Restore to any minute"), the database's change journal goes to the same bucket at least once an hour, and a base copy every Sunday, so the database can be brought back to <b>any minute of the last 31 days</b>, not only to last night <span class="d">D27-373</span> (A3).</p>
+  <ul>
+    <li><b>It never goes over the live database.</b> The chosen minute is rebuilt in a temporary copy and handed over as a separate database, <code>fidato_pitr</code>, beside the live one. You compare the two, then decide: take back only what was lost, switch the whole database to that minute (everything after it is lost, at every hotel), or drop it.</li>
+    <li>At most about an hour of changes is not yet off the server at any moment.</li>
+    <li>Connection health's <span class="ui">Backups</span> row turns red when the journal or the weekly base copy is not reaching the bucket.</li>
+    <li>Reading it back needs a read link you make in the Oracle console on the day, expiring the next day; the server never holds one.</li>
+  </ul>
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>A backup that has never been restored is not a backup: the classic disaster is a nightly job that ran for years and produced an empty or wrong file. So the nightly job restores what it took and compares it. It used to compare against fixed demo figures, and once printed "would not give you your hotel back" over a perfectly sound backup; it now compares with the source, so it never needs editing when the data changes (MEMORY 30, 34, 151).</p>

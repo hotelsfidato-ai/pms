@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { readFile, statfs } from "node:fs/promises";
 import { getAuth } from "firebase-admin/auth";
 import { firebaseApp, withSession } from "../../auth.ts";
-import type { Client } from "../../db.ts";
+import { withUser, type Client } from "../../db.ts";
 import { env } from "../../env.ts";
 import { canSend } from "../../sending.ts";
 
@@ -21,7 +21,11 @@ import { canSend } from "../../sending.ts";
      crs        the CRS reader's last read and error, the last booking taken
      firebase   whether the Admin SDK answers one read-only question
      backups    the status line the nightly check writes into its log
-                (db/verify-backup.sh, "backup-status")
+                (db/verify-backup.sh, "backup-status"); the weekly base
+                copy's line (db/base-backup.sh), the journal's archiving
+                (pg_stat_archiver) and its push to the bucket
+                (/var/log/fidato-wal.status), for restore to any minute
+                (D27-373, A3)
      disk       the server's root file system: how full it is (resilience A2)
      rivals     rivals' prices: the last check day and the prices it kept
 
@@ -81,7 +85,16 @@ export interface BackupFacts {
   lastFailed: string | null;
   /** The last run that copied the backup off the server: once there is one, a bucket is set. */
   lastUploaded: string | null;
+  /** The weekly base copy for restore to any minute (db/base-backup.sh, D27-373 A3). */
+  lastBase: { at: string; ok: boolean } | null;
+  lastBaseOk: string | null;
+  /** The journal's archiving into the spool (pg_stat_archiver). Null: archiving is off. */
+  wal: { failing: boolean; lastArchived: string | null; lastFailed: string | null } | null;
+  /** The spool's last push to the bucket (db/wal.sh, /var/log/fidato-wal.status). Null: none yet. */
+  walPush: WalPush | null;
 }
+
+export interface WalPush { at: string; ok: boolean; waiting: number; why: string | null }
 
 /** The root file system, as `df` counts it: what is written, and what the
     database (not root) may still write. */
@@ -118,6 +131,10 @@ export const FAILED_IN_A_ROW = 3;
 export const CRS_STALE_MINUTES = 30;
 /** The backup runs nightly at 03:00: the n8n watch's own 26 hours (deploy/README.md). */
 export const BACKUP_STALE_HOURS = 26;
+/** The base copy is weekly: a day's grace (D27-373, A3). */
+export const BASE_STALE_DAYS = 8;
+/** The journal's push runs every 5 minutes: six missed runs is a fault. */
+export const WAL_PUSH_STALE_MINUTES = 30;
 /** Amber from this much of the disk used, red from the next (resilience A2). */
 export const DISK_AMBER_PERCENT = 80;
 export const DISK_RED_PERCENT = 90;
@@ -167,6 +184,26 @@ function backups(f: BackupFacts, now: Date): Omit<Row, "key" | "label"> {
     lastSuccess: f.lastOk,
     lastError: f.lastFailed ? { at: f.lastFailed, detail: "The backup failed. /var/log/fidato-backup.log on the server says why." } : null,
   };
+  /* Restore to any minute (D27-373, A3): the journal and the weekly base copy. */
+  if (f.wal?.failing) {
+    return {
+      ...base, status: "red", lastError: { at: f.wal.lastFailed, detail: "PostgreSQL's log on the server says why." },
+      summary: "The database cannot set its change journal aside for the bucket: a restore to a chosen minute stops before now, and the journal piles up on this server's disk.",
+    };
+  }
+  if (f.walPush && !f.walPush.ok) {
+    return {
+      ...base, status: "red", lastError: { at: f.walPush.at, detail: f.walPush.why },
+      summary: `The database's change journal is not reaching the bucket (${f.walPush.waiting} waiting on this server): a restore to a chosen minute stops before them.`,
+    };
+  }
+  if (f.walPush && minutesSince(f.walPush.at, now) > WAL_PUSH_STALE_MINUTES) {
+    return { ...base, status: "red", summary: `The change journal's copy to the bucket (every 5 minutes) has not run for over ${WAL_PUSH_STALE_MINUTES} minutes.` };
+  }
+  if (f.lastBase && !f.lastBase.ok) return { ...base, status: "red", summary: "The weekly base copy for restoring to a chosen minute failed." };
+  if (f.lastBaseOk && minutesSince(f.lastBaseOk, now) > BASE_STALE_DAYS * 24 * 60) {
+    return { ...base, status: "red", summary: `No weekly base copy for over ${BASE_STALE_DAYS} days: restoring to a chosen minute needs one.` };
+  }
   if (!f.found) return { ...base, status: "grey", summary: "No nightly backup runs on this server." };
   if (!f.last) return { ...base, status: "amber", summary: "No result recorded yet. The nightly backup records one from its next run." };
   if (minutesSince(f.last.at, now) > BACKUP_STALE_HOURS * 60) {
@@ -234,22 +271,59 @@ export async function hotelFacts(client: Client, hotelId: string | null): Promis
    ponytail: the whole log is read; it grows a few KB a night. */
 export const BACKUP_LOG = "/var/log/fidato-backup.log";
 const STATUS_LINE = /^backup-status (\S+) (ok|failed) uploaded=(yes|no)$/gm;
+/* The weekly base copy writes into the same log (db/base-backup.sh). */
+const BASE_LINE = /^base-backup-status (\S+) (ok|failed)$/gm;
+
+const NONE = { last: null, lastOk: null, lastFailed: null, lastUploaded: null, lastBase: null, lastBaseOk: null, wal: null, walPush: null };
+
+/* The journal's push to the bucket rewrites one small file every 5 minutes
+   (db/wal.sh): its first line the result, after a failure a second the why. */
+export const WAL_STATUS = "/var/log/fidato-wal.status";
+const PUSH_LINE = /^wal-push (\S+) (ok|failed) sent=\d+ waiting=(\d+)$/;
+
+export function readWalPush(text: string): WalPush | null {
+  const [first = "", why = ""] = text.split(/\r?\n/);
+  const m = PUSH_LINE.exec(first);
+  return m ? { at: m[1]!, ok: m[2] === "ok", waiting: Number(m[3]), why: why.trim() || null } : null;
+}
 
 export function readBackupStatus(text: string): BackupFacts {
-  const facts: BackupFacts = { found: true, last: null, lastOk: null, lastFailed: null, lastUploaded: null };
+  const facts: BackupFacts = { found: true, ...NONE };
   for (const [, at, result, uploaded] of text.matchAll(STATUS_LINE)) {
     facts.last = { at: at!, ok: result === "ok", uploaded: uploaded === "yes" };
     if (result === "ok") facts.lastOk = at!; else facts.lastFailed = at!;
     if (uploaded === "yes") facts.lastUploaded = at!;
   }
+  for (const [, at, result] of text.matchAll(BASE_LINE)) {
+    facts.lastBase = { at: at!, ok: result === "ok" };
+    if (result === "ok") facts.lastBaseOk = at!;
+  }
   return facts;
 }
 
+/* The journal's archiving, as PostgreSQL counts it: failing when the last
+   try failed after the last success. Nothing while archiving is off. A
+   database that cannot answer fails the page and the sweep as the hotels'
+   facts would. */
+const iso = (c: string) => `to_char(${c} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`;
+const walFacts = (): Promise<BackupFacts["wal"]> => withUser("", async (client) => {
+  const { rows: [r] } = await client.query<{ on: boolean; failing: boolean; last_archived: string | null; last_failed: string | null }>(
+    `select current_setting('archive_mode') <> 'off' as on,
+            coalesce(last_failed_time > coalesce(last_archived_time, '-infinity'), false) as failing,
+            ${iso("last_archived_time")} as last_archived, ${iso("last_failed_time")} as last_failed
+       from pg_stat_archiver`);
+  return r?.on ? { failing: r.failing, lastArchived: r.last_archived, lastFailed: r.last_failed } : null;
+});
+
 async function backupFacts(path = BACKUP_LOG): Promise<BackupFacts> {
+  const [wal, walPush] = await Promise.all([
+    walFacts(),
+    readFile(WAL_STATUS, "utf8").then(readWalPush, () => null),
+  ]);
   try {
-    return readBackupStatus(await readFile(path, "utf8"));
+    return { ...readBackupStatus(await readFile(path, "utf8")), wal, walPush };
   } catch {
-    return { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null };
+    return { found: false, ...NONE, wal, walPush };
   }
 }
 

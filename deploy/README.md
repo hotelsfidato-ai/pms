@@ -481,6 +481,132 @@ n8n's: the bucket → Objects → `n8n/` → the night's `.tar.gz`. It holds
 back. The logins open only with the key in `/etc/n8n/encryption-key`, which is
 on the server alone.
 
+## Restore to any minute
+
+The nightly backup gives back last night. This gives back **any minute of the
+last 31 days** (D27-373, plan A, A3), for the day somebody deletes or changes
+the wrong thing at 14:05 and the backup is from 03:00.
+
+How it runs, once switched on:
+
+- PostgreSQL hands each finished piece of its change journal (the WAL: 16 MB,
+  a few hundred KB gzipped) to `fidato-wal put`, which sets it aside in
+  `/var/lib/pgsql/wal-out`, at least once an hour (`archive_timeout = 3600`).
+- Every 5 minutes cron's `fidato-wal push` copies those pieces into the bucket
+  under `wal/` with the backup's upload-only link, and writes one line to
+  `/var/log/fidato-wal.status`. So at most about an hour and five minutes of
+  changes are not yet off the server.
+- Sundays at 04:30 `fidato-base-backup` puts a base copy under `base/`: a
+  restore starts from one and replays the journal after it.
+- The bucket's rules (Backups, step 1) keep all of it 31 days.
+- Connection health's **Backups** row turns red when the database cannot set
+  a piece aside, when a push fails or has not run for 30 minutes, when the
+  last base copy failed, or when there has been none for 8 days. A piece that
+  cannot leave stays on this disk, which then fills: the Disk row shows it.
+- A restore **never goes over the live database**. It builds the past minute
+  in a temporary PostgreSQL of its own and copies the hotel database out of it
+  as a new database, `fidato_pitr`, beside the live one. You compare, then
+  decide.
+
+Rehearsed on this PC on PostgreSQL 16.15, the server's version, with a folder
+as the bucket: `bash db/tests/pitr.sh`. Not yet run on the server, and so not
+yet under its SELinux (MEMORY 191): step 3 is that proof.
+
+### Setting it up, once
+
+After Backups steps 1 and 3 (the bucket and its link), and a `launch.sh` run
+that carries this change (it installs `fidato-wal`, `fidato-base-backup` and
+`fidato-pitr-restore`).
+
+**1 · Switch the archiving on:** *the server, over ssh as `opc`, at a quiet
+hour: PostgreSQL and the PMS restart, for a few seconds*
+
+```bash
+sudo -u postgres psql -c "ALTER SYSTEM SET archive_mode = 'on'" -c "ALTER SYSTEM SET archive_command = '/usr/local/bin/fidato-wal put %p %f'" -c "ALTER SYSTEM SET archive_timeout = 3600"
+sudo systemctl restart postgresql
+systemctl is-active postgresql fidato-api
+```
+
+The last line should print `active` twice.
+
+**2 · The two timers:** *the same place*
+
+```bash
+sudo tee /etc/cron.d/fidato-wal > /dev/null <<'EOF'
+*/5 * * * * postgres flock -n /var/lib/pgsql/wal-out.lock /usr/local/bin/fidato-wal push > /dev/null 2>&1
+30 4 * * 0 postgres /usr/local/bin/fidato-base-backup >> /var/log/fidato-backup.log 2>&1
+EOF
+```
+
+**3 · Prove it:** *the same place*
+
+```bash
+sudo -u postgres psql -tAc "select pg_walfile_name(pg_switch_wal())"
+sudo -u postgres psql -xc "select archived_count, last_archived_wal, failed_count from pg_stat_archiver"
+```
+
+`last_archived_wal` should be the name the first line printed, and
+`failed_count` 0. Then:
+
+```bash
+sudo -u postgres /usr/local/bin/fidato-wal push; cat /var/log/fidato-wal.status
+sudo -u postgres bash -c '/usr/local/bin/fidato-base-backup >> /var/log/fidato-backup.log 2>&1'; tail -n 2 /var/log/fidato-backup.log
+```
+
+The first should end with a line `wal-push … ok sent=… waiting=0`, the second
+with `base-backup-status … ok`. The Oracle console should show `wal/` and
+`base/` in the bucket. If `failed_count` is not 0, or either line says
+failed, copy what it printed to the master chat. If the base copy says *no
+pg_hba.conf entry for replication connection*, let the database's own account
+make one, and run the base copy again:
+
+```bash
+echo "local replication postgres peer" | sudo tee -a "$(sudo -u postgres psql -tAc 'show hba_file')"
+sudo systemctl reload postgresql
+```
+
+**4 · Rehearse once:** the steps below with a minute from an hour ago, then
+`sudo -u postgres psql -c "DROP DATABASE fidato_pitr"`. Note how long it took.
+
+### Getting a minute back
+
+1. *The Oracle console*: the bucket → Objects → `base/`. Note the newest base
+   copy from **before** the minute. Its name is in UTC:
+   `base-20261101T230000Z.tar` is 1 November 23:00 UTC, 2 November 04:30 in
+   India.
+2. *The Oracle console*: the bucket → Pre-Authenticated Requests → Create.
+   Name `restore-` and today's date, target **Bucket**, access **Permit object
+   reads**, expiry **tomorrow**. Copy the URL. It can read, not write or
+   delete, and it is never saved on the server.
+3. *The server, over ssh as `opc`*, with the URL from 2, the base copy from 1
+   and the minute, with India's offset:
+
+   ```bash
+   sudo -u postgres env RESTORE_FROM='<the URL from 2>' /usr/local/bin/fidato-pitr-restore <the base copy from 1> '2026-11-03 14:05:00+05:30'
+   ```
+
+   It ends *"fidato_pitr is fidato as it was at …"*, with the bookings, bill
+   lines, invoices and guests of both side by side. A minute later than the
+   last piece in the bucket stops with *"recovery ended before configured
+   recovery target was reached"* and creates nothing. For a customer, put
+   `DB=fidato_<code>` after `env`.
+4. Look at `fidato_pitr` with the master chat (`sudo -u postgres psql -d
+   fidato_pitr`), and decide, **your explicit yes**, one of:
+   - **Take back only what was lost**, row by row, with the master chat (for
+     one hotel, the one-hotel restore tool, A4, when it is built).
+   - **Switch the whole database to that minute.** Everything after it is
+     lost, at every hotel. *The server, over ssh as `opc`*, the date in the
+     name being today's:
+
+     ```bash
+     sudo systemctl stop fidato-api
+     sudo -u postgres psql -c "ALTER DATABASE fidato RENAME TO fidato_before_20261103" -c "ALTER DATABASE fidato_pitr RENAME TO fidato"
+     sudo systemctl start fidato-api
+     ```
+
+     Keep `fidato_before_…` until you are sure, then drop it.
+   - **Neither:** `sudo -u postgres psql -c "DROP DATABASE fidato_pitr"`.
+
 ## Watching it
 
 Two things watch the system, because n8n runs on the box it watches: if the
@@ -495,7 +621,8 @@ server, its network or n8n itself goes down, n8n cannot say so.
     a full disk stops the database.
   - **Backups**: red when last night's backup failed, when none has run for 26
     hours, or, once a copy has ever gone to the bucket, when none has for 26
-    hours.
+    hours; and, once restore to any minute is on, when the journal or the
+    weekly base copy is not reaching the bucket (above).
 - **UptimeRobot**, free, outside (*uptimerobot.com, in your browser*):
   commercial use is allowed on the free plan (its help centre, 27 Aug 2026).
   Add two HTTP(s) monitors at 5 minutes, `https://api.fidatohotels.com/health`

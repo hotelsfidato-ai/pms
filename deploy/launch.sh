@@ -725,6 +725,13 @@ say "Backups"
 if [ -z "$CUSTOMER" ]; then
 install -m 755 "$APP_DIR/db/backup.sh"        /usr/local/bin/fidato-backup
 install -m 755 "$APP_DIR/db/verify-backup.sh" /usr/local/bin/fidato-verify-backup
+# Restore to any minute (D27-373, A3): installed on every run, switched on
+# once by the owner (deploy/README.md, "Restore to any minute"). The status
+# file is the journal push's, read by Connection health.
+install -m 755 "$APP_DIR/db/wal.sh"           /usr/local/bin/fidato-wal
+install -m 755 "$APP_DIR/db/base-backup.sh"   /usr/local/bin/fidato-base-backup
+install -m 755 "$APP_DIR/db/pitr-restore.sh"  /usr/local/bin/fidato-pitr-restore
+[ -e /var/log/fidato-wal.status ] || install -m 644 -o postgres -g postgres /dev/null /var/log/fidato-wal.status
 
 # Where the copy goes and whom to tell: the server's own settings, never the
 # repository. Written EMPTY once and never overwritten; the owner fills it in

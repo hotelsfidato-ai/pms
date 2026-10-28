@@ -10781,7 +10781,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span>, <span class="ui">Disk</span> and <span class="ui">Rivals' prices</span>. Backups, the disk and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
   <ul>
     <li><span class="ui">Disk</span> says how full the server's disk is and how much is free. Needs a look from 80% used; Not working from 90%, because the database stops when the disk is full. Tell whoever looks after the server at once.</li>
-    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours.</li>
+    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours. Once restore to any minute is switched on, also when the database's change journal or its weekly base copy is not reaching the bucket.</li>
   </ul>
   <p class="muted">The picture above was taken before the Disk row was added; the page now shows it between Backups and Rivals' prices.</p>
 
@@ -11943,7 +11943,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Emails, WhatsApp</td><td>The last three tries all failed.</td></tr>
       <tr><td>CRS bridge</td><td>The last read failed, or nothing has been read for 30 minutes (the reader runs every five).</td></tr>
       <tr><td>Firebase sign-in</td><td>It did not answer.</td></tr>
-      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>. Amber when backed up but on the server's disk only.</td></tr>
+      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>; or, with restore to any minute on, the change journal or the weekly base copy is not reaching the bucket. Amber when backed up but on the server's disk only.</td></tr>
       <tr><td>Disk</td><td>The server's disk is 90% used or more: the database stops when it is full. Amber from 80% <span class="d">D27-373</span>. The picture above was taken before this row was added.</td></tr>
       <tr><td>Rivals' prices</td><td>Never red; amber when switched on and nothing kept yet.</td></tr>
     </tbody>
@@ -13287,6 +13287,14 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>To put a backup back:</b> <code>db/restore.sh &lt;file&gt;</code> or <code>db/restore.sh --latest</code>. It says what it is about to overwrite, waits for the database's name to be typed, and first takes a safety backup of what it replaces. There is no undo; that is why it asks. A backup does not carry the application's database rights, so they are put back before the API uses the restored database: <code>deploy/README.md</code> does it by running <code>deploy/launch.sh</code> again, which applies the migrations.</li>
     <li><b>From the bucket</b> (once it exists): the Oracle console, the bucket, Objects, the file, Download.</li>
     <li><b>From this PC's version of PostgreSQL (17) to the server's (16):</b> only with <code>db/backup.sh --portable</code>. A normal backup made on 17 cannot be read by 16 (MEMORY 190).</li>
+  </ul>
+  <h3>Getting back any minute of the last month</h3>
+  <p>Once it is switched on (<code>deploy/README.md</code>, "Restore to any minute"), the database's change journal goes to the same bucket at least once an hour, and a base copy every Sunday, so the database can be brought back to <b>any minute of the last 31 days</b>, not only to last night <span class="d">D27-373</span> (A3).</p>
+  <ul>
+    <li><b>It never goes over the live database.</b> The chosen minute is rebuilt in a temporary copy and handed over as a separate database, <code>fidato_pitr</code>, beside the live one. You compare the two, then decide: take back only what was lost, switch the whole database to that minute (everything after it is lost, at every hotel), or drop it.</li>
+    <li>At most about an hour of changes is not yet off the server at any moment.</li>
+    <li>Connection health's <span class="ui">Backups</span> row turns red when the journal or the weekly base copy is not reaching the bucket.</li>
+    <li>Reading it back needs a read link you make in the Oracle console on the day, expiring the next day; the server never holds one.</li>
   </ul>
   <div class="box why">
     <h4>Why it works this way</h4>
