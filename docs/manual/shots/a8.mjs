@@ -569,4 +569,15 @@ export const SHOTS = [
       { n: 2, at: "text:Join", side: "top" },
     ],
   },
+  /* A dish's MRP (D27-373). Before it the master types an MRP on one demo dish
+     and on one first-type choice of a dish sold by variation, leaving the rest
+     empty, so the picture shows a figure and a dash. */
+  {
+    id: "A8-49", title: "A dish's MRP on the Menu", as: "General Manager",
+    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }],
+    marks: [
+      { n: 1, at: "label:MRP of", nth: 0, side: "bottom" },
+      { n: 2, at: "text:(MRP", nth: 0, side: "bottom" },
+    ],
+  },
 ];

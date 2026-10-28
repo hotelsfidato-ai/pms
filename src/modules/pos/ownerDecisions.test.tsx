@@ -722,3 +722,61 @@ describe("the tax heading on each menu section (D22-4)", () => {
     await vi.waitFor(() => expect(offers(spirits)).toContain("alcohol"));
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   D27-373 · A DISH'S MRP, typed on the Menu beside its price, values a
+   bill given free (NC) in the stock. Empty is a dash - never a zero, and
+   never the price filled in. A dish sold by variation carries it on its
+   first-type choices, on the variations form.
+   ══════════════════════════════════════════════════════════════════ */
+describe("a dish's MRP on the Menu (D27-373)", () => {
+  const menuWithMrp = () => server({
+    [`GET ${MENU}`]: () => ({
+      categories: [{
+        id: "c-1", name: "Starters", prepMinutes: null, course: null,
+        items: [
+          dish({ id: "i-1", name: "Bhaaji Pau", variations: [{ ...OIL, mrp: 250 }] }),
+          dish({ id: "i-3", name: "Paneer Tikka", mrp: null }),
+        ],
+      }] satisfies MenuCategory[],
+    }),
+    [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+    [`GET ${GROUPS}`]: () => ({ groups: [] }),
+    [`POST /api/hotels/${HOTEL}/till/menu/items/i-3/mrp`]: () => ({ ok: true }),
+    [`PUT /api/hotels/${HOTEL}/till/menu/items/i-1/variations`]: () => ({ ok: true }),
+  });
+
+  it("none typed is a dash, never the price; a typed one is sent", async () => {
+    const calls = menuWithMrp();
+    menuAt();
+    const pill = await screen.findByRole("button", { name: "MRP of Paneer Tikka" });
+    expect(pill.textContent).toBe("MRP -");
+    expect(screen.queryByRole("button", { name: "MRP of Bhaaji Pau" }),
+      "a dish sold by variation has it on its choices").toBeNull();
+
+    fireEvent.click(pill);
+    const box = screen.getByRole("textbox", { name: "MRP of Paneer Tikka" }) as HTMLInputElement;
+    expect(box.value, "never filled in from the price").toBe("");
+    fireEvent.change(box, { target: { value: "180" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/items/i-3/mrp")))
+      .toMatchObject({ method: "POST", body: { mrp: 180 } }));
+  });
+
+  it("a first-type choice shows its MRP, and the form sends it - empty clears it", async () => {
+    const calls = menuWithMrp();
+    menuAt();
+    expect(await screen.findByText(/Oil ₹300\.00 \(MRP ₹250\.00\)/)).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Change variations of Bhaaji Pau" }));
+    const dialog = await screen.findByRole("dialog");
+    const mrp = within(dialog).getByLabelText("MRP of type 1, choice 1") as HTMLInputElement;
+    expect(mrp.value).toBe("250");
+    fireEvent.change(mrp, { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Option" }));
+    fireEvent.change(within(dialog).getByLabelText(/Heading/), { target: { value: "Fat" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/items/i-1/variations")))
+      .toMatchObject({ method: "PUT", body: { types: [{ choices: [{ label: "Oil", mrp: "" }] }] } }));
+  });
+});

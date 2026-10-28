@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { NumberedAddonsTab } from "@/modules/pos/components/NumberedAddonsTab";
 import { getModules } from "@/data/repositories";
-import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setItemMrp, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
@@ -811,6 +811,16 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
                     dash, never the column nobody has looked at since. */}
                 {item.variations.length > 0 ? "-" : moneyPrecise(item.price)}
               </span>
+              {/* Its MRP, for an NC bill in the stock (D27-373). A dish sold
+                  by variation carries it on its first-type choices. */}
+              {item.variations.length === 0 && (
+                <MrpControl mrp={item.mrp} label={`MRP of ${item.name}`}
+                            onSet={async (mrp) => {
+                              const res = await setItemMrp(hotelId, item.id, mrp);
+                              if (!res.ok) return void toast.error("Not changed", res.reason ?? "Refused.");
+                              onChanged();
+                            }} />
+              )}
               {/* POS-9: THE CONTROLS GO UNDER THE NAME ON A PHONE. On one line
                   at 375px the row needed 465px of 302 and the dish name was
                   squeezed to nothing (17 September). A desk has the room, and
@@ -890,7 +900,8 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
                     </span>
                     <span className="tabular">
                       {t.choices.map((v) => `${v.label} ${v.price === 0 ? "Free"
-                        : `${i > 0 ? "+" : ""}${moneyPrecise(v.price)}`}`).join(" · ")}
+                        : `${i > 0 ? "+" : ""}${moneyPrecise(v.price)}`}${i === 0
+                        ? ` (MRP ${v.mrp == null ? "-" : moneyPrecise(v.mrp)})` : ""}`).join(" · ")}
                     </span>
                   </p>
                 ))}
@@ -1084,9 +1095,9 @@ const KINDS: { kind: VariationKind; label: string; names: string[] }[] = [
   { kind: "quantity", label: "Quantity", names: ["Half", "Full"] },
   { kind: "option", label: "Option", names: [] },
 ];
-type ChoiceRow = { id?: string; label: string; price: string; free: boolean };
+type ChoiceRow = { id?: string; label: string; price: string; free: boolean; mrp: string };
 type TypeRow = { kind: VariationKind | null; heading: string; choices: ChoiceRow[] };
-const blankChoice = (): ChoiceRow => ({ label: "", price: "", free: false });
+const blankChoice = (): ChoiceRow => ({ label: "", price: "", free: false, mrp: "" });
 const priced = (c: { price: string; free: boolean }) => c.free || c.price.trim() !== "";
 
 function VariationsDialog({ hotelId, item, onClose, onSaved }: {
@@ -1098,7 +1109,8 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
     kind: t.choices[0]!.kind ?? null,
     heading: t.choices[0]!.heading ?? "",
     choices: t.choices.map((v) => ({ id: v.id, label: v.label,
-      price: v.price === 0 ? "" : String(v.price), free: v.price === 0 })),
+      price: v.price === 0 ? "" : String(v.price), free: v.price === 0,
+      mrp: v.mrp == null ? "" : String(v.mrp) })),
   })));
   /* The first type went, so the next one's figures are no longer
      additions: cleared, to be typed again as the dish's price. */
@@ -1129,7 +1141,7 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
   const removeType = (i: number) => {
     if (i === 0 && types.length > 1) setMoved(true);
     setTypes((ts) => ts.filter((_, j) => j !== i).map((t, j) => (i === 0 && j === 0
-      ? { ...t, choices: t.choices.map((c) => ({ ...c, price: "", free: false })) } : t)));
+      ? { ...t, choices: t.choices.map((c) => ({ ...c, price: "", free: false, mrp: "" })) } : t)));
   };
 
   const ready = types.length > 0
@@ -1140,11 +1152,12 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
   const save = async () => {
     setBusy(true);
     const res = await saveVariations(hotelId, item.id, {
-      types: types.map((t) => ({
+      types: types.map((t, i) => ({
         kind: t.kind!,
         ...(t.kind === "option" ? { heading: t.heading.trim() } : {}),
         choices: t.choices.map((c) => ({
-          ...(c.id ? { id: c.id } : {}), label: c.label.trim(), price: c.price, free: c.free })),
+          ...(c.id ? { id: c.id } : {}), label: c.label.trim(), price: c.price, free: c.free,
+          ...(i === 0 ? { mrp: c.mrp } : {}) })),
       })),
       ...(types.length === 0 ? { dishPrice, dishFree } : {}),
     });
@@ -1161,7 +1174,8 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
         size="lg"
         title={`Variations - ${item.name}`}
         description={"The waiter picks one of each. The first type's prices are the dish's "
-          + "price; each further type adds to it. A blank price is not zero - tick Free."}
+          + "price; each further type adds to it. A blank price is not zero - tick Free. "
+          + "The first type's MRP values a bill given free (NC) in the stock; leave it empty for none."}
         footer={
           <>
             <Button variant="secondary" size="lg" onClick={onClose}>
@@ -1214,6 +1228,7 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
                 <div className="flex gap-2 text-2xs uppercase tracking-wide text-grey-500">
                   <span className="flex-1 min-w-32">Choice</span>
                   <span className="w-24">{i === 0 ? "Price" : "Adds"}</span>
+                  {i === 0 && <span className="w-24">MRP</span>}
                   <span className="w-28" />
                 </div>
                 {t.choices.map((c, k) => (
@@ -1225,6 +1240,12 @@ function VariationsDialog({ hotelId, item, onClose, onSaved }: {
                            value={c.free ? "" : c.price} disabled={c.free}
                            inputMode="decimal" className="w-24 tabular"
                            onChange={(e) => changeChoice(i, k, { price: e.target.value })} />
+                    {/* Optional: empty is none, a dash (D27-373). */}
+                    {i === 0 && (
+                      <Input aria-label={`MRP of type 1, choice ${k + 1}`} value={c.mrp}
+                             inputMode="decimal" className="w-24 tabular" placeholder="-"
+                             onChange={(e) => changeChoice(i, k, { mrp: e.target.value })} />
+                    )}
                     <Checkbox label="Free" checked={c.free}
                               onCheckedChange={(free) => changeChoice(i, k, { free })} />
                     <button type="button"
@@ -1788,6 +1809,77 @@ function CourseControl({ course, own, label, onSet }: {
       }
     >
       {unset ? "Any" : `${course}${inherited ? "*" : ""}`}
+    </button>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   A DISH'S MRP (D27-351, D27-373)
+
+   What a bill given free (NC) values the dish at in the stock reports -
+   never a sale, never tax. Typed by whoever may change the menu. EMPTY IS
+   NONE: a dash, never a zero, and never the price filled in. The same
+   gesture as PrepControl: tap, type, Enter; an empty field clears.
+   ══════════════════════════════════════════════════════════════════ */
+function MrpControl({ mrp, label, onSet }: {
+  mrp: number | null | undefined;
+  label: string;
+  onSet: (mrp: number | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const commit = async () => {
+    const text = draft.replace(/[,₹\s]/g, "");
+    const next = text === "" ? null : Number(text);
+    if (next !== null && (!Number.isFinite(next) || next <= 0)) {
+      toast.error("That is not an MRP", "A figure above 0, or leave it empty for none.");
+      return;
+    }
+    setBusy(true);
+    await onSet(next);
+    setBusy(false);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={busy}
+        inputMode="decimal"
+        aria-label={label}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        placeholder="MRP"
+        className="w-24 h-11 px-2 rounded-md border border-brand-orange text-base tabular shrink-0"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={() => {
+        setDraft(mrp == null ? "" : String(mrp));
+        setEditing(true);
+      }}
+      className={cn(
+        "press min-w-24 h-11 px-3 rounded-full border text-base tabular shrink-0 cursor-pointer",
+        "bg-white border-grey-300 hover:border-grey-400 hover:bg-grey-50",
+        mrp == null ? "text-grey-500" : "text-ink-900",
+      )}
+      title="MRP: what a bill given free (NC) values this dish at in the stock. Never a sale."
+    >
+      MRP {mrp == null ? "-" : moneyPrecise(mrp)}
     </button>
   );
 }

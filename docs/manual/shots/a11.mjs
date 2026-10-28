@@ -340,4 +340,15 @@ export const SHOTS = [
       { n: 5, at: "text:By category", side: "left" },
     ],
   },
+  /* NC bills at MRP (D27-373). Needs A8-49's MRPs, and an NC bill this month
+     with a dish that has an MRP and one that has none (A8-38's will do). */
+  {
+    id: "A11-28", title: "Consumption: given free (NC), at MRP", as: "General Manager", size: "wall",
+    path: "/reports/stock-consumption", steps: [LOADED("Given free (NC), at MRP")],
+    marks: [
+      { n: 1, at: "text:Given free (NC), at MRP", side: "left" },
+      { n: 2, at: "text:VALUE AT MRP", nth: 0, side: "top" },
+      { n: 3, at: "text:no MRP and", nth: 0, side: "left" },
+    ],
+  },
 ];

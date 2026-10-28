@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-29 · Consumption: NC bills at MRP (D27-373)
+
+**Asked for** The owner: NC bills valued at MRP in the stock, never in sales or tax.
+**Shipped** The Consumption report's last section, "Given free (NC), at MRP" (`builders/stock.ts`, from the POS door's `noChargeAtMrp`): outlet, dish, quantity, MRP, value; a dish with no MRP a dash, left out of the total and counted in the note. The root `CHANGELOG.md` has the whole piece.
+**Proved** `api/test/modules/pos/dishMrp.test.ts`: the section by hand (270, two lacking) and the Day book's restaurant sales the paid bill alone.
+**Left open** Whether the MRP should be the bill's day's rather than today's (the owner's question).
+
 ## 2026-10-28 · The GST sales register's B2B / B2C Type (the owner's D27-372)
 
 **Shipped:** `GET /reports/gst-sales` returns `type` per row: **B2B** when the
