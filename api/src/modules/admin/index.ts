@@ -10,6 +10,7 @@ import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
 import { activity } from "./activity.ts";
 import { testHotels } from "./testHotelRoutes.ts";
+import { ownerReset } from "./ownerReset.ts";
 import { setup } from "./setup.ts";
 
 /* The front door of the administration service on the server — the only file
@@ -28,6 +29,8 @@ export const mounts: readonly Mount[] = [
   /* D27-296: before admin's own /admin/hotels/:code/:state, which would
      otherwise take "test-reset" for a state it does not know. */
   ["/api", testHotels],
+  /* D27-342: the owner's full reset - before :state for the same reason. */
+  ["/api", ownerReset],
   ["/api", admin],
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],

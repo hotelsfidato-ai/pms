@@ -539,6 +539,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/hotels/:code/test-hotel`]: own("admin/testHotelRoutes.ts: a group administrator (D27-296)"),
   [`POST /api/admin/hotels/:code/test-reset`]: own("admin/testHotelRoutes.ts: a group administrator, typed RESET (D27-296)"),
   [`POST /api/admin/hotels/:code/test-recopy`]: own("admin/testHotelRoutes.ts: a group administrator, typed RE-COPY (D27-296)"),
+  /* D27-342: the owner's full reset - the account whose e-mail is RESET_OWNER_EMAIL, no role. */
+  [`POST /api/admin/hotels/:code/owner-reset`]: own("admin/ownerReset.ts: only the e-mail RESET_OWNER_EMAIL names, typed code (D27-342)"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
   [`PUT /api/me/preferences`]: SELF,
@@ -1070,6 +1072,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
   [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
+  /* D27-342: whether the full reset is the signed-in person's, and its dry run - theirs only. */
+  [`GET /api/admin/owner-reset`]: own("admin/ownerReset.ts: says only whether it is yours"),
+  [`GET /api/admin/hotels/:code/owner-reset`]: own("admin/ownerReset.ts: only the e-mail RESET_OWNER_EMAIL names (D27-342)"),
   [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
   /* D27-243 5.4, D27-245 Q-B: the owner anybody's, an Admin their hotel's people. */
   [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.devices_of (195)"),

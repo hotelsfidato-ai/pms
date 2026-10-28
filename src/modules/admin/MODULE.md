@@ -157,6 +157,27 @@ properties and people.
   test hotels to somebody who works only in them; a person's test-hotel
   place carries TEST. Anybody else is never offered a test hotel. Tests:
   `testHotels.test.tsx`.
+- **Clear this hotel and start today (the owner's D27-342, D27-365 (3), 28
+  October).** On each real hotel's card on **Properties**, under "Start
+  afresh", for ONE account: the one whose e-mail is the server setting
+  `RESET_OWNER_EMAIL` - not a role (`components/OwnerReset.tsx`). It shows
+  the server's count first (the database's own dry run, the one
+  `api/scripts/reset-property.ts` prints), then the hotel's code typed
+  (`TypedConfirm`, shared with the test hotels' Reset), then the server
+  takes the server's backup, clears the hotel in one transaction and puts
+  it on today; the window says how many records went, the backup's file
+  and the new business date. A refusal - a guest checked in (named), a
+  failed backup, a test hotel - is the server's sentence. Calls:
+  `ownerResetIsMine`, `ownerResetCount`, `ownerReset` (`data/admin.ts`;
+  `GET /api/admin/owner-reset`, `GET | POST /api/admin/hotels/:code/owner-reset`,
+  `api/src/modules/admin/ownerReset.ts`). The clearing is the database's
+  (`owner_reset.counts`, `owner_reset.clear`, migration "owner full
+  reset"), run as its own login `pms_owner_reset` (`RESET_DATABASE_URL`);
+  the backup through `RESET_BACKUP_SOCKET` (`deploy/fidato-backup-now.*`).
+  Turned on by the owner on the server: `deploy/README.md`, "The owner's
+  full reset". Tests: `ownerReset.test.tsx`;
+  `api/test/modules/admin/ownerReset.test.ts`; `db/tests/modules/admin.sql`
+  ("owner full reset"); `api/test/resetOrder.test.ts`.
 - **Set up this hotel (the owner's D27-311, 13 October; the screens' half).**
   The 18 steps from a bare hotel to its first booking, in `setup/steps.ts`
   (id, number, group, plain "what it is" and "why it matters", and the REAL

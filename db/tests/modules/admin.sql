@@ -1105,3 +1105,219 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- THE OWNER'S FULL RESET (D27-342, D27-365 (3))
+-- =============================================================================
+-- The database's half: a login that may count and clear and nothing else;
+-- pms_app shut out; every guard lifted for the clear - a paid bill, a closed
+-- day, an invoice, key cards, a struck KOT line, the Store - and put back; a
+-- test hotel and a guest checked in refused; another hotel untouched; and the
+-- dry run's count being what went. The API's half (one e-mail, the typed
+-- code, the backup, all or nothing over the wire) is
+-- api/test/modules/admin/ownerReset.test.ts. Everything here is undone.
+-- =============================================================================
+do $$
+declare
+  res jsonb := '[]';
+  owner uuid; h uuid; other uuid; t uuid; t_code text; rt uuid; rt_o uuid; r101 uuid;
+  g1 uuid; g2 uuid; g3 uuid; outlet uuid; kitchen uuid; cat uuid; item uuid; loc uuid; si uuid;
+  stay uuid; stay2 uuid; inhouse uuid; fol uuid; fol2 uuid; pid bigint; ord uuid; line bigint;
+  fy text; bd date; dry jsonb; done jsonb; v text; n bigint; s record;
+  rg_here uuid; rg_bill uuid; rg_led uuid;
+begin
+  begin
+    select id into owner from staff where email = 'owner@fidato.in';
+    perform set_config('app.user_id', owner::text, true);
+    perform set_config('app.hotel_code', '', true);
+
+    h     := app.provision_property_unchecked('ORS', 'Owner Reset Real', 'Nowhere');
+    other := app.provision_property_unchecked('ORT', 'Owner Reset Other', 'Nowhere');
+    select id into rt   from room_types where hotel_id = h     and code = 'STD';
+    select id into rt_o from room_types where hotel_id = other and code = 'STD';
+    insert into rooms (hotel_id, room_type_id, number) values (h, rt, '101') returning id into r101;
+    insert into pos_outlets (hotel_id, code, name, staff_id, api_key_hash)
+    values (h, 'REST', 'Restaurant', owner, repeat('b', 64)) returning id into outlet;
+    select id into kitchen from pos_kot_kinds where hotel_id = h order by sort limit 1;
+    insert into pos_menu_categories (hotel_id, name, kot_kind_id) values (h, 'Mains', kitchen) returning id into cat;
+    insert into pos_menu_items (hotel_id, category_id, name, price) values (h, cat, 'Dal', 180) returning id into item;
+    select id into loc from locations where hotel_id = h order by name limit 1;
+    insert into stock_items (hotel_id, name, unit) values (h, 'Rice', 'kg') returning id into si;
+
+    -- A guest who stayed only here; one who also has a stay at the other hotel.
+    insert into guests (full_name, phone) values ('ORS Only Here', '9833300001') returning id into g1;
+    insert into guests (full_name, phone) values ('ORS Both Places', '9833300002') returning id into g2;
+    insert into guest_documents (guest_id, id_type, id_number) values (g2, 'passport', 'Y7654321');
+
+    -- A few days of trade.
+    bd := app.business_date(h);
+    fy := app.current_fin_year(h);
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, app.next_reference(h), g1, rt, bd - 1, bd, 3000, 'checked_out') returning id into stay;
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, app.next_reference(h), g2, rt, bd - 5, bd - 4, 3000, 'checked_out');
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (other, app.next_reference(other), g2, rt_o, bd + 10, bd + 11, 3000, 'confirmed') returning id into stay2;
+    -- Booking groups: one only here (goes); one with no bookings and its bill
+    -- at the other hotel, and one the other hotel leads (both stay).
+    insert into reservation_groups (name) values ('ORS here') returning id into rg_here;
+    update reservations set group_id = rg_here where id = stay;
+    insert into reservation_groups (name) values ('ORS bill elsewhere') returning id into rg_bill;
+    insert into folios (hotel_id, group_id) values (other, rg_bill);
+    insert into reservation_groups (name, lead_hotel_id) values ('ORT leads', other) returning id into rg_led;
+    insert into folios (hotel_id, reservation_id) values (h, stay) returning id into fol;
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+    values (h, fol, bd - 1, 'room', 'Room 101 · 1 night', 3000, 12, 360);
+    insert into night_audit_runs (hotel_id, business_date, status, completed_at)
+    values (h, bd - 1, 'completed', now());
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+    values (h, fol, bd, 'payment', 'Cash', -3360) returning id into pid;
+    insert into payments (hotel_id, posting_id, method, amount) values (h, pid, 'cash', 3360);
+    insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+    values (h, fol, fy, app.next_invoice_number(h, fy), 'ORS Only Here', 3360, 360);
+    insert into key_cards (hotel_id, reservation_id, room_id, act, cards, valid_until, why, outcome, driver)
+    values (h, stay, r101, 'issue', 2, now() + interval '1 day', 'check_in', 'done', 'stand-in');
+    insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+    values (h, outlet, app.pos_next_order_no(h, bd), bd, owner) returning id into ord;
+    insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+    values (ord, h, item, 'Dal', 1, 180, 5, owner) returning id into line;
+    insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by,
+                                 voided, voided_by, voided_at)
+    values (ord, h, item, 'Dal', 2, 180, 5, owner, true, owner, now());
+    insert into pos_line_events (hotel_id, line_id, order_id, status, by_staff)
+    values (h, line, ord, 'sent', owner);
+    insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+    values (ord, h, 'cash', 189, owner);
+    update pos_orders set status = 'settled', settled_by = owner, settled_at = now(), payment_method = 'cash'
+     where id = ord;
+    insert into stock_movements (hotel_id, item_id, business_date, kind, quantity, location_id, moved_by)
+    values (h, si, bd, 'receipt', 25, loc, owner);
+    update rooms set occupancy_status = 'occupied', housekeeping_status = 'dirty' where id = r101;
+    update hotels set business_date = bd - 3 where id = h;
+    -- The other hotel's own ledger, which must stay.
+    insert into folios (hotel_id, reservation_id) values (other, stay2) returning id into fol2;
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+    values (other, fol2, app.business_date(other), 'misc', 'ORT charge', 100);
+    -- And somebody in the house.
+    insert into guests (full_name) values ('ORS In House') returning id into g3;
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, app.next_reference(h), g3, rt, bd - 3, bd + 1, 3000, 'checked_in') returning id into inhouse;
+    -- The deferred checks of the rows above, now: a guard cannot be lifted on
+    -- a table with checks still pending in the same transaction.
+    set constraints all immediate;
+
+    -- ---------- who may call it ----------
+    set local role pms_app;
+    v := null;
+    begin perform owner_reset.counts('ORS'); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'the API''s own role cannot even count', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin perform owner_reset.clear('ORS', true, owner, null); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'nor clear', 'ok', v = '42501', 'd', v);
+    reset role;
+
+    set local role pms_owner_reset;
+    v := null;
+    begin perform count(*) from reservations; exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'the reset login reads no table', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin delete from folio_postings where hotel_id = h; exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'deletes nothing itself', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin perform app.is_group_admin(); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'and calls nothing of the app''s', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin perform owner_reset.steps(true); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'not even the clear''s own parts: it counts and clears, nothing else', 'ok', v = '42501', 'd', v);
+    dry := owner_reset.counts('ORS');
+    reset role;
+    res := res || jsonb_build_object('n', 'it counts', 'ok', (dry -> 'tables' ->> 'reservations') = '3', 'd', dry::text);
+
+    -- ---------- refused: a guest checked in, a test hotel ----------
+    res := res || jsonb_build_object('n', 'the dry run names the guest checked in',
+      'ok', dry ->> 'refusal' = 'A guest is still checked in at Owner Reset Real: ORS In House. Check them out before the hotel is cleared.',
+      'd', dry ->> 'refusal');
+    v := null;
+    set local role pms_owner_reset;
+    begin perform owner_reset.clear('ORS', true, owner, 'x.dump'); exception when others then v := sqlstate || ': ' || sqlerrm; end;
+    reset role;
+    res := res || jsonb_build_object('n', 'and the clear refuses, saying who, with nothing gone and every guard on',
+      'ok', v like '23514: A guest is still checked in at Owner Reset Real: ORS In House.%'
+            and (select count(*) from reservations where hotel_id = h) = 3
+            and (select count(*) from owner_reset.guards(true) g join pg_trigger tr on tr.tgname = g.trigger_name
+                  where tr.tgenabled <> 'O') = 0,
+      'd', v);
+
+    t := app.create_test_hotel(h);
+    t_code := (select code from hotels where id = t);
+    v := null;
+    set local role pms_owner_reset;
+    begin perform owner_reset.clear(t_code, true, owner, 'x.dump'); exception when others then v := sqlstate || ': ' || sqlerrm; end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a test hotel is refused: it keeps its own Reset',
+      'ok', v = format('23514: %s is a test hotel. It keeps its own Reset, on ORS''s card on Properties.', t_code)
+            and (owner_reset.counts(t_code) ->> 'refusal') = substr(v, 8),
+      'd', v);
+
+    -- ---------- the clear ----------
+    update reservations set status = 'checked_out' where id = inhouse;
+    dry := owner_reset.counts('ORS');
+    set local role pms_owner_reset;
+    done := owner_reset.clear('ORS', true, owner, 'fidato-20261028-101500.dump');
+    reset role;
+
+    res := res || jsonb_build_object('n', 'what went is what the dry run said would go - a paid bill, a closed day, an invoice, key cards, the Store among it',
+      'ok', done -> 'tables' = dry -> 'tables' and done -> 'guests' = dry -> 'guests'
+            and (dry -> 'tables') ?& array['folio_postings', 'invoices', 'pos_orders', 'pos_order_lines',
+                                           'pos_order_tenders', 'stock_movements', 'night_audit_runs'],
+      'd', done::text);
+    v := null;
+    for s in select * from owner_reset.steps(true) where where_sql = 'hotel_id = $1' loop
+      execute format('select count(*) from public.%I where hotel_id = $1', s.table_name) into n using h;
+      if n > 0 then v := concat_ws(', ', v, s.table_name || ' ' || n); end if;
+    end loop;
+    res := res || jsonb_build_object('n', 'nothing is left of the trade, the key cards and the kitchen''s timings with it',
+      'ok', v is null and not exists (select 1 from key_cards where hotel_id = h)
+            and not exists (select 1 from pos_line_events where hotel_id = h),
+      'd', coalesce(v, '-'));
+    res := res || jsonb_build_object('n', 'a guest who stayed only here goes; one with a stay elsewhere stays, papers and all',
+      'ok', not exists (select 1 from guests where id in (g1, g3))
+            and exists (select 1 from guests where id = g2)
+            and exists (select 1 from guest_documents where guest_id = g2));
+    res := res || jsonb_build_object('n', 'a booking group goes only when nothing at another hotel holds it: not its bill there, not that hotel leading it',
+      'ok', not exists (select 1 from reservation_groups where id = rg_here)
+            and exists (select 1 from reservation_groups where id = rg_bill)
+            and exists (select 1 from reservation_groups where id = rg_led));
+    res := res || jsonb_build_object('n', 'the other hotel is untouched',
+      'ok', exists (select 1 from reservations where id = stay2)
+            and exists (select 1 from folio_postings where hotel_id = other and description = 'ORT charge'));
+    res := res || jsonb_build_object('n', 'rooms vacant and clean, the business date today, the setup kept',
+      'ok', not exists (select 1 from rooms where hotel_id = h and (occupancy_status <> 'vacant' or housekeeping_status <> 'clean'))
+            and (select business_date from hotels where id = h) = (now() at time zone (select timezone from hotels where id = h))::date
+            and exists (select 1 from pos_menu_items where id = item) and exists (select 1 from stock_items where id = si)
+            and exists (select 1 from rooms where id = r101));
+    res := res || jsonb_build_object('n', 'invoice numbers carry on, never reused',
+      'ok', (select next_number from invoice_series where hotel_id = h and fin_year = fy) = 2
+            and app.next_invoice_number(h, fy) like '%/00002');
+    res := res || jsonb_build_object('n', 'one audit line: who, which hotel, how many rows, the backup',
+      'ok', (select count(*) from audit_log where hotel_id = h and action = 'OWNER_RESET') = 1
+            and exists (select 1 from audit_log where hotel_id = h and action = 'OWNER_RESET' and actor = owner
+                         and after ->> 'backup' = 'fidato-20261028-101500.dump'
+                         and (after ->> 'removed')::bigint = (done ->> 'removed')::bigint));
+    res := res || jsonb_build_object('n', 'every guard is back on after it',
+      'ok', (select count(*) from owner_reset.guards(true) g join pg_trigger tr on tr.tgname = g.trigger_name
+              where tr.tgenabled <> 'O') = 0);
+    v := null;
+    begin delete from folio_postings where hotel_id = other; exception when others then v := sqlerrm; end;
+    res := res || jsonb_build_object('n', 'and still refuses the other hotel''s ledger', 'ok', v like '%append-only%', 'd', v);
+
+    raise exception using errcode = 'OR001', message = 'undo';
+  exception when sqlstate 'OR001' then
+    null;
+  end;
+
+  insert into test.results (suite, name, passed, detail)
+  select 'owner full reset', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
+    from jsonb_array_elements(res) x;
+end $$;
