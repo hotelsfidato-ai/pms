@@ -16,7 +16,7 @@
       <tr><td>Equipment</td><td>The Inventory Manager; anybody who can see it may ask</td><td>The register of durable things: an AC, a TV, a fridge, a kettle. Where each one is, its repairs, and taking it out of the store.</td></tr>
       <tr><td>Places and suppliers</td><td>The Inventory Manager and managers</td><td>The stores and the other places things stand, and who the property buys from.</td></tr>
       <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves. Bar bills: the owner, an Admin, the GM, the Inventory Manager, the bar manager</td><td><span class="ui">Restaurant and hotel</span>: ask for something, get it approved, order it, record the delivery into a store; <span class="ui">Who may ask to buy</span> is its setting. <span class="ui">Bar</span>: record a bar bill as printed, with its photo (A9.11). <span class="ui">Supplier dues</span>: what is owed to suppliers, and paying it - the Accountant, the GM, the owner and an Admin only (A9.11).</td></tr>
-      <tr><td>Inventory</td><td>The Inventory Manager; whoever sees the Store reads it</td><td><span class="ui">Bar</span>: the bar's day - today's sheet and its count, the bills, the set up; the same as Bar stock in the Restaurant menu (A9.11). <span class="ui">Restaurant</span> comes next.</td></tr>
+      <tr><td>Inventory</td><td>The Inventory Manager; whoever sees the Store reads it</td><td><span class="ui">Bar</span>: the bar's day - today's sheet and its count, the bills, the set up; the same as Bar stock in the Restaurant menu (A9.11). <span class="ui">Restaurant</span>: the kitchen store's day - today's sheet and its count - and the recipes every KOT takes (A9.11).</td></tr>
     </tbody>
   </table>
   <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
@@ -840,6 +840,90 @@
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. The bar like the paper register: all spirits as NIPs, both sheet layouts as a setting, bills as printed, one Bar stock page in the Restaurant menu for the bar manager, the GM, the owner and an Admin: <span class="d">D27-356</span>. The Rate column, the ₹1 round-off, Set up read by the bar manager: <span class="d">D27-357</span>. Two places, the store and the counter; the counter asks and the GM or the Inventory Manager approves; counted three ways; the night audit waits for the closing count, the GM may mark the bar closed; the morning count; FLR-1A/2A/3A and FLR-3 like the paper, a NIP sold the day it is opened: <span class="d">D27-361</span>. Bar stock as a switch for each property, fully off when off: <span class="d">D27-367</span>. Other moves on the store's sheet and the Simple one, so each row adds up: <span class="d">D27-364</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+  </div>
+
+  <h3>The kitchen's day: Inventory, Restaurant</h3>
+  <p>The <span class="ui">Restaurant</span> tab of <span class="ui">Inventory</span> is the kitchen's stock, the way Bar stock is the bar's. It has two parts: <span class="ui">Today's sheet</span> and <span class="ui">Recipes</span>. The owner, an Admin, the GM and the Inventory Manager keep it: they mark the kitchen's store, set the recipes and count. Whoever sees the Store reads it, the kitchen manager and the chef among them.</p>
+  <p><b>Which store is the kitchen's.</b> Nothing is marked when the system is brought up to this release. Until a store is marked, a KOT takes nothing. Open <span class="ui">Inventory</span>, tap <span class="ui">Restaurant</span>, pick the store under <span class="ui">The kitchen's store</span> (usually the <i>Kitchen store</i>), and tap <span class="ui">Mark it the kitchen's</span>. <span class="ui">Change</span>, beside its name on the sheet, picks another. The Bar store and the Bar counter are never the kitchen's.</p>
+
+  <h3>Recipes: what each dish takes</h3>
+  <p>A recipe says what <b>one</b> of a dish takes from the kitchen store, in each Store item's own unit: Paneer Tikka takes <i>Paneer 0.1 kg</i> and <i>Butter 0.01 kg</i>. Once it is saved, <b>every KOT sent takes it off the kitchen store</b>, from whichever screen sent it.</p>
+  <ul>
+    <li>A <b>size</b> (a variation), a <b>side</b> and a numbered <b>add-on</b> have lines of their own, taken <b>on top of</b> the dish's. Left empty, they take nothing extra: Paneer Tikka (Full) may add another 0.1 kg of paneer, and (Half) nothing.</li>
+    <li>A <b>dish with no recipe sells as before and takes nothing</b>. The Recipes part lists every such dish at the top, so none is forgotten.</li>
+    <li>A custom add-on typed at the table has no recipe and takes nothing.</li>
+  </ul>
+  <ol class="steps">
+    <li>Open <span class="ui">Inventory</span>, tap <span class="ui">Restaurant</span>, then <span class="ui">Recipes</span>. The food on the menu is listed by section, each size under its dish, then the sides and the add-ons. <span class="ui">Find a dish</span> narrows it.</li>
+    <li>Tap <span class="ui">Edit</span> beside one. Tap <span class="ui">Add an ingredient</span>, pick the Store item and type how much one takes, in the unit shown beside it. Add as many lines as it needs; the cross takes one off.</li>
+    <li>Tap <span class="ui">Save</span>. Saved with no line, it takes nothing.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-48">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A9-48 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/inventory?tab=restaurant&amp;part=recipes</code>, with a recipe on two dishes and one dish left without, and Edit open on one of them</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the card “… dishes have no recipe”; 2 → a dish's line, its ingredients; 3 → a size under it, “Nothing extra”; 4 → in the dialog, an ingredient, how much and its unit; 5 → Add an ingredient; 6 → Save</dd>
+        <dt>File</dt><dd><code>img/A9-48.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A9-48.</b> Recipes.</figcaption>
+    <ol class="callouts"><li>The dishes with no recipe</li><li>What one of a dish takes</li><li>A size: on top of the dish</li><li>An ingredient, how much, its unit</li><li>Add an ingredient</li><li>Save</li></ol>
+  </figure>
+
+  <h3>Every day: the kitchen's sheet and its closing count</h3>
+  <p><span class="ui">Today's sheet</span> shows the kitchen store's business day, one line for each item it holds, moved or is in a recipe. Pick another <span class="ui">Day</span> to read an earlier one.</p>
+  <table>
+    <thead><tr><th style="width:24%">Column</th><th>What it says</th></tr></thead>
+    <tbody>
+      <tr><td>Opening</td><td>What the kitchen store held when the day began.</td></tr>
+      <tr><td>Received</td><td>Deliveries straight into it.</td></tr>
+      <tr><td>Moved in, Moved out</td><td>Moves from and to the other stores, and issues, returns and breakages recorded in the Store.</td></tr>
+      <tr><td>Used by KOTs</td><td>What the recipes of the dishes sent took.</td></tr>
+      <tr><td>Wastage</td><td>Waste recorded in the Store, and every dish struck after its KOT. The reasons are listed under the sheet.</td></tr>
+      <tr><td>Corrected</td><td>What the day's counts put right.</td></tr>
+      <tr><td>Closing</td><td>What it holds by the book: opening + received + moved in - moved out - used - wastage + corrected. <b>Below zero, it is red</b>.</td></tr>
+      <tr><td>Counted, Difference</td><td>The closing count, and how far it was from the book.</td></tr>
+    </tbody>
+  </table>
+  <ol class="steps">
+    <li>At the end of the day, open <span class="ui">Inventory</span>, <span class="ui">Restaurant</span>. <span class="ui">Today's sheet</span> opens on the business day.</li>
+    <li>Type the count of each item counted under <span class="ui">Counted</span>, in its unit. A line left blank is not counted, never taken as zero. The <span class="ui">Difference</span> shows as you type.</li>
+    <li>Tap <span class="ui">Save the closing count</span>. A difference is saved as a count correction against your name.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-49">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A9-49 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/inventory?tab=restaurant</code>, after a KOT with recipes, one dish struck after its KOT with a reason, an item below zero, and a count typed on one line</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the kitchen store's name and Change; 2 → Used by KOTs; 3 → Wastage; 4 → a Closing below zero, in red; 5 → the count typed, and its Difference; 6 → Save the closing count; 7 → “Wastage on this day” with the strike's reason</dd>
+        <dt>File</dt><dd><code>img/A9-49.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A9-49.</b> The kitchen's sheet, with the closing count typed in.</figcaption>
+    <ol class="callouts"><li>The kitchen's store</li><li>Used by KOTs</li><li>Wastage</li><li>Below zero, in red</li><li>The count and its difference</li><li>Save the closing count</li><li>The wastage, with its reasons</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A recipe is taken off when its KOT is <b>sent</b>, not when the bill is paid. A KOT always goes: an item the store does not have goes below zero and shows red, until a delivery or a count puts it right.</li>
+      <li>A dish struck <b>before</b> its KOT took nothing, so nothing comes back. Struck <b>after</b> (or made fewer), what it took stays used and shows as <b>wastage</b>, with the strike's reason: <span class="msg">“Struck after the KOT: guest left”</span>.</li>
+      <li>A bill voided after it was paid does not give its ingredients back: the food was made.</li>
+      <li>Bar stock switched off (A17.14) does not switch the kitchen off.</li>
+      <li>If an item moved after the sheet was opened (a KOT sent), the count is refused and names it: count it again.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Inventory's Restaurant tab, the kitchen store's daily sheet and recipes taken by every KOT: <span class="d">D27-373</span>. No recipe takes nothing and is listed; sizes and add-ons have their own lines; a KOT always goes, below zero in red; struck before the kitchen had it gives back, after counts as wastage with the reason: <span class="d">D27-374</span>.</p>
   </div>
 
   <!-- A9.12 -->

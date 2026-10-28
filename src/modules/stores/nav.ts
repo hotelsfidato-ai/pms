@@ -20,11 +20,12 @@ export const nav: ServiceNavEntry[] = [
     workingMenus: ["housekeeping", "stores", "kitchen_manager"],
     label: "Store", to: "/h/:code/stores", icon: Package, resource: "stock",
     keywords: ["stock", "inventory", "stores"], matchPrefix: true },
-  /* Inventory: the bar's stock, the restaurant's to come (the owner's D27-354). */
+  /* Inventory: the bar's stock (the owner's D27-354) and the kitchen's, with
+     its recipes (D27-373, D27-374). */
   { section: "store-and-equipment", order: 12,
     workingMenus: ["stores"],
     label: "Inventory", to: "/h/:code/inventory", icon: Wine, resource: "stock",
-    keywords: ["bar", "liquor", "pegs", "drinks", "bar stock"], matchPrefix: true },
+    keywords: ["bar", "liquor", "pegs", "drinks", "bar stock", "kitchen stock", "recipes", "recipe"], matchPrefix: true },
   /* Bar stock, beside the Kitchen in the Restaurant menu (the owner's D27-354):
      the bar's daily sheet, its bills, its set up. */
   { section: "point-of-sale", order: 45, workingMenus: ["bar"],
