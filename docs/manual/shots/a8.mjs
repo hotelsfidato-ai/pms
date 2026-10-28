@@ -530,4 +530,18 @@ export const SHOTS = [
       { n: 3, at: "text:Record", nth: 1, side: "top" },
     ],
   },
+  /* Bill history (the owner's D27-370): October's bills of the demo, the filters, the table. */
+  {
+    id: "A8-46", title: "Bill history", as: "General Manager",
+    path: "/pos/5EL/bill-history",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-bill-filters]", ms: 60000 },
+      { eval: "(() => { const i = document.querySelector('[data-bill-filters] input[type=date]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '2026-10-01'); i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()" },
+      { click: "text:Show bills" }, { waitFor: "css:table tbody tr", ms: 30000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "css:[data-bill-filters] input[type=date]", side: "top" },
+      { n: 2, at: "css:[data-bill-filters] input:not([type=date])", side: "top" },
+      { n: 3, at: "css:table tbody tr", side: "left" },
+      { n: 4, at: "text:Download to Excel", side: "bottom" },
+    ],
+  },
 ];

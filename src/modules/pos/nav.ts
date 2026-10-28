@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Receipt, MonitorSmartphone, Flame, UtensilsCrossed, Banknote, Plug, SlidersHorizontal,
-  CalendarClock,
+  CalendarClock, History,
 } from "lucide-react";
 import { can, canAccess, type Role } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
@@ -31,6 +31,12 @@ export const nav: ServiceNavEntry[] = [
   { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos", "bar"],
     label: "Till", to: "/pos/:code/till", icon: Receipt, resource: "payment",
     keywords: ["pos", "order", "restaurant bill"],
+    canSee: (role) => mayRingUp(role) },
+  /* Every finished bill of any dates (D27-370): the Till's own rule, the people
+     who may list an earlier bill there (roleGate GET /till/bills). */
+  { section: "point-of-sale", order: 25, workingMenus: ["front_desk", "pos", "bar"],
+    label: "Bill history", to: "/pos/:code/bill-history", icon: History, resource: "payment",
+    keywords: ["earlier bills", "old bills", "reprint", "duplicate bill", "void", "nc", "excel"],
     canSee: (role) => mayRingUp(role) },
   /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
      one outlet, targets sized for a thumb rather than a mouse. */

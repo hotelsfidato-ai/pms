@@ -2042,44 +2042,107 @@ till.get("/:code/till/orders", async (c) => {
    whose number holds what was typed, on any day. Opened on the Till, its
    Print the bill prints BILL · DUPLICATE (D27-292); who may print is as for
    today's bills. Only paid, voided and NC bills (D27-351): an open order is
-   on the Till already, and a bill closed unpaid has nothing to print. */
+   on the Till already, and a bill closed unpaid has nothing to print.
+
+   BILL HISTORY (the owner's D27-370, 27 October): the same question over a
+   RANGE of dates - `from` and `to`, either may be left off - narrowed by the
+   bill's number, table, guest (name or phone), payment mode, waiter and
+   outlet, every part optional and every one a bound parameter. `date` is
+   from = to = that day, so the Till asks as it always did. At most
+   BILLS_CAP rows answer; `capped` says so, and the screen says it. */
+const BILLS_CAP = 500;
+const BILL_MODES = ["cash", "card", "upi", "room", "function", "allowance", "split"];
+const isoDay = (v: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+/** A typed fragment for `ilike`, its own % and _ taken literally. */
+const likePart = (v: string) => v.replace(/[\\%_]/g, (m) => "\\" + m);
+
 till.get("/:code/till/bills", async (c) => {
-  const date = c.req.query("date") ?? "";
-  const no = (c.req.query("no") ?? "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) && !no) {
+  const q = (k: string) => (c.req.query(k) ?? "").trim();
+  const day = q("date");
+  const from = day || q("from");
+  const to = day || q("to");
+  const no = q("no");
+  const table = q("table");
+  const guest = q("guest");
+  const mode = q("mode").toLowerCase();
+  const waiter = q("waiter");
+  const outlet = q("outlet").toUpperCase();
+  /* `limit` may only ask for FEWER than the cap (a test, a small look). */
+  const cap = Math.min(BILLS_CAP, Math.max(1, Math.floor(Number(q("limit"))) || BILLS_CAP));
+  if (!from && !to && !no && !table && !guest) {
     return c.json(refuse("Pick a day, or type the bill's number."), 409);
   }
-  if (no.length > 40) return c.json(refuse("A bill number is at most 40 characters."), 409);
+  for (const d of [from, to]) {
+    if (d && !isoDay(d)) return c.json(refuse("Dates are written 2026-10-27."), 409);
+  }
+  if (from && to && from > to) return c.json(refuse("The first date is after the last."), 409);
+  if (no.length > 40 || table.length > 40 || guest.length > 60) {
+    return c.json(refuse("That is too long to search for."), 409);
+  }
+  if (mode && !BILL_MODES.includes(mode)) return c.json(refuse("Not a way of paying."), 409);
+  if (waiter && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waiter)) {
+    return c.json(refuse("Not a waiter."), 409);
+  }
+  /* A phone is found however it was typed: 98765 43210 finds 9876543210. */
+  const digits = /^[\d\s+()-]+$/.test(guest) ? guest.replace(/\D/g, "") : "";
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const { rows } = await client.query<{
       id: string; order_no: string; outlet: string; table_ref: string | null;
-      status: string; business_date: string; gross: string;
-      payment_method: string | null; opened_at: string; lines: string;
+      status: string; business_date: string; gross: string; payable: string;
+      payment_method: string | null; modes: string[]; opened_at: string; lines: string;
+      waiter: string | null; customer_name: string | null; customer_phone: string | null;
     }>(
       `select o.id::text, o.order_no, ou.code as outlet, o.table_ref,
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
+              (select payable from app.pos_order_total(o.id))::text as payable,
               o.payment_method,
+              array(select distinct t.method from pos_order_tenders t
+                     where t.order_id = o.id order by t.method)::text[] as modes,
               app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
-                where l.order_id = o.id and not l.voided)::text as lines
+                where l.order_id = o.id and not l.voided)::text as lines,
+              coalesce(sw.full_name, so.full_name) as waiter,
+              o.customer_name, o.customer_phone
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
+         /* LEFT joins: a name staff's row security hides prints as a dash. */
+         left join staff sw on sw.id = o.waiter_id
+         left join staff so on so.id = o.opened_by
         where o.hotel_id = $1 and o.status in ('settled', 'void', 'no_charge')
-          and ($2::date is null or o.business_date = $2::date)
-          and ($3 = '' or o.order_no ilike '%' || $3 || '%' escape '\\')
+          and ($2::date is null or o.business_date >= $2::date)
+          and ($3::date is null or o.business_date <= $3::date)
+          and ($4 = '' or o.order_no ilike '%' || $4 || '%' escape '\\')
+          and ($5 = '' or o.table_ref ilike '%' || $5 || '%' escape '\\')
+          and ($6 = '' or o.customer_name ilike '%' || $6 || '%' escape '\\'
+               or o.customer_phone ilike '%' || $6 || '%' escape '\\'
+               or ($7 <> '' and regexp_replace(coalesce(o.customer_phone, ''), '\\D', '', 'g') like '%' || $7 || '%'))
+          and ($8 = '' or o.payment_method = $8
+               or exists (select 1 from pos_order_tenders t where t.order_id = o.id and t.method = $8))
+          and ($9::uuid is null or coalesce(o.waiter_id, o.opened_by) = $9::uuid)
+          and ($10 = '' or ou.code = $10)
         order by o.business_date desc, o.opened_at desc
-        limit 100`,
-      [hotelId, date || null, no.replace(/[\\%_]/g, (m) => "\\" + m)],
+        limit $11`,
+      [hotelId, from || null, to || null, likePart(no), likePart(table), likePart(guest), digits,
+       mode, waiter || null, outlet, cap + 1],
     );
+    const { rows: outlets } = await client.query<{ code: string; name: string }>(
+      "select code, name from pos_outlets where hotel_id = $1 order by code", [hotelId]);
     return {
-      bills: rows.map((r) => ({
+      bills: rows.slice(0, cap).map((r) => ({
         id: r.id, orderNo: r.order_no, outlet: r.outlet, table: r.table_ref, status: r.status,
-        businessDate: r.business_date, gross: Number(r.gross), paymentMethod: r.payment_method,
+        businessDate: r.business_date, gross: Number(r.gross), payable: Number(r.payable),
+        paymentMethod: r.payment_method,
+        modes: r.modes.length ? r.modes : r.payment_method ? [r.payment_method] : [],
         openedAt: r.opened_at, lines: Number(r.lines),
+        waiter: r.waiter, guest: r.customer_name, phone: r.customer_phone,
       })),
+      capped: rows.length > cap,
+      cap,
+      outlets,
     };
   });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);

@@ -468,6 +468,35 @@ export async function listEarlierBills(
   return (await api<{ bills: OrderSummary[] }>(`/api/hotels/${hotelId}/till/bills?${q}`)).bills;
 }
 
+/** One line of Bill history (D27-370): the earlier-bill row, with who and how it was paid. */
+export interface BillHistoryRow extends OrderSummary {
+  /** What the guest paid: the bill's GRAND TOTAL. */
+  payable: number;
+  /** Every way it was paid, as the till took it: cash, card, upi, room, function, allowance. */
+  modes: string[];
+  waiter: string | null;
+  guest: string | null;
+  phone: string | null;
+}
+export interface BillHistoryAsk {
+  from?: string; to?: string; no?: string; table?: string; guest?: string;
+  mode?: string; waiter?: string; outlet?: string;
+}
+export interface BillHistory {
+  bills: BillHistoryRow[];
+  /** True when more matched than the server sends: `cap` is what it sent. */
+  capped: boolean;
+  cap: number;
+  outlets: { code: string; name: string }[];
+}
+
+/** Bill history (D27-370): the same route as the Till's earlier bill, over a range of dates and narrowed by what was typed. */
+export function listBillHistory(hotelId: string, ask: BillHistoryAsk): Promise<BillHistory> {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(ask)) if (v?.trim()) q.set(k, v.trim());
+  return api<BillHistory>(`/api/hotels/${hotelId}/till/bills?${q}`);
+}
+
 export async function getOrder(
   hotelId: string, orderId: string,
 ): Promise<Order | null> {

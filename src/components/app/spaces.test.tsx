@@ -64,15 +64,15 @@ describe("each space's menu", () => {
     }
     const pos = sidebarFor("owner", "5EL", ALL_ON, "pos").flatMap((s) => s.items);
     expect(pos.map((i) => i.label)).toEqual([
-      "Tables", "Table bookings", "Till", "Terminal", "Kitchen", "Bar stock", "Menu",
+      "Tables", "Table bookings", "Till", "Bill history", "Terminal", "Kitchen", "Bar stock", "Menu",
       "Close restaurant day", "Charges to rooms", "Restaurant setup",
     ]);
     expect(pos.filter((i) => !i.to.startsWith("/pos/5EL/")).map((i) => i.to)).toEqual([]);
-    expect(labels("front_desk", "pos")).toEqual(["Tables", "Till", "Terminal", "Close restaurant day"]);
+    expect(labels("front_desk", "pos")).toEqual(["Tables", "Till", "Bill history", "Terminal", "Close restaurant day"]);
   });
 
   it("keeps the waiter's, chef's and kitchen manager's whole menu in their one space (Q3)", () => {
-    expect(labels("pos", "pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
+    expect(labels("pos", "pos")).toEqual(["Guest requests", "Tables", "Till", "Bill history", "Terminal", "Close restaurant day"]);
     expect(labels("kitchen_manager", "pos")).toEqual(
       ["Guest requests", "Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
