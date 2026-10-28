@@ -145,6 +145,13 @@ Connection health turns red, the PMS emails that address once (at most once
 an hour per connection). Empty: no alert emails. It needs the
 `health-alert` draft in the workflow, below.
 
+### The 28 October paste: the daily reports in one email (D27-371)
+
+**Read the message** only, from `D:\fidato pms\.local\n8n\paste-28oct\read-the-message.js`:
+`OWNER-STEPS.md` part 6 has the steps and what happens if the PMS is
+updated first. It holds everything the 5 October paste below put in Read
+the message; Build the voucher message is unchanged.
+
 ### ⚠ The 5 October paste: two nodes, the whole code of each
 
 The live workflow lacks the `health-alert` email (D27-276), the

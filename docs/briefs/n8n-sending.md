@@ -157,6 +157,13 @@ server. One POST carries it. **In n8n:** a Convert to File node turns
 The `file` key is **absent**, not null, when there is no document, so the
 workflow can branch on whether it is there.
 
+**Several documents (D27-371, the daily reports in one email):** `files`, a
+list of the same `{ name, contentType, base64 }`, and the first of them also
+as `file`, so a workflow that reads only `file` still attaches one. The CRS
+workflow's **Read the message** attaches every one of `files` (binaries
+`data`, `data1`, … in order) and otherwise `file`. `messages_sent` keeps one
+row per report and address, each with its own PDF's name and size.
+
 ---
 
 ## What is already built, waiting on steps 1–5
