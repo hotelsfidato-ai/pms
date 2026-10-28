@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    363 pictures, 45 still to be taken. Built from the chapters in docs/manual/chapters.
+    363 pictures, 48 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -269,7 +269,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li class="here"><span class="c">A10</span><a class="t" href="#a10">Guests and guest messages</a><span class="state">In this book</span>
       <span class="s">A10.1 The Guests &amp;amp; CRM screens · A10.2 Guests · A10.3 A guest's record: the marks on a booking, and Edit guest · A10.4 Companies and agents · A10.5 Guest 360: one guest, every hotel · A10.6 The same person twice · A10.7 What goes out to guests · A10.8 The Guest messages screen · A10.9 When a message did not go · A10.10 Reviews · A10.11 In short</span></li>
     <li class="here"><span class="c">A11</span><a class="t" href="#a11">Reports</a><span class="state">In this book</span>
-      <span class="s">A11.1 Finding a report · A11.2 Every report works the same way · A11.3 The Manager report · A11.4 The Night audit report · A11.5 Occupancy and statistics: the month and the year · A11.6 Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues · A11.7 Statutory: Lodging tax, GST sales register, Form III register · A11.8 Accounting export: the month for the accountant · A11.9 The Store and equipment reports · A11.10 In short: which report answers which question</span></li>
+      <span class="s">A11.1 Finding a report · A11.2 Every report works the same way · A11.3 The Manager report · A11.4 The Night audit report · A11.5 Occupancy and statistics: the month and the year · A11.6 Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash · A11.7 Statutory: Lodging tax, GST sales register, Form III register · A11.8 Accounting export: the month for the accountant · A11.9 The Store and equipment reports · A11.10 In short: which report answers which question</span></li>
     <li class="here"><span class="c">A12</span><a class="t" href="#a12">Approvals, cash expenses, notifications</a><span class="state">In this book</span>
       <span class="s">A12.1 The System part of the menu · A12.2 Who approves what · A12.3 Approving or refusing · A12.4 A request that is not yours to decide · A12.5 What was decided, and by whom · A12.6 When you asked: reading the answer · A12.7 Cash expenses · A12.8 The bell · A12.9 The Notifications screen · A12.10 In short</span></li>
     <li class="here"><span class="c">A13</span><a class="t" href="#a13">Banquets, spa and laundry</a><span class="state">In this book</span>
@@ -3120,9 +3120,25 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><span class="ui">Taken this shift</span> lists what you took, by method. Only cash reaches the drawer: a card payment, or a bill sent to a company, is not in the tin.</li>
     <li>Money that was not a payment: under <span class="ui">In and out of the drawer</span>, click <span class="ui">Record</span>. Choose <span class="ui">What happened</span> (<span class="ui">Paid out</span>, <span class="ui">Cash in</span>, <span class="ui">To the safe</span>), type <span class="ui">How much</span> and <span class="ui">What was it for</span>, and click <span class="ui">Record</span>.</li>
-    <li>A <b>Paid out</b> waits for the GM's or the owner's yes. Until then it reads <span class="msg">“Waiting for a yes - not taken off the drawer yet”</span>.</li>
+    <li>A <b>Paid out</b> also needs its <span class="ui">Category</span>: Kitchen, Housekeeping, Maintenance, Office or Other (<span class="ui">Record</span> stays grey until one is chosen). Add the <span class="ui">Photo of the bill</span> if you have it: the phone's camera, or a file. It can be added later with <span class="ui">Add photo</span> under the paid-out; <span class="ui">Photo of the bill</span> opens it. A paid-out from before 27 October 2026 shows a dash for its category.</li>
+    <li>A <b>Paid out</b> waits for the GM's or the owner's yes. Until then it reads <span class="msg">“Waiting for a yes - not taken off the drawer yet”</span>. Every paid-out is in the <span class="ui">Petty cash</span> report (A11.6).</li>
     <li><span class="ui">The drawer</span>, on the right, adds it up: <span class="ui">Opening float</span>, <span class="ui">Cash taken</span>, money in and out, <span class="ui">Expected</span>, and <span class="ui">Counted</span>.</li>
   </ul>
+
+  <figure class="shot" id="fig-A4-22">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-22 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><span class="ui">Cashiering</span> with a drawer open, <span class="ui">Record</span>; What happened <span class="ui">Paid out</span>, How much 150, What was it for “Courier”, Category <span class="ui">Office</span>; not recorded</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Category; 2 → Photo of the bill; 3 → Record</dd>
+        <dt>File</dt><dd><code>img/A4-22.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-22.</b> A paid-out: its category, and the photo of its bill.</figcaption>
+    <ol class="callouts"><li>Category: one of five</li><li>Photo of the bill: the camera or a file</li><li>Record</li></ol>
+  </figure>
 
   <h3>At the end of your shift</h3>
   <ol class="steps">
@@ -5263,8 +5279,27 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">In and out of the drawer</span>, tap <span class="ui">Record</span>.</li>
     <li>Choose <span class="ui">What happened</span>: <b>Expense</b> (paid out, such as milk), <b>Cash in</b> (a top-up), <b>To the safe</b>, or <b>Due paid</b> (money owed, collected).</li>
     <li>Type <span class="ui">How much</span> and <span class="ui">What was it for</span>. This line is what somebody asks about tomorrow, so say it plainly.</li>
+    <li>For an <b>Expense</b>, choose its <span class="ui">Category</span>: Kitchen, Housekeeping, Maintenance, Office or Other. <span class="ui">Record</span> stays grey until one is chosen.</li>
+    <li>For an <b>Expense</b>, add the <span class="ui">Photo of the bill</span> if you have it: take it with the phone's camera, or pick a file. It can be added later.</li>
     <li>Tap <span class="ui">Record</span>.</li>
   </ol>
+
+  <figure class="shot" id="fig-A8-45">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A8-45 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><span class="ui">Close restaurant day</span>, the <span class="ui">Cash</span> step, <span class="ui">Record</span>; What happened <span class="ui">Expense</span>, How much 200, What was it for “Milk for the kitchen”, Category <span class="ui">Kitchen</span>; not recorded</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Category; 2 → Photo of the bill; 3 → Record</dd>
+        <dt>File</dt><dd><code>img/A8-45.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A8-45.</b> An expense: its category, and the photo of its bill.</figcaption>
+    <ol class="callouts"><li>Category: one of five</li><li>Photo of the bill: the camera or a file</li><li>Record</li></ol>
+  </figure>
+
+  <p>Each expense in the list shows its category after the word Expense; an expense recorded before 27 October 2026 shows a dash. Under it, <span class="ui">Photo of the bill</span> opens the photo, or <span class="ui">Add photo</span> adds one now - also after the day is closed. Every expense, with its category and photo, is in the <span class="ui">Petty cash</span> report (A11.6).</p>
 
   <figure class="shot" id="fig-A8-29">
     <img src="img/A8-29.png" alt="The Money in or out window: What happened, How much, What was it for, Record">
@@ -7093,7 +7128,7 @@ figure.shot.phone img { max-width: 72mm; }
     <thead><tr><th style="width:20%">Group</th><th style="width:36%">Reports</th><th>Who opens them</th></tr></thead>
     <tbody>
       <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Voids, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
-      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger or Cashier shift; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
+      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger, Cashier shift or Petty cash; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
       <tr><td>Statutory</td><td>Lodging tax, GST sales register, Form III register (A11.7)</td><td>The same as The day; the Form III register only for the Owner, Admin, General Manager, Hotel Manager and Reception</td></tr>
       <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report, Bar stock, FLR-1A/2A/3A register, FLR-3 register (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
     </tbody>
@@ -7185,7 +7220,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend, Supplier dues (owed on the business date; paid in the month so far)</td></tr>
       <tr><td>The whole month</td><td>Monthly occupancy, Monthly statistics, Lodging tax</td></tr>
       <tr><td>The calendar year, January to December</td><td>Yearly statistics</td></tr>
-      <tr><td>Any days you choose</td><td>Voids (A11.4), Accounting export (A11.8)</td></tr>
+      <tr><td>Any days you choose</td><td>Voids (A11.4), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
     </tbody>
   </table>
 
@@ -7409,7 +7444,7 @@ figure.shot.phone img { max-width: 72mm; }
   </div>
 
   <!-- A11.6 -->
-  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues</h2>
+  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash</h2>
 
   <h3>City ledger</h3>
   <p><span class="ui">City ledger</span> (<code>/reports/city-ledger</code>) is the bills sent to a company or a booking site, account by account, for the business date: <b>Opening Balance</b>, <b>Debit</b> (bills sent to the account), <b>Credit</b> (what the account paid, recorded on Company accounts), <b>Closing Balance</b>.</p>
@@ -7457,12 +7492,37 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
+  <h3>Petty cash</h3>
+  <p><span class="ui">Petty cash</span> (<code>/reports/petty-cash</code>) is every expense paid out of a restaurant's tin (A8.9) and the front desk's drawer (A4.10), together. It opens on the 1st of the month to the business date; change the two dates above it to see other days.</p>
+  <ul>
+    <li><b>Expenses, by day</b>: one line per expense - the date, where (the outlet, or Front desk), its category, what it was for, the amount, who recorded it, its approval (<b>Approved</b>, <b>Waiting</b>, <b>Asked for more</b>, <b>Refused</b>, or <b>Not asked</b> for one from before approvals began) and <b>Yes</b> under Photo when the bill's photo is on it. Each day ends with its total, and the report with the total of all.</li>
+    <li><b>By category</b>: Kitchen, Housekeeping, Maintenance, Office and Other - how many expenses, and how much is <b>Counted</b>, <b>Waiting for a yes</b> and <b>Refused</b>.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-27">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A11-27 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/reports/petty-cash</code>, after one expense recorded in the restaurant (Kitchen, with a photo) and one paid-out at the desk (Office), one of them approved</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the From and To dates; 2 → a day's band; 3 → an expense line's Approval; 4 → the day's total; 5 → By category</dd>
+        <dt>File</dt><dd><code>img/A11-27.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A11-27.</b> Petty cash: every expense, by day and by category.</figcaption>
+    <ol class="callouts"><li>The days shown</li><li>One day</li><li>An expense and its approval</li><li>The day's total: approved expenses only</li><li>By category</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
+      <li>Petty cash totals count an expense once it is approved, as the drawer and the tin count it. One waiting for a yes or refused is listed but not added; By category shows it in its own column.</li>
+      <li>In Petty cash the restaurant's expenses fall on their business day; the front desk's on the business day its drawer was opened.</li>
+      <li>A dash for a category is an expense recorded before categories began (27 October 2026).</li>
       <li>A receipt that was reversed is not money the cashier holds, so it is not counted - the same rule as the Manager report.</li>
       <li>“not on record” is never filled in with a name: naming somebody would be worse than the gap.</li>
-      <li>The Revenue Manager does not see City ledger, Guest ledger or Cashier shift.</li>
+      <li>The Revenue Manager does not see City ledger, Guest ledger, Cashier shift or Petty cash.</li>
     </ul>
   </div>
 
@@ -7700,6 +7760,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Who did not come?</td><td>No show</td><td>A11.6</td></tr>
       <tr><td>Which guests' bills moved, and what is left on them?</td><td>Guest ledger</td><td>A11.6</td></tr>
       <tr><td>What did each cashier take today?</td><td>Cashier shift</td><td>A11.6</td></tr>
+      <tr><td>What was paid out of the tins and drawers, and for what?</td><td>Petty cash</td><td>A11.6</td></tr>
       <tr><td>The month's check-out bills and their tax</td><td>Lodging tax</td><td>A11.7</td></tr>
       <tr><td>Every invoice and credit note, for GSTR-1</td><td>GST sales register</td><td>A11.7</td></tr>
       <tr><td>Which foreign guests are filed with the FRRO?</td><td>Form III register</td><td>A11.7</td></tr>
@@ -7902,7 +7963,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>At the front desk, open <span class="ui">Cashiering</span>; in a restaurant, open <span class="ui">Close restaurant day</span> and its <span class="ui">Cash</span> step (A8.9).</li>
     <li>Under <span class="ui">In and out of the drawer</span>, tap <span class="ui">Record</span>.</li>
     <li>Choose <span class="ui">What happened</span>: <span class="ui">Paid out</span> at the desk, <span class="ui">Expense</span> in a restaurant.</li>
-    <li>Type <span class="ui">How much</span> and <span class="ui">What was it for</span>, then tap <span class="ui">Record</span>.</li>
+    <li>Type <span class="ui">How much</span> and <span class="ui">What was it for</span>, choose its <span class="ui">Category</span>, add the <span class="ui">Photo of the bill</span> if you have it (A8.9, A4.10), then tap <span class="ui">Record</span>.</li>
   </ol>
   <p>The expense goes to Approvals as a <span class="ui">Cash expense</span>, named by its drawer and your words: <span class="msg">“Fidato Restaurant tin: Milk for the kitchen”</span>, or <span class="msg">“Front desk drawer: …”</span>. The GM or the owner decides it (A12.3). Not the person who paid it out.</p>
 

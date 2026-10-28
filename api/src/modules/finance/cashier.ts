@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { businessDateFor } from "../../businessDate.ts";
+import { categoryProblem, putExpensePhoto, serveExpensePhoto } from "./expenses.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -200,8 +201,11 @@ cashier.get("/:code/cashier-shift", async (c) => {
     const { rows: movements } = await client.query<{
       id: string; kind: string; amount: string; reason: string;
       recorded_by: string; at: string; approval: string | null; approval_note: string | null;
+      category: string | null; photo: boolean;
     }>(
-      `select m.id::text, m.kind, m.amount::text, m.reason,
+      `select m.id::text, m.kind, m.amount::text, m.reason, m.category,
+              exists (select 1 from attachments a where a.subject_table = 'cashier_movements'
+                         and a.subject_id = m.id) as photo,
               s.full_name as recorded_by, app.hotel_clock(m.hotel_id, m.recorded_at, 'HH24:MI') as at,
               ${EXPENSE_DECISION("status")} as approval,
               ${EXPENSE_DECISION("decision_note")} as approval_note
@@ -260,6 +264,8 @@ cashier.get("/:code/cashier-shift", async (c) => {
           /* A paid-out's yes (D27-242): pending, clarify, approved,
              rejected; null where nobody was asked. */
           approval: m.approval, approvalNote: m.approval_note,
+          /* The petty cash book (D27-370): null on one from before it. */
+          category: m.category, photo: m.photo,
         })),
         /* Paid-outs waiting for a yes: not in Expected yet. */
         waiting: Number(waiting!.waiting),
@@ -325,7 +331,7 @@ cashier.post("/:code/cashier-shift/open", async (c) => {
 });
 
 cashier.post("/:code/cashier-shift/movements", async (c) => {
-  type Body = { kind?: string; amount?: number; reason?: string };
+  type Body = { kind?: string; amount?: number; reason?: string; category?: string };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const KINDS = ["expense", "top_up", "withdrawal"];
@@ -340,6 +346,9 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
     return c.json(refuse(
       "What was it for? This is the line somebody asks about."), 409);
   }
+  /* The petty cash book's category (D27-370): one of five, on a paid-out. */
+  const noCategory = categoryProblem(input.kind, input.category);
+  if (noCategory) return c.json(refuse(noCategory), 409);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
@@ -356,11 +365,11 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into cashier_movements (hotel_id, shift_id, kind, amount,
-                                      reason, recorded_by)
-       values ($1,$2,$3,$4,$5,$6)
+                                      reason, recorded_by, category)
+       values ($1,$2,$3,$4,$5,$6,$7)
        returning id::text`,
       [hotelId, shift[0].id, input.kind, Number(input.amount).toFixed(2),
-       reason, session.staffId]);
+       reason, session.staffId, input.kind === "expense" ? input.category : null]);
     /* A paid-out waits for the GM's or the owner's yes (D27-242). */
     if (input.kind === "expense") {
       await client.query(
@@ -369,12 +378,17 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
         [hotelId, made[0]!.id, `Front desk drawer: ${reason}`,
          Number(input.amount).toFixed(2), session.staffId]);
     }
-    return { ok: true as const };
+    /* Its id, for the photo of the bill that may follow (D27-370). */
+    return { ok: true as const, id: made[0]!.id };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* A paid-out's photo of its bill (D27-370), when recorded or afterwards. */
+cashier.post("/:code/cashier-shift/movements/:id/photo", (c) => putExpensePhoto(c, "cashier_movements"));
+cashier.get("/:code/cashier-shift/movements/:id/photo", (c) => serveExpensePhoto(c, "cashier_movements"));
 
 cashier.post("/:code/cashier-shift/count", async (c) => {
   type Body = { denominations?: { value: number; count: number }[] };

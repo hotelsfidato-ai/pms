@@ -29,7 +29,7 @@
     <thead><tr><th style="width:20%">Group</th><th style="width:36%">Reports</th><th>Who opens them</th></tr></thead>
     <tbody>
       <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Voids, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
-      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger or Cashier shift; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
+      <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger, Cashier shift or Petty cash; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
       <tr><td>Statutory</td><td>Lodging tax, GST sales register, Form III register (A11.7)</td><td>The same as The day; the Form III register only for the Owner, Admin, General Manager, Hotel Manager and Reception</td></tr>
       <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report, Bar stock, FLR-1A/2A/3A register, FLR-3 register (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
     </tbody>
@@ -121,7 +121,7 @@
       <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend, Supplier dues (owed on the business date; paid in the month so far)</td></tr>
       <tr><td>The whole month</td><td>Monthly occupancy, Monthly statistics, Lodging tax</td></tr>
       <tr><td>The calendar year, January to December</td><td>Yearly statistics</td></tr>
-      <tr><td>Any days you choose</td><td>Voids (A11.4), Accounting export (A11.8)</td></tr>
+      <tr><td>Any days you choose</td><td>Voids (A11.4), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
     </tbody>
   </table>
 
@@ -345,7 +345,7 @@
   </div>
 
   <!-- A11.6 -->
-  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues</h2>
+  <h2 id="a11-6"><span class="n">A11.6</span>Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash</h2>
 
   <h3>City ledger</h3>
   <p><span class="ui">City ledger</span> (<code>/reports/city-ledger</code>) is the bills sent to a company or a booking site, account by account, for the business date: <b>Opening Balance</b>, <b>Debit</b> (bills sent to the account), <b>Credit</b> (what the account paid, recorded on Company accounts), <b>Closing Balance</b>.</p>
@@ -393,12 +393,37 @@
     </ol>
   </figure>
 
+  <h3>Petty cash</h3>
+  <p><span class="ui">Petty cash</span> (<code>/reports/petty-cash</code>) is every expense paid out of a restaurant's tin (A8.9) and the front desk's drawer (A4.10), together. It opens on the 1st of the month to the business date; change the two dates above it to see other days.</p>
+  <ul>
+    <li><b>Expenses, by day</b>: one line per expense - the date, where (the outlet, or Front desk), its category, what it was for, the amount, who recorded it, its approval (<b>Approved</b>, <b>Waiting</b>, <b>Asked for more</b>, <b>Refused</b>, or <b>Not asked</b> for one from before approvals began) and <b>Yes</b> under Photo when the bill's photo is on it. Each day ends with its total, and the report with the total of all.</li>
+    <li><b>By category</b>: Kitchen, Housekeeping, Maintenance, Office and Other - how many expenses, and how much is <b>Counted</b>, <b>Waiting for a yes</b> and <b>Refused</b>.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-27">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A11-27 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/reports/petty-cash</code>, after one expense recorded in the restaurant (Kitchen, with a photo) and one paid-out at the desk (Office), one of them approved</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the From and To dates; 2 → a day's band; 3 → an expense line's Approval; 4 → the day's total; 5 → By category</dd>
+        <dt>File</dt><dd><code>img/A11-27.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A11-27.</b> Petty cash: every expense, by day and by category.</figcaption>
+    <ol class="callouts"><li>The days shown</li><li>One day</li><li>An expense and its approval</li><li>The day's total: approved expenses only</li><li>By category</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
+      <li>Petty cash totals count an expense once it is approved, as the drawer and the tin count it. One waiting for a yes or refused is listed but not added; By category shows it in its own column.</li>
+      <li>In Petty cash the restaurant's expenses fall on their business day; the front desk's on the business day its drawer was opened.</li>
+      <li>A dash for a category is an expense recorded before categories began (27 October 2026).</li>
       <li>A receipt that was reversed is not money the cashier holds, so it is not counted - the same rule as the Manager report.</li>
       <li>“not on record” is never filled in with a name: naming somebody would be worse than the gap.</li>
-      <li>The Revenue Manager does not see City ledger, Guest ledger or Cashier shift.</li>
+      <li>The Revenue Manager does not see City ledger, Guest ledger, Cashier shift or Petty cash.</li>
     </ul>
   </div>
 
@@ -636,6 +661,7 @@
       <tr><td>Who did not come?</td><td>No show</td><td>A11.6</td></tr>
       <tr><td>Which guests' bills moved, and what is left on them?</td><td>Guest ledger</td><td>A11.6</td></tr>
       <tr><td>What did each cashier take today?</td><td>Cashier shift</td><td>A11.6</td></tr>
+      <tr><td>What was paid out of the tins and drawers, and for what?</td><td>Petty cash</td><td>A11.6</td></tr>
       <tr><td>The month's check-out bills and their tax</td><td>Lodging tax</td><td>A11.7</td></tr>
       <tr><td>Every invoice and credit note, for GSTR-1</td><td>GST sales register</td><td>A11.7</td></tr>
       <tr><td>Which foreign guests are filed with the FRRO?</td><td>Form III register</td><td>A11.7</td></tr>

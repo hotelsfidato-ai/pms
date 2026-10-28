@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-27 · The petty cash book in Close restaurant day (the owner's D27-370), a helper's lane
+
+**Shipped** Close restaurant day › Cash › Record › Expense asks its **Category** (one of five, required) and takes the **Photo of the bill** (optional), finance's `ExpenseFields` through its front door. `till.ts`: `POST /:code/till/day-end/movements` refuses a new expense without a category before the first write, stores it and returns the id; the day's movements carry `category` and `photo`; `POST/GET /:code/till/day-end/movements/:id/photo` wrap finance's `putExpensePhoto`/`serveExpensePhoto` (MEMORY 436), a closed day's expense too (DAY_END to add; the day's readers or `invoice` to read). Each expense in the list shows its category (a dash before 27 October) and its photo or Add photo. Manual A8.9, picture plan A8-45.
+
+**Proved** `src/modules/pos/pettyCash.test.tsx`; the server's half in `api/test/modules/finance/pettyCash.test.ts`; `api/test/modules/pos/till.test.ts` given a category on its two expenses.
+
+---
+
 ## 2026-10-26 · The Fidato Printer app updates itself (D27-365, D27-366)
 
 **Shipped** Fidato Printer 1.1.0 (`printer/`): `electron-updater` 6.8.10, generic provider at `https://api.fidatohotels.com/downloads/`; it checks at start and every 24 hours (packaged only), downloads a newer version and installs it at once, silently, after any slip in the printer's hands; restarted with `--updated` it stays by the clock with no window. `deploy/nginx.conf` serves exactly the installer, its `.blockmap` and `latest.yml` from `/var/www/fidato-downloads/`. The manual (A8) and `KOT-STATION-SETUP.md` say it updates itself. **Proved** `node --check printer/main.js`; `npm run dist` wrote the exe, `latest.yml` (checksum matches the exe) and the blockmap; the packaged app against a local feed logged "not available" for 1.1.0 and, with the feed down, logged `ERR_CONNECTION_REFUSED` and kept running; `manual.test.ts`. Not proved: a real install of a newer version (it would install the app on this PC), and `nginx -t` (no nginx here; launch.sh runs it before reloading). **Left open** Version 1.0.0 on the BAR PC has no updater: install 1.1.0 there once by hand.

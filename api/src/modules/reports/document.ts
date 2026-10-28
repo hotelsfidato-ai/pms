@@ -103,7 +103,9 @@ export type ReportKey =
   | "flr-daily"
   | "flr-monthly"
   /* What we owe suppliers, and what was paid (D27-370). */
-  | "supplier-dues";
+  | "supplier-dues"
+  /* The petty cash book (D27-370). */
+  | "petty-cash";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -128,6 +130,7 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "flr-daily",
   "flr-monthly",
   "supplier-dues",
+  "petty-cash",
 ];
 
 /** The Store and equipment reports (phase 3A): read by D27-240's readers,

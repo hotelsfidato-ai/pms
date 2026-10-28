@@ -8,7 +8,7 @@ import {
   MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
 } from "@/modules/reports/pages/Statistics";
 import {
-  CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage,
+  CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage, PettyCashPage,
 } from "@/modules/reports/pages/Ledgers";
 import VoidsPage from "@/modules/reports/pages/Voids";
 import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
@@ -43,7 +43,8 @@ export const routes = (
     <Route path="/reports/lodging-tax" element={<RequireAccess path="/reports/lodging-tax" resource="report"><LodgingTaxPage /></RequireAccess>} />
     <Route path="/reports/guest-ledger" element={<RequireAccess path="/reports/guest-ledger" resource="report"><GuestLedgerPage /></RequireAccess>} />
     <Route path="/reports/cashier-shift" element={<RequireAccess path="/reports/cashier-shift" resource="report"><CashierShiftPage /></RequireAccess>} />
-    <Route path="/reports/gst-sales" element={<RequireAccess path="/reports/gst-sales" resource="report"><GstSalesPage /></RequireAccess>} />
+    <Route path="/reports/petty-cash" element={<RequireAccess path="/reports/petty-cash" resource="report"><PettyCashPage /></RequireAccess>} />
+    <Route path="/reports/gst-sales"element={<RequireAccess path="/reports/gst-sales" resource="report"><GstSalesPage /></RequireAccess>} />
     <Route
       path="/reports/c-form"
       element={<RequireAccess path="/reports/c-form" resource="customer"><CFormPage /></RequireAccess>}

@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-27 · The Petty cash report (the owner's D27-370), a helper's lane
+
+**Shipped** `api/src/modules/reports/builders/pettyCash.ts`, key `petty-cash` (screen, PDF, Excel and CSV from one document): every expense from the restaurant's tins and the front desk's drawers, by day (date, where, category, what for, amount, recorded by, approval, photo; a total per day and in all) and by category (expenses, Counted, Waiting for a yes, Refused). Totals count what the drawer counts, `app.cash_expense_counts` (D27-242). From the 1st of the month to the business date, or the days chosen (`PettyCashPage` in `pages/Ledgers.tsx`). Read as Cashier shift is: roleGate `MONEY_REPORT`, the file route's `MONEY_REPORTS`, the menu's `seesMoney` - not the revenue manager. All reports lists it under Money owed. Manual A11.6, picture plan A11-25.
+
+**Proved** `api/test/modules/finance/pettyCash.test.ts` (rows, totals, refused to the revenue manager on screen and as a file), `src/modules/reports/pettyCash.test.tsx`.
+
+---
 ## 2026-10-28 · The Voids report (the owner's D27-370)
 
 Branch `worktree-agent-a2db7e340a555ebc7`, copy `.claude\worktrees\agent-a2db7e340a555ebc7`, on cp6 at `dc06985a`.

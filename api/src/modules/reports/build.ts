@@ -16,6 +16,7 @@ import { barStockReport } from "./builders/barStock.ts";
 import { flrDaily, flrMonthly } from "./builders/flr.ts";
 import { supplierDuesReport } from "./builders/supplierDues.ts";
 import { voidsReport } from "./builders/voids.ts";
+import { pettyCashReport } from "./builders/pettyCash.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    buildReport — the one door to every report's figures
@@ -63,6 +64,8 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
   /* Owed on the date, and paid in the window to it (D27-370). */
   "supplier-dues": (c, h, p) => supplierDuesReport(c, h, from(p), p.asOn),
+  /* The petty cash book (D27-370): the 1st of the month to the date. */
+  "petty-cash": (c, h, p) => pettyCashReport(c, h, from(p), p.asOn),
 };
 
 /** The Bar stock switch (D27-367): its three reports are refused where it is off -

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { dateShort } from "@/lib/format";
-import { Switch } from "@/components/ui";
+import { Input, Switch } from "@/components/ui";
 import { DocumentReport } from "@/modules/reports/components/DocumentReport";
 import { monthOf } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -47,6 +47,31 @@ export function CityLedgerPage() {
           onCheckedChange={setIgnoreZero}
           label="Ignore zero balance account"
         />
+      }
+    />
+  );
+}
+
+/* ── Petty cash (D27-370) ─────────────────────────────────────────── */
+
+/* Every paid-out, the restaurant's and the front desk's, from the 1st of the
+   month to the business date, or the days chosen. */
+export function PettyCashPage() {
+  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+  const [to, setTo] = useState(BUSINESS_DATE);
+  const ok = Boolean(from && to && from <= to);
+  return (
+    <DocumentReport
+      report="petty-cash"
+      title="Petty cash"
+      period={ok ? `${dateShort(from)} to ${dateShort(to)}` : "Choose the days"}
+      query={ok ? { from, asOn: to } : { from: BUSINESS_DATE, asOn: BUSINESS_DATE }}
+      what="the petty cash book"
+      controls={
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </div>
       }
     />
   );

@@ -122,6 +122,12 @@ const GROUPS: Group[] = [
         path: "/reports/supplier-dues",
         description: "What we owe each supplier on a date, bill by bill, and the payments made.",
       },
+      {
+        title: "Petty cash",
+        icon: Wallet,
+        path: "/reports/petty-cash",
+        description: "Every expense paid out of the restaurant's tin and the front desk's drawer, by day and category.",
+      },
     ],
   },
   {

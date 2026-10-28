@@ -1939,6 +1939,9 @@ export interface DayEnd {
     reason: string; recordedBy: string | null; at: string;
     /** A paid-out's yes (D27-242); null where nobody was asked. */
     approval?: string | null; approvalNote?: string | null;
+    /** The petty cash book (D27-370): a paid-out's category, null on one
+        from before it; whether its bill's photo is on it. */
+    category?: string | null; photo?: boolean;
   }[];
   cash: {
     opening: number;
@@ -1969,8 +1972,8 @@ export async function getDayEnd(
 
 export async function recordMovement(
   hotelId: string,
-  input: { outlet?: string; kind: MovementKind; amount: number; reason: string },
-): Promise<Refusal> {
+  input: { outlet?: string; kind: MovementKind; amount: number; reason: string; category?: string },
+): Promise<Refusal<{ id?: string }>> {
   return till(hotelId, "day-end/movements", input);
 }
 
@@ -2000,16 +2003,17 @@ export async function closeDay(
 }
 
 /** One shape for all three, because all three refuse the same way. */
-type Refusal = { ok: true } | { ok: false; reason: string };
+type Refusal<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 
 async function till(
   hotelId: string, path: string, body: unknown,
-): Promise<Refusal> {
+): Promise<Refusal<{ id?: string }>> {
   try {
-    await api(`/api/hotels/${hotelId}/till/${path}`, {
+    const res = await api<{ id?: string } | null>(`/api/hotels/${hotelId}/till/${path}`, {
       method: "POST", body: JSON.stringify(body),
     });
-    return { ok: true };
+    /* A movement's id, for the photo of its bill (D27-370). */
+    return res?.id ? { ok: true, id: res.id } : { ok: true };
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;

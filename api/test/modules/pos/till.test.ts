@@ -2181,7 +2181,7 @@ describe("day end", () => {
     const before = await dayEnd();
 
     await post("/api/hotels/5EL/till/day-end/movements",
-      { kind: "expense", amount: 300, reason: "vegetables" });
+      { kind: "expense", amount: 300, reason: "vegetables", category: "Kitchen" });
     await post("/api/hotels/5EL/till/day-end/movements",
       { kind: "top_up", amount: 500, reason: "change from the safe" });
 
@@ -2308,7 +2308,7 @@ describe("day end", () => {
 
   it("will not take a movement against a closed day", async () => {
     const res = await post("/api/hotels/5EL/till/day-end/movements",
-      { kind: "expense", amount: 50, reason: "late delivery" });
+      { kind: "expense", amount: 50, reason: "late delivery", category: "Kitchen" });
     expect(res.status).toBe(409);
     /* A correction is a movement on TODAY, not an edit of yesterday. */
     expect(((await res.json()) as { reason: string }).reason)

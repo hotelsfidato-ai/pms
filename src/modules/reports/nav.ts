@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban, Wallet,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -89,6 +89,11 @@ export const nav: ServiceNavEntry[] = [
     label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
     canSee: seesMoney,
     keywords: ["drawer", "takings"], listed: false },
+  /* The petty cash book (D27-370): money paid out, read as Cashier shift is. */
+  { section: "reports", order: 135,
+    label: "Petty cash", to: "/reports/petty-cash", icon: Wallet, resource: "report",
+    canSee: seesMoney,
+    keywords: ["expenses", "paid out", "petty cash book", "bills"], listed: false },
   /* The Store and equipment (phase 3A): one search away, and in All reports. */
   { section: "reports", order: 145,
     label: "Store reports", to: STOCK_REPORTS_PATH, icon: Warehouse, resource: "stock",

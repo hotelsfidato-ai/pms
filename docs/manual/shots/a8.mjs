@@ -11,6 +11,10 @@
 // Taken by: node docs/manual/tools/shoot.mjs a8 [ids...]
 
 const PRINTERS = "http://localhost:5199";
+/* An expense's Category (D27-370): the dialog's second select, set as React hears it. */
+const PICK_CATEGORY = (c) => `(() => { const s = document.querySelectorAll('[role=dialog] select')[1];
+  Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(c)});
+  s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`;
 const TOAST = "css:[role=region] [role=status]";
 
 export const SHOTS = [
@@ -507,6 +511,23 @@ export const SHOTS = [
       { n: 2, at: "text:What it prints", side: "left" },
       { n: 3, at: "text:A heading line, your own words (blank: none)", side: "left" },
       { n: 4, at: "css:[data-kot-width]", side: "right" },
+    ],
+  },
+  /* The petty cash book (D27-370): an expense's category and the photo of its bill. */
+  {
+    id: "A8-45", title: "An expense: its category, and the photo of its bill", as: "General Manager",
+    path: "/pos/5EL/day-end",
+    steps: [
+      { click: "text:What is in the tin" }, { waitFor: "text:Count the drawer" },
+      { click: "text:Record" }, { waitFor: "text:Money in or out" },
+      { type: ["css:[role=dialog] input[type='number']", "200"] },
+      { type: ["css:[role=dialog] textarea", "Milk for the kitchen"] },
+      { eval: PICK_CATEGORY("Kitchen") },
+    ],
+    marks: [
+      { n: 1, at: "text:Category", side: "left" },
+      { n: 2, at: "text:Photo of the bill", side: "left" },
+      { n: 3, at: "text:Record", nth: 1, side: "top" },
     ],
   },
 ];

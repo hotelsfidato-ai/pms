@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { getDayEnd, recordMovement, openDay, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
+import { ExpenseFields, ExpensePhoto, attachExpensePhoto, expensePhotoPath } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DAY END
@@ -644,20 +645,27 @@ function Movements({ hotelId, day, onDone }: {
   const [kind, setKind] = useState<MovementKind>("expense");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  /* The petty cash book (D27-370): a paid-out's category and bill. */
+  const [category, setCategory] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const closed = Boolean(day.closedAt);
   const chosen = MOVEMENTS.find((m) => m.kind === kind)!;
+  const expense = kind === "expense";
 
   const submit = async () => {
     setSaving(true);
     const res = await recordMovement(hotelId, {
-      kind, amount: Number(amount), reason,
+      kind, amount: Number(amount), reason, ...(expense ? { category } : {}),
     });
+    if (!res.ok) { setSaving(false); return toast.error("Not recorded", res.reason); }
+    const photo = expense && file && res.id
+      ? await attachExpensePhoto(expensePhotoPath(hotelId, "till", res.id), file) : { ok: true as const };
     setSaving(false);
-    if (!res.ok) return toast.error("Not recorded", res.reason);
-    setOpen(false); setAmount(""); setReason("");
-    toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
+    setOpen(false); setAmount(""); setReason(""); setCategory(""); setFile(null);
+    if (photo.ok) toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
+    else toast.error("Recorded, without its photo", photo.reason);
     onDone();
   };
 
@@ -692,8 +700,16 @@ function Movements({ hotelId, day, onDone }: {
                   <div className="min-w-0 flex-1">
                     <p className="text-base">{m.reason}</p>
                     <p className="text-sm text-grey-500">
-                      {spec?.label ?? m.kind} · {m.recordedBy ?? "-"} · {m.at}
+                      {spec?.label ?? m.kind}
+                      {/* The petty cash book (D27-370): a dash before it. */}
+                      {m.kind === "expense" && ` · ${m.category ?? "-"}`} · {m.recordedBy ?? "-"} · {m.at}
                     </p>
+                    {m.kind === "expense" && (
+                      <div className="mt-1">
+                        <ExpensePhoto path={expensePhotoPath(hotelId, "till", m.id)} photo={Boolean(m.photo)}
+                          title={`Bill: ${m.reason}`} onAdded={onDone} />
+                      </div>
+                    )}
                     {/* A paid-out waits for the GM's or owner's yes (D27-242). */}
                     {waitsOrRefused(m) && (
                       <p className={cn("text-sm", m.approval === "rejected" ? "text-danger" : "text-warning-dark")}>
@@ -757,13 +773,15 @@ function Movements({ hotelId, day, onDone }: {
               )}
             </Field>
 
+            {expense && <ExpenseFields category={category} onCategory={setCategory} onFile={setFile} />}
+
             <div className="flex gap-2">
               <DialogClose asChild>
                 <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
               </DialogClose>
               <Button variant="primary"
                 onClick={submit}
-                disabled={saving || !amount || !reason.trim()}
+                disabled={saving || !amount || !reason.trim() || (expense && !category)}
                 className="h-12 flex-1"
               >
                 Record
