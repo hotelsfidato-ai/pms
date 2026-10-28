@@ -5,6 +5,38 @@ shape as the root `CHANGELOG.md`, which is the master's.
 
 ---
 
+## 2026-10-29 · The one-hotel restore brings a guest's ID documents back (release 15, D27-376)
+
+**Asked for:** the owner, D27-376: "a brought-back guest's ID documents come
+back with the guest".
+
+**Why they did not:** what a guest's ID says lives in `guest_documents`, one row
+per guest, a shared ("group") table. The tool read a shared table only when
+something points at it, and nothing points at `guest_documents`, so it was never
+compared and never written. The ID photo's row (`guest_id_photos`) is the
+hotel's own and already came back with its stay; the photo itself is encrypted
+in Google Drive (D27-209), never on the server, and nothing in the PMS deletes
+it when a guest's rows go.
+
+**Shipped**
+- `deploy/restore-hotel.sql`: `guest_documents` is read, and a missing one comes
+  back exactly when its guest does, right after the guest; never for a guest
+  still in live. The rules are unchanged: insert only, missing only, parents
+  first, one transaction, triggers on; append-only, "never", people and
+  properties listed, not written.
+- The look lists the **ID photos coming back**, by booking reference (never a
+  guest's name: the output may be sent on), and says the photo is in Google
+  Drive, out of the tool's reach: the owner, an administrator or the GM opens
+  each once in the PMS. The tool never reaches Google.
+- `db/tests/restore-hotel.sh`: the guest also loses what their ID says and their
+  ID photo's row, and a guest with no 5EL booking loses what their ID says
+  alone. Both of the guest's rows come back identical, after the guest; the
+  other guest's does not; the look lists the photo by its booking.
+- `deploy/README.md`, "Bringing back one hotel": what comes back now, the ID
+  photos list, and opening each photo once in step 4.
+
+---
+
 ## 2026-10-29 · A4, the one-hotel restore tool (release 15, D27-373)
 
 **Asked for:** plan A's A4 (`docs/plans/resilience-a.md`): when one hotel's data

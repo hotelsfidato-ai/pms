@@ -587,7 +587,11 @@ hotel's code again. Restoring the whole database is a different job
 **What it brings back, and what it never does.** Only rows that are **missing**
 in the live system come back, as they were in the backup, with the shared rows
 they need (the guest of a booking, its company), parents first (the guest, then
-the booking, then its bill), in one go: all of them or none. It never:
+the booking, then its bill), in one go: all of them or none. **A guest who comes
+back brings their ID documents** (D27-376): what their ID says (type, number,
+expiry, visa, address) right after the guest, and the row of their ID photo with
+the stay. A guest who is still in the live system is not brought back, and
+neither is an ID document of theirs that went missing alone. It never:
 
 - overwrites a row that changed since the backup (the live one is right);
 - touches a row that is new since the backup;
@@ -626,12 +630,18 @@ sudo -u postgres bash /opt/fidato/deploy/restore-hotel.sh AMR /var/backups/fidat
 For a copy already restored to a minute (A3, `fidato_pitr`), name the database
 instead of the file: it is read and left as it is.
 
-It takes under a minute and prints three lists:
+It takes under a minute and prints three lists, and a fourth when it applies:
 
 - **What differs:** each table where the hotel has rows missing in live,
   changed since or new since.
 - **Stays missing:** what this tool will not write, and why.
 - **Could come back:** the rows the second step would write, in order.
+- **ID photos coming back:** by booking reference. The photo itself is not on
+  the server: it is encrypted with the hotel's password and kept in Google
+  Drive (D27-209), and the tool never reaches Drive. Only the row comes back.
+  Nothing in the PMS deletes the Drive file when a guest's rows go (only a
+  person removing the photo, or the guest replacing it, does), so it should
+  still be there; step 4 opens it once to be sure.
 
 The hotels can keep working meanwhile: the look only reads the live system.
 
@@ -647,7 +657,11 @@ and nothing is written. Then it says what came back, what the database itself
 did as they went in (its audit lines, for example), and `committed`.
 
 **4 · Check:** *the PMS, in your browser*: open the hotel and look at what
-came back. What "stays missing" is yours to decide; ask before acting on it.
+came back. For each ID photo the look listed, the owner, an administrator or
+the GM opens it once (Online check-in, ID photos kept) to see that it shows;
+one that will not open means the hotel's ID photo password has changed since,
+or the file was taken out of Drive by hand. What "stays missing" is yours to
+decide; ask before acting on it.
 
 **If the hotel itself is gone** (its row in `hotels`), the tool refuses: every
 row of a hotel hangs off that row. It must come back first, by hand, and that
