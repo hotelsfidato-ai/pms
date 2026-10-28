@@ -231,7 +231,8 @@ The reader uses about 300 a day, plus one or two for each booking changed.
 ## 6 · The daily reports in one email (D27-371, the CRS's n8n, in your browser)
 
 After the night audit, each address now gets **one email** with every report it is set to get:
-the subject **"<Hotel> daily reports - <date>"**, each report's key figures under its name, and
+the subject **"<Hotel> daily reports - <date>"** (e.g. "5 Elements Akkalkot daily reports - 26 Oct 2026",
+D27-372), each report's key figures under its name, and
 **each report as its own PDF**, all attached. Only the node **Read the message** of the sending
 workflow changes. Nothing else in n8n changes, and no setting on the server.
 

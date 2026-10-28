@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { app } from "../../../src/server.ts";
-import { closePool } from "../../../src/db.ts";
+import { closePool, withUser } from "../../../src/db.ts";
 import { runInvoices } from "../../../src/modules/guest-messaging/invoices.ts";
 import { runReportEmails } from "../../../src/modules/guest-messaging/reportEmails.ts";
 import { inr } from "../../../src/reportRender.ts";
@@ -425,6 +425,24 @@ describe("daily report emails after the night audit (D27-280)", () => {
     received = [];
     expect(await runReportEmails()).toEqual({ due: 0, sent: 0 });
     expect(sent(), "never twice").toEqual([]);
+  });
+
+  it("wait, the whole email, while one of its reports cannot be built (D27-372)", async () => {
+    await save(gmId, ["manager", "night-audit"].map((key) =>
+      ({ key, isOn: true, addresses: ["owner@example.com", "gm@example.com"] })));
+    await audit("2000-02-07");
+    let builds = 0;
+    const firstFails = <T,>(id: string, fn: (c: never) => Promise<T>): Promise<T> => {
+      builds += 1;
+      if (builds === 1) return Promise.reject(new Error("a report that will not build"));
+      return withUser(id, fn as never) as Promise<T>;
+    };
+    expect(await runReportEmails(undefined, firstFails)).toEqual({ due: 4, sent: 0 });
+    expect(sent(), "no address gets an email with a report missing").toEqual([]);
+    expect(await rowsFor("2000-02-07"), "nothing written: all four still owed").toEqual([]);
+
+    expect(await runReportEmails()).toEqual({ due: 4, sent: 4 });
+    expect(sent().map((m) => m.files?.length), "then whole, both reports in each").toEqual([2, 2]);
   });
 
   it("try a failed email again with every report in it, three tries and no more", async () => {

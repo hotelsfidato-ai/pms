@@ -381,7 +381,7 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
       data: { reportTitle: "Night audit report", hotelName: "Test Hotel", businessDate: "02/10/2026",
         keyFigures: "Rooms occupied: 12 of 18\nRoom revenue with tax: ₹1,23,456.00\nMoney <taken>: -" } }) });
     expect(report!.json).toMatchObject({ stop: false, to: "owner@example.com", attachments: "data",
-      subject: "Test Hotel daily reports - 02/10/2026" });
+      subject: "Test Hotel daily reports - 2 Oct 2026" });
     expect(report!.json["text"], "a single report from before D27-371: its title from reportTitle")
       .toContain("Night audit report\n\nRooms occupied");
     expect(report!.json["text"]).toContain("Rooms occupied: 12 of 18\nRoom revenue with tax: ₹1,23,456.00");

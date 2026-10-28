@@ -192,8 +192,9 @@ export async function runReportEmails(
   result.due = owed.length;
 
   /* Each report built once for all its addresses. A report that cannot be
-     built is left out of the email and stays owed (nothing is written about
-     it), so it goes by itself on a later sweep once it builds. */
+     built holds back every email it belongs in (the owner's D27-372): nothing
+     is written about them, so they all stay owed and go together on a later
+     sweep, once every one builds. */
   const built = new Map<string, { title: string; figures: Figure[]; bytes: Uint8Array } | null>();
   const buildKey = (o: Owed) => [o.hotelId, o.businessDate, o.report, o.builtBy].join("/");
   for (const o of owed) {
@@ -218,12 +219,12 @@ export async function runReportEmails(
      owed to that address that day, in DAILY_REPORTS's order, a PDF each. */
   const emails = new Map<string, Owed[]>();
   for (const o of owed) {
-    if (!built.get(buildKey(o))) continue;
     const key = [o.hotelId, o.businessDate, o.address].join("/");
     emails.set(key, [...(emails.get(key) ?? []), o]);
   }
   const order = (o: Owed) => DAILY_REPORTS.findIndex((r) => r.key === o.report);
   for (const list of emails.values()) {
+    if (list.some((o) => !built.get(buildKey(o)))) continue;
     list.sort((a, b) => order(a) - order(b));
     const to = list[0]!;
     const reports = list.map((o) => built.get(buildKey(o))!);

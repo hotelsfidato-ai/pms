@@ -85,10 +85,10 @@ it("the daily reports in one email (D27-371): each report's title and table, eve
       keyFigures: "Night audit report\nRooms occupied: 14 of 20\nA <b> figure: 3\n\nManager report\nOccupancy: 70.00%\n\nBar stock\nBar bills: ₹4,200" },
   });
   expect(out.json).toMatchObject({ stop: false, email: true, to: "gm@example.com", attachments: "data,data1,data2",
-    subject: "5 Elements Akkalkot daily reports - 26/10/2026" });
+    subject: "5 Elements Akkalkot daily reports - 26 Oct 2026" });
   expect(Object.values(out.binary).map((b) => [b.fileName, b.data]), "each PDF once, in the PMS's order").toEqual(
     files.map((f) => [f.name, f.base64]));
-  expect(out.json.text).toBe("The daily reports for 5 Elements Akkalkot, business date 26/10/2026.\n\n"
+  expect(out.json.text).toBe("The daily reports for 5 Elements Akkalkot, business date 26 Oct 2026.\n\n"
     + "Night audit report\n\nRooms occupied: 14 of 20\nA <b> figure: 3\n\nManager report\n\nOccupancy: 70.00%\n\n"
     + `Bar stock\n\nBar bills: ₹4,200\n\nEach report is attached as its own PDF.\n\n${SETTINGS_LINE}`);
   expect(out.json.html.match(/<table/g), "a table for each report").toHaveLength(3);
@@ -103,9 +103,9 @@ it("a daily report from the PMS before D27-371: one PDF, its title from reportTi
     data: { reportTitle: "Night audit report", hotelName: "5 Elements", businessDate: "05/10/2026",
       keyFigures: "Occupancy: 82%\nRoom revenue: ₹1,20,000" },
   });
-  expect(out.json).toMatchObject({ attachments: "data", subject: "5 Elements daily reports - 05/10/2026" });
+  expect(out.json).toMatchObject({ attachments: "data", subject: "5 Elements daily reports - 5 Oct 2026" });
   expect(out.binary.data.fileName).toBe("Night-audit.pdf");
-  expect(out.json.text).toBe("The daily reports for 5 Elements, business date 05/10/2026.\n\n"
+  expect(out.json.text).toBe("The daily reports for 5 Elements, business date 5 Oct 2026.\n\n"
     + `Night audit report\n\nOccupancy: 82%\nRoom revenue: ₹1,20,000\n\nEach report is attached as its own PDF.\n\n${SETTINGS_LINE}`);
 });
 
