@@ -6561,6 +6561,29 @@ copy will see of theirs.**
 
 ---
 
+### 447 · HELPERS: three slips in the release 15 follow-ups (29 October)
+
+(1) The uploads helper's first `get` trusted curl's exit code with `--retry`: curl 8.14 exits 0 after a failed download
+when retrying, so a 404 counted as a file put back - the very trap `db/backup.sh` documents; its own test caught it.
+(2) One of its fail-first breaks was a `sed` that failed with a syntax error, so the test ran on the unbroken file and
+passed; noticed and redone. (3) The ID-documents helper built a "file on the server's disk" check for ID photos before
+reading `idPhotos.ts`, which says they are never on the server (encrypted in Drive, D27-209); my brief had assumed the
+upload folder. **The rules:** every curl, downloads too, reads `%{http_code}`; a break is confirmed applied (a grep
+count) before its red or green means anything; a brief that names where data lives is checked against the code
+first - by me before sending it.
+
+---
+
+### 446 · MINE: restoring a deliberately broken file with `git checkout` dropped my own uncommitted change (29 October)
+
+To prove the new `backupLog()` test fails, I broke `health.ts` with `sed`, ran the test (it failed, as it should), then
+put the file back with `git checkout --`. That restored the COMMITTED file: my uncommitted `backupLog()` change went
+with the break. Seen at once in the diff stat; redone, type-checked and re-run (57/57) before the commit. Earlier the
+same day I had done it right for `release.mjs` (a saved copy). **The rule:** a fail-first break on a file with
+uncommitted edits is undone from a saved copy, never from git.
+
+---
+
 ### 445 · HELPERS: four shell traps met building release 15 (29 October)
 
 Each cost a helper a run, none reached cp6: (1) **bash reads a script as it runs** - the backups helper edited
