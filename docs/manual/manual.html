@@ -10796,7 +10796,6 @@ figure.shot.phone img { max-width: 72mm; }
     <li><span class="ui">Disk</span> says how full the server's disk is and how much is free. Needs a look from 80% used; Not working from 90%, because the database stops when the disk is full. Tell whoever looks after the server at once.</li>
     <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours. Once restore to any minute is switched on, also when the database's change journal or its weekly base copy is not reaching the bucket. Also when the nightly copy of the uploaded files (bill photos, receipts) or n8n's own nightly copy failed or has not run for 26 hours; Needs a look while either has no bucket link, and the line says which stays on the server's disk only.</li>
   </ul>
-  <p class="muted">The picture above was taken before the Disk row was added; the page now shows it between Backups and Rivals' prices.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
@@ -11957,7 +11956,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>CRS bridge</td><td>The last read failed, or nothing has been read for 30 minutes (the reader runs every five).</td></tr>
       <tr><td>Firebase sign-in</td><td>It did not answer.</td></tr>
       <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>; or, with restore to any minute on, the change journal or the weekly base copy is not reaching the bucket; or the nightly copy of the uploaded files, or n8n's own nightly copy, failed or has not run for 26 hours <span class="d">D27-377</span>. Amber when backed up but on the server's disk only, all of it or the uploaded files or n8n's copy.</td></tr>
-      <tr><td>Disk</td><td>The server's disk is 90% used or more: the database stops when it is full. Amber from 80% <span class="d">D27-373</span>. The picture above was taken before this row was added.</td></tr>
+      <tr><td>Disk</td><td>The server's disk is 90% used or more: the database stops when it is full. Amber from 80% <span class="d">D27-373</span>.</td></tr>
       <tr><td>Rivals' prices</td><td>Never red; amber when switched on and nothing kept yet.</td></tr>
     </tbody>
   </table>
