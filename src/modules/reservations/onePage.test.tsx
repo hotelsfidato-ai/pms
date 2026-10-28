@@ -248,6 +248,9 @@ describe("the advance", () => {
     const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       { ok: true, blob: async () => new Blob(["%PDF-"], { type: "application/pdf" }) } as Response);
     URL.createObjectURL = vi.fn(() => "blob:voucher");
+    /* The voucher's link is freed 60 s later (api.ts): this environment has no
+       revokeObjectURL, and left alone it threw in whatever test ran then. */
+    URL.revokeObjectURL = vi.fn();
     open();
     await screen.findByRole("heading", { name: "Guest" });
     type(/^Full name/, "Anna Smith");

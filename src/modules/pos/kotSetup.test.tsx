@@ -97,7 +97,14 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
     /* The Fidato Printer app first (D27-360), from the API's server (D27-362); the setup file is the other way. */
     expect((await screen.findByRole("link", { name: /Download Fidato Printer for Windows/ })).getAttribute("href"))
       .toBe("https://api.example.test/downloads/Fidato-Printer-Setup.exe");
-    fireEvent.click(await screen.findByRole("button", { name: /download the setup file/i }));
+    const button = await screen.findByRole("button", { name: /download the setup file/i });
+    /* The download frees its link 2 s later (kotSetupFile.ts). Run that here, while
+       URL is still this test's stand-in: left to fire after the stub is gone, it threw
+       in whatever test the worker ran next and failed a random one (release 14's gates). */
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    fireEvent.click(button);
+    vi.runAllTimers();
+    vi.useRealTimers();
 
     expect(click).toHaveBeenCalledTimes(1);
     expect(names).toEqual([`KOT-station-setup-${HOTEL.toUpperCase()}.cmd`]);
