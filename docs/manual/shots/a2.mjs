@@ -77,7 +77,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: 15000 },
-      { type: ["css:input[placeholder='Sharma family']", "A2 Test Sharma"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A2 Test Sharma"] },
       SET("Phone", "98765 00201"),
       { click: "text:Guest agreed to WhatsApp" },
       DAY("Arrival", 11), ...FORM, DAY("Departure", 13), ...FORM,
@@ -85,11 +85,13 @@ export const SHOTS = [
       { wait: 1500 }, TOP,
     ],
     marks: [
-      { n: 1, at: "css:input[placeholder='Sharma family']", side: "top" },
+      { n: 1, at: "css:input[placeholder='Anil Sharma']", side: "top" },
       { n: 2, at: "text:Needed for online check-in and WhatsApp.", side: "right" },
-      { n: 3, at: "text:Guest agreed to WhatsApp", side: "left" },
-      { n: 4, at: "text:2 nights", side: "right" },
-      { n: 5, at: "text:The booking", nth: 0, side: "left" },
+      /* D27-371: the guest's company, GSTIN and address, all optional. */
+      { n: 3, at: "css:[data-guest-gstin]", side: "right" },
+      { n: 4, at: "text:Guest agreed to WhatsApp", side: "left" },
+      { n: 5, at: "text:2 nights", side: "right" },
+      { n: 6, at: "text:The booking", nth: 0, side: "left" },
     ],
   },
   {
@@ -154,7 +156,7 @@ export const SHOTS = [
     id: "A2-08", title: "A walk-in into room 301", as: "Reception",
     steps: [
       { click: "css:[data-room-tile='301']" }, { waitFor: "text:A walk-in into room 301", ms: 15000 }, { wait: 1500 },
-      { type: ["css:input[placeholder='Sharma family']", "A2 Test Kumar"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A2 Test Kumar"] },
       SET("Phone", "98765 00202"), TAG("Booking source", "source"), TAG("Room", "room"),
       { eval: "document.querySelector('[data-inclusive]').scrollIntoView({ block: 'center' })" }, { wait: 800 },
     ],
@@ -201,7 +203,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: 15000 },
-      { type: ["css:input[placeholder='Sharma family']", "A2 Test Mehta"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A2 Test Mehta"] },
       SET("Phone", "98765 00203"),
       DAY("Arrival", 15), ...FORM, DAY("Departure", 17), ...FORM,
       SET("Booking source", "Website"),
@@ -252,7 +254,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: 15000 },
-      { type: ["css:input[placeholder='Sharma family']", "A2 Test Joshi"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A2 Test Joshi"] },
       SET("Phone", "98765 00204"),
       DAY("Arrival", 20), ...FORM, DAY("Departure", 21), ...FORM,
       SET("Booking source", "Fidato Hotels"),

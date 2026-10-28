@@ -8,6 +8,18 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-28 · Edit guest carries the booking's company (the owner's D27-371)
+
+**Shipped.** `EditGuestFlow` takes an optional `stay`: opened from the stay
+panel by someone who may change a booking, it shows that stay's Company name,
+GSTIN and Company address and saves them through reservations'
+`PUT /stays/:id/guest-company` (`saveStayCompany`, data/directory.ts). A wrong
+GSTIN stops Save in the same sentence. Guest 360 passes no stay: no section.
+
+**Proved.** `editGuest.test.tsx` 2/2 (the GSTIN check taken out: the new test fails).
+
+---
+
 ## 2026-10-15 · Stays and Nights leave voided bookings out (the owner's D27-330 (5))
 
 **Asked for:** the guest directory's Stays and Nights leave voided bookings out, cancelled and no-show as the "possible duplicate" mark already does.

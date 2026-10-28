@@ -77,7 +77,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: SLOW },
-      { type: ["css:input[placeholder='Sharma family']", "A3 Test Desai"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A3 Test Desai"] },
       SET("Phone", "98765 00302"),
       DAY("Departure", 2), ...FORM,
       SET("Booking source", "Website"), SET("Room type", "Superior"),
@@ -91,7 +91,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: SLOW },
-      { type: ["css:input[placeholder='Sharma family']", "A3 Test Iyer"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A3 Test Iyer"] },
       SET("Phone", "98765 00303"),
       DAY("Departure", 2), ...FORM,
       SET("Booking source", "Agoda"), SET("Room type", "Superior"), { wait: 2500 },

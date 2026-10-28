@@ -96,7 +96,7 @@ export const SHOTS = [
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: 30000 },
-      { type: ["css:input[placeholder='Sharma family']", "A3 Test Smith"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A3 Test Smith"] },
       SET("Phone", "98765 00301"),
       DAY("Departure", 2), ...FORM,
       SET("Booking source", "WhatsApp"),

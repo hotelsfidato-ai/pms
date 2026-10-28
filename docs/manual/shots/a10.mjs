@@ -154,6 +154,8 @@ export const SHOTS = [
       { n: 2, at: "text:Phone", side: "left" },
       { n: 3, at: "text:Two letters: IN for India. Anything else puts the guest on the Form III register.", side: "right" },
       { n: 4, at: "text:Save", side: "bottom" },
+      /* D27-371: this booking's company, on the stay panel only. */
+      { n: 5, at: "css:[data-stay-company]", side: "right" },
     ],
   },
   {

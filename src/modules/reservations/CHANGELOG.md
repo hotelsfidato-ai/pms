@@ -8,6 +8,47 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-28 · The guest's company and GSTIN on a booking (the owner's D27-371)
+
+**Asked for.** Salutation beside Full name; Company name, GSTIN and Company
+address on New booking, all optional; the GSTIN checked; with a GSTIN the tax
+invoice in the company's name and in the GST sales register as B2B; the guest
+still pays; 'Bill to company' unchanged; the company not added to the list.
+
+**Shipped.**
+- `pages/BookingPage.tsx`: the Guest card opens with **Salutation** (the
+  hotel's default still fills in) beside **Full name** (was "Guest or
+  company"); Title left the "More about the guest" fold. Under the phone and
+  email: **Company name, GSTIN, Company address**, all optional. A GSTIN is
+  checked by `gstinProblem` (api/src/validate.ts - the one check, which already
+  held GSTN's mod-36 check digit): said under the field once 15 characters are
+  typed, and under the buttons. Sent as `guestCompany`.
+- `api/.../book.ts`: `guestCompany` checked in `deskTerms` (above the first
+  write) and kept on every room of the booking in its own statement.
+  `groups.ts` passes it through.
+- `api/.../desk.ts`: `PUT /:code/stays/:id/guest-company` - one stay's
+  company changed after booking (reservation edit, `roleGate.ts`).
+- Migration **247**: `reservations.guest_company_name / _gstin / _address`,
+  the GSTIN's shape and the lengths as constraints (the check digit is the
+  server's). Re-runnable.
+- Finance, guests and front desk: see their changelogs (the invoice, Edit
+  guest, the stay panel).
+
+**Proved.** API `guestCompany.test.ts` 7/7; web `guestCompany.test.tsx` 3/3,
+`editGuest.test.tsx` 2/2; reservations web 45/45 (13 files). Each guard taken
+out and the test run: the booking's check (4 of 7 fail; a bad shape then
+reaches the constraint as a 500), the stay route's check, the invoice
+addressing, Bill to company's precedence, the gate rule (3 of 7 fail); the
+screen's two checks (2 of 5 fail). All restored before commit.
+
+**Left open.** Questions for the owner in the master's report (place of
+supply, an invoice issued before the GSTIN, the guest profile remembering
+the company, online check-in, the automatic send, a B2B column).
+
+**Commits.** On the helper's branch.
+
+---
+
 ## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Shipped** **A Special request box of its own** on New booking (D27-347), up to 500 characters, printed on the voucher; Notes say they are the hotel's own and never on the voucher (`pages/BookingPage.tsx`, `data/groups.ts`; `book.ts` and `groups.ts` on the server, migration 231). A booking site's or the CRS's request is copied into it as well as the notes (`channel.ts`). **Proved** `onePage.test.tsx` 17/17, `api/test/modules/reservations/newBooking.test.ts` 24/24. The root `CHANGELOG.md` has the whole entry and the gate numbers.

@@ -8,6 +8,26 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-28 · The tax invoice in the guest's company's name (the owner's D27-371)
+
+**Shipped.** `invoices.ts`: the stay's invoice route makes a guest's bill out
+to the guest's own company when the booking carries its GSTIN (name - the
+guest's own with only a GSTIN typed -, GSTIN, address), and only where
+`RECIPIENT_COMPANY` names no company, so Bill to company still wins.
+`recipientName` holds the name rule once; `billing.ts`'s Invoices list
+("Billed to") reads it too. `RECIPIENT_COMPANY` is unchanged (it is a
+`companies` row: credit limits and 216's automatic send), so 216 is unchanged
+and the guest's-company invoice is sent to the guest by itself.
+Who pays, folios, the city ledger: untouched. The GST sales register needed
+no change: it reads the invoice's recipient and GSTIN.
+
+**Proved.** `api/test/modules/reservations/guestCompany.test.ts`: the invoice
+to the company while every bill stays the guest's; the register's row with
+the GSTIN and name; a proprietor's GSTIN alone; Bill to company wins. Finance's
+API tests with the rest: 66 files, 607 tests.
+
+---
+
 ## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Shipped** The interim bill is the **proforma bill**, drawn by the tax invoice's own sheet (`flows/BillPrint.tsx` `proformaOf`, `InvoiceSheet`'s `proforma` in `pages/Invoice.tsx`; the Bill tab's button and `pages/InterimBill.tsx`), with the hotel's contacts, each line's HSN/SAC, the stay and the payments (`folios.ts` GET bill, `stayFacts`/`paymentsOn` in `invoices.ts`). **The tax invoice at check-out** follows the hotel's setting (229): issued and printed by itself in two copies, ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER (`useInvoicePrinter`, `useInvoiceCopies`, `flows/TaxInvoiceStep.tsx`), or offered, or left to Invoices. The invoice prints the **G.R. card no** (230). A kind's code is **HSN/SAC**, 4, 6 or 8 digits (232; `tax.ts`, `TaxRulesCard`). Front door: `proformaOf`, `InvoiceSheet`, `useInvoiceCopies`; the server's `stayFacts`. **Proved** `billPrint`, `printedBills`, `billTabControls`, `invoiceLayout`, `taxInvoiceAtCheckOut`, `taxSacP3`, `testHotel` (snapshots updated on purpose). The root `CHANGELOG.md` has the whole entry and the gate numbers.
