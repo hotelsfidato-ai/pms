@@ -67,6 +67,16 @@ function typedPrice(raw: unknown): number | null {
 const NO_PRICE =
   "Type a price, or tick Free. A blank is not zero.";
 
+/** A dish's MRP as typed (D27-351, D27-373): above zero, or empty - which
+    clears it to a dash. Never filled in from the price. "bad" otherwise. */
+function mrpOf(raw: unknown): number | null | "bad" {
+  if (raw === null || raw === undefined || (typeof raw === "string" && raw.trim() === "")) return null;
+  const n = typedPrice(raw);
+  return n !== null && n > 0 ? n : "bad";
+}
+
+const BAD_MRP = "An MRP is a figure above 0, or left empty for none.";
+
 /** The hotel this route is about, or null if the code is unknown. */
 async function hotelFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
@@ -193,7 +203,7 @@ till.get("/:code/till/menu", async (c) => {
     const { rows } = await client.query<{
       category_id: string; category: string; tax_kind: string | null;
       id: string | null;
-      name: string | null; price: string | null; tax_rate: string | null;
+      name: string | null; price: string | null; mrp: string | null; tax_rate: string | null;
       is_active: boolean | null; sort_order: number;
       short_code: string | null; is_veg: boolean | null;
       is_favourite: boolean | null; off_until: string | null;
@@ -209,7 +219,7 @@ till.get("/:code/till/menu", async (c) => {
          A kitchen that has created "Desserts" and not filled it needs
          to see the empty shelf, not wonder where it went. */
       `select c.id::text as category_id, c.name as category, c.tax_kind,
-              i.id::text, i.name, i.price::text,
+              i.id::text, i.name, i.price::text, i.mrp::text,
               ${DISH_TAX_RATE}::text as tax_rate,
               i.is_active, coalesce(i.sort_order, 0) as sort_order,
               i.short_code, i.is_veg, i.is_favourite,
@@ -248,6 +258,9 @@ till.get("/:code/till/menu", async (c) => {
       course: number | null;
       items: {
         id: string; name: string; price: number;
+        /** What an NC bill's dish is valued at in the stock reports
+            (D27-351, D27-373). Null: none typed - a dash, never 0. */
+        mrp: number | null;
         /** The rate it is rung at. Null is "none set" - a dash on
             screen, never 0%. A real 0 stays 0. */
         taxRate: number | null;
@@ -264,7 +277,7 @@ till.get("/:code/till/menu", async (c) => {
         course: number | null;
         ownCourse: number | null;
         variations: {
-          id: string; label: string; price: number;
+          id: string; label: string; price: number; mrp: number | null;
           typeNo: number; kind: string | null; heading: string | null;
         }[];
         addonGroups: {
@@ -289,6 +302,7 @@ till.get("/:code/till/menu", async (c) => {
           id: r.id,
           name: r.name,
           price: Number(r.price),
+          mrp: r.mrp === null ? null : Number(r.mrp),
           taxRate: r.tax_rate === null ? null : Number(r.tax_rate),
           isActive: r.is_active ?? false,
           shortCode: r.short_code,
@@ -313,10 +327,10 @@ till.get("/:code/till/menu", async (c) => {
        come back eight times, and the reassembly is then the thing that
        has a bug in it. */
     const { rows: variations } = await client.query<{
-      item_id: string; id: string; label: string; price: string;
+      item_id: string; id: string; label: string; price: string; mrp: string | null;
       type_no: number; kind: string | null; heading: string | null;
     }>(
-      `select v.item_id::text, v.id::text, v.label, v.price::text,
+      `select v.item_id::text, v.id::text, v.label, v.price::text, v.mrp::text,
               v.type_no, v.kind, v.heading
          from pos_item_variations v
          join pos_menu_items i on i.id = v.item_id
@@ -351,6 +365,7 @@ till.get("/:code/till/menu", async (c) => {
          choice as type 1, as it was. */
       items.get(v.item_id)?.variations.push({
         id: v.id, label: v.label, price: Number(v.price),
+        mrp: v.mrp === null ? null : Number(v.mrp),
         typeNo: v.type_no, kind: v.kind, heading: v.heading,
       });
     }
@@ -1020,6 +1035,31 @@ till.post("/:code/till/menu/items/:id/prep", async (c) => {
   return c.json(result, result.ok ? 200 : 409);
 });
 
+/* A DISH'S MRP (D27-351, D27-373): what it is valued at when a bill is
+   given free (NC) - in the stock reports only, never a sale or tax. Typed
+   by whoever may change the menu (`menu: edit`); empty clears it to a dash.
+   A dish sold by variation carries it on its first-type choices instead
+   (the variations form). */
+till.post("/:code/till/menu/items/:id/mrp", async (c) => {
+  const input = await c.req.json<{ mrp?: unknown }>().catch(() => ({} as { mrp?: unknown }));
+  const mrp = mrpOf(input.mrp);
+  if (mrp === "bad") return c.json(refuse(BAD_MRP), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ name: string }>(
+      `update pos_menu_items set mrp = $3, updated_at = now()
+        where id = $1 and hotel_id = $2 returning name`,
+      [c.req.param("id"), hotelId, mrp]);
+    if (!rows[0]) return refuse("No such dish.");
+    return { ok: true as const, name: rows[0].name, mrp };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
 till.post("/:code/till/menu/categories/:id/prep", async (c) => {
   const input = await c.req.json<{ minutes?: unknown }>()
     .catch(() => ({} as { minutes?: unknown }));
@@ -1107,7 +1147,7 @@ till.post("/:code/till/menu/items/:id/toggle", async (c) => {
    replaced D21-42's "type 0").
    ══════════════════════════════════════════════════════════════════ */
 
-type Named = { label?: unknown; price?: unknown; free?: unknown };
+type Named = { label?: unknown; price?: unknown; free?: unknown; mrp?: unknown };
 const labelOf = (raw: unknown) => (typeof raw === "string" ? raw.trim() : "");
 const TYPE_KINDS = ["size", "quantity", "option"];
 
@@ -1131,7 +1171,7 @@ till.put("/:code/till/menu/items/:id/variations", async (c) => {
   const typesIn = Array.isArray(input.types) ? input.types : [];
 
   type Choice = { id: string | null; typeNo: number; label: string; price: number;
-                  kind: string; heading: string | null; sort: number };
+                  kind: string; heading: string | null; sort: number; mrp: number | null };
   const wanted: Choice[] = [];
   for (const [i, t] of typesIn.entries()) {
     const typeNo = i + 1;
@@ -1155,8 +1195,12 @@ till.put("/:code/till/menu/items/:id/variations", async (c) => {
       seen.add(label.toLowerCase());
       const priced = priceOf(ch);
       if ("reason" in priced) return c.json(refuse(`${label}: ${priced.reason}`), 409);
+      /* The MRP rides on the first type only: its choice IS what is sold
+         (D27-373). A later type adds to the price and has none. */
+      const mrp = typeNo === 1 ? mrpOf(ch.mrp) : null;
+      if (mrp === "bad") return c.json(refuse(`${label}: ${BAD_MRP}`), 409);
       wanted.push({ id: typeof ch.id === "string" ? ch.id : null, typeNo, label,
-                    price: priced.price, kind, heading, sort: j + 1 });
+                    price: priced.price, kind, heading, sort: j + 1, mrp });
     }
   }
   const dishPrice = typesIn.length === 0
@@ -1208,18 +1252,18 @@ till.put("/:code/till/menu/items/:id/variations", async (c) => {
       [itemId, [...taken]]);
     for (const w of wanted) {
       const row = rowOf.get(w);
-      const values = [w.typeNo, w.label, w.price, w.kind, w.heading, w.sort];
+      const values = [w.typeNo, w.label, w.price, w.kind, w.heading, w.sort, w.mrp];
       if (row) {
         await client.query(
           `update pos_item_variations
               set type_no = $2, label = $3, price = $4, kind = $5, heading = $6,
-                  sort_order = $7, is_active = true
+                  sort_order = $7, mrp = $8, is_active = true
             where id = $1`, [row, ...values]);
       } else {
         await client.query(
           `insert into pos_item_variations
-             (hotel_id, item_id, type_no, label, price, kind, heading, sort_order)
-           values ($1, $2, $3, $4, $5, $6, $7, $8)`, [hotelId, itemId, ...values]);
+             (hotel_id, item_id, type_no, label, price, kind, heading, sort_order, mrp)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [hotelId, itemId, ...values]);
       }
     }
     if (dishPrice && hadAny && "price" in dishPrice) {
@@ -2993,6 +3037,34 @@ export async function noChargeBills(
     orderNo: r.order_no, table: r.table_ref, outlet: r.outlet, reason: r.reason,
     by: r.by, at: r.at,
   }));
+}
+
+/** The dishes on bills given free (NC) in a window of business days, per
+    outlet and dish, with the MRP the GM typed on the Menu (D27-351,
+    D27-373) - for the STOCK reports only; no sales figure reads this. A
+    dish sold by variation takes its first-type choice's MRP, never the
+    dish's filled in; a line typed off the menu has none. Null is a dash.
+    Struck lines, sides and add-ons are not dishes and are left out.
+    ponytail: today's MRP from the Menu, not the MRP on the day of the bill;
+    copy it onto the bill when it is given NC if the owner wants the moment's. */
+export async function noChargeAtMrp(client: Client, hotelId: string, from: string, to: string) {
+  const { rows } = await client.query<{ outlet: string; dish: string; qty: string; mrp: string | null }>(
+    `select ou.name as outlet,
+            coalesce(i.name || coalesce(' (' || v.label || ')', ''), min(l.name)) as dish,
+            sum(l.qty)::text as qty,
+            (case when i.id is null then null when v.id is null then i.mrp else v.mrp end)::text as mrp
+       from pos_orders o
+       join pos_outlets ou on ou.id = o.outlet_id
+       join pos_order_lines l on l.order_id = o.id and not l.voided
+                             and l.parent_line_id is null and l.extra_kind is null
+       left join pos_menu_items i on i.id = l.item_id
+       left join pos_item_variations v on v.id = l.variation_id
+      where o.hotel_id = $1 and o.status = 'no_charge'
+        and o.business_date between $2::date and $3::date
+      group by ou.id, i.id, v.id, case when i.id is null then l.name end
+      order by 1, 2`,
+    [hotelId, from, to]);
+  return rows.map((r) => ({ outlet: r.outlet, dish: r.dish, qty: Number(r.qty), mrp: r.mrp === null ? null : Number(r.mrp) }));
 }
 
 /** What each outlet sold per business day, BEFORE GST - the till's own
