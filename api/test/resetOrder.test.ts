@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { CLEAR } from "../scripts/reset-property.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A TEARDOWN IS A MIGRATION RUN BACKWARDS
 
-   `reset-property.ts` deletes twenty-odd tables in a fixed order, and
-   the order is the whole of it: a child must go before its parent or
-   Postgres refuses on a foreign key, halfway through, with the
-   append-only guards already lifted.
+   The reset deletes sixty-odd tables in a fixed order, and the order is
+   the whole of it: a child must go before its parent or Postgres refuses
+   on a foreign key, halfway through, with the append-only guards already
+   lifted. Since 28 October (D27-342) the list is the database's own,
+   `owner_reset.steps()` (the migration "owner full reset"), which both
+   `reset-property.ts` and the owner's button on Admin → Properties call;
+   this file reads it from there, with --fresh-start's tables too.
 
    ⚠ THE LIST HAD `pos_tickets` BEFORE `pos_orders`, AND
    `pos_orders.ticket_id` REFERENCES `pos_tickets`. It survived every
@@ -32,6 +34,8 @@ const SUPER =
 
 type Edge = { child: string; parent: string; cascades: boolean };
 let edges: Edge[] = [];
+let CLEAR: [table: string][] = [];
+let missingGuards: string[] = [];
 
 beforeAll(async () => {
   const pool = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -44,6 +48,18 @@ beforeAll(async () => {
          join pg_class f on f.oid = con.confrelid
         where con.contype = 'f' and c.relname <> f.relname`);
     edges = rows;
+    const { rows: steps } = await pool.query<{ table_name: string }>(
+      "select table_name from owner_reset.steps(true) order by step");
+    CLEAR = steps.map((r) => [r.table_name]);
+    /* A guard lifted by a name that is not there stops the clear at its
+       first statement, as an invented table name once did. Each must be a
+       trigger on its own table. */
+    const { rows: missing } = await pool.query<{ g: string }>(
+      `select g.table_name || '.' || g.trigger_name as g
+         from owner_reset.guards(true) g
+        where not exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid
+                           where c.relname = g.table_name and t.tgname = g.trigger_name)`);
+    missingGuards = missing.map((r) => r.g);
   } finally { await pool.end(); }
 });
 
@@ -57,6 +73,11 @@ describe("the reset deletes children before parents", () => {
     /* Without this the whole file passes vacuously against an empty
        list — which is how a guard ends up agreeing with everything. */
     expect(edges.length).toBeGreaterThan(50);
+    expect(CLEAR.length).toBeGreaterThan(60);
+  });
+
+  it("every guard it lifts is a trigger on its table", () => {
+    expect(missingGuards).toEqual([]);
   });
 
   it("every table it names actually exists", () => {

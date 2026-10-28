@@ -120,6 +120,26 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - Pictures A17-49 and B5-01 show six rows, not seven: they need the local web and API running (`node docs/manual/tools/shoot.mjs a17 A17-49`, `... b5 B5-01`), which this helper may not start. The chapters say so under each.
 - Nothing tells anyone when n8n's own backup fails: questions for the owner (in the helper's report).
 
+## 2026-10-29 · Release 14 (READY at bf74ce5a, the owner's to type): the restaurant, supplier dues, petty cash, the guest's GST, one daily email, the printer app (D27-365 to D27-372)
+
+**Asked for:** the owner's answers D27-365 to D27-372 (26-28 October): the allowance, the bar switch, Taxes and the KOT's design in Restaurant setup, the Dashboard's charts, the guest's proforma, NC, the printer updating itself; then table shifting, petty cash, credit purchases, bill history, order voids, the slow reprint, the guest's company and GSTIN, the daily reports in one email - and every helper question answered (D27-372).
+
+**Shipped** (`release/r14` = cp6 at bf74ce5a, on release 13 2e7a5b4a; migrations 239-249)
+- Restaurant: NC without prices (fc3c679c); the owner's allowance (240); the Taxes card and the KOT's design with 58/80 mm (242); Move and Join a table on the Till and the Terminal, across sections, covers added, 'Joined to', a booked table from 2 h (244, 248); Bill history for managers and the cashier (room guest, settled time, Excel); the Voids report with who/when on an unpaid close (248); a reprint and a bill print wake the printing computer at once (243).
+- Money: the petty cash book - category and bill photo on every paid-out, a report (245); supplier dues - credit bills on deliveries and bar bills, part payments, TDS entered by the Accountant, credit notes, reversals, the statement and TDS reports, the Accountant's menu, bar suppliers from the list, +30-day due dates (246, 249).
+- Front desk: the guest's company and GSTIN on New booking (Salutation, Full name; the invoice in the company's name while the guest pays; B2B/B2C in the GST register; the last company offered) (247); the guest's proforma identical to the desk's (241); Remove clears a connecting link.
+- Reports and email: the Dashboard's chart row (REP-20 fixed); one daily email per address, a PDF per report, "26 Oct 2026", held whole until every report builds (n8n node: the owner's A0 paste).
+- Bar stock as a switch, on at every hotel, off for a hotel added later (239, D27-369). Fidato Printer 1.1.0: updates itself, version on the icon, Electron 44.9.3.
+- Found and fixed: the live Night audit report's times printed raw in GMT (MEMORY 440); a joined bill under "Settled today".
+
+**Found** (MEMORY 437-441): an untyped test; the locked printer build folder; helpers started on release 13's code; the GMT timestamps; the gates catching four cross-file faults and my own bare-vitest run on the dev database. The gate runs also exposed three download tests whose delayed `URL.revokeObjectURL` threw into other tests, an old invoice test's stays inside the calibrated days, and three long tests on a 20 s limit - all fixed in tests.
+
+**Proved:** one complete gate run on bf74ce5a: web 1,472/1,472, API 2,918/2,918, database 1,816/1,816, 249 migrations re-runnable, PostgreSQL 16; `release.mjs` once: `index-D0bnQp9L.js`. Every screen opened on the local demo; manual pictures taken.
+
+**Left open:** the owner deploys (`.local/release-14-steps.md`, A0-A9). Releases 15 (full reset, all of plan A) and 16 (Restaurant tab with recipes, MRP for NC) are being built (D27-373, D27-374).
+
+---
+
 ## 2026-10-25 · Release 13 (LIVE 26 Oct, with 12.1, at 2e7a5b4a): the bar's store and counter, as the excise registers keep it (D27-361); the printer installer from our server (D27-362)
 
 **Asked for:** the owner, 22 October, with photos of FORM FLR-1A/2A/3A and FLR-3: "2 places - the store where it's counted whole, and the counter ... the counter requested 5 bottles so the approval will be given to move ... closing count ... then the night audit, and the morning audit of stock". Answers (D27-361): a Bar store and a Bar counter, the counter asks and the GM or the Inventory Manager approves; counted three ways (poured, whole, packet); the night audit waits for the closing count, the GM may mark "Bar closed today"; a morning count by the bar manager; both registers like the paper; a NIP sold the day it is opened (to confirm with the CA); release 13, after 12. And D27-362: the Fidato Printer installer hosted on our server. Asked while the checks ran (D27-364): **"Other moves"** on the store's sheet and the Simple one, so every row adds up.

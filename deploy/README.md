@@ -481,6 +481,87 @@ n8n's: the bucket → Objects → `n8n/` → the night's `.tar.gz`. It holds
 back. The logins open only with the key in `/etc/n8n/encryption-key`, which is
 on the server alone.
 
+### Bringing back one hotel
+
+For the day **one hotel's records are damaged** (a booking, a bill, a guest
+deleted by mistake) and the other hotels must not move (plan A, A4, D27-373).
+`deploy/restore-hotel.sh` puts last night's backup into a scratch database,
+compares that one hotel with the live system, table by table, and shows you
+what differs. It changes nothing until you run it a second time and type the
+hotel's code again. Restoring the whole database is a different job
+(`db/restore.sh`, above); do not use that for one hotel.
+
+**What it brings back, and what it never does.** Only rows that are **missing**
+in the live system come back, as they were in the backup, with the shared rows
+they need (the guest of a booking, its company), parents first (the guest, then
+the booking, then its bill), in one go: all of them or none. It never:
+
+- overwrites a row that changed since the backup (the live one is right);
+- touches a row that is new since the backup;
+- writes an **append-only** record: a bill line, a payment's line, an issued
+  invoice or VAT bill, a stock or equipment movement. A wrong one is reversed
+  in the PMS; a missing one is listed for you to decide, with everything that
+  needs it;
+- writes the invoice or bill **series**, so a number is never issued twice; nor
+  who works where, devices, bank details, outside systems (channel manager,
+  CRS) or what was sent. Those are listed too;
+- brings back a person or a property.
+
+Every rule the live database has (its checks, its keys, its triggers) applies
+to what goes back. If one refuses a row (a GR card number given to someone else
+since, a room booked since), nothing at all is written and it says which row
+and why.
+
+**1 · Find the backup:** *the server, over ssh as `opc`*
+
+```bash
+sudo ls -lt /var/backups/fidato | head
+```
+
+The nightly files are `fidato-<date>-<time>.dump`; pick the last one from
+before the damage. A file from the bucket (Oracle console → the bucket →
+Objects → Download) works too, once it is on the server.
+
+**2 · Look:** *the server, over ssh as `opc`*
+
+```bash
+sudo -u postgres bash /opt/fidato/deploy/restore-hotel.sh AMR /var/backups/fidato/fidato-20261028-030000.dump
+```
+
+`AMR` is the hotel's code, in capitals. For a customer on the shared server:
+`sudo -u postgres env DB=fidato_abc bash /opt/fidato-abc/deploy/restore-hotel.sh …`.
+For a copy already restored to a minute (A3, `fidato_pitr`), name the database
+instead of the file: it is read and left as it is.
+
+It takes under a minute and prints three lists:
+
+- **What differs:** each table where the hotel has rows missing in live,
+  changed since or new since.
+- **Stays missing:** what this tool will not write, and why.
+- **Could come back:** the rows the second step would write, in order.
+
+The hotels can keep working meanwhile: the look only reads the live system.
+
+**3 · Bring back:** *the server, over ssh as `opc`, only if the list in step 2
+is what you expected*
+
+```bash
+sudo -u postgres bash /opt/fidato/deploy/restore-hotel.sh AMR /var/backups/fidato/fidato-20261028-030000.dump --bring-back
+```
+
+It shows the lists again and asks you to type the hotel's code. Anything else
+and nothing is written. Then it says what came back, what the database itself
+did as they went in (its audit lines, for example), and `committed`.
+
+**4 · Check:** *the PMS, in your browser*: open the hotel and look at what
+came back. What "stays missing" is yours to decide; ask before acting on it.
+
+**If the hotel itself is gone** (its row in `hotels`), the tool refuses: every
+row of a hotel hangs off that row. It must come back first, by hand, and that
+is a job to plan with help: the database adds a new property's defaults
+(stores, payment methods, the series) the moment the row goes in. The tool
+prints the two commands that copy the row across; after them, run step 2 again.
+
 ## Restore to any minute
 
 The nightly backup gives back last night. This gives back **any minute of the
@@ -606,6 +687,82 @@ sudo systemctl reload postgresql
 
      Keep `fidato_before_…` until you are sure, then drop it.
    - **Neither:** `sudo -u postgres psql -c "DROP DATABASE fidato_pitr"`.
+
+## The owner's full reset
+
+**Clear this hotel and start today** (D27-342, D27-365 (3)), on each real
+hotel's card on Admin → Properties: a backup, then every booking, guest, bill,
+payment, invoice, order, banquet, night audit, cash shift and stock movement
+of that one hotel gone, in one go; the hotel, rooms, rates, menu, tables,
+staff, sign-ins and settings stay; the business date becomes today; invoice
+numbers carry on. It is what `npm run reset -- <CODE> --fresh-start --yes`
+does on the server, from the same functions in the database, and it is
+refused while any guest is checked in, and for a test hotel (it has its own
+Reset).
+
+**Only one account may press it**: the one whose sign-in e-mail is
+`RESET_OWNER_EMAIL`. Not the owner role, not an Admin. Until all three
+settings below are in `api/.env`, it is refused for everybody, in a
+sentence. Nothing about it is turned on by a deploy.
+
+| Setting | What it is |
+|---|---|
+| `RESET_OWNER_EMAIL` | the one account allowed, by its sign-in e-mail |
+| `RESET_DATABASE_URL` | the reset's own database login, `pms_owner_reset`. It may count and clear and do nothing else: no table, no other function. Made by the migrations **with no password**, so nobody can sign in as it until you set one (step 1) |
+| `RESET_BACKUP_SOCKET` | where the server's own backup (`fidato-backup`, which copies it off the server when the bucket is set up) listens for the API: `/run/fidato-backup-now.sock` (step 2) |
+
+### Turning it on, once
+
+After a release that carries it has been deployed (its migrations make the
+login). Each step is typed by you.
+
+**1 · The login's password and RESET_DATABASE_URL:** *the server, over ssh as `opc`*
+
+```bash
+P="$(head -c 32 /dev/urandom | base64 | tr -d '/+=')"
+sudo -u postgres psql -qc "alter role pms_owner_reset password '$P'"
+echo "RESET_DATABASE_URL=postgres://pms_owner_reset:$P@127.0.0.1:5432/fidato" | sudo tee -a /opt/fidato/api/.env >/dev/null
+unset P
+```
+
+The password is made on the server and written only into `api/.env`; nobody
+needs to see it.
+
+**2 · The backup on demand, and RESET_BACKUP_SOCKET:** *the server, over ssh as `opc`*
+
+`deploy/launch.sh` installs and starts the backup on demand on every run
+(D27-375), so this is only the API's setting, after checking it listens:
+
+```bash
+systemctl is-active fidato-backup-now.socket
+echo "RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock" | sudo tee -a /opt/fidato/api/.env >/dev/null
+```
+
+The first line should print `active`. The API may not run the backup itself (it runs as `postgres`, and the API's
+service may gain no privileges), so systemd runs it for each connection to a
+socket only the API's user may open. Every press makes one more file in
+`/var/backups/fidato`, kept with the nightly ones (the last 14).
+
+**3 · Who, and on:** *the server, over ssh as `opc`*
+
+```bash
+echo "RESET_OWNER_EMAIL=influvateseo@gmail.com" | sudo tee -a /opt/fidato/api/.env >/dev/null
+sudo systemctl restart fidato-api
+```
+
+**4 · Prove it:** *the PMS, in your browser, signed in as that account*
+
+Admin → Properties: **Clear this hotel and start today** is on each real
+hotel's card. Press it on a hotel and read the count, then **Cancel**. Nothing
+is removed until the code is typed and **Clear and start today** is pressed.
+Signed in as anybody else, the button is not there, and the server refuses
+it if asked directly.
+
+To turn it off again: remove `RESET_OWNER_EMAIL` from `api/.env` and restart
+the API (step 3's second line).
+
+A customer's copy on the same server (`deploy/customer.sh`) has none of this:
+leave its three settings empty and the button is refused there.
 
 ## Watching it
 

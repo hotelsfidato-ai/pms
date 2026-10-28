@@ -146,10 +146,11 @@ export function TestHotelControls({ real, test, onChanged }: {
 /* ── The typed word ─────────────────────────────────────────────────
    The button is off until the word is in the box exactly. The server is
    sent the word as typed and checks it again, so a box filled some other
-   way still cannot reset anything. */
-function TypedConfirm<T>({ title, word, action, what, run, done, onClose, onDone }: {
+   way still cannot reset anything. The owner's full reset (OwnerReset.tsx)
+   asks for the hotel's code the same way. */
+export function TypedConfirm<T>({ title, word, action, what, run, done, onClose, onDone }: {
   title: string;
-  word: "RESET" | "RE-COPY";
+  word: string;
   action: string;
   what: React.ReactNode;
   run: (confirm: string) => Promise<AdminResult<T>>;
