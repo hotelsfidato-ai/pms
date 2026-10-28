@@ -6561,6 +6561,49 @@ copy will see of theirs.**
 
 ---
 
+### 445 · HELPERS: four shell traps met building release 15 (29 October)
+
+Each cost a helper a run, none reached cp6: (1) **bash reads a script as it runs** - the backups helper edited
+`db/tests/pitr.sh` while a run of it was going and the running copy executed the new lines mid-run (stopped by hand,
+its throwaway cluster too). (2) **`echo X | run ...` runs `run` in a subshell**, so the restore test's checks read the
+previous exit code and output; fixed with here-strings (`run ... <<< X`). (3) **PowerShell mangles double quotes in a
+`git commit -m`**; write the message to a file and `git commit -F <file>`. (4) **`cygpath -w` already ends in .exe**:
+appending another named `bash.exe.exe`. **The rules:** never edit a script while it runs - copy it first; feed a
+checked command with a here-string, never a pipe; commit messages from PowerShell go through `-F`.
+
+---
+
+### 444 · MINE: the browser pane would not open a 3.7 MB page from the disk (29 October)
+
+The release 14 guide (`.local/guides/release-14-vat-gst-guide.html`, 18 pictures embedded) failed to open in the pane
+from `.local\` and from `docs\manual\`, "the file may be missing, unreadable, or the user declined access", while a
+67 KB copy in the same folder opened. It is the size, not the folder. Checked instead with a copy that LINKS the
+pictures (`img/...`, saved beside the manual's `img\`), read through `javascript_tool` (headings, 18 images, the VAT and
+B2B text), plus a script decoding all 18 embedded PNGs; the check copies deleted. **The rule:** to look at a big
+self-contained page, open a linked-picture twin of it and prove the embedded parts separately.
+
+---
+
+### 443 · HELPERS: a helper that ends its turn "waiting for the background run" is never woken (29 October)
+
+The full-reset helper started its tests in the background and ended its turn. The run's notice had nowhere to go, so
+it sat "completed" with an uncommitted test file until I resumed it by message. **The rule:** every helper brief says
+"if you start a background run, do not end your turn while waiting - poll it"; and when a helper reports it is waiting,
+resume it with a message rather than assume it will continue.
+
+---
+
+### 442 · FOUND: the reset script's booking-group clause failed on a group shared with another hotel (29 October)
+
+`api/scripts/reset-property.ts` (since D27-298) deleted a hotel's booking groups by a clause that also took a group
+whose group bill sat at another hotel - the clear then failed on the foreign key - and a group another hotel leads that
+had no bookings yet. Found by the full-reset helper running the script on the database suite's data while moving the
+lists into migration 250 (`owner_reset.steps()`). **Fixed:** a group goes only when nothing at another hotel holds it,
+with a database check. **The rule:** a "clear one hotel" list is proved on data where hotels SHARE things (groups,
+guests, companies), not only on one hotel alone.
+
+---
+
 ### 441 · MINE: release 14's gates caught four faults the helpers' own runs could not - and I then ran four tests on the dev database (28 October)
 
 Release 14's full gate run (36f7690c) failed its API step with 4 of 2,918: (1) the property reset did not know the new
