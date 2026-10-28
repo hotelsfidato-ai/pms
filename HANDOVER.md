@@ -765,6 +765,22 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **28 October, about 11:45: RELEASE 14 - three helpers on D27-372, then ONE gate run.** Merged on cp6 today:
+> table Move/Join (244), petty cash book (245), supplier dues (246, its test-hotel list now also carries 244's
+> pos_table_moves), Voids report, Bill history, the guest's company and GSTIN (247), the daily reports in one email
+> (no migration; n8n paste file in `.local/n8n/paste-28oct/` - the owner pastes it BEFORE the API deploy), a joined
+> bill kept out of "Settled today" (6489b161), the Night audit's times on a GMT server (62ceea16, MEMORY 440 - a LIVE
+> defect: the live DB runs in GMT), the email's "26 Oct 2026" and held-email rule (bf398cbc). Pictures taken (59d97b39).
+> 244-247 applied to the dev DB. The owner answered EVERY helper question (D27-372). Building now, each in its own
+> copy: restaurant follow-ups (Bill history for managers + cashier only, server-enforced; room guest + settled time;
+> an unpaid close records who/when - migration 248; Move/Join across sections, covers added, 'joined to', Terminal,
+> booked table only within 2 h), supplier dues extras (part payments, TDS + report, credit notes, reversals, statement,
+> reference required, +30 days, Accountant's menu, bar suppliers from the list, who handed the money - migration 249),
+> guest GST follow-ups (Edit guest labels, B2B/B2C column, remembered company, the switch hides the fields). Then:
+> merge (reconcile `app.test_hotel_classes()` - 249 must carry 244's and 246's tables), pictures, screens, db run.sh +
+> rerun.sh, fast-forward `release/r14`, ONE gate run, the printer 1.1.0 is in `.local/printer-r14`, release.mjs once,
+> the steps (`.local/release-14-steps.md` draft: add 244-249, the n8n paste first, the Bill history roles).
+
 > **27 October, 16:30: RELEASE 14 GREW (D27-369, D27-370) - not ready yet.** On cp6 since release 13: everything
 > in fc3c679c ... 49a37b79 (NC, Bar stock switch 239, allowance 240, guest proforma 241, charts, Taxes card, KOT design
 > 242, printer 1.1.0, D27-369: a new hotel's Bar stock off, tray version + Electron 44.9.3, REP-20) and 810976ff (243:
