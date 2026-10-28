@@ -12,7 +12,7 @@ import {
 } from "@/components/ui";
 import {
   getPurchasing, getPurchaseRequest, priceLine, sendOrder, cancelRequest,
-  recordDelivery, downloadOrder, getPurchaseApproval, decidePurchase,
+  recordDelivery, downloadOrder, getPurchaseApproval, decidePurchase, suggestedDue,
   type PurchaseLine, type PurchaseApproval,
 } from "@/modules/purchasing/data/purchasing";
 import { STATE_WORDS } from "@/modules/purchasing/pages/Purchasing";
@@ -706,7 +706,12 @@ function DeliveryDialog({
             )}
           </Field>
 
-          <Checkbox checked={onCredit} onCheckedChange={setOnCredit}
+          <Checkbox checked={onCredit}
+            onCheckedChange={(v) => {
+              setOnCredit(v);
+              /* D27-372: due date + 30 days offered; the clerk changes it if the bill says otherwise. */
+              if (v) setBill((b) => (b.dueOn ? b : { ...b, dueOn: suggestedDue(b.billDate) }));
+            }}
             label="On credit - the supplier's bill is paid later" />
           {onCredit && (
             <div className="grid gap-3 sm:grid-cols-4">

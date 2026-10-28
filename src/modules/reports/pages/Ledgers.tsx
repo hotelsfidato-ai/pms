@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { dateShort } from "@/lib/format";
-import { Input, Switch } from "@/components/ui";
+import { api } from "@/lib/api";
+import { useUi } from "@/lib/ui";
+import { Input, NativeSelect, Switch } from "@/components/ui";
 import { DocumentReport } from "@/modules/reports/components/DocumentReport";
 import { monthOf } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -47,6 +51,70 @@ export function CityLedgerPage() {
           onCheckedChange={setIgnoreZero}
           label="Ignore zero balance account"
         />
+      }
+    />
+  );
+}
+
+/* ── TDS and the supplier statement (D27-372) ────────────────────── */
+
+/* The TDS deducted from suppliers, by section and supplier, for the days
+   chosen: the quarterly return's (26Q) figures. */
+export function TdsPage() {
+  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+  const [to, setTo] = useState(BUSINESS_DATE);
+  const ok = Boolean(from && to && from <= to);
+  return (
+    <DocumentReport
+      report="tds"
+      title="TDS on supplier payments"
+      period={ok ? `${dateShort(from)} to ${dateShort(to)}` : "Choose the days"}
+      query={ok ? { from, asOn: to } : { from: BUSINESS_DATE, asOn: BUSINESS_DATE }}
+      what="the TDS deducted"
+      controls={
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </div>
+      }
+    />
+  );
+}
+
+/* One supplier's ledger for the days chosen: opening balance, each bill,
+   payment, TDS, credit note and reversal, a running balance, the closing
+   balance. The supplier comes from the address (Supplier dues links here) or
+   the list; the list is the hotel's suppliers, asked of purchasing's own API. */
+export function SupplierStatementPage() {
+  const code = useUi((s) => s.hotelId);
+  const [params, setParams] = useSearchParams();
+  const supplier = params.get("supplier") ?? "";
+  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+  const [to, setTo] = useState(BUSINESS_DATE);
+  const suppliers = useQuery({
+    queryKey: ["supplier-list", code],
+    queryFn: async () => (await api<{ suppliers: { id: string; name: string }[] }>(`/api/hotels/${code}/purchasing/dues`)).suppliers,
+    enabled: Boolean(code),
+  });
+  const ok = Boolean(supplier && from && to && from <= to);
+  const name = suppliers.data?.find((s) => s.id === supplier)?.name;
+  return (
+    <DocumentReport
+      report="supplier-statement"
+      title={name ? `Statement: ${name}` : "Supplier statement"}
+      period={ok ? `${dateShort(from)} to ${dateShort(to)}` : "Pick a supplier and the days"}
+      query={ok ? { from, asOn: to, supplier } : undefined}
+      what="the supplier's statement"
+      controls={
+        <div className="flex flex-wrap items-center gap-2">
+          <NativeSelect aria-label="Supplier" value={supplier}
+            onChange={(e) => setParams(e.target.value ? { supplier: e.target.value } : {}, { replace: true })}>
+            <option value="">Pick a supplier</option>
+            {(suppliers.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </NativeSelect>
+          <Input type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </div>
       }
     />
   );

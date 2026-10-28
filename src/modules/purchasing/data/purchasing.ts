@@ -131,6 +131,15 @@ export async function getPurchasing(hotelId: string): Promise<PurchasingList> {
 }
 
 /** A supplier's bill on credit (D27-370): as printed, and when it is due. */
+/** A supplier's bill without a due date of its own: the bill date + 30 days,
+    offered for the clerk to accept or change (the owner's D27-372). */
+export const suggestedDue = (billDate: string): string => {
+  const d = new Date(`${billDate}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setUTCDate(d.getUTCDate() + 30);
+  return d.toISOString().slice(0, 10);
+};
+
 export interface CreditBill { billNo: string; billDate: string; amount: number; dueOn: string }
 
 export async function getPurchaseRequest(
@@ -230,24 +239,69 @@ export async function downloadOrder(hotelId: string, requestId: string): Promise
    server's DUES_ROLES, who are exactly who hold `approve` on `invoice`. */
 export const seesSupplierDues = (role: Role): boolean => can(role, "approve", "invoice");
 
-export interface SupplierDue {
-  id: string; supplier: string; billNo: string; billDate: string;
-  /** As printed on the bill. A string to the screen, as all money here. */
-  amount: string; dueOn: string;
-  from: { kind: "bar" } | { kind: "order"; id: string; reference: string };
+export type PayMethod = "cash" | "cheque" | "bank" | "upi";
+export type TdsSection = "194C" | "194Q" | "194J" | "194I";
+
+/** One payment on a bill (D27-372): part payments, each with its TDS when the Accountant entered it. */
+export interface SupplierPayment {
+  id: string; paidOn: string; method: PayMethod; reference: string | null; amount: string;
+  tds: { section: TdsSection; rate: string; amount: string } | null;
+  handedOverBy: string | null; recordedBy: string | null; reversed: boolean;
+}
+export interface SupplierCreditNote {
+  id: string; noteNo: string; noteDate: string; amount: string; issuedBy: "supplier" | "hotel"; reason: string;
 }
 
-export async function getSupplierDues(hotelId: string): Promise<{ today: string; bills: SupplierDue[] }> {
+export interface SupplierDue {
+  id: string; supplierId: string | null; supplier: string; billNo: string; billDate: string;
+  /** As printed on the bill. A string to the screen, as all money here. */
+  amount: string; dueOn: string;
+  /** What is left: the amount less what was paid, its TDS and its credit notes. */
+  owed: string; paid: string; tds: string; credited: string;
+  status: "unpaid" | "part-paid" | "paid";
+  /** The bill this one replaced, after a reversal (D27-372). */
+  replaces: string | null;
+  from: { kind: "bar" } | { kind: "order"; id: string; reference: string };
+  payments: SupplierPayment[];
+  creditNotes: SupplierCreditNote[];
+}
+
+export interface SupplierDues {
+  today: string;
+  suppliers: { id: string; name: string }[];
+  bills: SupplierDue[];
+  /** Credit notes against a supplier rather than one bill: they lower what is owed to it. */
+  credits: (Omit<SupplierCreditNote, "id"> & { id: string; supplierId: string; supplier: string })[];
+}
+
+export async function getSupplierDues(hotelId: string): Promise<SupplierDues> {
   return api(`/api/hotels/${hotelId}/purchasing/dues`);
 }
 
-export type PayMethod = "cash" | "cheque" | "bank" | "upi";
-
-/** Paid in full: the bill leaves the dues. No cash drawer is touched. */
+/** A payment, all of what is left or a part of it. No cash drawer is touched. */
 export async function paySupplierDue(
-  hotelId: string, billId: string, input: { method: PayMethod; reference: string | null; paidOn: string },
+  hotelId: string, billId: string,
+  input: { amount: number; method: PayMethod; reference: string | null; paidOn: string; handedOverBy: string;
+           tds: { section: TdsSection; rate: number; amount: number } | null },
 ): Promise<Result<unknown>> {
   return call(`/api/hotels/${hotelId}/purchasing/dues/${billId}/payment`, "POST", input);
+}
+
+/** A credit note, money only: against one bill, or the supplier as a whole. */
+export async function addSupplierCreditNote(hotelId: string, input: {
+  billId: string | null; supplierId: string | null; issuedBy: "supplier" | "hotel";
+  noteNo: string; noteDate: string; amount: number; reason: string;
+}): Promise<Result<unknown>> {
+  return call(`/api/hotels/${hotelId}/purchasing/dues/credit-notes`, "POST", input);
+}
+
+/** A mistake reversed with a reason: both stay on the record (D27-372). */
+export async function reverseSupplierEntry(
+  hotelId: string, input: { kind: "bill" | "payment" | "credit-note"; id: string; reason: string;
+    /** A wrong bill's right one, on the same delivery or bar bill. */
+    correct?: CreditBill | null },
+): Promise<Result<unknown>> {
+  return call(`/api/hotels/${hotelId}/purchasing/dues/reverse`, "POST", input);
 }
 
 async function call<T>(path: string, method: string, body?: unknown): Promise<Result<T>> {

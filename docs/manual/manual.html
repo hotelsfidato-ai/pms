@@ -2650,6 +2650,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Cashiering</td><td>Reception, and whoever takes cash at the desk</td><td>Your own cash drawer: what you took, money in and out, the count, the hand-over (A4.10).</td></tr>
       <tr><td>Cash deposits</td><td>The owner, an administrator, the GM, the accountant, the Viewer</td><td>Each closed day's cash to deposit, what was banked, and who verified it.</td></tr>
       <tr><td>Company accounts</td><td>The desk and the accountant</td><td>What each company or booking site owes and paid. <span class="ui">Record payment</span> when a company pays (A4.8).</td></tr>
+      <tr><td>Supplier dues</td><td>The accountant, the GM, the owner, an Admin</td><td>What the hotel owes suppliers: the bills taken on credit, part payments, TDS, credit notes and each supplier's statement - the same list as Purchasing's Supplier dues tab (A9.11).</td></tr>
       <tr><td>Form III</td><td>Whoever checks guests in</td><td>Foreign guests reported to the FRRO (chapter A3).</td></tr>
       <tr><td>Online payments</td><td>The owner, administrators, the GM</td><td>Marked <span class="msg">“Not built yet”</span>: a page saying what it will do.</td></tr>
     </tbody>
@@ -4793,21 +4794,21 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <h3>Moving a table, or joining two</h3>
-  <p>Guests change tables, and two tables become one party. Both are done on the Till, on the table's open bill (tap the eye on the table in Tables to open it there), by anybody who takes orders. Nothing prints: the Kitchen screen shows the new table by itself (<span class="d">D27-370</span>).</p>
+  <p>Guests change tables, and two tables become one party. Both are done on the table's open bill, on the Till or the Terminal (tap the eye on the table in Tables to open it on the Till), by anybody who takes orders. Nothing prints: the Kitchen screen shows the new table by itself (<span class="d">D27-370</span>, <span class="d">D27-372</span>).</p>
   <p>To <b>move</b> the guests to a free table:</p>
   <ol class="steps">
     <li>On the open bill, tap <span class="ui">Move to another table</span>.</li>
-    <li>The free tables of the same section are listed. Tap the one the guests are moving to.</li>
+    <li>The restaurant's free tables are listed, in every section (A/C to Non A/C is fine). Tap the one the guests are moving to.</li>
     <li>The bill, its dishes and its KOTs are now on that table, and the old table is free. The bill says <span class="msg">“Moved from N4 to N6 by Ravi at 20:15.”</span> and keeps it.</li>
   </ol>
   <p>To <b>join</b> another table onto this bill, so the two pay one bill:</p>
   <ol class="steps">
     <li>On the open bill, tap <span class="ui">Join another table</span>.</li>
-    <li>The tables of the same section with an open bill are listed. Tap the one that joins this one.</li>
+    <li>The restaurant's other tables with an open bill are listed, in every section. Tap the one that joins this one.</li>
     <li>The screen says what happens and that <span class="msg">“This cannot be undone.”</span> Tap <span class="ui">Join</span>.</li>
-    <li>That table's dishes and KOTs are now on this bill, and that table is free. Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it.</li>
+    <li>That table's dishes, KOTs and covers are now on this bill (this bill keeps its own waiter). Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it. On Tables, that table reads <b>Joined to AC3</b> until this bill is settled, as the party may still be sitting there; then it is free.</li>
   </ol>
-  <p>For now, a move or a join stays inside one section of one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked for today is refused.</p>
+  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked is refused from two hours before the booking; earlier in the day it can be used.</p>
 
   <figure class="shot" id="fig-A8-47">
     <img src="img/A8-47.png" alt="The Till: Move AC3 to another table, the bill and its KOTs go with it, and the free tables of the section to choose from">
@@ -5158,11 +5159,11 @@ figure.shot.phone img { max-width: 72mm; }
   </div>
 
   <h3>Bill history: any dates</h3>
-  <p>The Till's card above finds one day, or one number. For anything wider, open <span class="ui">Bill history</span> in the restaurant's menu, under <span class="ui">Till</span>. It lists every paid, VOID and NC bill of the dates you choose, and nothing else: an order still open is on the Till, and a bill closed unpaid has nothing to print.</p>
+  <p>The Till's card above finds one day, or one number, for everyone who uses the Till. For anything wider, the owner, an Admin, the GM, the Hotel Manager, the Accountant and Reception open <span class="ui">Bill history</span> in the restaurant's menu, under <span class="ui">Till</span> (<span class="d">D27-372</span>). It lists every paid, VOID and NC bill of the dates you choose, and nothing else: an order still open is on the Till, and a bill closed unpaid has nothing to print.</p>
   <ol class="steps">
     <li>It opens on today's business day. Change <span class="ui">From</span> and <span class="ui">To</span> to any dates. Leave one empty to go on without an end.</li>
     <li>To narrow the list, fill any of these (all optional, and they work together): the <span class="ui">Bill number</span> (a part is enough), the <span class="ui">Table</span>, the <span class="ui">Guest name or phone</span> (a part of either; a phone is found however it was typed), <span class="ui">Paid by</span>, the <span class="ui">Waiter</span> and the <span class="ui">Outlet</span>. Tap <span class="ui">Show bills</span>. <span class="ui">Clear</span> empties the boxes.</li>
-    <li>Each line says the bill number, its date and time, outlet, table, guest, waiter, how it was paid, its total and its state: <span class="ui">Paid</span>, <b>VOID</b> (the total struck through) or <b>NC</b> (no value). A bill paid in two ways says both. A figure nobody holds shows a dash.</li>
+    <li>Each line says the bill number, its date and the time it was settled, outlet, table, guest (a bill charged to a room shows the stay's guest and room, and is found by them too), waiter, how it was paid, its total and its state: <span class="ui">Paid</span>, <b>VOID</b> (the total struck through) or <b>NC</b> (no value). A bill paid in two ways says both. A figure nobody holds shows a dash.</li>
     <li>Tap a bill to see the whole bill, as it is on paper. <span class="ui">Print the bill</span> prints it as in A8.6, headed <b>BILL · DUPLICATE</b>.</li>
     <li><span class="ui">Download to Excel</span> saves the list on the screen as a file Excel opens (a CSV, named with the hotel and the dates). Totals are plain numbers so Excel can add them; an NC bill's total is left empty. A VOID bill keeps its total in the file, so filter its <span class="ui">State</span> column before adding up.</li>
   </ol>
@@ -6162,7 +6163,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Open the order. It says <span class="ui">Ordered</span>. Tap <span class="ui">Record the delivery</span>.</li>
     <li>For each line, type what <span class="ui">Came</span> and what it cost each, before GST. Then the bill's <span class="ui">GST %</span>, the GST amount, <span class="ui">Claimable</span>, and the <span class="ui">Use by</span> date if it has one.</li>
     <li>Type <span class="ui">Anything to note</span>: a short delivery, a damaged case, a different brand.</li>
-    <li>If the goods came <b>on credit</b> - the supplier is paid later - tick <span class="ui">On credit - the supplier's bill is paid later</span> and type the supplier's <span class="ui">Bill number</span>, the <span class="ui">Bill date</span>, the <span class="ui">Amount, as printed</span> and the date it is <span class="ui">Due on</span>. The bill goes on <span class="ui">Supplier dues</span> (below).</li>
+    <li>If the goods came <b>on credit</b> - the supplier is paid later - tick <span class="ui">On credit - the supplier's bill is paid later</span> and type the supplier's <span class="ui">Bill number</span>, the <span class="ui">Bill date</span>, the <span class="ui">Amount, as printed</span> and the date it is <span class="ui">Due on</span> (filled with the bill date + 30 days; change it to what the bill says). The bill goes on <span class="ui">Supplier dues</span> (below).</li>
     <li>Tap <span class="ui">Record the delivery</span>. The goods land in the order's store, as a delivery in the Store (A9.4).</li>
   </ol>
 
@@ -6216,12 +6217,12 @@ figure.shot.phone img { max-width: 72mm; }
   <p>A bill for the bar is recorded <b>as printed</b>, with no approval: the bill has already come. Its bottles go into the <b>Bar store</b> at once, so the bar's stock is right from the moment the bill is saved. The owner, an Admin, the GM, the Inventory Manager and the bar manager (the Bar role) record them; whoever sees Purchasing or Bar stock can read them.</p>
   <ol class="steps">
     <li>Open <span class="ui">Bar stock</span> in the Restaurant menu, tap <span class="ui">Bills</span>, then <span class="ui">Record a bar bill</span>. (Or <span class="ui">Purchasing</span>, <span class="ui">Bar</span>.)</li>
-    <li>Type the <span class="ui">Supplier</span>, the <span class="ui">Bill number</span> as printed, the <span class="ui">Bill date</span> and the <span class="ui">T.P. number</span> (the transport permit, if the bill has one).</li>
+    <li>Pick the <span class="ui">Supplier</span> from the hotel's list (a new one is added first in Places and suppliers, so one supplier never becomes two by spelling), type the <span class="ui">Bill number</span> as printed, the <span class="ui">Bill date</span> and the <span class="ui">T.P. number</span> (the transport permit, if the bill has one).</li>
     <li><span class="ui">Photo of the bill</span>: take it with the phone's camera, or pick a file.</li>
     <li>For each line of the bill, pick the drink from the bar's list. A drink the list does not have yet: <span class="ui">Add another drink…</span>, then its brand as on the bill, its size in ml (a NIP is 180) and what it is counted in (bottle, can, packet, piece). It joins the bar's list.</li>
     <li>Type the line as printed: <span class="ui">Bottles a case</span> (48 NIPs, 12 beers of 650 ml; filled in from the drink's last bill), the <span class="ui">Cases</span>, any <span class="ui">Loose bottles</span>, the <span class="ui">MRP</span> and the <span class="ui">Rate a case</span>. The <span class="ui">Amount</span> works itself out: the rate for each case, and a case's share of it for each loose bottle. <span class="ui">Add a drink</span> for the next line.</li>
     <li>Type the <span class="ui">Handling charges</span>, the <span class="ui">TCS</span> and the <span class="ui">Total, as printed</span>. The line under them says what the lines, handling and TCS make, and <span class="msg">“matches the bill”</span>, or how much more or less it is.</li>
-    <li>If the bill is <b>on credit</b>, tick <span class="ui">On credit - the bill is paid later</span> and pick the date it is <span class="ui">Due on</span>. Its number, date and total go on <span class="ui">Supplier dues</span> (below).</li>
+    <li>If the bill is <b>on credit</b>, tick <span class="ui">On credit - the bill is paid later</span> and check the date it is <span class="ui">Due on</span> (filled with the bill date + 30 days). Its number, date and total go on <span class="ui">Supplier dues</span> (below).</li>
     <li>Tap <span class="ui">Save the bill</span>.</li>
   </ol>
 
@@ -6252,13 +6253,17 @@ figure.shot.phone img { max-width: 72mm; }
   </div>
 
   <h3>Supplier dues: what we owe suppliers</h3>
-  <p>The <span class="ui">Supplier dues</span> tab of Purchasing lists every bill taken on credit - from a delivery or a bar bill - that is not paid yet. Each supplier has its bills (number, the order or "bar bill" it came from, bill date, due date and amount) and its total; the total owed to all of them is at the top. A bill past its due date is in red, with <span class="msg">“overdue”</span>. The Accountant, the GM, the owner and an Admin see it and pay; nobody else sees the tab.</p>
+  <p>The <span class="ui">Supplier dues</span> tab of Purchasing, and <span class="ui">Supplier dues</span> in the Finance menu, list every bill taken on credit - from a delivery or a bar bill - with something still to pay. Each supplier has its bills (number, the order or "bar bill" it came from, bill date, due date, amount and what is <b>Left</b>, marked <b>Part-paid</b> once something is paid), its total and a link to its <span class="ui">Statement</span> (A11.6); the total owed to all of them is at the top. A bill past its due date is in red, with <span class="msg">“overdue”</span>. The Accountant, the GM, the owner and an Admin see it and use it; nobody else sees it (<span class="d">D27-370</span>, <span class="d">D27-372</span>).</p>
+  <p>To <b>pay</b> all or part of a bill:</p>
   <ol class="steps">
-    <li>Open <span class="ui">Purchasing</span>, tap <span class="ui">Supplier dues</span>.</li>
-    <li>On the bill being paid, tap <span class="ui">Record payment</span>.</li>
-    <li>Pick <span class="ui">How</span>: Cash, Cheque, Bank transfer or UPI. Type the <span class="ui">Reference</span> (the cheque or UTR number; it may be left empty) and the date it was <span class="ui">Paid on</span> (today unless changed).</li>
-    <li>Tap <span class="ui">Mark paid</span>. The bill is paid in full and leaves the list; who recorded it is kept.</li>
+    <li>On the bill, tap <span class="ui">Record payment</span>.</li>
+    <li>The <span class="ui">Amount paid</span> is filled with what is left; type less to pay a part.</li>
+    <li>Pick <span class="ui">How</span>: Cash, Cheque, Bank transfer or UPI. For a cheque, a bank transfer or UPI the <span class="ui">Reference</span> (cheque, UTR or UPI number) is needed; for cash it may be left empty. Check <span class="ui">Paid on</span>, and type who <span class="ui">Handed over</span> the money or cheque.</li>
+    <li>If TDS was deducted, tick <span class="ui">TDS deducted</span> and type its <span class="ui">Section</span> (194C, 194Q, 194J or 194I), <span class="ui">Rate, %</span> and <span class="ui">TDS amount</span>. The Accountant decides whether TDS applies; the system works nothing out. The supplier is paid the rest, and the payment and its TDS together come off the bill.</li>
+    <li>Tap <span class="ui">Record payment</span>. When nothing is left, the bill leaves the list.</li>
   </ol>
+  <p>A <b>credit note</b> lowers what is owed, money only: <span class="ui">Credit note</span> on a bill, or beside the supplier's name for one not against a bill. Say whose note it is (the supplier's, or ours), its number, date, amount and what it is for. Goods sent back leave the store as a store movement, separately.</p>
+  <p>A <b>mistake</b> is never changed or deleted: <span class="ui">Reverse</span> a bill, a payment or a credit note and say why. Both stay on the record, with who did it. Reversing a wrong bill can carry the right one (its number, date, amount and due date), which then replaces it.</p>
 
   <figure class="shot" id="fig-A9-46">
     <img src="img/A9-46.png" alt="Purchasing, Supplier dues: the total owed, a supplier with its bills and total, an overdue due date in red, and Record payment">
@@ -6275,11 +6280,10 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>A payment pays the whole bill. Paying part of a bill is not offered.</li>
-      <li>Nothing changes in a cash drawer or a shift: the payment is a record that the bill is paid.</li>
-      <li>A payment is not dated in the future, nor before the bill. A bill already paid is refused: <span class="msg">“This bill is already marked paid.”</span></li>
-      <li>A recorded bill or payment cannot be changed or removed here.</li>
-      <li>What was owed on a date, and the payments made, are in the <span class="ui">Supplier dues</span> report (A11.6).</li>
+      <li>A payment is never more than what is left on the bill, nor dated in the future or before the bill.</li>
+      <li>Nothing changes in a cash drawer or a shift: the payment is a record of what was paid.</li>
+      <li>A bill, payment or credit note is put right only by <span class="ui">Reverse</span>, with a reason.</li>
+      <li>What was owed on a date and the payments made are in the <span class="ui">Supplier dues report</span>; one supplier's ledger in the <span class="ui">Supplier statement</span>; TDS by section in <span class="ui">TDS on suppliers</span> (A11.6).</li>
     </ul>
   </div>
 
@@ -7424,7 +7428,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li><b>An order closed unpaid shows “-” for who and when.</b> The system keeps only the reason for it, so the report cannot say who closed it or at what time.</li>
+      <li><b>An order closed unpaid shows who closed it and when</b> from 28 October 2026 (<span class="d">D27-372</span>); one closed before that shows “-” for both, as only its reason was kept.</li>
       <li>A dish struck before the kitchen had it may have no reason: the reason column then shows “-”.</li>
       <li>The three kinds are never added together: a bill's amount has GST, a struck dish's does not.</li>
       <li>A bill given free (NC) and a discount are not voids and are not on this report.</li>
@@ -7555,7 +7559,7 @@ figure.shot.phone img { max-width: 72mm; }
   </div>
 
   <h3>Supplier dues</h3>
-  <p><span class="ui">Supplier dues</span> (<code>/reports/supplier-dues</code>) is what the hotel owes, not what it is owed: the suppliers' bills taken on credit (A9.11). <b>Owed to each supplier</b> lists, under each supplier, every bill dated by the business date and not paid by it - its date, its due date, the days it is overdue and its amount - with the supplier's total, and the total owed at the foot. <b>Payments made</b> lists the bills paid from the 1st of the month to the business date: the day, the supplier, the bill, how it was paid, its reference, who recorded it and the amount, with the total paid. It is the Owner's, an Admin's, the General Manager's and the Accountant's only; it has <span class="ui">PDF</span>, <span class="ui">Excel</span> and <span class="ui">CSV</span> like the others.</p>
+  <p>The <span class="ui">Supplier dues report</span> (<code>/reports/supplier-dues</code>) is what the hotel owes, not what it is owed: the suppliers' bills taken on credit (A9.11). <b>Owed to each supplier</b> lists, under each supplier, every bill dated by the business date and not paid by it - its date, its due date, the days it is overdue and its amount - with the supplier's total, and the total owed at the foot. <b>Payments made</b> lists the bills paid from the 1st of the month to the business date: the day, the supplier, the bill, how it was paid, its reference, who recorded it and the amount, with the total paid. It is the Owner's, an Admin's, the General Manager's and the Accountant's only; it has <span class="ui">PDF</span>, <span class="ui">Excel</span> and <span class="ui">CSV</span> like the others.</p>
 
   <figure class="shot" id="fig-A11-25">
     <img src="img/A11-25.png" alt="Supplier dues: Owed to each supplier with a supplier band, its bills, days overdue and its total, and Payments made">
@@ -7566,6 +7570,10 @@ figure.shot.phone img { max-width: 72mm; }
       <li>Payments made in the month so far</li>
     </ol>
   </figure>
+
+  <h3>Supplier statement, and TDS on suppliers</h3>
+  <p>The <span class="ui">Supplier statement</span> (<code>/reports/supplier-statement</code>, or <span class="ui">Statement</span> beside a supplier on Supplier dues) is one supplier's ledger for the days chosen: the opening balance, then each bill, payment, TDS, credit note and reversal by date with the balance after it, and the closing balance. Pick the supplier and the From and To dates.</p>
+  <p><span class="ui">TDS on suppliers</span> (<code>/reports/tds</code>) lists the TDS deducted on supplier payments for the days chosen, by section (194C, 194Q, 194J, 194I) and supplier: the figures for the quarterly TDS return (26Q). Both are read by the Accountant, the GM, the owner and an Admin, and download as PDF, Excel and CSV (<span class="d">D27-372</span>).</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>

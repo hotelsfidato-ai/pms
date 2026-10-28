@@ -4,6 +4,7 @@ import { RequireAccess } from "@/components/app/RequireAccess";
 import PurchasingPage from "@/modules/purchasing/pages/Purchasing";
 import PurchaseRequestPage from "@/modules/purchasing/pages/PurchaseRequest";
 import WhoMayAskPage from "@/modules/purchasing/pages/WhoMayAsk";
+import SupplierDuesPage from "@/modules/purchasing/pages/SupplierDuesPage";
 
 /* Purchasing's three addresses. Mounted by App.tsx inside the signed-in
    shell.
@@ -18,6 +19,14 @@ import WhoMayAskPage from "@/modules/purchasing/pages/WhoMayAsk";
    a 404 nobody can explain. */
 export const routes = (
   <>
+    <Route
+      path="/h/:code/supplier-dues"
+      element={
+        <RequireAccess path="/h/:code/supplier-dues" resource="invoice">
+          <PropertyScope /><SupplierDuesPage />
+        </RequireAccess>
+      }
+    />
     <Route
       path="/h/:code/purchasing"
       element={

@@ -42,15 +42,16 @@ export function DocumentReport({
   /** The screen's heading while the document is loading. */
   title: string;
   period: string;
-  query: ReportQuery;
+  /** Absent while the screen still needs a choice (a statement's supplier): nothing is asked. */
+  query: ReportQuery | undefined;
   what: string;
   controls?: import("react").ReactNode;
 }) {
   const hotelId = useHotel();
   const q = useQuery({
     queryKey: ["report", report, hotelId, query],
-    queryFn: () => getReport(hotelId, report, query),
-    enabled: Boolean(hotelId),
+    queryFn: () => getReport(hotelId, report, query!),
+    enabled: Boolean(hotelId && query),
     /* The Manager report is read afresh each time it opens, as the
        Dashboard's copy of it is (D27-151): kept for the session, it showed
        a booking voided since as still sold. */
@@ -70,7 +71,7 @@ export function DocumentReport({
         ready: Boolean(doc),
         /* The server's file routes, asked the same question the screen
            asked, so the file and the screen cannot show two answers. */
-        path: (kind) => `/api/hotels/${hotelId}/reports/${report}.${kind}${fileQuery(query)}`,
+        path: (kind) => `/api/hotels/${hotelId}/reports/${report}.${kind}${fileQuery(query ?? {})}`,
       }}
     >
       {q.isLoading ? (
@@ -81,6 +82,8 @@ export function DocumentReport({
         <ReadFailed error={readError(q)} what={what} onRetry={() => void q.refetch()} />
       ) : doc ? (
         <ReportView doc={doc} />
+      ) : !query ? (
+        <p className="py-10 text-center text-sm text-grey-500">Choose above what the report is of.</p>
       ) : (
         <p className="py-10 text-center text-sm text-grey-500">
           This property has no report to show.

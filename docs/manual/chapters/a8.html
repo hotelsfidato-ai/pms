@@ -108,21 +108,21 @@
   </figure>
 
   <h3>Moving a table, or joining two</h3>
-  <p>Guests change tables, and two tables become one party. Both are done on the Till, on the table's open bill (tap the eye on the table in Tables to open it there), by anybody who takes orders. Nothing prints: the Kitchen screen shows the new table by itself (<span class="d">D27-370</span>).</p>
+  <p>Guests change tables, and two tables become one party. Both are done on the table's open bill, on the Till or the Terminal (tap the eye on the table in Tables to open it on the Till), by anybody who takes orders. Nothing prints: the Kitchen screen shows the new table by itself (<span class="d">D27-370</span>, <span class="d">D27-372</span>).</p>
   <p>To <b>move</b> the guests to a free table:</p>
   <ol class="steps">
     <li>On the open bill, tap <span class="ui">Move to another table</span>.</li>
-    <li>The free tables of the same section are listed. Tap the one the guests are moving to.</li>
+    <li>The restaurant's free tables are listed, in every section (A/C to Non A/C is fine). Tap the one the guests are moving to.</li>
     <li>The bill, its dishes and its KOTs are now on that table, and the old table is free. The bill says <span class="msg">“Moved from N4 to N6 by Ravi at 20:15.”</span> and keeps it.</li>
   </ol>
   <p>To <b>join</b> another table onto this bill, so the two pay one bill:</p>
   <ol class="steps">
     <li>On the open bill, tap <span class="ui">Join another table</span>.</li>
-    <li>The tables of the same section with an open bill are listed. Tap the one that joins this one.</li>
+    <li>The restaurant's other tables with an open bill are listed, in every section. Tap the one that joins this one.</li>
     <li>The screen says what happens and that <span class="msg">“This cannot be undone.”</span> Tap <span class="ui">Join</span>.</li>
-    <li>That table's dishes and KOTs are now on this bill, and that table is free. Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it.</li>
+    <li>That table's dishes, KOTs and covers are now on this bill (this bill keeps its own waiter). Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it. On Tables, that table reads <b>Joined to AC3</b> until this bill is settled, as the party may still be sitting there; then it is free.</li>
   </ol>
-  <p>For now, a move or a join stays inside one section of one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked for today is refused.</p>
+  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked is refused from two hours before the booking; earlier in the day it can be used.</p>
 
   <figure class="shot" id="fig-A8-47">
     <img src="img/A8-47.png" alt="The Till: Move AC3 to another table, the bill and its KOTs go with it, and the free tables of the section to choose from">
@@ -473,11 +473,11 @@
   </div>
 
   <h3>Bill history: any dates</h3>
-  <p>The Till's card above finds one day, or one number. For anything wider, open <span class="ui">Bill history</span> in the restaurant's menu, under <span class="ui">Till</span>. It lists every paid, VOID and NC bill of the dates you choose, and nothing else: an order still open is on the Till, and a bill closed unpaid has nothing to print.</p>
+  <p>The Till's card above finds one day, or one number, for everyone who uses the Till. For anything wider, the owner, an Admin, the GM, the Hotel Manager, the Accountant and Reception open <span class="ui">Bill history</span> in the restaurant's menu, under <span class="ui">Till</span> (<span class="d">D27-372</span>). It lists every paid, VOID and NC bill of the dates you choose, and nothing else: an order still open is on the Till, and a bill closed unpaid has nothing to print.</p>
   <ol class="steps">
     <li>It opens on today's business day. Change <span class="ui">From</span> and <span class="ui">To</span> to any dates. Leave one empty to go on without an end.</li>
     <li>To narrow the list, fill any of these (all optional, and they work together): the <span class="ui">Bill number</span> (a part is enough), the <span class="ui">Table</span>, the <span class="ui">Guest name or phone</span> (a part of either; a phone is found however it was typed), <span class="ui">Paid by</span>, the <span class="ui">Waiter</span> and the <span class="ui">Outlet</span>. Tap <span class="ui">Show bills</span>. <span class="ui">Clear</span> empties the boxes.</li>
-    <li>Each line says the bill number, its date and time, outlet, table, guest, waiter, how it was paid, its total and its state: <span class="ui">Paid</span>, <b>VOID</b> (the total struck through) or <b>NC</b> (no value). A bill paid in two ways says both. A figure nobody holds shows a dash.</li>
+    <li>Each line says the bill number, its date and the time it was settled, outlet, table, guest (a bill charged to a room shows the stay's guest and room, and is found by them too), waiter, how it was paid, its total and its state: <span class="ui">Paid</span>, <b>VOID</b> (the total struck through) or <b>NC</b> (no value). A bill paid in two ways says both. A figure nobody holds shows a dash.</li>
     <li>Tap a bill to see the whole bill, as it is on paper. <span class="ui">Print the bill</span> prints it as in A8.6, headed <b>BILL · DUPLICATE</b>.</li>
     <li><span class="ui">Download to Excel</span> saves the list on the screen as a file Excel opens (a CSV, named with the hotel and the dates). Totals are plain numbers so Excel can add them; an NC bill's total is left empty. A VOID bill keeps its total in the file, so filter its <span class="ui">State</span> column before adding up.</li>
   </ol>

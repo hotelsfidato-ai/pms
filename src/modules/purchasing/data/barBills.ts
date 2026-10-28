@@ -50,14 +50,16 @@ export const lineAmount = (l: { perCase: number; cases: number; bottles: number;
 type Result<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 
 export const barDrinks = (hotelId: string) =>
-  api<{ store: { id: string; name: string; isActive: boolean } | null; drinks: BarDrink[] }>(
+  api<{ store: { id: string; name: string; isActive: boolean } | null; drinks: BarDrink[];
+        /** The hotel's suppliers: a bar bill's is picked from them (D27-372). */
+        suppliers: { id: string; name: string }[] }>(
     `/api/hotels/${hotelId}/bar/drinks`);
 
 export const barBills = async (hotelId: string) =>
   (await api<{ purchases: BarBill[] }>(`/api/hotels/${hotelId}/bar/purchases`)).purchases;
 
 export async function recordBarBill(hotelId: string, bill: {
-  supplier: string; billNo: string; billDate: string; tpNo: string | null;
+  supplierId: string; billNo: string; billDate: string; tpNo: string | null;
   handling: number | null; tcs: number | null; total: number; lines: NewBillLine[];
   /** On credit: its due date (D27-370). */
   dueOn?: string;

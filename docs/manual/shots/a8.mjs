@@ -545,7 +545,7 @@ export const SHOTS = [
     ],
   },
   /* Table shifting (D27-370). Before A8-47 the master opens dine-in bills
-     on AC3 and AC4 (a section with free tables); A8-47 opens AC3's on the
+     on AC3 and AC5 (a restaurant with free tables); A8-47 opens AC3's on the
      Till, and A8-48 follows on the same bill. */
   {
     id: "A8-47", title: "Move to another table", as: "General Manager",
@@ -554,7 +554,7 @@ export const SHOTS = [
       { click: "text:· AC3", nth: 0 }, { waitFor: "text:Move to another table", ms: 30000 },
       { click: "text:Move to another table" }, { waitFor: "text:The bill and its KOTs go with it", ms: 10000 }, { wait: 400 },
     ],
-    marks: [{ n: 1, at: "text:AC2", nth: 0, side: "left" }],
+    marks: [{ n: 1, at: "text:AC6", nth: 0, side: "left" }],
   },
   { id: "A8-47b", title: "Close the move without moving", noShot: true, as: "General Manager",
     steps: [{ click: "text:Cancel" }, { wait: 300 }] },
@@ -562,7 +562,7 @@ export const SHOTS = [
     id: "A8-48", title: "Join another table: said before it is done", as: "General Manager",
     steps: [
       { click: "text:Join another table" }, { waitFor: "text:its own bill closes as joined", ms: 10000 },
-      { click: "text:AC4 ·", nth: 0 }, { waitFor: "text:This cannot be undone", ms: 10000 }, { wait: 400 },
+      { click: "text:AC5 ·", nth: 0 }, { waitFor: "text:This cannot be undone", ms: 10000 }, { wait: 400 },
     ],
     marks: [
       { n: 1, at: "text:This cannot be undone", side: "left" },

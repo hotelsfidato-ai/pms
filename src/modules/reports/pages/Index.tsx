@@ -123,6 +123,18 @@ const GROUPS: Group[] = [
         description: "What we owe each supplier on a date, bill by bill, and the payments made.",
       },
       {
+        title: "Supplier statement",
+        icon: HandCoins,
+        path: "/reports/supplier-statement",
+        description: "One supplier's ledger for the days chosen: bills, payments, TDS, credit notes, the running balance.",
+      },
+      {
+        title: "TDS on supplier payments",
+        icon: HandCoins,
+        path: "/reports/tds",
+        description: "TDS deducted from suppliers, by section and supplier: the figures for the quarterly return (26Q).",
+      },
+      {
         title: "Petty cash",
         icon: Wallet,
         path: "/reports/petty-cash",

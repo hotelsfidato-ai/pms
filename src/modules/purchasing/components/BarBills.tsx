@@ -10,6 +10,7 @@ import {
   barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto, lineAmount,
   type BarBill, type BarDrink, type NewBillLine,
 } from "@/modules/purchasing/data/barBills";
+import { suggestedDue } from "@/modules/purchasing/data/purchasing";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING · BAR (the owner's D27-354)
@@ -108,7 +109,8 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
         )}
 
       {recording && drinks.data?.store && (
-        <RecordDialog hotelId={hotelId} drinks={drinks.data.drinks} onClose={() => onRecording(false)} />
+        <RecordDialog hotelId={hotelId} drinks={drinks.data.drinks} suppliers={drinks.data.suppliers ?? []}
+          onClose={() => onRecording(false)} />
       )}
 
       <Dialog open={photo !== null} onOpenChange={(o) => { if (!o) setPhoto(null); }}>
@@ -148,11 +150,12 @@ function figures(l: Draft) {
   return { perCase, cases, bottles, ratePerCase: rate };
 }
 
-function RecordDialog({ hotelId, drinks, onClose }: {
-  hotelId: string; drinks: BarDrink[]; onClose: () => void;
+function RecordDialog({ hotelId, drinks, suppliers, onClose }: {
+  hotelId: string; drinks: BarDrink[]; suppliers: { id: string; name: string }[]; onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const [supplier, setSupplier] = useState("");
+  /* From the supplier list, so one supplier never becomes two by spelling (D27-372). */
+  const [supplierId, setSupplierId] = useState("");
   const [billNo, setBillNo] = useState("");
   const [billDate, setBillDate] = useState(new Date().toLocaleDateString("en-CA"));
   const [tpNo, setTpNo] = useState("");
@@ -186,11 +189,12 @@ function RecordDialog({ hotelId, drinks, onClose }: {
         ? { newDrink: { name: l.name.trim(), unit: l.unit, sizeMl: num(l.sizeMl) }, ...common }
         : { itemId: l.itemId, ...common });
     }
+    if (!supplierId) return setProblem("Who is the bill from? Pick the supplier.");
     if (printed.trim() === "") return setProblem("Type the bill's total, as printed on it.");
     if (onCredit && !dueOn) return setProblem("Pick the date the bill is due.");
     setSaving(true);
     const res = await recordBarBill(hotelId, {
-      supplier, billNo, billDate, tpNo: tpNo.trim() || null,
+      supplierId, billNo, billDate, tpNo: tpNo.trim() || null,
       handling: num(handling), tcs: num(tcs), total: Number(printed), lines: out,
       ...(onCredit ? { dueOn } : {}) });
     if (!res.ok) { setSaving(false); return setProblem(res.reason); }
@@ -220,7 +224,12 @@ function RecordDialog({ hotelId, drinks, onClose }: {
           <p className="text-sm text-grey-600">Type it as printed. The lines, the handling and the TCS must make the bill's total.</p>
           <div className="grid gap-3 sm:grid-cols-4">
             <Field label="Supplier" className="sm:col-span-2">
-              {(p) => <Input {...fieldProps(p)} value={supplier} onChange={(e) => setSupplier(e.target.value)} />}
+              {(p) => (
+                <NativeSelect {...fieldProps(p)} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+                  <option value="">{suppliers.length ? "Pick the supplier" : "No supplier yet: add one in Places and suppliers"}</option>
+                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </NativeSelect>
+              )}
             </Field>
             <Field label="Bill number">
               {(p) => <Input {...fieldProps(p)} value={billNo} onChange={(e) => setBillNo(e.target.value)} />}
@@ -340,7 +349,8 @@ function RecordDialog({ hotelId, drinks, onClose }: {
           </p>
 
           <div className="flex flex-wrap items-end gap-4">
-            <Checkbox checked={onCredit} onCheckedChange={setOnCredit}
+            <Checkbox checked={onCredit}
+              onCheckedChange={(v) => { setOnCredit(v); if (v && !dueOn) setDueOn(suggestedDue(billDate)); }}
               label="On credit - the bill is paid later" />
             {onCredit && (
               <Field label="Due on">

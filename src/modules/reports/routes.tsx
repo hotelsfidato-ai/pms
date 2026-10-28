@@ -8,7 +8,7 @@ import {
   MonthlyOccupancyPage, MonthlyStatisticsPage, YearlyStatisticsPage,
 } from "@/modules/reports/pages/Statistics";
 import {
-  CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage, PettyCashPage,
+  CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage, PettyCashPage, TdsPage, SupplierStatementPage,
 } from "@/modules/reports/pages/Ledgers";
 import VoidsPage from "@/modules/reports/pages/Voids";
 import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
@@ -66,6 +66,9 @@ export const routes = (
     <Route path="/reports/flr-monthly" element={<RequireAccess path="/reports/flr-monthly" resource="stock"><FlrMonthlyPage /></RequireAccess>} />
     {/* What we owe suppliers (D27-370): its own menu entry names the four. */}
     <Route path="/reports/supplier-dues" element={<RequireAccess path="/reports/supplier-dues" resource="invoice"><SupplierDuesPage /></RequireAccess>} />
+    {/* D27-372: TDS by section and supplier, and one supplier's statement - the same four. */}
+    <Route path="/reports/tds" element={<RequireAccess path="/reports/tds" resource="invoice"><TdsPage /></RequireAccess>} />
+    <Route path="/reports/supplier-statement" element={<RequireAccess path="/reports/supplier-statement" resource="invoice"><SupplierStatementPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );

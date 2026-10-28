@@ -1,5 +1,6 @@
-import { ShoppingCart } from "lucide-react";
+import { HandCoins, ShoppingCart } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { seesSupplierDues } from "@/modules/purchasing/data/purchasing";
 
 /* Purchasing — BUILT (phase 2C, docs/BUILD-PLAN-2026-09-18.md § 1). Its
    entry left the Coming soon section and took its place in "Store and
@@ -36,4 +37,9 @@ export const nav: ServiceNavEntry[] = [
     label: "Who may ask to buy", to: "/h/:code/purchasing/who-may-ask",
     icon: ShoppingCart, resource: "purchasing", listed: false,
     keywords: ["purchase setting", "who may raise", "requester", "permission to buy"] },
+  /* D27-372: Supplier dues in the Accountant's menu, for the four who see it. */
+  { section: "finance", order: 70,
+    label: "Supplier dues", to: "/h/:code/supplier-dues", icon: HandCoins,
+    resource: "invoice", canSee: seesSupplierDues,
+    keywords: ["supplier dues", "payable", "credit purchase", "owe", "tds", "credit note"] },
 ];
