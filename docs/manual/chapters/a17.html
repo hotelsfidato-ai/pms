@@ -1077,11 +1077,16 @@
       <li>Last success (and the last error, when there is one)</li>
     </ol>
   </figure>
-  <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span> and <span class="ui">Rivals' prices</span>. Backups and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
+  <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span>, <span class="ui">Disk</span> and <span class="ui">Rivals' prices</span>. Backups, the disk and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
+  <ul>
+    <li><span class="ui">Disk</span> says how full the server's disk is and how much is free. Needs a look from 80% used; Not working from 90%, because the database stops when the disk is full. Tell whoever looks after the server at once.</li>
+    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours. Once restore to any minute is switched on, also when the database's change journal or its weekly base copy is not reaching the bucket.</li>
+  </ul>
+  <p class="muted">The picture above was taken before the Disk row was added; the page now shows it between Backups and Rivals' prices.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The module switches are the owner's and an Admin's: <span class="d">D17-36</span>. Rivals' prices, 30 nights twice a week, the lowest public price: <span class="d">D27-270</span>. One page for every outside connection: <span class="d">D27-276</span>.</p>
+    <p>The module switches are the owner's and an Admin's: <span class="d">D17-36</span>. Rivals' prices, 30 nights twice a week, the lowest public price: <span class="d">D27-270</span>. One page for every outside connection: <span class="d">D27-276</span>. The disk and the off-site copies watched there too: <span class="d">D27-373</span> (plan A, A2).</p>
   </div>
 
   <!-- A17.15 -->

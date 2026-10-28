@@ -41,7 +41,8 @@ function for the page and the alert. Per-hotel facts come from
 | **WhatsApp (Meta)** | `messages_sent`, channel whatsapp; Meta's refusal is the detail | as above | as above | as above | as above |
 | **CRS bridge** | `crs_hotels` (last read, last error), `crs_bookings` (last booking taken = last success) | this hotel not connected | connected under 30 minutes ago, no read yet | the last read failed, or nothing read for **30 minutes** (the reader runs every 5) | the last read worked |
 | **Firebase sign-in** | the Admin SDK lists ONE account (read-only), 10 seconds allowed | no Firebase key on this server (development) | - | it did not answer | it answered |
-| **Backups** | the last `backup-status` line in `/var/log/fidato-backup.log` (`db/verify-backup.sh`) | no backup log on this server | no status line yet; or backed up but on this disk only | the last one failed, or none for **26 hours** | backed up and copied off the server |
+| **Backups** | the last `backup-status` line in `/var/log/fidato-backup.log` (`db/verify-backup.sh`) | no backup log on this server | no status line yet; or backed up but on this disk only | the last one failed, or none for **26 hours**; or, once a line has said `uploaded=yes` (a bucket is set), none has for **26 hours** (D27-373, A2). Restore to any minute (A3), once on: `pg_stat_archiver` failing (the last try failed after the last success); the push's `/var/log/fidato-wal.status` saying failed, or older than **30 minutes**; the last `base-backup-status` line failed, or none ok for **8 days** | backed up and copied off the server |
+| **Disk** | `statfs("/")`, counted as `df` does: used = blocks less free, free = what a non-root user (the database) may still write | - | **80%** used or more | **90%** used or more (D27-373, A2): the database stops when the disk is full | below 80% |
 | **Rivals' prices** | `market_rate_settings`, `market_rates` | switched off here | switched on, not checked yet; or the last check kept no prices (a failed search is only in the server log) | - (failures are not recorded) | the last check kept prices |
 
 **Why emails and WhatsApp are judged apart:** both go through the one n8n
@@ -88,7 +89,8 @@ not unique (several people can be owner). The setting is explicit.
 
 1. Emails and WhatsApp judged apart (above) - confirm.
 2. Red after **3** failures in a row, CRS stale after **30** minutes, backups
-   stale after **26** hours - confirm the numbers.
+   stale after **26** hours - confirm the numbers. (The disk's 80% and 90% are
+   plan A's, chosen with it: D27-373.)
 3. Done 5 October (D27-284 (5)): System health (admin) reads the same
    `backup-status` line through this service's front door (`readBackupStatus`,
    `BACKUP_LOG` in `index.ts`). One reader, one format.

@@ -1,0 +1,35 @@
+# =============================================================================
+# fidato-backup-now.socket — a backup on demand, for the owner's full reset
+# =============================================================================
+# D27-342: "Clear this hotel and start today" takes a backup first, with the
+# server's own `fidato-backup` (which copies it off the server when
+# /etc/fidato-backup.env names a bucket). That program runs as `postgres`, and
+# the API may gain no privileges (NoNewPrivileges in fidato-api.service), so
+# the API cannot run it. Instead: every connection to this socket starts one
+# fidato-backup-now@.service, which runs the backup and writes its output back
+# down the socket. The API reads it to the end; the last line is the file.
+#
+# Only the API's own user may connect (SocketUser/SocketMode). Connecting does
+# one thing: take a backup. It reads nothing and removes nothing.
+#
+# Installed and enabled by deploy/launch.sh on every run (D27-375), into
+# /etc/systemd/system/ with its service. The API is told where it is by the
+# owner alone (deploy/README.md, "The owner's full reset"):
+#   RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock
+# =============================================================================
+
+[Unit]
+Description=Fidato PMS - a backup on demand, for the owner's full reset
+
+[Socket]
+ListenStream=/run/fidato-backup-now.sock
+SocketUser=fidato
+SocketGroup=fidato
+SocketMode=0600
+Accept=yes
+# One at a time: a second press while a backup is running is refused, and
+# the API says the backup could not be started (nothing is cleared).
+MaxConnections=1
+
+[Install]
+WantedBy=sockets.target

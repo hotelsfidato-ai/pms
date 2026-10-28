@@ -24,6 +24,8 @@ const HEALTH: ConnectionsHealth = {
       lastSuccess: "2026-10-04T09:59:00Z", lastError: null },
     { key: "backups", label: "Backups", status: "amber", summary: "Backed up on this server's disk only.",
       lastSuccess: "2026-10-03T21:30:00Z", lastError: null },
+    { key: "disk", label: "Disk", status: "red", summary: "92% used, 3.7 GB free. Make room now: the database stops when the disk is full.",
+      lastSuccess: null, lastError: null },
     { key: "rivals", label: "Rivals' prices", status: "grey", summary: "Switched off for this property.",
       lastSuccess: null, lastError: null },
   ],
@@ -59,6 +61,7 @@ describe("Connection health", () => {
     expect(within(screen.getByRole("listitem", { name: "Emails (n8n)" })).getByText("Working")).toBeTruthy();
     expect(within(screen.getByRole("listitem", { name: "Backups" })).getByText("Needs a look")).toBeTruthy();
     expect(within(screen.getByRole("listitem", { name: "CRS bridge" })).getByText("Not set up")).toBeTruthy();
+    expect(within(screen.getByRole("listitem", { name: "Disk" })).getByText("Not working")).toBeTruthy();
     expect(screen.getByText(/never while emails are not working/i)).toBeTruthy();
   });
 
