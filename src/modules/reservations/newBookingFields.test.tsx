@@ -118,5 +118,7 @@ describe("New booking's Phase 1 fields", () => {
     expect(await screen.findByText("Held, waiting for the hotel")).toBeTruthy();
     /* Nothing goes to a guest while it waits: no link, no voucher. */
     expect(screen.queryByRole("button", { name: /Send voucher/ })).toBeNull();
-  });
+  /* It fills every field New booking has: 13 s alone, over 20 s when the whole
+     suite runs at once (release 14's gates). */
+  }, 60_000);
 });

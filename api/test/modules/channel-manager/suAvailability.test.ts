@@ -354,7 +354,9 @@ describe("only what changed", () => {
     expect(entries[0]).toMatchObject({ roomid: "DLX", date: addDays(first, 20) });
     expect(before).toBeGreaterThan(0);
     expect(Number(entries[0]!["roomstosell"])).toBe(before - 1);
-  });
+    /* 15-19 s alone on this machine, release 13's code and 14's alike; over 20 s in
+       the full run (release 14's gates). */
+  }, 60_000);
 
   it("sends a refused request again next time, and logs what SU said", async () => {
     await onSu();

@@ -256,7 +256,10 @@ describe("the tax invoice to the guest, with its PDF", () => {
         `insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out, adults,
                                    status, source, agreed_rate, company_id)
          select $1, $2, (select id from room_types where hotel_id = $1 limit 1), $3,
-                app.business_date($1), app.business_date($1) + 1, 1, 'confirmed', 'direct', 1000, $4
+                /* 400 days on, never in the demo's calibrated days: an issued invoice
+                   cannot be deleted, so these stays stay, and on the business date they
+                   added two nights to inventory.test.ts's 132 (release 14's gates). */
+                app.business_date($1) + 400, app.business_date($1) + 401, 1, 'confirmed', 'direct', 1000, $4
          returning id::text as id`, [hotelId, guestId, reference, company]);
       const [bill] = await sql("insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text as id",
         [hotelId, stay!.id]);
