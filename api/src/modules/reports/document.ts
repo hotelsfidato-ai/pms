@@ -104,6 +104,8 @@ export type ReportKey =
   | "flr-monthly"
   /* What we owe suppliers, and what was paid (D27-370). */
   | "supplier-dues"
+  /* TDS deducted from suppliers, and one supplier's statement (D27-372). */
+  | "tds" | "supplier-statement"
   /* The petty cash book (D27-370). */
   | "petty-cash";
 
@@ -130,6 +132,8 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "flr-daily",
   "flr-monthly",
   "supplier-dues",
+  "tds",
+  "supplier-statement",
   "petty-cash",
 ];
 
@@ -151,6 +155,8 @@ export interface ReportParams {
       nothing on them are left out. */
   from?: string;
   ignoreZero?: boolean;
+  /** Supplier statement: the supplier's id (D27-372). */
+  supplier?: string;
 }
 
 export interface ReportDoc {

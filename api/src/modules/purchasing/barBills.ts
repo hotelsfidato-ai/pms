@@ -69,7 +69,10 @@ barBills.get("/:code/bar/drinks", async (c) => {
         order by item_id, (select recorded_at from bar_purchases p where p.id = purchase_id) desc`,
       [hotelId]);
     const perCase = new Map(cases.map((r) => [r.item_id, r.per_case]));
-    return { store, drinks: drinks.map((d) => ({ ...d, perCase: perCase.get(d.id) ?? null })) };
+    /* The bill's supplier is picked from this list, not typed (D27-372). */
+    const { rows: suppliers } = await client.query<{ id: string; name: string }>(
+      "select id::text, name from suppliers where hotel_id = $1 and is_active order by name", [hotelId]);
+    return { store, suppliers, drinks: drinks.map((d) => ({ ...d, perCase: perCase.get(d.id) ?? null })) };
   });
   if (!body) return c.json({ error: "No such property." }, 404);
   if ("forbidden" in body) return c.json(refuse(body.forbidden), 403);
@@ -85,7 +88,7 @@ barBills.get("/:code/bar/purchases", async (c) => {
       id: string; supplier: string; bill_no: string; bill_date: string; tp_no: string | null;
       handling: string | null; tcs: string | null; bill_total: string | null;
       recorded_by: string | null; recorded_at: string; photo_id: string | null;
-      credit: { dueOn: string; paidOn: string | null } | null;
+      credit: { dueOn: string; owed: string } | null;
       lines: { item: string; unit: string; sizeMl: number | null; mrp: string | null; perCase: number;
                cases: number; bottles: number; ratePerCase: string; amount: string }[];
     }>(
@@ -96,8 +99,9 @@ barBills.get("/:code/bar/purchases", async (c) => {
                 where a.hotel_id = p.hotel_id and a.subject_table = 'bar_purchases'
                   and a.subject_id = p.id order by a.uploaded_at desc limit 1) as photo_id,
               (select json_build_object('dueOn', to_char(sb.due_on, 'YYYY-MM-DD'),
-                                        'paidOn', to_char(sb.paid_on, 'YYYY-MM-DD'))
-                 from supplier_bills sb where sb.bar_purchase_id = p.id) as credit,
+                                        'owed', app.supplier_bill_owed(sb.id)::text)
+                 from supplier_bills sb where sb.bar_purchase_id = p.id
+                  and not exists (select 1 from supplier_reversals x where x.bill_id = sb.id)) as credit,
               coalesce((select json_agg(json_build_object(
                          'item', i.name, 'unit', i.unit, 'sizeMl', i.size_ml, 'mrp', l.mrp::text,
                          'perCase', l.per_case, 'cases', l.cases, 'bottles', l.bottles,
@@ -117,7 +121,7 @@ barBills.get("/:code/bar/purchases", async (c) => {
         id: r.id, supplier: r.supplier, billNo: r.bill_no, billDate: r.bill_date, tpNo: r.tp_no,
         handling: num(r.handling), tcs: num(r.tcs), total: num(r.bill_total),
         recordedBy: r.recorded_by, recordedAt: r.recorded_at, photoId: r.photo_id,
-        /* On credit (D27-370): when it is due, and when it was paid. Null: paid on the day. */
+        /* On credit (D27-370): when it is due, and what is left on it (D27-372). Null: paid on the day. */
         credit: r.credit,
         lines: r.lines.map((l) => ({ ...l, mrp: num(l.mrp), ratePerCase: Number(l.ratePerCase),
           amount: Number(l.amount) })),
@@ -146,20 +150,20 @@ export const lineAmount = (l: { perCase: number; cases: number; bottles: number;
   round2(l.ratePerCase * (l.cases + l.bottles / l.perCase));
 
 barBills.post("/:code/bar/purchases", async (c) => {
-  type Body = { supplier?: string; billNo?: string; billDate?: string; tpNo?: string | null;
+  type Body = { supplierId?: string; billNo?: string; billDate?: string; tpNo?: string | null;
                 handling?: number | null; tcs?: number | null; total?: number; lines?: LineIn[];
                 /** On credit, its due date: the bill goes on the Supplier dues (D27-370). */
                 dueOn?: string | null };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
-  const supplier = input.supplier?.trim() ?? "";
+  const supplierId = input.supplierId ?? "";
   const billNo = input.billNo?.trim() ?? "";
   const billDate = input.billDate ?? "";
   const tpNo = input.tpNo?.trim() || null;
   const lines = Array.isArray(input.lines) ? input.lines : [];
 
   /* The bill's own facts, before anything is asked of the database. */
-  if (!supplier) return c.json(refuse("Who is the bill from? Type the supplier."), 409);
-  if (supplier.length > 120) return c.json(refuse("A supplier's name is at most 120 characters."), 409);
+  /* Picked from the supplier list, so one supplier cannot become two by spelling (D27-372). */
+  if (!UUID.test(supplierId)) return c.json(refuse("Who is the bill from? Pick the supplier."), 409);
   if (!billNo) return c.json(refuse("Type the bill's number, as printed on it."), 409);
   if (billNo.length > 60) return c.json(refuse("A bill number is at most 60 characters."), 409);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(billDate)) return c.json(refuse("Pick the bill's date."), 409);
@@ -205,6 +209,10 @@ barBills.post("/:code/bar/purchases", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     if (!(await hasRoleAt(client, hotelId, BAR_RECORDERS))) return forbid(PURCHASING_REFUSED.barBill);
+    const { rows: [picked] } = await client.query<{ name: string }>(
+      "select name from suppliers where hotel_id = $1 and id = $2 and is_active", [hotelId, supplierId]);
+    if (!picked) return refuse("That supplier is not on this hotel's list. Pick one, or add it in Places and suppliers.");
+    const supplier = picked.name;
 
     /* The calendar, not the business day: a hotel whose night audit is behind
        still receives today's bills. */
@@ -234,10 +242,10 @@ barBills.post("/:code/bar/purchases", async (c) => {
     /* ── Written: the bill, any drink added, then each line into the bar's store ── */
     const { rows: [bill] } = await client.query<{ id: string }>(
       `insert into bar_purchases
-         (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by, tp_no, handling, tcs, bill_total)
-       values ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9, $10) returning id::text`,
+         (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by, tp_no, handling, tcs, bill_total, supplier_id)
+       values ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9, $10, $11) returning id::text`,
       [hotelId, supplier, billNo, billDate, today, session.staffId, tpNo,
-       input.handling ?? null, input.tcs ?? null, input.total]);
+       input.handling ?? null, input.tcs ?? null, input.total, supplierId]);
     for (const [n, l] of lines.entries()) {
       let itemId = l.itemId ?? null;
       if (!itemId) {
@@ -260,7 +268,7 @@ barBills.post("/:code/bar/purchases", async (c) => {
         [hotelId, bill!.id, itemId, got.id, l.mrp ?? null, l.perCase, l.cases, l.bottles, l.ratePerCase, amounts[n]]);
     }
     if (credit) {
-      await recordCredit(client, { hotelId, staffId: session.staffId, supplier, credit, barPurchaseId: bill!.id });
+      await recordCredit(client, { hotelId, staffId: session.staffId, supplier, supplierId, credit, barPurchaseId: bill!.id });
     }
     return { ok: true as const, id: bill!.id };
   });
