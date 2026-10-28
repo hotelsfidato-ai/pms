@@ -8,7 +8,28 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
-## 2026-10-28 · The guest's company and GSTIN on a booking (the owner's D27-371)
+## 2026-10-28 · The guest's company: the owner's follow-ups (D27-372)
+
+**Asked for:** a returning guest's last company offered on New booking for the
+clerk to confirm; Settings' Company section (`booking_company`) switched off
+hides the guest's three company fields too.
+
+**Shipped:** `BookingPage.tsx` - Company name, GSTIN and Company address are
+drawn, checked and sent only while the Company section is on (off: not shown,
+no GSTIN check, no `guestCompany` sent; the server refuses nothing, as for the
+other booking sections). The returning-guest line gets `onUseCompany` (only
+while the section is on): after **Same person**, "Last company: ... · GSTIN
+..." and **Use this company**, which fills the three fields; nothing fills by
+itself. No new storage: the guests service reads it from their latest booking
+that had a company (247's columns).
+
+**Proved:** `guestCompany.test.tsx` 5/5 (two new: the switch hides and sends
+nothing; the offer fills only on the tap and is saved). Each new test failed
+with its code taken out (the `show.company` gate; the `onUseCompany` prop),
+then passed restored.
+
+**Left open:** none here; questions in the helper's report (cross-hotel last
+company; "last" = last booking that had one).
 
 **Asked for.** Salutation beside Full name; Company name, GSTIN and Company
 address on New booking, all optional; the GSTIN checked; with a GSTIN the tax

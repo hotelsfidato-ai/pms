@@ -11,6 +11,24 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-28 · The GST sales register's B2B / B2C Type (the owner's D27-372)
+
+**Shipped:** `GET /reports/gst-sales` returns `type` per row: **B2B** when the
+invoice carries a recipient GSTIN, else **B2C**; a credit note takes its
+invoice's (joined on `credits_id`). The screen has a **Type** column after
+GSTIN; the CSV a "Type" column after "Recipient GSTIN". Print (the PDF) is the
+screen. Issued invoices untouched.
+
+**Proved:** API `guestCompany.test.ts`: a GSTIN invoice B2B, its credit note
+B2B, an invoice with no GSTIN B2C - both failed with `type` removed. Screen:
+`gstSalesType.test.tsx` 1/1, failed with the cell removed.
+
+**Left open:** the credit note copies its invoice's GSTIN at issue, so "its
+invoice's type" and "its own" cannot differ today; the join keeps it right if
+that ever changes. Picture A11-15 to retake.
+
+---
+
 ## 2026-10-27 · The Petty cash report (the owner's D27-370), a helper's lane
 
 **Shipped** `api/src/modules/reports/builders/pettyCash.ts`, key `petty-cash` (screen, PDF, Excel and CSV from one document): every expense from the restaurant's tins and the front desk's drawers, by day (date, where, category, what for, amount, recorded by, approval, photo; a total per day and in all) and by category (expenses, Counted, Waiting for a yes, Refused). Totals count what the drawer counts, `app.cash_expense_counts` (D27-242). From the 1st of the month to the business date, or the days chosen (`PettyCashPage` in `pages/Ledgers.tsx`). Read as Cashier shift is: roleGate `MONEY_REPORT`, the file route's `MONEY_REPORTS`, the menu's `seesMoney` - not the revenue manager. All reports lists it under Money owed. Manual A11.6, picture plan A11-25.

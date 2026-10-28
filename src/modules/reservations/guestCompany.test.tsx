@@ -54,7 +54,7 @@ afterEach(() => {
 });
 
 const input = (label: string) =>
-  screen.getByLabelText((t) => t === label || t === `${label}*`, { selector: "input" });
+  screen.getByLabelText<HTMLInputElement>((t) => t === label || t === `${label}*`, { selector: "input" });
 const type = (label: string, value: string) => fireEvent.change(input(label), { target: { value } });
 
 const open = async () => {
@@ -120,5 +120,46 @@ describe("New booking's Guest card (D27-371)", () => {
     });
     /* The guest pays: nothing turns this into Bill to company. */
     expect(body).not.toHaveProperty("companyId");
+  });
+});
+
+/** The api mock above, with one more answer in front of it. */
+const answer = (match: (path: string) => boolean, body: unknown) => {
+  const base = vi.mocked(apiModule.api).getMockImplementation()!;
+  vi.mocked(apiModule.api).mockImplementation(async (path: string, init?: RequestInit) =>
+    !init?.method && match(path) ? body as never : base(path, init));
+};
+
+describe("D27-372: the Company section's switch, and a returning guest's last company", () => {
+  it("hides the three company fields when Settings' Company section is off, and sends none", async () => {
+    answer((p) => p.endsWith("/modules"), { modules: [{ module: "booking_company", enabled: false }] });
+    await open();
+    await waitFor(() => expect(screen.queryByText("Company name")).toBeNull());
+    expect(screen.queryByText("GSTIN")).toBeNull();
+    expect(screen.queryByText("Company address")).toBeNull();
+    type("Full name", "Anna Smith");
+    expect(await save()).not.toHaveProperty("guestCompany");
+  });
+
+  it("offers their last company once the clerk says Same person; one tap fills it, nothing by itself", async () => {
+    answer((p) => p.includes("/guests/returning"), { matches: [{
+      guestId: "g-anna", visits: 2, name: "Anna Smith", suggested: true, blacklisted: false, blacklistReason: null,
+      lastCompany: { name: "Acme Traders", gstin: "27AAPFU0939F1ZV", address: "4 Park Street, Pune" },
+    }] });
+    await open();
+    type("Full name", "Anna Smith");
+    type("Phone", "9876543210");
+    fireEvent.click(await screen.findByRole("button", { name: "Same person" }));
+    expect(input("Company name").value, "nothing fills by itself").toBe("");
+    expect(screen.getByText(/Last company/).textContent).toMatch(/Acme Traders · GSTIN 27AAPFU0939F1ZV/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Use this company" }));
+    expect(input("Company name").value).toBe("Acme Traders");
+    expect(input("GSTIN").value).toBe("27AAPFU0939F1ZV");
+    expect(input("Company address").value).toBe("4 Park Street, Pune");
+    expect(await save()).toMatchObject({
+      guestId: "g-anna",
+      guestCompany: { name: "Acme Traders", gstin: "27AAPFU0939F1ZV", address: "4 Park Street, Pune" },
+    });
   });
 });

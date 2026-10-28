@@ -1452,7 +1452,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Open <span class="ui">New booking</span>. It opens on today's business date, one night, one room.</li>
     <li>Choose the <span class="ui">Salutation</span> (Mr, Ms, Mrs, Dr or None; the hotel's own default is chosen first) and type the name in <span class="ui">Full name</span>. The name is the only guest detail that must be typed.</li>
     <li>Type the <span class="ui">Phone</span>, and the <span class="ui">Email</span> if the guest gives one. If the system knows that phone or email, a line under them names the guest and how often they have stayed with the group, and asks <span class="msg">“same person?”</span>. Press <span class="ui">Same person</span> only if it is them (A10.6); nothing is joined until you do.</li>
-    <li>If the guest wants the tax invoice in their company's name, type the <span class="ui">Company name</span>, its <span class="ui">GSTIN</span> and the <span class="ui">Company address</span>. All three may be left empty. With a GSTIN, the stay's tax invoice is made out to that company; <b>the guest still pays at the desk</b>.</li>
+    <li>If the guest wants the tax invoice in their company's name, type the <span class="ui">Company name</span>, its <span class="ui">GSTIN</span> and the <span class="ui">Company address</span>. All three may be left empty. With a GSTIN, the stay's tax invoice is made out to that company; <b>the guest still pays at the desk</b>. For a returning guest, once you press <span class="ui">Same person</span>, the line also shows <span class="msg">“Last company”</span> - the company on their last booking that had one - and <span class="ui">Use this company</span> fills the three fields for you. Nothing is filled until you press it; check it with the guest. These three fields are not shown when the hotel has switched off the <span class="ui">Company section</span> in Settings.</li>
     <li>Ask the guest if they agree to WhatsApp, and switch on <span class="ui">Guest agreed to WhatsApp</span> if they do.</li>
     <li>Set <span class="ui">Arrival</span> and <span class="ui">Departure</span>. The number of nights shows under Departure. The night of departure is not charged.</li>
     <li>Choose the <span class="ui">Booking source</span>: how the booking reached us. Nothing is chosen for you (except Walk-in for a walk-in, A2.5).</li>
@@ -1524,7 +1524,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>One page with three buttons, for booking, giving a room and checking in: <span class="d">D27-158</span>. The WhatsApp tick stays in sight because the voucher and the check-in code need it; offers and “woman travelling alone” fold away: <span class="d">D27-176</span>. Rate includes GST, a tick per line, off unless ticked: <span class="d">D27-187</span>, <span class="d">D27-199</span>. A day use's price is typed every time: <span class="d">D27-229</span>. Prepaid on the booking site: <span class="d">D27-246</span>. A returning guest is only suggested; a person confirms: <span class="d">D21-2</span>. Salutation beside Full name, and the guest's company and GSTIN on the Guest card, all optional, the invoice in the company's name while the guest pays: <span class="d">D27-371</span>.</p>
+    <p>One page with three buttons, for booking, giving a room and checking in: <span class="d">D27-158</span>. The WhatsApp tick stays in sight because the voucher and the check-in code need it; offers and “woman travelling alone” fold away: <span class="d">D27-176</span>. Rate includes GST, a tick per line, off unless ticked: <span class="d">D27-187</span>, <span class="d">D27-199</span>. A day use's price is typed every time: <span class="d">D27-229</span>. Prepaid on the booking site: <span class="d">D27-246</span>. A returning guest is only suggested; a person confirms: <span class="d">D21-2</span>. Salutation beside Full name, and the guest's company and GSTIN on the Guest card, all optional, the invoice in the company's name while the guest pays: <span class="d">D27-371</span>. A returning guest's last company offered, never filled by itself; the Company section switched off hides the guest's company too: <span class="d">D27-372</span>.</p>
   </div>
 
   <!-- A2.3 -->
@@ -6664,16 +6664,16 @@ figure.shot.phone img { max-width: 72mm; }
   <ol class="steps">
     <li>On the booking's panel, tap <span class="ui">Edit guest</span>. (The owner, an Admin and the GM also have it on Guest 360, A10.5.)</li>
     <li>The window says <span class="msg">“The guest's own record: it is the same on every booking of theirs, at every hotel.”</span></li>
-    <li>Change what is wrong: <span class="ui">Title</span>, <span class="ui">Name</span>, <span class="ui">Phone</span>, <span class="ui">Email</span>, <span class="ui">Address</span>, <span class="ui">City</span>, <span class="ui">State</span>, <span class="ui">PIN code</span>, <span class="ui">Country</span>, <span class="ui">Nationality</span>.</li>
-    <li>On the booking's panel, under them, are <b>this booking's</b> <span class="ui">Company name</span>, <span class="ui">GSTIN</span> and <span class="ui">Company address</span> (A2.2): <span class="msg">“This booking's company. With a GSTIN, its tax invoice is made out to the company; the guest still pays.”</span> Change them here before the tax invoice is issued. They are not on Guest 360: they belong to the booking, not the guest. Only the people who may change a booking see them.</li>
+    <li>Change what is wrong: <span class="ui">Salutation</span>, <span class="ui">Full name</span>, <span class="ui">Phone</span>, <span class="ui">Email</span>, <span class="ui">Address</span>, <span class="ui">City</span>, <span class="ui">State</span>, <span class="ui">PIN code</span>, <span class="ui">Country</span>, <span class="ui">Nationality</span>.</li>
+    <li>On the booking's panel, under them, are <b>this booking's</b> <span class="ui">Company name</span>, <span class="ui">GSTIN</span> and <span class="ui">Company address</span> (A2.2): <span class="msg">“This booking's company. With a GSTIN, its tax invoice is made out to the company; the guest still pays.”</span> Change them here before the tax invoice is issued. They are not on Guest 360: they belong to the booking, not the guest. Only the people who may change a booking see them, and nobody does when the hotel has switched off the <span class="ui">Company section</span> in Settings.</li>
     <li>Tap <span class="ui">Save</span>. It stays grey until something has changed and everything typed is right. The message says <span class="msg">“Guest updated”</span>, <span class="msg">“A10 Test Ravi Kumar: the change is on every booking of theirs.”</span></li>
   </ol>
 
   <figure class="shot" id="fig-A10-03">
-    <img src="img/A10-03.png" alt="The Edit guest window: Title, Name, Phone, Email, Address, City, State, PIN code, Country, Nationality, this booking's Company name, GSTIN and Company address, Cancel and Save">
+    <img src="img/A10-03.png" alt="The Edit guest window: Salutation, Full name, Phone, Email, Address, City, State, PIN code, Country, Nationality, this booking's Company name, GSTIN and Company address, Cancel and Save">
     <figcaption><b>Figure A10-03.</b> Edit guest.</figcaption>
     <ol class="callouts">
-      <li>Name</li>
+      <li>Salutation and Full name</li>
       <li>Phone, then Email beside it</li>
       <li>Nationality, two letters: IN for India; anything else puts the guest on the Form III register</li>
       <li>Save</li>
@@ -7593,7 +7593,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p>The tax columns carry the room rent less its discount. Everything else on those bills is in <b>Other Bills</b>, except alcohol and its VAT, which are not on this sheet.</p>
 
   <h3>GST sales register</h3>
-  <p><span class="ui">GST sales register</span> (<code>/reports/gst-sales</code>) is every invoice and credit note issued from the 1st of the month to the business date, as GSTR-1 wants them: invoice, date, recipient, GSTIN, place, taxable value, CGST, SGST, total.</p>
+  <p><span class="ui">GST sales register</span> (<code>/reports/gst-sales</code>) is every invoice and credit note issued from the 1st of the month to the business date, as GSTR-1 wants them: invoice, date, recipient, GSTIN, type (B2B or B2C), place, taxable value, CGST, SGST, total.</p>
 
   <figure class="shot" id="fig-A11-15">
     <img src="img/A11-15.png" alt="GST sales register: Print and CSV, the GSTR-1 extract line, no invoices in this period, Total 0 documents and the note">
@@ -7607,7 +7607,7 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
   <p>An invoice is listed on the business day it belongs to, not the moment it was printed. A credit note says which invoice it credits.</p>
-  <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column: that is a B2B invoice in GSTR-1. A dash under GSTIN is an unregistered recipient (B2C).</p>
+  <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column, and <span class="ui">Type</span> says <b>B2B</b>. A dash under GSTIN is an unregistered recipient, and Type says <b>B2C</b>. A credit note has the type of the invoice it credits. The CSV carries the same Type column: <span class="d">D27-372</span>.</p>
 
   <h3>Form III register</h3>
   <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>

@@ -333,7 +333,7 @@ reports.get("/:code/reports/gst-sales", async (c) => {
       number: string; issued: string; recipient: string | null;
       gstin: string | null; place_of_supply: string | null; sac: string;
       taxable: string; cgst: string; sgst: string; total: string;
-      credits: string | null;
+      credits: string | null; type: "B2B" | "B2C";
     }>(
       /* Dated by the property's BUSINESS DATE, not the wall clock.
          A GST return is filed by document date, and a hotel's document
@@ -349,9 +349,14 @@ reports.get("/:code/reports/gst-sales", async (c) => {
               i.place_of_supply, i.sac_code as sac,
               i.taxable_value::text as taxable, i.cgst_total::text as cgst,
               i.sgst_total::text as sgst, i.total::text,
-              (select o.number from invoices o where o.id = i.credits_id)
-                as credits
+              o.number as credits,
+              /* B2B when the invoice carries a GSTIN, else B2C (the owner's
+                 D27-372); a credit note takes its invoice's type. */
+              case when nullif(case when i.credits_id is null then i.recipient_gstin
+                                    else o.recipient_gstin end, '') is not null
+                   then 'B2B' else 'B2C' end as type
          from invoices i
+         left join invoices o on o.id = i.credits_id
         where i.hotel_id = $1
           and coalesce(i.business_date, i.issued_at::date)
               between $2::date and $3::date
@@ -376,6 +381,7 @@ reports.get("/:code/reports/gst-sales", async (c) => {
         sgst: round(Number(r.sgst)),
         total: round(Number(r.total)),
         creditsInvoice: r.credits,
+        type: r.type,
       })),
     };
   });

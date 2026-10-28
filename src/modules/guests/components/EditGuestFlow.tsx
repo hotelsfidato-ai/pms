@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
+import { getModules } from "@/data/repositories";
 import {
   getGuestContact, saveGuestContact, saveStayCompany, type GuestContact,
 } from "@/modules/guests/data/directory";
@@ -29,13 +30,17 @@ const FIELDS: (keyof Form)[] = ["title", "fullName", "phone", "email", "national
   "addressLine", "city", "state", "pincode", "country"];
 const TITLES = ["Mr", "Ms", "Mrs", "Dr"];
 
-export function EditGuestFlow({ hotelId, guestId, open, onOpenChange, stay }: {
+export function EditGuestFlow({ hotelId, guestId, open, onOpenChange, stay: fromStay }: {
   hotelId: string; guestId: string; open: boolean; onOpenChange: (open: boolean) => void;
   /** From the stay panel, for whoever may change a booking: that stay's
       company, edited with the guest (D27-371). Kept on the booking, not the
       guest. Absent (Guest 360), the section is not shown. */
   stay?: { id: string; company: { name: string | null; gstin: string | null; address: string | null } | null };
 }) {
+  /* D27-372: Settings' Company section (booking_company) switched off hides
+     the company here too. Unreadable is not off (getModules gives {}). */
+  const modules = useQuery({ queryKey: ["modules", hotelId], queryFn: () => getModules(hotelId) });
+  const stay = modules.data?.["booking_company"] === false ? undefined : fromStay;
   const was: Company = {
     name: stay?.company?.name ?? "", gstin: stay?.company?.gstin ?? "", address: stay?.company?.address ?? "",
   };
@@ -60,7 +65,7 @@ export function EditGuestFlow({ hotelId, guestId, open, onOpenChange, stay }: {
   const wrong = (!form.fullName.trim() ? "A guest has a name." : null)
     ?? phoneProblem(form.phone) ?? emailProblem(form.email)
     ?? countryProblem(form.nationality) ?? (!form.nationality.trim() ? "Nationality is a two-letter country code, e.g. IN." : null)
-    ?? gstinProblem(company.gstin);
+    ?? (stay ? gstinProblem(company.gstin) : null);
   const changes = record.data
     ? Object.fromEntries(FIELDS.filter((k) => (record.data[k] ?? "") !== form[k].trim())
         .map((k) => [k, form[k].trim()]))
@@ -110,7 +115,8 @@ export function EditGuestFlow({ hotelId, guestId, open, onOpenChange, stay }: {
           : (
             <div className="space-y-4">
               <div className="grid grid-cols-[6rem_1fr] gap-3">
-                <Field label="Title">
+                {/* D27-372: the words New booking uses. */}
+                <Field label="Salutation">
                   {(f) => (
                     <NativeSelect {...fieldProps(f)} value={form.title} onChange={(e) => set("title")(e.target.value)}>
                       <option value="">None</option>
@@ -118,7 +124,7 @@ export function EditGuestFlow({ hotelId, guestId, open, onOpenChange, stay }: {
                     </NativeSelect>
                   )}
                 </Field>
-                {text("fullName", "Name")}
+                {text("fullName", "Full name")}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {text("phone", "Phone", "tel")}

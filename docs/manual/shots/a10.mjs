@@ -150,7 +150,8 @@ export const SHOTS = [
     path: `/h/5EL/reservations?res=${STAY1}`,
     steps: [{ waitFor: "text:Edit guest", ms: 20000 }, { click: "text:Edit guest" }, { waitFor: "text:Two letters: IN for India.", ms: 10000 }],
     marks: [
-      { n: 1, at: "text:Name", side: "left" },
+      /* D27-372: Salutation and Full name, as New booking says. */
+      { n: 1, at: "text:Full name", side: "left" },
       { n: 2, at: "text:Phone", side: "left" },
       { n: 3, at: "text:Two letters: IN for India. Anything else puts the guest on the Form III register.", side: "right" },
       { n: 4, at: "text:Save", side: "bottom" },

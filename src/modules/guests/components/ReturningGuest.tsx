@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui";
-import { findReturningGuest } from "@/modules/guests/data/people";
+import { findReturningGuest, type GuestCompany } from "@/modules/guests/data/people";
 import { phoneKey, emailKey } from "@/modules/guests/logic/contactKeys";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -15,7 +15,10 @@ import { phoneKey, emailKey } from "@/modules/guests/logic/contactKeys";
 
    The desk sees a name and a count, and nothing more (D21-13). "The
    group", not a name: nothing in the system holds the group's name, and
-   nothing new may say Fidato (D21-27; the owner, 21 September).
+   nothing new may say Fidato (D21-27; the owner, 21 September). Once the
+   clerk says "Same person", New booking also offers the company of their
+   last booking that had one - a tap fills it, nothing fills by itself
+   (D27-372, 28 October).
 
    A BLACKLISTED match is a warning with its reason, on ANY match, and it
    never stops the booking - a person decides (D21-21).
@@ -34,7 +37,7 @@ const worthAsking = (phone: string, email: string) =>
   phoneKey(phone) !== null || /.+@.+\..+/.test(email.trim());
 
 export function ReturningGuest({
-  hotelId, phone, email, chosen, onChoose,
+  hotelId, phone, email, chosen, onChoose, onUseCompany,
 }: {
   hotelId: string;
   phone: string;
@@ -42,6 +45,9 @@ export function ReturningGuest({
   /** The guest the clerk confirmed, or null. */
   chosen: { id: string; name: string } | null;
   onChoose: (guest: { id: string; name: string } | null) => void;
+  /** D27-372: once the clerk says "Same person", their last booking's
+      company is offered; one tap hands it here. Absent, it is not offered. */
+  onUseCompany?: (company: GuestCompany) => void;
 }) {
   const ask = worthAsking(phone, email);
   const found = useQuery({
@@ -70,6 +76,7 @@ export function ReturningGuest({
 
       {suggestions.map((m) => {
         const isChosen = chosen?.id === m.guestId;
+        const company = isChosen && onUseCompany ? m.lastCompany : undefined;
         return (
           <div key={m.guestId}
             className="flex flex-wrap items-center gap-3 rounded-lg border border-grey-200 bg-grey-50 p-3">
@@ -87,6 +94,17 @@ export function ReturningGuest({
               <Button variant="secondary" onClick={() => onChoose({ id: m.guestId!, name: m.name })}>
                 Same person
               </Button>
+            )}
+            {company && (
+              <div className="flex w-full flex-wrap items-center gap-3 border-t border-grey-200 pt-3" data-last-company>
+                <span className="min-w-0 flex-1 text-sm text-grey-700">
+                  Last company: <span className="font-medium text-ink-900">{company.name ?? m.name}</span>
+                  {company.gstin && <span className="tabular"> · GSTIN {company.gstin}</span>}
+                </span>
+                <Button variant="secondary" onClick={() => onUseCompany!(company)}>
+                  Use this company
+                </Button>
+              </div>
             )}
           </div>
         );

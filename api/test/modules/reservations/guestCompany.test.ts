@@ -131,6 +131,39 @@ describe("New booking's guest company", () => {
   });
 });
 
+describe("a returning guest's last company (D27-372)", () => {
+  it("is offered with the suggestion: their most recent booking that had one", async () => {
+    /* A phone of this run's own, so a re-run starts with nobody on it. */
+    const phone = `98${String(Date.now() % 1e8).padStart(8, "1")}`;
+    const returning = async () => {
+      const res = await call(owner, "GET", `/guests/returning?phone=${phone}`);
+      expect(res.status, await res.clone().text()).toBe(200);
+      return ((await res.json()) as { matches: Array<{ guestId?: string; lastCompany?: unknown }> }).matches;
+    };
+    /* A night of its own each, or the repeat guard answers the first again. */
+    const night = (i: number) => ({ checkIn: `2029-07-1${i}`, checkOut: `2029-07-1${i + 1}` });
+    expect((await call(owner, "POST", "/bookings", booking("Returning", { phone, ...night(0) }))).status).toBe(200);
+    const [first] = await returning();
+    expect(first!.guestId).toBeTruthy();
+    expect(first, "no company yet, nothing offered").not.toHaveProperty("lastCompany");
+
+    const guestId = first!.guestId;
+    for (const [i, guestCompany] of [
+      { name: "Acme Traders", gstin: GOOD, address: "4 Park Street, Pune" },
+      { name: "Beta Foods" },
+      undefined,
+    ].entries()) {
+      const res = await call(owner, "POST", "/bookings",
+        booking("Returning", { phone, guestId, ...night(i + 1), ...(guestCompany ? { guestCompany } : {}) }));
+      expect(res.status, await res.clone().text()).toBe(200);
+    }
+    /* The last booking had none: the one before it, Beta, is offered. */
+    expect((await returning())[0]).toMatchObject({
+      guestId, lastCompany: { name: "Beta Foods", gstin: null, address: null },
+    });
+  });
+});
+
 describe("the stay panel's change", () => {
   it("refuses a bad check digit, and anyone who may not change a booking", async () => {
     const stay = await invoiceable();
@@ -166,7 +199,28 @@ describe("the tax invoice and the GST sales register", () => {
       { headers: { "x-dev-staff-id": owner } });
     expect(reg.status).toBe(200);
     const { rows } = (await reg.json()) as { rows: Array<{ number: string; recipient: string; gstin: string | null }> };
-    expect(rows.find((r) => r.number === inv.number)).toMatchObject({ recipient: "Acme Traders", gstin: GOOD });
+    expect(rows.find((r) => r.number === inv.number)).toMatchObject({ recipient: "Acme Traders", gstin: GOOD, type: "B2B" });
+
+    /* D27-372: its credit note takes the invoice's type. */
+    const cn = await call(owner, "POST", `/invoices/${inv.number}/credit-note`, { reason: `${TAG} wrong company` });
+    expect(cn.status, await cn.clone().text()).toBe(200);
+    const { number: cnNumber } = (await cn.json()) as { number: string };
+    const cnDate = (await sql<{ d: string }>("select business_date::text as d from invoices where number = $1", [cnNumber]))[0]!.d;
+    const after = (await (await app.request(
+      `/api/hotels/5EL/reports/gst-sales?from=${inv.business_date}&to=${cnDate}`,
+      { headers: { "x-dev-staff-id": owner } })).json()) as { rows: Array<{ number: string }> };
+    expect(after.rows.find((r) => r.number === cnNumber)).toMatchObject({ creditsInvoice: inv.number, type: "B2B" });
+  });
+
+  it("lists an invoice with no GSTIN as B2C (D27-372)", async () => {
+    const stay = await invoiceable();
+    touched.push(stay);
+    const inv = await issue(stay);
+    expect(inv.recipient_gstin).toBeNull();
+    const reg = (await (await app.request(
+      `/api/hotels/5EL/reports/gst-sales?from=${inv.business_date}&to=${inv.business_date}`,
+      { headers: { "x-dev-staff-id": owner } })).json()) as { rows: Array<{ number: string }> };
+    expect(reg.rows.find((r) => r.number === inv.number)).toMatchObject({ gstin: null, type: "B2C" });
   });
 
   it("with only a GSTIN typed (a proprietor's), names the guest with that GSTIN", async () => {

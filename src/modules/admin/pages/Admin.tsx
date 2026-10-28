@@ -522,7 +522,8 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
      is off, the section is simply not drawn. */
   booking_company: {
     label: "Company section",
-    note: "Bill a booking to a company, with its GSTIN. Off, every new booking is billed to the guest.",
+    note: "Bill a booking to a company, with its GSTIN; and the guest's own company name, GSTIN and address. " +
+      "Off, every new booking is billed to the guest and those three fields are not shown.",
   },
   booking_notes: {
     label: "Notes section",
