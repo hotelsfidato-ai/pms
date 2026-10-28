@@ -41,6 +41,7 @@ and both stay. A list can be imported from a file.
 |---|---|---|---|
 | Store | `/h/:code/stores` | `pages/Stores.tsx` | housekeeping, stores |
 | Inventory | `/h/:code/inventory` (`?tab=restaurant`, `&part=recipes`) | `pages/Inventory.tsx`: Bar (`BarStock.tsx`), Restaurant (`KitchenStock.tsx`) | stores |
+| Kitchen stock (Restaurant menu, after Kitchen) | `/pos/:code/kitchen-stock` | `pages/KitchenStock.tsx` (the Restaurant tab's two parts) | kitchen_manager, chef (`canSee`: only they, D27-378) |
 
 - **Inventory, Restaurant** (D27-373, D27-374, release 16): **Today's sheet** -
   the kitchen store's day per item (Opening, Received, Moved in, Moved out,
@@ -495,11 +496,11 @@ service's claim.
 - **29 October · the kitchen's stock (D27-373, D27-374).** (1) `api/src/roleGate.ts`:
   the five `/kitchen-stock/` routes are listed beside the bar's, as
   `own("stores/stockGrants.ts: …")` - added in this branch, for the master to
-  review at merge. (2) **The kitchen manager's and the chef's menus** do not
-  show Inventory: they read the kitchen's sheet only by its address or Find a
-  screen. A "Kitchen stock" entry in the Restaurant menu for them (as the bar
-  has Bar stock) changes their pinned menus in `navigation.test.ts` - the
-  owner's question, the master's file.
+  review at merge. (2) **Kitchen stock in the kitchen manager's and the chef's
+  menus** (the owner's D27-378, the owner allowed the navigation files for it):
+  the entry is in this service's `nav.ts`; their pinned menus are updated in
+  `src/components/app/navigation.test.ts` and `spaces.test.tsx`, with a
+  `mayReach` check beside Bar stock's - for the master to review at merge.
 - **25 September · the role gate** (`api/src/roleGate.ts`, shared): the two
   new writes are listed under `/* stores */` as `own("stores/stockGrants.ts")`
   - `PATCH …/stores/items/:id` and `POST …/stores/counts` - the way the

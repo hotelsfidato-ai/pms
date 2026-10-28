@@ -5,6 +5,7 @@ import StoresPage from "@/modules/stores/pages/Stores";
 import StoreDaysPage from "@/modules/stores/pages/StoreDays";
 import InventoryPage from "@/modules/stores/pages/Inventory";
 import BarStockPage from "@/modules/stores/pages/BarStock";
+import KitchenStockPage from "@/modules/stores/pages/KitchenStock";
 
 /* The store's screen address. Mounted by App.tsx inside the signed-in
    shell. */
@@ -47,6 +48,16 @@ export const routes = (
       element={
         <RequireAccess path="/pos/:code/bar-stock" resource="stock">
           <PropertyScope /><BarStockPage />
+        </RequireAccess>
+      }
+    />
+    {/* Kitchen stock, in the kitchen manager's and the chef's Restaurant menu
+        (D27-378): Inventory's Restaurant tab, reached from where the kitchen works. */}
+    <Route
+      path="/pos/:code/kitchen-stock"
+      element={
+        <RequireAccess path="/pos/:code/kitchen-stock" resource="stock">
+          <PropertyScope /><KitchenStockPage />
         </RequireAccess>
       }
     />

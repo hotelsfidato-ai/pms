@@ -843,8 +843,8 @@
   </div>
 
   <h3>The kitchen's day: Inventory, Restaurant</h3>
-  <p>The <span class="ui">Restaurant</span> tab of <span class="ui">Inventory</span> is the kitchen's stock, the way Bar stock is the bar's. It has two parts: <span class="ui">Today's sheet</span> and <span class="ui">Recipes</span>. The owner, an Admin, the GM and the Inventory Manager keep it: they mark the kitchen's store, set the recipes and count. Whoever sees the Store reads it, the kitchen manager and the chef among them.</p>
-  <p><b>Which store is the kitchen's.</b> Nothing is marked when the system is brought up to this release. Until a store is marked, a KOT takes nothing. Open <span class="ui">Inventory</span>, tap <span class="ui">Restaurant</span>, pick the store under <span class="ui">The kitchen's store</span> (usually the <i>Kitchen store</i>), and tap <span class="ui">Mark it the kitchen's</span>. <span class="ui">Change</span>, beside its name on the sheet, picks another. The Bar store and the Bar counter are never the kitchen's.</p>
+  <p>The <span class="ui">Restaurant</span> tab of <span class="ui">Inventory</span> is the kitchen's stock, the way Bar stock is the bar's. It has two parts: <span class="ui">Today's sheet</span> and <span class="ui">Recipes</span>. The owner, an Admin, the GM and the Inventory Manager keep it: they set the recipes, count, and change which store is the kitchen's. Whoever sees the Store reads it. The kitchen manager and the chef open the same two parts as <span class="ui">Kitchen stock</span> in their Restaurant menu, after Kitchen, to read.</p>
+  <p><b>Which store is the kitchen's.</b> Each hotel's <i>Kitchen store</i> is the kitchen's from this release, and a new hotel's from the day it is added. Its name is beside <span class="ui">Change</span> on the sheet; <span class="ui">Change</span> picks another store, and <span class="ui">Mark it the kitchen's</span> saves it. A hotel with no store called Kitchen store picks one the same way; until one is picked, a KOT takes nothing. The Bar store and the Bar counter are never the kitchen's.</p>
 
   <h3>Recipes: what each dish takes</h3>
   <p>A recipe says what <b>one</b> of a dish takes from the kitchen store, in each Store item's own unit: Paneer Tikka takes <i>Paneer 0.1 kg</i> and <i>Butter 0.01 kg</i>. Once it is saved, <b>every KOT sent takes it off the kitchen store</b>, from whichever screen sent it.</p>
@@ -923,7 +923,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Inventory's Restaurant tab, the kitchen store's daily sheet and recipes taken by every KOT: <span class="d">D27-373</span>. No recipe takes nothing and is listed; sizes and add-ons have their own lines; a KOT always goes, below zero in red; struck before the kitchen had it gives back, after counts as wastage with the reason: <span class="d">D27-374</span>.</p>
+    <p>Inventory's Restaurant tab, the kitchen store's daily sheet and recipes taken by every KOT: <span class="d">D27-373</span>. No recipe takes nothing and is listed; sizes and add-ons have their own lines; a KOT always goes, below zero in red; struck before the kitchen had it gives back, after counts as wastage with the reason: <span class="d">D27-374</span>. Each hotel's Kitchen store marked the kitchen's, as the Bar store was; Kitchen stock in the kitchen manager's and the chef's Restaurant menu; recipes and the count the owner's, an Admin's, the GM's and the Inventory Manager's; the night audit does not wait for the kitchen's count; a voided paid bill's ingredients stay used: <span class="d">D27-378</span>.</p>
   </div>
 
   <!-- A9.12 -->

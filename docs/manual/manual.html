@@ -493,7 +493,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>In Settings, <span class="ui">Back to front office</span> at the top of the menu also takes you back.</li>
   </ol>
   <p>In Settings, an entry with a small arrow (↗) opens a Front office screen, for example <span class="ui">Rates</span> or <span class="ui">Cancellation terms</span>. It takes you out of Settings.</p>
-  <p>The Restaurant's own menu section is <span class="ui">Point of sale</span>. The waiter, the chef and the kitchen manager have the Restaurant only, so their whole working menu is there: <span class="ui">Guest requests</span> as well, and for the kitchen manager the <span class="ui">Store</span>.</p>
+  <p>The Restaurant's own menu section is <span class="ui">Point of sale</span>. The waiter, the chef and the kitchen manager have the Restaurant only, so their whole working menu is there: <span class="ui">Guest requests</span> as well, <span class="ui">Kitchen stock</span> for the chef and the kitchen manager, and for the kitchen manager the <span class="ui">Store</span>.</p>
 
   <figure class="shot" id="fig-A0-6">
     <img src="img/A0-6.png" alt="The Settings space for the owner: Settings highlighted in the switcher, Back to front office, the Property group, and the arrow mark beside Rates">
@@ -4703,6 +4703,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Terminal</td><td>Waiters, the bar</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
       <tr><td>Bar stock</td><td>The bar manager (the Bar role), GM, owner, Admin</td><td>The bar's day like the paper register - what came, what was sold (NIPs, 30, 60 and 90 ml), what is left - and the closing count; the bar's bills as printed; what each drink takes (A9.11).</td></tr>
+      <tr><td>Kitchen stock</td><td>Chef, kitchen manager (to read)</td><td>The kitchen store's day - what came, what the KOTs used, what was wasted and why, what is left, the closing count - and each dish's recipe. The same as Inventory's Restaurant tab (A9.11).</td></tr>
       <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
       <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
       <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
@@ -6402,8 +6403,8 @@ figure.shot.phone img { max-width: 72mm; }
   </div>
 
   <h3>The kitchen's day: Inventory, Restaurant</h3>
-  <p>The <span class="ui">Restaurant</span> tab of <span class="ui">Inventory</span> is the kitchen's stock, the way Bar stock is the bar's. It has two parts: <span class="ui">Today's sheet</span> and <span class="ui">Recipes</span>. The owner, an Admin, the GM and the Inventory Manager keep it: they mark the kitchen's store, set the recipes and count. Whoever sees the Store reads it, the kitchen manager and the chef among them.</p>
-  <p><b>Which store is the kitchen's.</b> Nothing is marked when the system is brought up to this release. Until a store is marked, a KOT takes nothing. Open <span class="ui">Inventory</span>, tap <span class="ui">Restaurant</span>, pick the store under <span class="ui">The kitchen's store</span> (usually the <i>Kitchen store</i>), and tap <span class="ui">Mark it the kitchen's</span>. <span class="ui">Change</span>, beside its name on the sheet, picks another. The Bar store and the Bar counter are never the kitchen's.</p>
+  <p>The <span class="ui">Restaurant</span> tab of <span class="ui">Inventory</span> is the kitchen's stock, the way Bar stock is the bar's. It has two parts: <span class="ui">Today's sheet</span> and <span class="ui">Recipes</span>. The owner, an Admin, the GM and the Inventory Manager keep it: they set the recipes, count, and change which store is the kitchen's. Whoever sees the Store reads it. The kitchen manager and the chef open the same two parts as <span class="ui">Kitchen stock</span> in their Restaurant menu, after Kitchen, to read.</p>
+  <p><b>Which store is the kitchen's.</b> Each hotel's <i>Kitchen store</i> is the kitchen's from this release, and a new hotel's from the day it is added. Its name is beside <span class="ui">Change</span> on the sheet; <span class="ui">Change</span> picks another store, and <span class="ui">Mark it the kitchen's</span> saves it. A hotel with no store called Kitchen store picks one the same way; until one is picked, a KOT takes nothing. The Bar store and the Bar counter are never the kitchen's.</p>
 
   <h3>Recipes: what each dish takes</h3>
   <p>A recipe says what <b>one</b> of a dish takes from the kitchen store, in each Store item's own unit: Paneer Tikka takes <i>Paneer 0.1 kg</i> and <i>Butter 0.01 kg</i>. Once it is saved, <b>every KOT sent takes it off the kitchen store</b>, from whichever screen sent it.</p>
@@ -6482,7 +6483,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Inventory's Restaurant tab, the kitchen store's daily sheet and recipes taken by every KOT: <span class="d">D27-373</span>. No recipe takes nothing and is listed; sizes and add-ons have their own lines; a KOT always goes, below zero in red; struck before the kitchen had it gives back, after counts as wastage with the reason: <span class="d">D27-374</span>.</p>
+    <p>Inventory's Restaurant tab, the kitchen store's daily sheet and recipes taken by every KOT: <span class="d">D27-373</span>. No recipe takes nothing and is listed; sizes and add-ons have their own lines; a KOT always goes, below zero in red; struck before the kitchen had it gives back, after counts as wastage with the reason: <span class="d">D27-374</span>. Each hotel's Kitchen store marked the kitchen's, as the Bar store was; Kitchen stock in the kitchen manager's and the chef's Restaurant menu; recipes and the count the owner's, an Admin's, the GM's and the Inventory Manager's; the night audit does not wait for the kitchen's count; a voided paid bill's ingredients stay used: <span class="d">D27-378</span>.</p>
   </div>
 
   <!-- A9.12 -->
@@ -11257,8 +11258,8 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Revenue Manager</td><td>Front office</td><td>Dashboard, Rooms, Calendar, the bookings, Rates and Revenue outlook, Cancellation terms, Booking sources, the reports. The banquet Diary and Halls to read <span class="d">D27-174</span>.</td></tr>
       <tr><td>Reception</td><td>Front office (and Restaurant where allowed)</td><td>Dashboard, Rooms, Calendar; Arrivals, In house, Walk-ins, Online check-in, Guest requests, Wake-up calls, Lost property; All bookings, CRS bookings, New booking; Guests, Guest messages; Cashiering; laundry Dockets; Notifications. In the Restaurant: Tables, Till, Terminal, Close restaurant day, only where "Reception can use the POS" is on.</td></tr>
       <tr><td>Housekeeping</td><td>Front office</td><td>Rooms; Housekeeping, Work orders, Guest requests, Lost property; Store, Equipment, Purchasing; laundry Dockets; Notifications. Starts on Housekeeping.</td></tr>
-      <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
-      <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
+      <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Kitchen stock (to read), Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen <span class="d">D27-378</span>.</td></tr>
+      <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Kitchen stock (to read), Guest requests, Notifications <span class="d">D27-378</span>.</td></tr>
       <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
       <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests, as the waiter. Starts on Tables, with the waiter's Start here card; sees only the dishes on the menu's Bar tab <span class="d">D27-329</span>.</td></tr>
       <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>

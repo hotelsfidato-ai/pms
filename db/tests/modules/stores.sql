@@ -512,8 +512,8 @@ end $$;
 -- =============================================================================
 -- THE KITCHEN'S STOCK AND RECIPES (the owner's D27-373, D27-374; migration 253)
 -- =============================================================================
--- Nothing is marked the kitchen's store by the migration, and the bar's never
--- is. A line SENT takes its dish's recipe and its size's on top; a line still
+-- A new hotel's "Kitchen store" is marked the kitchen's (D27-378), and the
+-- bar's never is. A line SENT takes its dish's recipe and its size's on top; a line still
 -- waiting and a dish with no recipe take nothing; nothing is taken twice.
 -- Struck once sent, the issue is undone and written again as wastage with the
 -- reason - stock does not move. A recipe line has one owner.
@@ -528,11 +528,11 @@ begin
   select id into v_kitchen from locations where hotel_id = h and name = 'Kitchen store';
   select id into v_bar from locations where hotel_id = h and is_bar_store;
   bd := app.business_date(h);
-  perform test.ok('kitchen stock', 'no store is marked the kitchen''s by the migration',
-    not exists (select 1 from locations where hotel_id = h and is_kitchen_store));
+  perform test.ok('kitchen stock', 'a new hotel''s Kitchen store is the kitchen''s, and only it',
+    (select array_agg(name) from locations where hotel_id = h and is_kitchen_store) = array['Kitchen store'],
+    (select array_agg(name) from locations where hotel_id = h and is_kitchen_store)::text);
   perform test.raises('kitchen stock', 'the bar''s store is never the kitchen''s',
     format('update locations set is_kitchen_store = true where id = %L', v_bar), '23514');
-  update locations set is_kitchen_store = true where id = v_kitchen;
 
   insert into pos_outlets (hotel_id, code, name, category, staff_id)
   values (h, 'KSR', 'Kitchen Stock Restaurant', 'food', v_staff) returning id into v_out;

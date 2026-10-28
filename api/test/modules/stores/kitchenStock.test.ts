@@ -25,6 +25,8 @@ let businessDate = "";
 const who: Record<string, string> = {};
 let store = "";
 let barStore = "";
+/* The hotel's own Kitchen store, marked by the migration (D27-378): put back after. */
+let ownKitchen = "";
 let tikka = "";
 let dal = "";
 const size: Record<string, string> = {};
@@ -70,6 +72,8 @@ beforeAll(async () => {
     [hotel, `${TAG} Kitchen`]))[0]!.id;
   barStore = (await sql<{ id: string }>(
     "select id::text from locations where hotel_id = $1 and is_bar_store", [hotel]))[0]?.id ?? "";
+  ownKitchen = (await sql<{ id: string }>(
+    "select id::text from locations where hotel_id = $1 and is_kitchen_store", [hotel]))[0]?.id ?? "";
 
   for (const [name, unit, category] of [["Paneer", "kg", "Dairy"], ["Butter", "kg", "Dairy"],
     ["Onion", "kg", "Vegetables"], ["Kebab meat", "kg", "Meat"], ["Rum", "bottle", "Bar"]] as const) {
@@ -125,6 +129,7 @@ afterAll(async () => {
     await db.query("delete from pos_menu_categories where name like $1", [`${TAG}%`]);
     await db.query("delete from stock_items where name like $1", [`${TAG}%`]);
     await db.query("delete from locations where name like $1", [`${TAG}%`]);
+    if (ownKitchen) await db.query("update locations set is_kitchen_store = true where id = $1", [ownKitchen]);
     await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [Object.values(who)]);
     await db.query("delete from hotel_modules where hotel_id = $1 and module = 'bar_stock'", [hotel]);
   } finally {
@@ -162,7 +167,11 @@ describe("the kitchen's stock and recipes (D27-373, D27-374)", () => {
     expect(left).toEqual({ recipes: 0, marked: false, counts: 0 });
   });
 
-  it("no store marked yet: the sheet says so and a count is refused; the GM marks one - never the bar's", async () => {
+  it("the hotel's Kitchen store came marked; with none marked the sheet says so and a count is refused; the GM marks one - never the bar's", async () => {
+    const [own] = await sql<{ name: string; bar: boolean }>(
+      "select name, is_bar_store or is_bar_counter as bar from locations where id = $1", [ownKitchen]);
+    expect(own, "the migration marked the hotel's Kitchen store (D27-378)").toEqual({ name: "Kitchen store", bar: false });
+    await sql("update locations set is_kitchen_store = false where id = $1", [ownKitchen]);
     const sheet = (await (await call(who["gm"]!, "GET", "/kitchen-stock/sheet")).json()) as Sheet;
     expect([sheet.store, sheet.mayKeep]).toEqual([null, true]);
     expect(await reasonOf(await call(who["stores"]!, "POST", "/kitchen-stock/count",

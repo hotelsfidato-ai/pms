@@ -74,7 +74,7 @@ describe("each space's menu", () => {
   it("keeps the waiter's, chef's and kitchen manager's whole menu in their one space (Q3)", () => {
     expect(labels("pos", "pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
     expect(labels("kitchen_manager", "pos")).toEqual(
-      ["Guest requests", "Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
+      ["Guest requests", "Store", "Kitchen", "Kitchen stock", "Menu", "Close restaurant day", "Notifications"]);
   });
 
   it("groups the console as the plan does, and draws a group only when it holds something", () => {

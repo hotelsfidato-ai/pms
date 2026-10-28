@@ -6,10 +6,11 @@
 -- kitchen store's daily sheet and recipes, the bar's way (235, 238).
 --
 --   * locations.is_kitchen_store: which store is the kitchen's, one per hotel,
---     as is_bar_store (234) marks the bar's. NOTHING IS MARKED HERE: no store
---     was marked as the kitchen's before, and which one is, is the hotel's to
---     say - the GM marks it on the Restaurant tab. Never the Bar store or the
---     Bar counter.
+--     as is_bar_store (234) marks the bar's. Each hotel's "Kitchen store" (104)
+--     is marked here, and a new hotel's by default_stores (the owner's
+--     D27-378, as the Bar store was) - only where the hotel has none marked,
+--     so a replay changes nothing the GM chose on the Restaurant tab. Never the
+--     Bar store or the Bar counter.
 --   * recipe_lines: what one of a dish takes from the kitchen store - so much
 --     of a Store item, in that item's own unit. A size (variation), a side
 --     (045's add-ons) and a numbered add-on (208) have lines of their own,
@@ -44,7 +45,35 @@ begin
 end $$;
 comment on column locations.is_kitchen_store is
   'The kitchen''s store (D27-373): every KOT takes the recipes of what it sends from it. One per '
-  'hotel, marked on Inventory''s Restaurant tab; never the bar''s store or counter.';
+  'hotel, its "Kitchen store" unless changed on Inventory''s Restaurant tab; never the bar''s store or counter.';
+
+-- Each hotel's "Kitchen store" is marked, where it has none marked (D27-378).
+update locations l set is_kitchen_store = true
+ where l.kind = 'store' and l.name = 'Kitchen store' and not l.is_bar_store and not l.is_bar_counter
+   and not exists (select 1 from locations o where o.hotel_id = l.hotel_id and o.is_kitchen_store);
+
+-- 238's, with one change: the Kitchen store it makes is marked the kitchen's.
+create or replace function app.default_stores(p_hotel uuid)
+returns int
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $fn$
+declare v_made int := 0;
+begin
+  if exists (select 1 from locations where hotel_id = p_hotel and kind = 'store') then
+    return 0;
+  end if;
+  insert into locations (hotel_id, name, kind, is_bar_store, is_bar_counter, is_kitchen_store)
+  values (p_hotel, 'Main store', 'store', false, false, false),
+         (p_hotel, 'Kitchen store', 'store', false, false, true),
+         (p_hotel, 'Bar store', 'store', true, false, false),
+         (p_hotel, 'Bar counter', 'store', false, true, false)
+  on conflict (hotel_id, name) do nothing;
+  get diagnostics v_made = row_count;
+  return v_made;
+end $fn$;
+revoke all on function app.default_stores(uuid) from public;
 
 -- ── Recipes ────────────────────────────────────────────────────────────────
 create table if not exists recipe_lines (

@@ -199,10 +199,11 @@ describe("each person's menu", () => {
        (the owner's D27-329 (3)), and Bar stock beside it - the bar manager's
        sheet, bills and set up (the owner, 21 October evening, D27-354). */
     expect(menu("bar")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Bar stock", "Close restaurant day"]);
-    expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Notifications"]);
+    /* Kitchen stock after the Kitchen for both: the kitchen's sheet and recipes (D27-378). */
+    expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Kitchen stock", "Notifications"]);
     /* The Store joined the kitchen manager's on 22 September (D22-19). */
     expect(menu("kitchen_manager")).toEqual(
-      ["Guest requests", "Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
+      ["Guest requests", "Store", "Kitchen", "Kitchen stock", "Menu", "Close restaurant day", "Notifications"]);
   });
 
   it("keeps the revenue manager out of the restaurant's menu (D22-35)", () => {
@@ -443,5 +444,16 @@ describe("Bar stock behind its switch (D27-367)", () => {
       expect(mayReach("gm", path, { bar_stock: false }), path).toBe(false);
     }
     expect(mayReach("gm", "/reports/stock-on-hand", { bar_stock: false }), "the Store's own reports stay").toBe(true);
+  });
+});
+
+describe("Kitchen stock (D27-378)", () => {
+  it("is the kitchen manager's and the chef's, and Bar stock's switch never takes it away", () => {
+    for (const role of ["kitchen_manager", "chef"] as const) {
+      expect(mayReach(role, "/pos/:code/kitchen-stock", { bar_stock: false }), role).toBe(true);
+    }
+    for (const role of ["pos", "bar", "front_desk", "housekeeping"] as const) {
+      expect(mayReach(role, "/pos/:code/kitchen-stock"), role).toBe(false);
+    }
   });
 });

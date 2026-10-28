@@ -1,10 +1,10 @@
 import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { ChefHat, Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
-  Card, CardBody, Button, Skeleton, ErrorState, EmptyState, NativeSelect, Input, Segmented, toast,
+  Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState, EmptyState, NativeSelect, Input, Segmented, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
 import {
@@ -20,8 +20,20 @@ import {
    typed into it; below zero in red. RECIPES - what one of each dish takes,
    a size's, a side's and an add-on's own lines on top; the dishes with no
    recipe listed. The bar's Today's sheet and Set up (BarStock.tsx), for
-   the kitchen.
+   the kitchen. Also "Kitchen stock" in the kitchen manager's and the chef's
+   Restaurant menu (D27-378), as Bar stock is the bar's.
    ══════════════════════════════════════════════════════════════════ */
+
+export default function KitchenStockPage() {
+  const { code = "" } = useParams<{ code: string }>();
+  return (
+    <Page>
+      <PageHeader title="Kitchen stock"
+        description="The kitchen's day: what came, what the KOTs used, what was wasted, what is left, and the count." />
+      <KitchenStockBody code={code} />
+    </Page>
+  );
+}
 
 type Part = "sheet" | "recipes";
 

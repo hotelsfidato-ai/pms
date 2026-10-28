@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-29 · Release 16: the owner's answers (D27-378) - the Kitchen store marked, Kitchen stock in the kitchen's menu
+
+**Asked for:** the owner's D27-378, through the master: each hotel's Kitchen store marked by the migration, and a new hotel's, as the Bar store was; "Kitchen stock" in the kitchen manager's and the chef's Restaurant menu, like Bar stock. Everything else kept as built. cp6 (release 15, migration 250) merged first; `owner_reset.steps()` needs nothing: `recipe_lines` and the mark are setup, which a reset keeps.
+**Shipped** Migration 253 marks each hotel's store named "Kitchen store" (never a bar store or counter) where the hotel has none marked, so a replay keeps the GM's choice; `app.default_stores` (238's) marks a new hotel's. `/pos/:code/kitchen-stock` (`KitchenStockPage`, routes.tsx) and its `nav.ts` entry (order 46, working menus and `canSee` the kitchen manager and the chef). Manual: A9.11, A8's screen list, A0.4's Restaurant menu, B2.2's menus per role.
+**Proved** `kitchenStock.test.ts` 6/6 (5EL's Kitchen store came marked); "kitchen stock" in the db suite 13/13 (a new hotel's Kitchen store, and only it); the replay of 253 on a kept scratch database marked an unmarked hotel's Kitchen store and left a hotel whose GM chose its Main store alone - and without its backfill left the first unmarked. Taken out and failing: the new hotel's mark (4 API tests), the entry's working menus (2 web tests), its `canSee` (4 web tests).
+
 ## 2026-10-29 · Release 16: Inventory's Restaurant tab - the kitchen's sheet and recipes (the owner's D27-373, D27-374)
 
 **Asked for:** the master, 28-29 October: the kitchen store's daily sheet and recipes, the bar's way; every KOT takes the recipe; no recipe takes nothing and is listed; sizes and add-ons their own lines; a KOT always goes, below zero red; struck before the kitchen had it gives back, after counts as wastage with the reason.
