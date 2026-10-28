@@ -544,4 +544,27 @@ export const SHOTS = [
       { n: 4, at: "text:Download to Excel", side: "bottom" },
     ],
   },
+  /* Table shifting (D27-370). Before A8-47 the master opens an open dine-in
+     bill on the Till (N4, in a section with a free table and another table
+     with an open bill, N5); A8-48 follows on the same bill. */
+  {
+    id: "A8-47", title: "Move to another table", as: "General Manager",
+    steps: [
+      { click: "text:Move to another table" }, { waitFor: "text:The bill and its KOTs go with it", ms: 10000 }, { wait: 400 },
+    ],
+    marks: [{ n: 1, at: "css:[role=dialog] button", side: "left" }],
+  },
+  { id: "A8-47b", title: "Close the move without moving", noShot: true, as: "General Manager",
+    steps: [{ click: "text:Cancel" }, { wait: 300 }] },
+  {
+    id: "A8-48", title: "Join another table: said before it is done", as: "General Manager",
+    steps: [
+      { click: "text:Join another table" }, { waitFor: "text:its own bill closes as joined", ms: 10000 },
+      { click: "css:[role=dialog] button" }, { waitFor: "text:This cannot be undone", ms: 10000 }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "text:This cannot be undone", side: "left" },
+      { n: 2, at: "text:Join", side: "top" },
+    ],
+  },
 ];

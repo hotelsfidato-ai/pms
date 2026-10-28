@@ -92,7 +92,8 @@ create trigger supplier_bills_paid_once before update on supplier_bills
   for each row execute function app.supplier_bill_paid_once();
 
 -- ── A test hotel's classes: a supplier's bill is trading ───────────────────
--- 238's list, copied with one change: ('supplier_bills', 'trading').
+-- 238's list, copied with ('supplier_bills', 'trading') added, and 244's ('pos_table_moves', 'trading')
+-- kept (both written from 238 on 27 October; this one runs last, so it carries both).
 create or replace function app.test_hotel_classes()
 returns table (table_name text, class text)
 language sql
@@ -139,7 +140,7 @@ as $$
   ('pos_tickets', 'trading'), ('pos_kot_prints', 'trading'), ('pos_kot_reprints', 'trading'),
   ('pos_bill_prints', 'trading'), ('bar_purchases', 'trading'), ('bar_purchase_lines', 'trading'),
   ('bar_requests', 'trading'), ('bar_request_lines', 'trading'), ('bar_closed_days', 'trading'),
-  ('pos_tender_changes', 'trading'), ('pos_requests', 'trading'),
+  ('pos_tender_changes', 'trading'), ('pos_requests', 'trading'), ('pos_table_moves', 'trading'),
   ('pos_cash_movements', 'trading'), ('pos_day_ends', 'trading'),
   ('pos_denominations', 'trading'), ('cashier_shifts', 'trading'),
   ('cashier_movements', 'trading'), ('cashier_denominations', 'trading'),
