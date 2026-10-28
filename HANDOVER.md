@@ -765,6 +765,18 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **29 October, 02:30: RELEASE 15 on cp6, not cut yet.** Merged: the owner's full reset (b47feac6, migration 250),
+> the one-hotel restore tool (946ebcf9), backups A1/A2/A3/A5/A6 + launch.sh installing the reset's backup socket
+> (fbfb78b0); the gates run `restore 1` and `to minute` and release.mjs requires both (e956c1fe). Decisions D27-375 to
+> D27-378. **Still building for 15:** uploaded files to the bucket nightly + n8n's backup failing turns red (helper);
+> a restored guest's ID documents come back with the guest (helper). **Then:** merge both; pictures A16 (the reset
+> window), A17-49 and B5-01 (Connection health rows); cut release/r15; ONE full gate run (helpers paused, dev servers
+> off); release.mjs once; steps incl. the owner's server settings (bucket rules, `/etc/n8n/backup.env`, archiving on,
+> `/etc/cron.d/fidato-wal`, RESET_DATABASE_URL / RESET_BACKUP_SOCKET / RESET_OWNER_EMAIL) and the read-only restore look.
+> **Release 16 (unmerged until 15 is cut):** MRP done (branch worktree-agent-a9e1acbb1774af69b, d3a53f18, migration
+> 254); Restaurant tab (worktree-agent-aaabdf3cd0aae2b35, migration 253) finishing the kitchen-store mark and the
+> Kitchen stock menu entry (D27-378). Pictures for 16: A8-49, A11-28, A8-34 again, A9-48, A9-49.
+
 > **29 October, 01:30: RELEASE 14 READY, the owner's to type** - `release/r14` at **bf74ce5a** (cp6), one complete
 > gate run green (web 1,472, API 2,918, db 1,816, replay 249, PG16), `index-D0bnQp9L.js`, printer 1.1.0 in
 > `.local/printer-r14`, steps `.local/release-14-steps.md` (A0 the n8n paste first). After the owner deploys: check it
