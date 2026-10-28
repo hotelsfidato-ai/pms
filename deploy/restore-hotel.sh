@@ -25,7 +25,10 @@
 #    row that changed since the backup; never writes an append-only record (the
 #    ledger, an issued invoice: reversed in the PMS, never rewritten); never
 #    the invoice and bill series, so a number is never issued twice; never a
-#    person or a property. Those it lists, and leaves to the owner.
+#    person or a property. Those it lists, and leaves to the owner. A guest
+#    who comes back brings their ID documents (D27-376); an ID photo's row
+#    comes back with its stay, and the look lists it to be opened once in the
+#    PMS: the photo is in Google Drive (D27-209), which this tool never reaches.
 #
 # Settings, as db/backup.sh: on the server (psql on the PATH) the unix socket
 # as postgres; on a development PC the local cluster (PGBIN, PGHOST, PGPORT,

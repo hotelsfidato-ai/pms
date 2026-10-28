@@ -24,7 +24,9 @@ set client_min_messages = warning;
 
 -- The hotel's tables and how to find its rows in each: its own hotel_id, or
 -- the parent it hangs off (app.copy_hotel_setup's way). Plus every shared
--- table that something points at, whole.
+-- table that something points at, whole; and a guest's ID documents
+-- (guest_documents), which nothing points at but which come back with their
+-- guest (D27-376).
 create temp table scope as
 select c.table_name::text tbl, c.class::text class,
        case
@@ -46,7 +48,8 @@ select c.table_name::text tbl, c.class::text class,
   from app.test_hotel_classes() c
   join pg_class r on r.oid = to_regclass('public.' || c.table_name)
  where c.class <> 'group'
-    or exists (select 1 from pg_constraint k where k.contype = 'f' and k.confrelid = r.oid);
+    or exists (select 1 from pg_constraint k where k.contype = 'f' and k.confrelid = r.oid)
+    or c.table_name = 'guest_documents';
 
 do $$
 begin
@@ -123,6 +126,11 @@ create temp table dep (child int, parent int);
 
 \copy b (tbl, row) from pstdin
 create index on b (tbl, k);
+-- Each guest's ID documents, and the guest's own line (D27-376).
+create temp view docs as
+select x.n, g.n guest
+  from b x join b g on g.tbl = 'guests' and g.row ->> 'id' = x.row ->> 'guest_id'
+ where x.tbl = 'guest_documents';
 
 -- Every backup row against live, by key; and the hotel's live rows that the
 -- backup does not have. Run again after the second step writes.
@@ -214,19 +222,24 @@ end $$;
 
 -- A shared row (a guest, a company) is the hotel's business only when one of
 -- its missing rows needs it; and it comes back only for one that comes back.
+-- A guest's ID documents are needed by nothing: they go where their guest
+-- goes (D27-376, the view docs). A guest still in live does not get theirs
+-- back here: only a guest who comes back brings them.
 with recursive a(n) as (
   select n from b where state = 'missing' and class is distinct from 'group'
   union
   select d.parent from dep d join a on a.n = d.child)
 update b set state = 'not needed'
- where state = 'missing' and class = 'group' and n not in (select n from a);
+ where state = 'missing' and class = 'group' and n not in (select n from a)
+   and n not in (select docs.n from docs join a on a.n = docs.guest);
 
 with recursive a(n) as (
   select n from b where state = 'missing' and class is distinct from 'group' and why is null
   union
   select d.parent from dep d join a on a.n = d.child)
 update b set why = 'only rows that stay missing need it'
- where state = 'missing' and class = 'group' and why is null and n not in (select n from a);
+ where state = 'missing' and class = 'group' and why is null and n not in (select n from a)
+   and n not in (select docs.n from docs join a on a.n = docs.guest);
 
 -- Parents first: a row's step comes after every parent's (a guest before its
 -- booking, a booking before its bill).
@@ -285,6 +298,30 @@ select depth + 1 as "step", tbl as "table", count(*) as "rows",
        || case when count(*) > 3 then ', ...' else '' end as "which"
   from b where state = 'missing' and why is null
  group by depth, tbl order by 1, 2;
+\endif
+
+-- An ID photo's row points at its file in Google Drive (D27-209): encrypted
+-- with the hotel's password, never on this server, and out of this tool's
+-- reach. Nothing deletes that file when the row goes - only a person removing
+-- the photo, or the guest replacing it - so it should still be there; a person
+-- opens it once to be sure. By booking reference: this output may be sent on,
+-- and a guest's name stays out of it.
+select count(*) > 0 as photos from b
+ where tbl = 'guest_id_photos' and state = 'missing' and why is null and row ->> 'status' = 'stored' \gset
+\if :photos
+\echo
+\echo '  ID PHOTOS coming back - the photo itself is in Google Drive, which this tool cannot see:'
+select (select r.row ->> 'reference' from b r
+         where r.tbl = 'reservations' and r.row ->> 'id' = p.row ->> 'reservation_id') as "booking",
+       p.row -> 'sides' as "sides", left(p.row ->> 'stored_at', 10) as "kept since"
+  from b p
+ where p.tbl = 'guest_id_photos' and p.state = 'missing' and p.why is null
+   and p.row ->> 'status' = 'stored'
+ order by 1;
+\echo '  Once they are back, the owner, an administrator or the GM opens each one'
+\echo '  (Online check-in, ID photos kept) to see that it shows. One that will not'
+\echo '  open: the hotel''s ID photo password changed since, or the file was taken'
+\echo '  out of Drive by hand.'
 \endif
 
 select count(*) as come from b where state = 'missing' and why is null \gset
