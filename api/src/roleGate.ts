@@ -313,6 +313,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/cancel`]: grant("reservation", "cancel", "Cancelling a booking"),
   [`POST ${H}/stays/:id/confirmation`]: grant("reservation", "create", "Sending a booking's voucher"),
   [`PUT ${H}/sales-people`]: own("reservations/desk.ts: owner, admin, GM"),
+  /* D27-371: the guest's company and GSTIN on a stay, for its tax invoice. */
+  [`PUT ${H}/stays/:id/guest-company`]: CHANGE_BOOKING,
 
   /* finance */
   [`POST ${H}/stays/:id/folios`]: CHARGE,

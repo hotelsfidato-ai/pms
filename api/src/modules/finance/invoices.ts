@@ -152,6 +152,17 @@ export const RECIPIENT_COMPANY = `
                            and o.bill_to = 'company') then r.company_id
   end`;
 
+/* THE GUEST'S OWN COMPANY (D27-371). Where RECIPIENT_COMPANY names no
+   company and the booking carries a GSTIN the guest typed, the invoice is
+   addressed to that company: its name (the guest's own when only a GSTIN was
+   typed - a proprietor's), its GSTIN and its address. The guest still pays:
+   this is who the document names, not who owes. RECIPIENT_COMPANY itself is
+   unchanged - it is a `companies` row (credit limits, 216's automatic send),
+   and this company is not one, so 216 needs no change. Aliases: the
+   RECIPIENT_COMPANY join, r (reservations), g (guests). */
+export const recipientName = (co: string) =>
+  `coalesce(${co}.name, case when r.guest_company_gstin is not null then r.guest_company_name end, g.full_name)`;
+
 /* ══════════════════════════════════════════════════════════════════
    THE DOOR A TAX INVOICE IS ISSUED THROUGH (28 September)
 
@@ -321,14 +332,17 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
       charged: boolean;
     }>(
       `select f.id::text,
-              coalesce(co.name, g.full_name) as name,
-              nullif(co.gstin, '') as gstin,
+              ${recipientName("co")} as name,
+              case when co.id is not null then nullif(co.gstin, '')
+                   else r.guest_company_gstin end as gstin,
               /* The recipient's name and address come from the same party
                  (CGST Rule 46(e)): a company's line and city, never the
                  guest's home under the company's name. */
               case when co.id is not null
                    then nullif(concat_ws(', ', nullif(co.address_line, ''),
                                                nullif(co.city, '')), '')
+                   when r.guest_company_gstin is not null and r.guest_company_name is not null
+                   then r.guest_company_address
                    else gd.address_line end as address,
               exists (select 1 from folio_postings fp
                        where fp.folio_id = f.id

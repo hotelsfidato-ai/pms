@@ -8,6 +8,17 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-28 · The guest's company on the stay panel (the owner's D27-371)
+
+**Shipped.** `api/.../stays.ts` reads the booking's guest company
+(`guestCompany`, null when none; `Stay.guestCompany` in the shared types,
+optional). `StayDrawer.tsx` shows it under Booked through as "Guest's
+company" with its GSTIN, and hands it to Edit guest for whoever may change a
+booking. Front desk's web tests: 151 tests in 32 files with the guards, one
+failing only for the migration-number gap below 247.
+
+---
+
 ## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Shipped** **The guest registration card** (D27-344, D27-345, D27-346): `pages/RegistrationCard.tsx` at `/h/:code/stays/:id/registration-card`, the old card's boxes in Fidato's document style (Aadhaar its last four, the house policies over the signature, a blank Remark, the no-offers box); `GET /stays/:id/registration-card` in `api/src/modules/front-desk/operations.ts`, gated as Form C (customer edit); **Print registration card** in the panel's top row on both tabs for a guest in the house or checked out (`flows/StayDrawer.tsx`). Its **G.R. card no** is given at check-in, 1, 2, 3 per hotel, by migration 230's trigger; a stay checked in before has none. **Front desk rules** gains *The tax invoice at check-out* and its copies (229; `settings/FrontDeskPage.tsx`, `lists.ts`). Front door: `RegistrationCardSheet`. **Proved** `registrationCard.test.tsx` 4/4, `refusedControls.test.tsx` 8/8, `api/test/modules/front-desk/registrationCard.test.ts` 4/4, `deskSettings.test.ts`. The root `CHANGELOG.md` has the whole entry and the gate numbers.

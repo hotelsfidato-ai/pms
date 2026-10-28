@@ -152,7 +152,7 @@ describe("Check in now", () => {
   it("is greyed with its reason until it can go: today, a clean room, the ID", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     await waitFor(() => expect(button("Save booking").disabled).toBe(false));
 
@@ -184,7 +184,7 @@ describe("Check in now", () => {
     refuseCheckIn = true;
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     pick(/^Room$/, "101");
     await waitFor(() => expect(reasons()).toContain("Record the ID document"));
@@ -210,7 +210,7 @@ describe("the advance", () => {
   it("is taken before Check in now checks the guest in", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     pick(/^Room$/, "101");
     await waitFor(() => expect(reasons()).toContain("Record the ID document"));
@@ -228,7 +228,7 @@ describe("the advance", () => {
   it("goes to the bill after the booking, held as the guest's credit", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     type(/^Amount/, "2000");
     pick(/^Paid by/, "UPI");
@@ -250,7 +250,7 @@ describe("the advance", () => {
     URL.createObjectURL = vi.fn(() => "blob:voucher");
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     await waitFor(() => expect(button("Save booking").disabled).toBe(false));
     fireEvent.click(button("Save booking"));
@@ -266,7 +266,7 @@ describe("the advance", () => {
   it("in cash with no drawer open, is taken and reaches the bill", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     type(/^Amount/, "2000");
     /* The summary has taken the advance in: the page has settled. It neither
@@ -320,7 +320,7 @@ describe("a rate that includes GST", () => {
   const typeRate = async (rate: string | null) => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     const tick = screen.getByRole("checkbox", { name: /Rate includes GST/ });
     expect(tick.getAttribute("aria-checked")).toBe("false");
@@ -381,7 +381,7 @@ describe("a lead", () => {
   it("fills the name, phone and source, and the booking keeps its campaign", async () => {
     open("/?lead=tok-good");
     await waitFor(() =>
-      expect((screen.getByLabelText(/^Guest or company/, { selector: "input" }) as HTMLInputElement).value).toBe("Meera Joshi"));
+      expect((screen.getByLabelText(/^Full name/, { selector: "input" }) as HTMLInputElement).value).toBe("Meera Joshi"));
     expect((screen.getByLabelText(/^Phone/, { selector: "input" }) as HTMLInputElement).value).toBe("9812345678");
     expect((screen.getByLabelText(/^Booking source/, { selector: "select" }) as HTMLSelectElement).value).toBe("src-1");
     await waitFor(() => expect(button("Save booking").disabled).toBe(false));
@@ -393,7 +393,7 @@ describe("a lead", () => {
   it("gone: its sentence, and a blank page", async () => {
     open("/?lead=tok-gone");
     expect((await screen.findByText(/This lead has expired or was erased/)).closest("[data-lead-gone]")).toBeTruthy();
-    expect((screen.getByLabelText(/^Guest or company/, { selector: "input" }) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/^Full name/, { selector: "input" }) as HTMLInputElement).value).toBe("");
   });
 });
 
@@ -406,7 +406,7 @@ describe("a walk-in", () => {
     expect((screen.getByLabelText(/^Booking source/, { selector: "select" }) as HTMLSelectElement).value).toBe("src-w");
     expect(button("Check in now").className).toContain("bg-brand-orange");
 
-    type(/^Guest or company/, "Kavya Rao");
+    type(/^Full name/, "Kavya Rao");
     fireEvent.click(screen.getByRole("switch", { name: /Woman travelling alone/ }));
     type(/^Reason for skipping/, "Scanner offline");
     await waitFor(() => expect(button("Check in now").disabled).toBe(false));
@@ -435,7 +435,7 @@ describe("a day use", () => {
   it("is out the day it comes: its price is typed, the tariff never asked, one day charged", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
-    type(/^Guest or company/, "Anna Smith");
+    type(/^Full name/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     const arrival = (screen.getByLabelText(/^Arrival/, { selector: "input" }) as HTMLInputElement).value;
     asked.length = 0;

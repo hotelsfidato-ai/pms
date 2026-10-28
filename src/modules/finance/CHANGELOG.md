@@ -8,6 +8,25 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-28 · The tax invoice in the guest's company's name (the owner's D27-371)
+
+**Shipped.** `invoices.ts`: the stay's invoice route makes a guest's bill out
+to the guest's own company when the booking carries its GSTIN (name - the
+guest's own with only a GSTIN typed -, GSTIN, address), and only where
+`RECIPIENT_COMPANY` names no company, so Bill to company still wins.
+`recipientName` holds the name rule once; `billing.ts`'s Invoices list
+("Billed to") reads it too. `RECIPIENT_COMPANY` is unchanged (it is a
+`companies` row: credit limits and 216's automatic send), so 216 is unchanged
+and the guest's-company invoice is sent to the guest by itself.
+Who pays, folios, the city ledger: untouched. The GST sales register needed
+no change: it reads the invoice's recipient and GSTIN.
+
+**Proved.** `api/test/modules/reservations/guestCompany.test.ts`: the invoice
+to the company while every bill stays the guest's; the register's row with
+the GSTIN and name; a proprietor's GSTIN alone; Bill to company wins. Finance's
+API tests with the rest: 66 files, 607 tests.
+
+---
 ## 2026-10-27 · The petty cash book (the owner's D27-370), a helper's lane
 
 **Asked for:** each paid-out, at the desk and in a restaurant, gets a category (Kitchen, Housekeeping, Maintenance, Office, Other) and a photo of its bill; a Petty cash report shows them by day and category, both places together. No float, top-ups or balance.

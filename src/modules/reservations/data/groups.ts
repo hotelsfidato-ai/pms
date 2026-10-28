@@ -205,6 +205,8 @@ export async function createBooking(
     isSingleLady?: boolean;
     /** The lead's campaign, when the booking came from "Book this lead" (D27-170). */
     campaign?: string;
+    /** D27-371: the guest's own company, for the tax invoice; the guest pays. */
+    guestCompany?: { name: string; gstin: string; address: string };
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;

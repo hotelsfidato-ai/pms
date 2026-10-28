@@ -4,7 +4,7 @@ import type { Client } from "../../db.ts";
 import { emailProblem, phoneProblem } from "../../validate.ts";
 import {
   makeBooking, alreadyReceived, answerRepeat, fingerprintOf, isUniqueViolation,
-  type BookingRequest, type BookingLineInput, type BookingDiscount, type BookingAddress,
+  type BookingRequest, type BookingLineInput, type BookingDiscount, type BookingAddress, type GuestCompany,
 } from "./book.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -373,6 +373,8 @@ groups.post("/:code/bookings", async (c) => {
     specialRequest?: string;
     /* D27-170: the lead's campaign, from "Book this lead". */
     campaign?: string;
+    /* D27-371: the guest's own company, for the tax invoice. */
+    guestCompany?: GuestCompany;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -432,6 +434,7 @@ groups.post("/:code/bookings", async (c) => {
     ...(typeof input.specialRequest === "string" ? { specialRequest: input.specialRequest } : {}),
     isSingleLady: input.isSingleLady === true,
     ...(typeof input.campaign === "string" ? { campaign: input.campaign } : {}),
+    ...(input.guestCompany && typeof input.guestCompany === "object" ? { guestCompany: input.guestCompany } : {}),
   });
 
   const result = await withSession(c.get("subject"), async (client) => {

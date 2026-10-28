@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { folioFor } from "../../folio.ts";
+import { gstinProblem } from "../../validate.ts";
 import { COMP_ROLES, holdsRoleAt } from "./book.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -121,6 +122,40 @@ desk.post("/:code/stays/:id/confirm", async (c) => {
           and (id = $1 or group_id = (select group_id from reservations where id = $1))`,
       [c.req.param("id"), hotelId]);
     return { ok: true as const, rooms: rowCount ?? 0, reference: stay.reference };
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── The guest's company on one stay, after booking (D27-371) ────────
+   Company name, GSTIN and address, all optional; a blank clears. The stay's
+   tax invoice not yet issued is addressed by them (finance's issuing route);
+   one already issued keeps what it printed. For whoever may change a
+   booking (the gate). Refused in words before the write. */
+const A_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+desk.put("/:code/stays/:id/guest-company", async (c) => {
+  const input = await c.req.json<{ name?: unknown; gstin?: unknown; address?: unknown }>()
+    .catch(() => ({}) as { name?: unknown; gstin?: unknown; address?: unknown });
+  const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const name = text(input.name);
+  const gstin = text(input.gstin)?.toUpperCase() ?? null;
+  const address = text(input.address);
+  const wrong = (!A_UUID.test(c.req.param("id")) ? "No such booking." : null)
+    ?? gstinProblem(gstin)
+    ?? ((name?.length ?? 0) > 200 ? "A company's name is at most 200 characters." : null)
+    ?? ((address?.length ?? 0) > 500 ? "A company's address is at most 500 characters." : null);
+  if (wrong) return c.json(refuse(wrong), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      `update reservations set guest_company_name = $3, guest_company_gstin = $4,
+              guest_company_address = $5
+        where id = $1::uuid and hotel_id = $2`,
+      [c.req.param("id"), hotelId, name, gstin, address]);
+    return rowCount ? { ok: true as const, name, gstin, address } : refuse("No such booking.");
   });
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);

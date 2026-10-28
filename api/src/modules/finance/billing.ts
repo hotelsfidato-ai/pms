@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
-import { RECIPIENT_COMPANY } from "./invoices.ts";
+import { RECIPIENT_COMPANY, recipientName } from "./invoices.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BILLING — receipts, and the stays ready to invoice
@@ -159,7 +159,7 @@ billing.get("/:code/billable", async (c) => {
               app.booking_source_label(bs.name, co.name, r.source) as source,
               r.check_in::text as arrival, r.check_out::text as departure,
               greatest(r.check_out - r.check_in, 0) as nights,
-              coalesce(rc.name, g.full_name) as bill_to,
+              ${recipientName("rc")} as bill_to,
               (select count(*)::int from folios o where o.reservation_id = r.id) as bills,
               coalesce((select sum(amount) from live
                          where folio_id = f.id and category not in ('payment', 'refund')), 0)::text as charges,

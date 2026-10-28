@@ -111,6 +111,24 @@ export const getGuestContact = (hotelId: string, guestId: string): Promise<Guest
 
 /** Only what changed is sent; blank clears (the server keeps the name and
     nationality). The server's sentence on a refusal. */
+/** The guest's company on ONE stay (D27-371): reservations' route, asked
+    from the Edit guest dialog on the stay panel. Blank clears. */
+export async function saveStayCompany(
+  hotelId: string, stayId: string, company: { name: string; gstin: string; address: string },
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/guest-company`, {
+      method: "PUT", body: JSON.stringify(company),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
 export async function saveGuestContact(
   hotelId: string, guestId: string, changes: Partial<Omit<GuestContact, "id">>,
 ): Promise<{ ok: true; guest: GuestContact } | { ok: false; reason: string }> {

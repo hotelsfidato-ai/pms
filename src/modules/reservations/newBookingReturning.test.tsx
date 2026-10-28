@@ -77,7 +77,7 @@ describe("a booking for a returning guest", () => {
 
     /* The heading is drawn while the inventory loads; the form after it. */
     await screen.findByRole("heading", { name: "Guest" });
-    type("Guest or company", "Rohit D");
+    type("Full name", "Rohit D");
     type("Phone", "+91 98765 43210");
     expect(await screen.findByText(/Stayed with the group 2 times/))
       .toBeTruthy();
@@ -114,7 +114,7 @@ describe("a booking for a returning guest", () => {
 
   it("'Not them' - and typing the phone again - leaves a new guest", async () => {
     await open();
-    type("Guest or company", "Rohit D");
+    type("Full name", "Rohit D");
     type("Phone", "9876543210");
     fireEvent.click(await screen.findByRole("button", { name: "Same person" }));
     fireEvent.click(await screen.findByRole("button", { name: "Not them" }));
@@ -131,7 +131,7 @@ describe("a booking for a returning guest", () => {
   it("warns of a blacklisted guest with the reason, and still lets the desk book them (D21-21)", async () => {
     blacklisted = true;
     await open();
-    type("Guest or company", "Rohit D");
+    type("Full name", "Rohit D");
     type("Phone", "9876543210");
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/blacklisted/);
@@ -148,7 +148,7 @@ describe("a booking for a returning guest", () => {
     const asked = vi.mocked(apiModule.api).mock.calls.some(([p]) => String(p).includes("/returning"));
     expect(asked).toBe(false);
 
-    type("Guest or company", "Asha K");
+    type("Full name", "Asha K");
     type("Phone", "abc");
     fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }),
       { target: { value: "src-1" } });

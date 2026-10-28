@@ -177,7 +177,9 @@ function StayBody({
             <>
               <VipToggle hotelId={hotelId} stay={stay} />
               {/* GU-1: nothing could correct a guest's record before. */}
-              <EditGuest hotelId={hotelId} guestId={stay.guestId} />
+              {/* D27-371: with this booking's company, for whoever may change a booking. */}
+              <EditGuest hotelId={hotelId} guestId={stay.guestId}
+                stay={mayEdit ? { id: stay.id, company: stay.guestCompany ?? null } : undefined} />
             </>
           )}
           {/* The CRM's: stayed with the group before, the WhatsApp tick,
@@ -310,6 +312,15 @@ function StayFacts({ stay: s }: { stay: Stay }) {
             a source-mix report an owner sets policy from. */}
         <Fact label="Segment">{s.marketSegment ?? DASH}</Fact>
         {s.salesPerson && <Fact label="Sold by">{s.salesPerson}</Fact>}
+        {/* D27-371: the guest's own company, which the tax invoice names. */}
+        {s.guestCompany && (
+          <Fact label="Guest's company">
+            <span data-guest-company>
+              {s.guestCompany.name ?? DASH}
+              {s.guestCompany.gstin && <span className="block tabular font-normal text-grey-600">GSTIN {s.guestCompany.gstin}</span>}
+            </span>
+          </Fact>
+        )}
       </FactGroup>
 
       {s.voidReason && (
@@ -451,7 +462,9 @@ function Total({ label, value, emphasis, precise, className }: {
 
 /* ── Correcting the guest (GU-1) ──────────────────────────────────
    The same quiet link as Mark VIP: it changes the guest, not the stay. */
-function EditGuest({ hotelId, guestId }: { hotelId: string; guestId: string }) {
+function EditGuest({ hotelId, guestId, stay }: {
+  hotelId: string; guestId: string; stay?: Parameters<typeof EditGuestFlow>[0]["stay"];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -464,7 +477,7 @@ function EditGuest({ hotelId, guestId }: { hotelId: string; guestId: string }) {
       >
         Edit guest
       </button>
-      {open && <EditGuestFlow hotelId={hotelId} guestId={guestId} open onOpenChange={setOpen} />}
+      {open && <EditGuestFlow hotelId={hotelId} guestId={guestId} open onOpenChange={setOpen} {...(stay ? { stay } : {})} />}
     </>
   );
 }

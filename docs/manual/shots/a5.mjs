@@ -81,7 +81,7 @@ export const SHOTS = [
     steps: [
       { waitFor: "css:[data-room-tile='303']", ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, { wait: 2500 },
       { click: "css:[data-room-tile='303']" }, { waitFor: "text:A walk-in into room 303", ms: 30000 }, { wait: 1500 },
-      { type: ["css:input[placeholder='Sharma family']", "A5 Test Rane"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A5 Test Rane"] },
       SET("Phone", "98765 00501"), DAY("Departure", 2), ...FORM,
       SET("Document", "Aadhaar"), { wait: 300 }, SET("Number", "3456 7890 1238"), { wait: 800 },
       { click: "text:Check in now" }, { waitFor: "text:Open the booking", ms: SLOW }, { wait: 1500 },
@@ -136,7 +136,7 @@ export const SHOTS = [
     steps: [
       { waitFor: "css:[data-room-tile='302']", ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, { wait: 2500 },
       { click: "css:[data-room-tile='302']" }, { waitFor: "text:A walk-in into room 302", ms: 30000 }, { wait: 1500 },
-      { type: ["css:input[placeholder='Sharma family']", "A5 Test Wagh"] },
+      { type: ["css:input[placeholder='Anil Sharma']", "A5 Test Wagh"] },
       SET("Phone", "98765 00502"), { wait: 500 }, ...FORM,
       SET("Document", "Aadhaar"), { wait: 300 }, SET("Number", "6789 0123 4560"), { wait: 2500 },
       { click: "text:Check in now" }, { waitFor: "text:Open the booking", ms: SLOW }, { wait: 1500 },
