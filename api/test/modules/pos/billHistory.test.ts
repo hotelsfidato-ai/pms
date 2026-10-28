@@ -19,6 +19,9 @@ let owner = "";
 let gm = "";
 let waiter = "";
 let outsider = "";
+let accountant = "";
+let reception = "";
+let viewer = "";
 let tikka = "";
 let putAwayTillDay: () => Promise<void>;
 
@@ -39,7 +42,7 @@ const call = (who: string, path: string, body?: unknown) =>
 interface Bill {
   id: string; orderNo: string; status: string; table: string | null; businessDate: string;
   payable: number; modes: string[]; waiter: string | null; guest: string | null; phone: string | null;
-  outlet: string;
+  outlet: string; settledAt: string | null; stayGuest: string | null; room: string | null;
 }
 interface Answer { bills: Bill[]; capped: boolean; cap: number; outlets: { code: string; name: string }[] }
 const history = async (query: string, who = owner): Promise<Answer> => {
@@ -88,6 +91,9 @@ beforeAll(async () => {
   gm = await person("billhist-gm@fidato.in", `${TAG} Manager`, "gm");
   waiter = await person("billhist-waiter@fidato.in", `${TAG} Waiter`, "pos");
   outsider = await person("billhist-outsider@fidato.in", `${TAG} Outsider`, "housekeeping");
+  accountant = await person("billhist-accountant@fidato.in", `${TAG} Accountant`, "finance");
+  reception = await person("billhist-reception@fidato.in", `${TAG} Reception`, "front_desk");
+  viewer = await person("billhist-viewer@fidato.in", `${TAG} Viewer`, "read_only");
   const menu = (await (await call(owner, "/till/menu")).json()) as { categories: { items: { id: string; name: string }[] }[] };
   tikka = menu.categories.flatMap((c) => c.items).find((i) => i.name === "Paneer Tikka")!.id;
   putAwayTillDay = await openTillDay("5EL");
@@ -99,11 +105,13 @@ afterAll(async () => {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
   try {
     await db.query("alter table pos_order_lines disable trigger pos_order_lines_frozen");
+    await db.query("alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled");
     await db.query(
       "delete from pos_order_lines where order_id in (select id from pos_orders where table_ref like $1)", [`${TAG}%`]);
     await db.query("delete from pos_orders where table_ref like $1", [`${TAG}%`]);
-    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, outsider]]);
+    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, outsider, accountant, reception, viewer]]);
   } finally {
+    await db.query("alter table pos_order_tenders enable trigger pos_order_tenders_no_delete_settled");
     await db.query("alter table pos_order_lines enable trigger pos_order_lines_frozen");
     await db.end();
   }
@@ -140,6 +148,9 @@ describe("Bill history: the Till's earlier-bills route over a range", () => {
     expect(by("a")).toMatchObject({ status: "settled", modes: ["upi"], waiter: expect.any(String), guest: "Asha Rao",
       phone: "98765 43210", outlet: "REST", businessDate: await day(3) });
     expect(by("a").payable).toBeGreaterThan(0);
+    /* The time it was settled, not opened (D27-372); an NC bill's is when it was given. */
+    for (const t of ["a", "b", "c", "d"]) expect(by(t).settledAt, t).toMatch(/^\d\d:\d\d$/);
+    expect(by("a")).toMatchObject({ stayGuest: null, room: null });
     expect(by("b")).toMatchObject({ modes: ["card", "cash"], waiter: `${TAG} Waiter` });
     expect(by("c").status).toBe("no_charge");
     expect(by("d")).toMatchObject({ status: "void", modes: ["card"] });
@@ -215,6 +226,53 @@ describe("Bill history: the Till's earlier-bills route over a range", () => {
   it("is for the people who may list the Till's bills, not a housekeeper", async () => {
     const res = await call(outsider, `/till/bills?from=${today}&to=${today}`);
     expect(res.status).toBe(403);
-    expect((await call(waiter, `/till/bills?from=${today}&to=${today}`)).status).toBe(200);
+  });
+
+  it("a range or a filter is the managers', the Accountant's and Reception's only (D27-372)", async () => {
+    /* Reception where the hotel lets Reception use the POS (087), as for the Till. */
+    const [was] = await sql<{ on: boolean }>(
+      `select is_enabled as on from hotel_modules where module = 'reception_pos'
+          and hotel_id = (select id from hotels where code = '5EL')`);
+    await sql(`insert into hotel_modules (hotel_id, module, is_enabled) select id, 'reception_pos', true from hotels where code = '5EL'
+               on conflict (hotel_id, module) do update set is_enabled = true`);
+    try {
+      for (const who of [owner, gm, accountant, reception]) {
+        expect((await call(who, `/till/bills?from=${today}&to=${today}`)).status, who).toBe(200);
+      }
+    } finally {
+      await (was
+        ? sql(`update hotel_modules set is_enabled = $1 where module = 'reception_pos'
+                 and hotel_id = (select id from hotels where code = '5EL')`, [was.on])
+        : sql(`delete from hotel_modules where module = 'reception_pos'
+                 and hotel_id = (select id from hotels where code = '5EL')`));
+    }
+    const WHO = "Bill history is for the managers, the Accountant and Reception. On the Till, look up one day's bills or a bill's number.";
+    for (const q of [`from=${today}&to=${today}`, `to=${today}`, `date=${today}&table=${TAG}`, `date=${today}&guest=asha`,
+                     `date=${today}&mode=cash`, `date=${today}&waiter=${waiter}`, `date=${today}&outlet=REST`]) {
+      for (const who of [waiter, viewer]) {
+        const r = await call(who, `/till/bills?${q}`);
+        expect(r.status, `${who} ${q}`).toBe(403);
+        expect(((await r.json()) as { error: string }).error).toBe(WHO);
+      }
+    }
+    /* The waiter keeps the Till's own two: a day, and a bill's number. */
+    expect((await call(waiter, `/till/bills?date=${today}`)).status).toBe(200);
+    const byNo = await call(waiter, `/till/bills?no=${encodeURIComponent(d.orderNo)}`);
+    expect(byNo.status).toBe(200);
+    expect(((await byNo.json()) as Answer).bills.map((x) => x.id)).toContain(d.id);
+  });
+
+  it("a bill charged to a room shows the stay's guest and room, and is found by either (D27-372)", async () => {
+    const rooms = (await (await call(owner, "/till/rooms")).json()) as {
+      rooms: { room: string; guest: string; folioId: string }[] };
+    const target = rooms.rooms[0]!;
+    const r = await bill("room", owner);
+    await pay(r.id, { method: "room", room: target.room, folioId: target.folioId });
+    const wide = `from=${today}&to=${today}`;
+    const [found] = (await history(wide)).bills.filter((x) => x.id === r.id);
+    expect(found).toMatchObject({ stayGuest: target.guest, room: target.room, guest: null, modes: ["room"] });
+    expect(found!.settledAt).toMatch(/^\d\d:\d\d$/);
+    expect((await history(`${wide}&guest=${encodeURIComponent(target.guest.slice(0, 4))}`)).bills.map((x) => x.id)).toContain(r.id);
+    expect((await history(`${wide}&guest=${encodeURIComponent(target.room)}`)).bills.map((x) => x.id)).toContain(r.id);
   });
 });

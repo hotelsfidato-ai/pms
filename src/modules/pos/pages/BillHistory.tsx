@@ -21,6 +21,9 @@ import {
 
    Every finished bill - paid, VOID and NC - of any range of dates, found
    by its number, table, guest, how it was paid, the waiter or the outlet.
+   For the managers, the Accountant and Reception only (D27-372); a bill
+   charged to a room names the stay's guest and room, and every bill shows
+   when it was settled.
    Tap one to see the whole bill and print it again (BILL · DUPLICATE, the
    Till's own reprint); the list on screen downloads as a file Excel opens.
 
@@ -33,6 +36,8 @@ const MODE_WORD: Record<string, string> = {
   cash: "Cash", card: "Card", upi: "UPI", room: "To a room", function: "To a function",
   allowance: "Owner's allowance", split: "Split",
 };
+/** Who the bill was for: the stay's guest on a bill charged to a room, else the name taken at the till. */
+const guestOf = (r: BillHistoryRow) => r.stayGuest ?? r.guest;
 const modesWords = (r: BillHistoryRow) => (r.modes.length ? r.modes.map((m) => MODE_WORD[m] ?? m).join(", ") : "-");
 
 const STATE: Record<string, { words: string; tone: "success" | "danger" | "neutral" }> = {
@@ -87,10 +92,10 @@ export default function BillHistoryPage() {
     /* Figures are bare numbers so Excel can sum them; NC has none, and a
        blank is not a zero. The bill's own date, 2026-10-27, sorts there. */
     const csv = toCsv(
-      ["Bill", "Date", "Time", "Outlet", "Table", "Guest", "Phone", "Waiter", "Paid by", "Total", "State"],
+      ["Bill", "Date", "Settled at", "Outlet", "Table", "Guest", "Room", "Phone", "Waiter", "Paid by", "Total", "State"],
       bills.map((b) => [
-        b.orderNo, b.businessDate, b.openedAt, outletName(b.outlet), b.table ?? "", b.guest ?? "",
-        b.phone ?? "", b.waiter ?? "", b.modes.map((m) => MODE_WORD[m] ?? m).join(", "),
+        b.orderNo, b.businessDate, b.settledAt ?? "", outletName(b.outlet), b.table ?? "", guestOf(b) ?? "",
+        b.room ?? "", b.phone ?? "", b.waiter ?? "", b.modes.map((m) => MODE_WORD[m] ?? m).join(", "),
         b.status === "no_charge" ? "" : b.payable.toFixed(2), STATE[b.status]?.words ?? b.status,
       ]),
     );
@@ -102,13 +107,15 @@ export default function BillHistoryPage() {
 
   const columns: Column<BillHistoryRow>[] = [
     { key: "no", header: "Bill", cell: (b) => <span className="font-medium tabular">{b.orderNo}</span> },
-    { key: "when", header: "Date and time", cell: (b) => <span className="tabular">{dateShort(b.businessDate)} · {b.openedAt}</span> },
+    { key: "when", header: "Date and time settled", cell: (b) => <span className="tabular">{dateShort(b.businessDate)} · {b.settledAt ?? "-"}</span> },
     { key: "outlet", header: "Outlet", hideBelow: "lg", cell: (b) => outletName(b.outlet) },
     { key: "table", header: "Table", cell: (b) => b.table ?? "-" },
     {
       key: "guest", header: "Guest", hideBelow: "md",
-      cell: (b) => b.guest || b.phone ? (
-        <span>{b.guest ?? "-"}{b.phone && <span className="block text-2xs text-grey-500 tabular">{b.phone}</span>}</span>
+      cell: (b) => guestOf(b) || b.phone || b.room ? (
+        <span>{guestOf(b) ?? "-"}
+          {b.room && <span className="block text-2xs text-grey-500 tabular">Room {b.room}</span>}
+          {b.phone && <span className="block text-2xs text-grey-500 tabular">{b.phone}</span>}</span>
       ) : "-",
     },
     { key: "waiter", header: "Waiter", hideBelow: "md", cell: (b) => b.waiter ?? "-" },
@@ -159,7 +166,7 @@ export default function BillHistoryPage() {
                 {(f) => <Input {...fieldProps(f)} value={draft.table} maxLength={40}
                   onChange={(e) => set("table")(e.target.value)} />}
               </Field>
-              <Field label="Guest name or phone">
+              <Field label="Guest name, phone or room">
                 {(f) => <Input {...fieldProps(f)} value={draft.guest} maxLength={60}
                   onChange={(e) => set("guest")(e.target.value)} />}
               </Field>

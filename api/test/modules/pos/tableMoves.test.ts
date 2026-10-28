@@ -18,6 +18,7 @@ const TAG = "TMOVE";
 let owner = "";
 let waiter = "";
 let viewer = "";
+let waiter2 = "";
 let tikka = "";
 let section = "";
 let other = "";
@@ -59,9 +60,9 @@ const join = (who: string, id: string, label: string) => call(who, `/till/orders
 const reason = async (res: Response) => ((await res.json()) as { reason: string }).reason;
 
 /** What Tables shows on a table. */
-async function tile(label: string): Promise<{ state: string; orderId: string | null }> {
+async function tile(label: string): Promise<{ state: string; orderId: string | null; joinedTo?: string | null }> {
   const floor = (await (await call(owner, "/till/floor?outlet=REST")).json()) as {
-    sections: { tables: { label: string; state: string; orderId: string | null }[] }[] };
+    sections: { tables: { label: string; state: string; orderId: string | null; joinedTo?: string | null }[] }[] };
   return floor.sections.flatMap((s) => s.tables).find((t) => t.label === label)!;
 }
 
@@ -84,6 +85,7 @@ beforeAll(async () => {
   };
   waiter = await person("tmove-waiter@fidato.in", "TMOVE Waiter", "pos");
   viewer = await person("tmove-viewer@fidato.in", "TMOVE Viewer", "read_only");
+  waiter2 = await person("tmove-waiter2@fidato.in", "TMOVE Second waiter", "pos");
 
   const mk = async (name: string) => (await sql<{ id: string }>(
     `insert into pos_sections (hotel_id, outlet_id, name)
@@ -91,7 +93,7 @@ beforeAll(async () => {
       where h.code = '5EL' and o.code = 'REST' returning id::text`, [name]))[0]!.id;
   section = await mk(`${TAG} A`);
   other = await mk(`${TAG} B`);
-  for (const [s, labels] of [[section, ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9"]], [other, ["X1"]]] as const) {
+  for (const [s, labels] of [[section, ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13", "M14", "M15", "M16"]], [other, ["X1"]]] as const) {
     for (const l of labels) {
       table[l] = (await sql<{ id: string }>(
         `insert into pos_tables (hotel_id, section_id, label)
@@ -110,7 +112,9 @@ afterAll(async () => {
                   join pos_sections s on s.id = t.section_id where s.name like '${TAG}%')`;
   try {
     await db.query("alter table pos_order_lines disable trigger pos_order_lines_frozen");
+    await db.query("alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled");
     await db.query(`delete from pos_table_moves where order_id in (${mine})`);
+    await db.query("delete from table_bookings where note = $1", [TAG]);
     await db.query(`delete from pos_kot_prints where order_id in (${mine})`);
     await db.query(`delete from pos_order_lines where order_id in (${mine})`);
     await db.query("alter table pos_orders disable trigger pos_orders_joined_stays");
@@ -118,8 +122,9 @@ afterAll(async () => {
                      where id in (${mine}) and status = 'joined'`);
     await db.query(`delete from pos_orders where id in (${mine})`);
     await db.query("delete from pos_sections where name like $1", [`${TAG}%`]);
-    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[waiter, viewer]]);
+    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[waiter, viewer, waiter2]]);
   } finally {
+    await db.query("alter table pos_order_tenders enable trigger pos_order_tenders_no_delete_settled");
     await db.query("alter table pos_order_lines enable trigger pos_order_lines_frozen");
     await db.query("alter table pos_orders enable trigger pos_orders_joined_stays");
     await db.end();
@@ -149,19 +154,19 @@ describe("Move to another table", () => {
     expect(Number(p!.n)).toBe(0);
   });
 
-  it("refuses a table with a bill on it, a table in another section, and a viewer", async () => {
+  it("refuses a table with a bill on it and a viewer; moves to another section of the restaurant (D27-372)", async () => {
     const a = await openOn("M3");
     const b = await openOn("M4");
     let res = await move(owner, a.id, "M4");
     expect(res.status).toBe(409);
     expect(await reason(res)).toBe(`${TAG}M4 already has ${b.orderNo} running on it. Join it instead, or choose a free table.`);
-    res = await move(owner, a.id, "X1");
-    expect(res.status).toBe(409);
-    expect(await reason(res)).toMatch(/is in another section/);
     res = await move(viewer, a.id, "M5");
     expect(res.status).toBe(403);
     const [row] = await sql<{ table_ref: string }>("select table_ref from pos_orders where id = $1", [a.id]);
     expect(row!.table_ref).toBe(`${TAG}M3`);
+    res = await move(owner, a.id, "X1");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as Order).table).toBe(`${TAG}X1`);
     await sql("update pos_orders set status = 'abandoned', abandoned_reason = 'test', cleared_at = now() where id = any($1::uuid[])", [[a.id, b.id]]);
   });
 
@@ -176,6 +181,38 @@ describe("Move to another table", () => {
   });
 });
 
+describe("A table a hotel guest booked (D27-372)", () => {
+  it("is refused from two hours before the booking; earlier in the day it is free", async () => {
+    const o = await openOn("M12");
+    const [h] = await sql<{ id: string; bd: string; rsv: string; outlet: string }>(
+      `select h.id::text, h.business_date::text as bd,
+              (select r.id::text from reservations r where r.hotel_id = h.id limit 1) as rsv,
+              (select ou.id::text from pos_outlets ou where ou.hotel_id = h.id and ou.code = 'REST') as outlet
+         from hotels h where h.code = '5EL'`);
+    const book = (label: string, hours: number) => sql(
+      `insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at, note, status, table_id)
+       values ($1, $2, $3, 2, now() + make_interval(hours => $4), $5, 'confirmed', $6)`,
+      [h!.id, h!.outlet, h!.rsv, hours, TAG, table[label]]);
+    /* "Today" is the business day: put it on the bookings' own day for this test. */
+    const onDayOf = (hours: number) => sql(
+      `update hotels set business_date = app.hotel_clock(id, now() + make_interval(hours => $1), 'YYYY-MM-DD')::date
+        where code = '5EL'`, [hours]);
+    try {
+      await book("M10", 1);
+      await book("M11", 3);
+      await onDayOf(1);
+      let res = await move(owner, o.id, "M10");
+      expect(res.status).toBe(409);
+      expect(await reason(res)).toMatch(new RegExp(`^${TAG}M10 is booked by a hotel guest at \\d\\d:\\d\\d\\. Choose another table\\.$`));
+      await onDayOf(3);
+      res = await move(owner, o.id, "M11");
+      expect(res.status, await res.clone().text()).toBe(200);
+    } finally {
+      await sql("update hotels set business_date = $1::date where code = '5EL'", [h!.bd]);
+    }
+  });
+});
+
 describe("Join another table", () => {
   it("puts the other table's lines and KOTs on this bill and closes it as joined, counted nowhere", async () => {
     const before = await abandoned();
@@ -186,8 +223,14 @@ describe("Join another table", () => {
     await sql(`insert into pos_kot_prints (hotel_id, order_id, kot_no)
                select hotel_id, id, $2 from pos_orders where id = $1`, [b.id, bKot]);
 
+    await sql("update pos_orders set covers = 2, waiter_id = $2 where id = $1", [a.id, waiter]);
+    await sql("update pos_orders set covers = 3, waiter_id = $2 where id = $1", [b.id, waiter2]);
     const res = await join(waiter, a.id, "M8");
     expect(res.status, await res.clone().text()).toBe(200);
+    /* The covers added; this bill's waiter kept (D27-372). */
+    const [kept] = await sql<{ covers: number; waiter_id: string }>(
+      "select covers, waiter_id::text from pos_orders where id = $1", [a.id]);
+    expect(kept).toEqual({ covers: 5, waiter_id: waiter });
     const joined = (await res.json()) as Order;
     expect(joined.lines.reduce((s, l) => s + l.qty, 0)).toBe(3);
     expect(joined.payable).toBeCloseTo(a.payable + b.payable, 2);
@@ -196,7 +239,8 @@ describe("Join another table", () => {
     const [gone] = await sql<{ status: string; joined_into: string; cleared: boolean }>(
       "select status, joined_into::text, cleared_at is not null as cleared from pos_orders where id = $1", [b.id]);
     expect(gone).toEqual({ status: "joined", joined_into: a.id, cleared: true });
-    expect(await tile(`${TAG}M8`)).toMatchObject({ state: "blank", orderId: null });
+    /* Joined to M7's bill, on Tables, until that bill is settled or closed (D27-372). */
+    expect(await tile(`${TAG}M8`)).toMatchObject({ state: "joined", orderId: a.id, joinedTo: `${TAG}M7` });
     const [print] = await sql<{ order_id: string }>(
       "select order_id::text from pos_kot_prints where kot_no = $1 and order_id = any($2::uuid[])", [bKot, [a.id, b.id]]);
     expect(print!.order_id).toBe(a.id);
@@ -207,6 +251,20 @@ describe("Join another table", () => {
     /* For good: the database keeps it joined. */
     await expect(sql("update pos_orders set status = 'open', joined_into = null where id = $1", [b.id]))
       .rejects.toThrow(/stays joined/);
+
+    /* While joined, it takes nothing: no move onto it, no new bill on it. */
+    const c = await openOn("M13");
+    const onto = await move(owner, c.id, "M8");
+    expect(onto.status).toBe(409);
+    expect(await reason(onto)).toBe(
+      `${TAG}M8 is joined to ${TAG}M7 on bill ${a.orderNo} until that bill is settled. Choose another table.`);
+    const fresh = await call(owner, "/till/orders", { outlet: "REST", tableId: table["M8"] });
+    expect(fresh.status).toBe(409);
+    expect(await reason(fresh)).toBe(`${TAG}M8 already has ${a.orderNo} running on it.`);
+    /* M7's bill closed: M8 is free. */
+    expect((await call(owner, `/till/orders/${a.id}/abandon`, { reason: "test" })).status).toBe(200);
+    expect(await tile(`${TAG}M8`)).toMatchObject({ state: "blank", orderId: null });
+    await sql("update pos_orders set status = 'abandoned', abandoned_reason = 'test', cleared_at = now() where id = any($1::uuid[])", [[a.id, c.id]]);
   });
 
   it("refuses a discounted or held bill, and a table with no open bill", async () => {
@@ -229,5 +287,20 @@ describe("Join another table", () => {
     expect(await reason(res)).toBe(`Bill ${b.orderNo} is held. Resume it before joining.`);
     const [still] = await sql<{ status: string }>("select status from pos_orders where id = $1", [b.id]);
     expect(still!.status).toBe("open");
+  });
+
+  it("a table joined to a bill that is itself joined on shows the last bill, and frees when it is settled", async () => {
+    const x = await openOn("M14");
+    const y = await openOn("M15");
+    const z = await openOn("M16");
+    expect((await join(owner, z.id, "M15")).status).toBe(200);
+    expect((await join(owner, x.id, "M16")).status).toBe(200);
+    for (const l of ["M15", "M16"]) {
+      expect(await tile(`${TAG}${l}`), l).toMatchObject({ state: "joined", orderId: x.id, joinedTo: `${TAG}M14` });
+    }
+    const [y2] = await sql<{ status: string }>("select status from pos_orders where id = $1", [y.id]);
+    expect(y2!.status).toBe("joined");
+    expect((await call(owner, `/till/orders/${x.id}/settle`, { method: "cash" })).status).toBe(200);
+    for (const l of ["M15", "M16"]) expect(await tile(`${TAG}${l}`), l).toMatchObject({ state: "blank" });
   });
 });

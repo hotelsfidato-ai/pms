@@ -479,6 +479,11 @@ export interface BillHistoryRow extends OrderSummary {
   waiter: string | null;
   guest: string | null;
   phone: string | null;
+  /** When it was paid, or given NC, on the hotel's clock (D27-372). */
+  settledAt: string | null;
+  /** A bill charged to a room: the stay's guest and room (D27-372). */
+  stayGuest: string | null;
+  room: string | null;
 }
 export interface BillHistoryAsk {
   from?: string; to?: string; no?: string; table?: string; guest?: string;
@@ -1400,8 +1405,9 @@ async function simplePost(
 /** blank · running · kot · printed · paid · closed — DERIVED from the
     order, never stored. A stored colour is a sixth thing to keep in step,
     and the one that will be wrong on the night a manager is watching.
-    `closed` is a bill closed unpaid whose table is not yet cleared (POS-33). */
-export type TableState = "blank" | "running" | "kot" | "printed" | "paid" | "closed";
+    `closed` is a bill closed unpaid whose table is not yet cleared (POS-33);
+    `joined`, a table joined to another's bill until that bill is settled (D27-372). */
+export type TableState = "blank" | "running" | "kot" | "printed" | "paid" | "closed" | "joined";
 
 export interface FloorTable {
   id: string;
@@ -1420,6 +1426,9 @@ export interface FloorTable {
       their lines. Absent on a floor cached before 1 October: none. */
   ready?: number;
   readyIds?: string[];
+  /** A joined table's: the table whose bill it went onto (D27-372). Its
+      orderId and orderNo are that bill's. */
+  joinedTo?: string | null;
 }
 
 export interface FloorSection {

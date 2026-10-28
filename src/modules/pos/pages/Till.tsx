@@ -4,8 +4,8 @@ import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, Minus, X, Receipt, BedDouble, Banknote, ChevronRight,
   CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban, SlidersHorizontal, Gift,
-  ArrowRightLeft, Merge,
 } from "lucide-react";
+import { TableShift } from "@/modules/pos/components/TableShift";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
@@ -24,7 +24,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, getFloor, moveOrder, joinTable, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -1241,50 +1241,6 @@ function OrderPanel({
     onChanged();
   };
 
-  /* TABLE SHIFTING (the owner's D27-370): two separate acts, for whoever
-     takes orders, within the order's section. Nothing prints; the Kitchen
-     screen shows the new table by itself. Join says it cannot be undone
-     before it is done. */
-  const shifted = async (join: boolean, label: string, tableId: string): Promise<Reply | undefined> => {
-    setBusy(true);
-    const res = await (join ? joinTable : moveOrder)(hotelId, order.id, tableId);
-    setBusy(false);
-    if (!res.ok) return { refused: res.reason };
-    toast.success(join ? `${label} joined this bill` : `Moved to ${label}`);
-    onChanged();
-    return undefined;
-  };
-  const shift = async (join: boolean) => {
-    const floor = await getFloor(hotelId, order.outlet).catch(() => null);
-    const section = floor?.sections.find((s) => s.tables.some((t) => t.orderId === order.id));
-    if (!section) return void toast.error("Not on a table", "This order is not on one of the floor's tables.");
-    const tables = section.tables.filter((t) => join
-      ? t.orderId && t.orderId !== order.id && ["running", "kot", "printed"].includes(t.state)
-      : t.state === "blank");
-    if (!tables.length) {
-      return void toast.error(join ? "No table to join" : "No free table",
-        join ? `No other table in ${section.name} has an open bill.` : `Every table in ${section.name} is taken.`);
-    }
-    setAsk(join ? {
-      title: `Join another table to ${order.table ?? "this table"}`,
-      body: `Its dishes and KOTs come onto bill ${order.orderNo}, and its own bill closes as joined. Nothing prints.`,
-      confirm: "", onConfirm: () => undefined,
-      choices: tables.map((t) => ({
-        label: `${t.label} · ${t.orderNo ?? ""}`,
-        onChoose: () => ({ next: {
-          title: `Join ${t.label} to ${order.table ?? "this table"}?`,
-          body: `${t.label}'s dishes and KOTs come onto bill ${order.orderNo}, and ${t.label} becomes free. This cannot be undone.`,
-          confirm: "Join", onConfirm: () => shifted(true, t.label, t.id),
-        } }),
-      })),
-    } : {
-      title: `Move ${order.table ?? "this order"} to another table`,
-      body: "The bill and its KOTs go with it, and this table becomes free. Nothing prints.",
-      confirm: "", onConfirm: () => undefined,
-      choices: tables.map((t) => ({ label: t.label, onChoose: () => shifted(false, t.label, t.id) })),
-    });
-  };
-
   /* A dialog, not window.prompt(), which the app's window refuses (POS-2). */
   const abandon = () => setAsk({
     title: "Close this bill unpaid?",
@@ -1789,19 +1745,8 @@ function OrderPanel({
               </Button>
             )}
 
-            {/* Table shifting (D27-370): two separate acts, a dine-in table only. */}
-            {order.orderType === "dine_in" && (
-              <>
-                <Button variant="secondary" size="lg" className="w-full" loading={busy} onClick={() => void shift(false)}>
-                  <ArrowRightLeft className="size-4" />
-                  Move to another table
-                </Button>
-                <Button variant="secondary" size="lg" className="w-full" loading={busy} onClick={() => void shift(true)}>
-                  <Merge className="size-4" />
-                  Join another table
-                </Button>
-              </>
-            )}
+            {/* Table shifting (D27-370, D27-372): two separate acts, a dine-in table only. */}
+            {order.orderType === "dine_in" && <TableShift hotelId={hotelId} order={order} onChanged={onChanged} />}
 
             <Button variant="ghost" size="lg" className="w-full"
               onClick={abandon} loading={busy}>

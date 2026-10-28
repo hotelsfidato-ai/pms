@@ -7,15 +7,17 @@ import { useSession } from "@/lib/session";
 import type { Role } from "@/lib/permissions";
 import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel } from "@/test/app";
 import type { FloorTable, Order } from "@/modules/pos/data/till";
+import type { ReactElement } from "react";
 import TillPage from "@/modules/pos/pages/Till";
+import TerminalPage from "@/modules/pos/pages/Terminal";
 
 /* ══════════════════════════════════════════════════════════════════
    TABLE SHIFTING ON THE TILL (the owner's D27-370)
 
    Two separate buttons on an open dine-in bill, for whoever takes orders:
-   "Move to another table" offers the free tables of its section; "Join
-   another table" offers the tables of its section with an open bill, and
-   says it cannot be undone before it is done. The server's half:
+   "Move to another table" offers the free tables of its restaurant, every
+   section (D27-372); "Join another table" offers its tables with an open
+   bill, and says it cannot be undone before it is done. The server's half:
    api/test/modules/pos/tableMoves.test.ts.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -73,7 +75,10 @@ const floor = {
   ],
 };
 
-function tillWith(order: () => Order, extra: Record<string, (body: unknown) => unknown> = {}) {
+function tillWith(
+  order: () => Order, extra: Record<string, (body: unknown) => unknown> = {},
+  page: ReactElement = <TillPage />, at = `/pos/${HOTEL}/till?order=o-5`, route = "/pos/:code/till",
+) {
   const calls: Call[] = [];
   const routes: Record<string, (body: unknown) => unknown> = {
     [`GET ${API}/till/orders`]: () => ({ businessDate: "2026-08-25", orders: [] }),
@@ -96,8 +101,8 @@ function tillWith(order: () => Order, extra: Record<string, (body: unknown) => u
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/pos/${HOTEL}/till?order=o-5`]}>
-        <Routes><Route path="/pos/:code/till" element={<TillPage />} /></Routes>
+      <MemoryRouter initialEntries={[at]}>
+        <Routes><Route path={route} element={page} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -105,7 +110,7 @@ function tillWith(order: () => Order, extra: Record<string, (body: unknown) => u
 }
 
 describe("the Till - table shifting (D27-370)", () => {
-  it("a waiter moves the bill to a free table of its section, and the move is kept", async () => {
+  it("a waiter moves the bill to a free table of any section, and the move is kept", async () => {
     as("pos");
     let now = open();
     const calls = tillWith(() => now, {
@@ -116,9 +121,11 @@ describe("the Till - table shifting (D27-370)", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: "Move to another table" }));
     expect(await screen.findByText(/The bill and its KOTs go with it/)).toBeTruthy();
-    /* Only the free tables of A/C: not T5 (a bill on it), T7 (not cleared) or the bar's B1. */
-    for (const busy of ["T5", "T7", "B1"]) expect(screen.queryByRole("button", { name: busy }), busy).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "T6" }));
+    /* The free tables of every section, each named with its section (D27-372):
+       not T5 (a bill on it) or T7 (not cleared). */
+    expect(screen.getByRole("button", { name: "B1 (Bar)" })).toBeTruthy();
+    for (const busy of [/^T5/, /^T7/, /^B2/]) expect(screen.queryByRole("button", { name: busy }), String(busy)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "T6 (A/C)" }));
     await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/move")))
       .toMatchObject({ method: "POST", body: { tableId: "T6" } }));
     expect(await screen.findByText("Moved from T4 to T6 by Waiter at 20:15.")).toBeTruthy();
@@ -130,10 +137,10 @@ describe("the Till - table shifting (D27-370)", () => {
       [`POST ${API}/till/orders/o-5/join`]: () => ({ ok: true, ...open() }),
     });
     fireEvent.click(await screen.findByRole("button", { name: "Join another table" }));
-    /* Only A/C's tables with an open bill: T5, not the paid T7 nor the bar's B2. */
+    /* The tables with an open bill, every section (D27-372): T5 and the bar's B2, not the paid T7. */
+    expect(await screen.findByRole("button", { name: "B2 (Bar) · bill-o-8" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^T7/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^B2/ })).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: "T5 · bill-o-6" }));
+    fireEvent.click(screen.getByRole("button", { name: "T5 (A/C) · bill-o-6" }));
     expect(await screen.findByText(/This cannot be undone\./)).toBeTruthy();
     expect(calls.some((c) => c.path.endsWith("/join")), "nothing joined before the yes").toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Join" }));
@@ -161,5 +168,27 @@ describe("the Till - table shifting (D27-370)", () => {
     await screen.findByRole("button", { name: "Close unpaid" });
     expect(screen.queryByRole("button", { name: "Move to another table" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Join another table" })).toBeNull();
+  });
+});
+
+/* ── The Terminal: the Till's own two buttons and questions (D27-372) ── */
+describe("the Terminal - table shifting (D27-372)", () => {
+  it("offers Move and Join on a dine-in order and moves it across sections, as the Till does", async () => {
+    as("pos");
+    localStorage.setItem("fidato.terminal-outlet", "REST");
+    const calls = tillWith(() => open(), {
+      [`GET ${API}/pos/outlets`]: () => [{ code: "REST", name: "Fidato Restaurant", category: "food", hasKey: false, isActive: true, bills: 0 }],
+      [`GET ${API}/till/orders`]: () => ({ businessDate: "2026-08-25", orders: [{
+        id: "o-5", orderNo: "20260825-5", outlet: "REST", table: "T4", status: "open", businessDate: "2026-08-25",
+        gross: 672, paymentMethod: null, openedAt: "2026-08-25T19:00", lines: 1 }] }),
+      [`GET ${API}/banquet/attachable`]: () => ({ enabled: false, businessDate: "2026-08-25", functions: [] }),
+      [`POST ${API}/till/orders/o-5/move`]: () => ({ ok: true, ...open({ table: "B1" }) }),
+    }, <TerminalPage />, `/pos/${HOTEL}/terminal`, "/pos/:code/terminal");
+    fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
+    expect(await screen.findByRole("button", { name: "Join another table" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Move to another table" }));
+    fireEvent.click(await screen.findByRole("button", { name: "B1 (Bar)" }));
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/move")))
+      .toMatchObject({ method: "POST", body: { tableId: "B1" } }));
   });
 });

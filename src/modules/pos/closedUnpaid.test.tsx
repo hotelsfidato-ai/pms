@@ -84,3 +84,23 @@ describe("Tables: a bill closed unpaid", () => {
       .toMatchObject({ method: "POST", path: `${API}/till/orders/o-5/clear` }));
   });
 });
+
+describe("Tables: a joined table (D27-372)", () => {
+  it("says 'Joined to AC3', takes no round and no print, and opens the bill it joined", async () => {
+    server({
+      [`GET ${API}/till/floor`]: () => ({
+        outlet: { code: "REST", name: "Fidato Restaurant", closedUntil: null, closedReason: null },
+        sections: [{ id: "s-1", name: "A/C", tables: [{
+          id: "t-4", label: "AC4", seats: 4, row: 0, col: 1, orderId: "o-3", orderNo: "DH-003",
+          state: "joined", joinedTo: "AC3", minutes: null, payable: null, ready: 0, readyIds: [],
+        }] }],
+      }),
+      [`GET ${API}/till/access`]: () => ({ ok: true }),
+    });
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", <FloorPage />);
+    expect(await screen.findByText("Joined to AC3")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Add a round to AC4/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Print the bill for AC4" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Open the bill AC4 is joined to" })).toBeTruthy();
+  });
+});

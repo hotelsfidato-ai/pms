@@ -31,7 +31,8 @@ const PAID = {
 const row = (over: Record<string, unknown>) => ({
   id: "o-9", orderNo: "20260822-4", outlet: "REST", table: "T2", status: "settled",
   businessDate: "2026-08-22", gross: 336, payable: 336, paymentMethod: "upi", modes: ["upi"],
-  openedAt: "20:15", lines: 1, waiter: "Ravi", guest: "Asha Rao", phone: "98765 43210", ...over,
+  openedAt: "20:15", settledAt: "21:40", lines: 1, waiter: "Ravi", guest: "Asha Rao", phone: "98765 43210",
+  stayGuest: null, room: null, ...over,
 });
 let answer: { bills: unknown[]; capped: boolean; cap: number; outlets: unknown[] };
 const asked: string[] = [];
@@ -42,7 +43,10 @@ beforeEach(() => {
   asked.length = 0;
   answer = {
     bills: [row({}), row({ id: "o-8", orderNo: "20260822-3", status: "void", modes: ["cash"], guest: null, phone: null }),
-            row({ id: "o-7", orderNo: "20260822-2", status: "no_charge", modes: [], paymentMethod: null })],
+            row({ id: "o-7", orderNo: "20260822-2", status: "no_charge", modes: [], paymentMethod: null }),
+            /* Charged to a room: the stay's guest and room (D27-372). */
+            row({ id: "o-6", orderNo: "20260822-1", modes: ["room"], paymentMethod: "room", guest: null, phone: null,
+                  stayGuest: "Meera Iyer", room: "204" })],
     capped: false, cap: 500, outlets: [{ code: "REST", name: "Restaurant" }, { code: "BAR", name: "Bar" }],
   };
   vi.stubGlobal("fetch", () => new Promise(() => {}));
@@ -74,22 +78,26 @@ const tableRows = () => Array.from(document.querySelectorAll("table tbody tr")) 
 describe("Bill history", () => {
   it("opens on today's business day and lists paid, VOID and NC bills with who, how and how much", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(3));
+    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
     expect(asked).toContain(`GET ${API}/till/bills?from=2026-08-25&to=2026-08-25`);
-    const [paid, voided, nc] = tableRows() as [HTMLElement, HTMLElement, HTMLElement];
-    for (const text of ["20260822-4", "22 Aug 2026 · 20:15", "Restaurant", "T2", "Asha Rao", "98765 43210", "Ravi", "UPI", "₹336.00", "Paid"]) {
+    const [paid, voided, nc, room] = tableRows() as [HTMLElement, HTMLElement, HTMLElement, HTMLElement];
+    /* The time it was settled, so labelled (D27-372). */
+    expect(document.querySelector("thead")!.textContent).toContain("Date and time settled");
+    expect(room.textContent).toContain("Meera Iyer");
+    expect(room.textContent).toContain("Room 204");
+    for (const text of ["20260822-4", "22 Aug 2026 · 21:40", "Restaurant", "T2", "Asha Rao", "98765 43210", "Ravi", "UPI", "₹336.00", "Paid"]) {
       expect(paid.textContent, text).toContain(text);
     }
     expect(voided.textContent).toContain("VOID");
     expect(voided.textContent).toContain("Cash");
     expect(nc.textContent).toContain("NC");
     expect(nc.textContent, "a bill given free has no value").not.toContain("₹");
-    expect(screen.getByText("3 bills.")).toBeTruthy();
+    expect(screen.getByText("4 bills.")).toBeTruthy();
   });
 
   it("sends every filter it was given, and asks nothing when there is nothing to look for", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(3));
+    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
     const form = document.querySelector("[data-bill-filters]") as HTMLElement;
     const type = (label: string, value: string) =>
       fireEvent.change(within(form).getByLabelText(label), { target: { value } });
@@ -97,7 +105,7 @@ describe("Bill history", () => {
     type("To", "2026-08-20");
     type("Bill number", "R-12");
     type("Table", "T2");
-    type("Guest name or phone", "asha");
+    type("Guest name, phone or room", "asha");
     type("Paid by", "card");
     type("Waiter", "11111111-2222-3333-4444-555555555555");
     type("Outlet", "BAR");
@@ -133,7 +141,7 @@ describe("Bill history", () => {
 
   it("opens the whole bill on the bill's own paper and prints it again through the Till's reprint", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(3));
+    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
     fireEvent.click(tableRows()[0]!);
     const dialog = await screen.findByRole("dialog");
     await vi.waitFor(() => expect(within(dialog).getByText("Paneer Tikka")).toBeTruthy());
@@ -150,23 +158,27 @@ describe("Bill history", () => {
     const names: string[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(3));
+    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
     fireEvent.click(screen.getByRole("button", { name: /Download to Excel/ }));
     await vi.waitFor(() => expect(names).toHaveLength(1));
     expect(names).toEqual(["5el-bill-history-2026-08-25-to-2026-08-25.csv"]);
     const lines = (await blobs[0]!.text()).replace(/^﻿/, "").split("\r\n");
-    expect(lines[0]).toBe("Bill,Date,Time,Outlet,Table,Guest,Phone,Waiter,Paid by,Total,State");
-    expect(lines[1]).toBe("20260822-4,2026-08-22,20:15,Restaurant,T2,Asha Rao,98765 43210,Ravi,UPI,336.00,Paid");
-    expect(lines[2]).toBe("20260822-3,2026-08-22,20:15,Restaurant,T2,,,Ravi,Cash,336.00,VOID");
-    expect(lines[3]).toBe("20260822-2,2026-08-22,20:15,Restaurant,T2,Asha Rao,98765 43210,Ravi,,,NC");
+    expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,State");
+    expect(lines[1]).toBe("20260822-4,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,UPI,336.00,Paid");
+    expect(lines[2]).toBe("20260822-3,2026-08-22,21:40,Restaurant,T2,,,,Ravi,Cash,336.00,VOID");
+    expect(lines[3]).toBe("20260822-2,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,,,NC");
+    expect(lines[4]).toBe("20260822-1,2026-08-22,21:40,Restaurant,T2,Meera Iyer,204,,Ravi,To a room,336.00,Paid");
   });
 
-  it("is offered to the people who may reach the Till, and to nobody else", () => {
-    expect(mayReach("pos", "/pos/5EL/bill-history")).toBe(true);
-    expect(mayReach("bar", "/pos/5EL/bill-history")).toBe(true);
-    expect(mayReach("housekeeping", "/pos/5EL/bill-history")).toBe(false);
-    for (const role of ["pos", "bar", "front_desk", "gm", "housekeeping", "chef", "read_only"] as const) {
-      expect(mayReach(role, "/pos/5EL/bill-history"), role).toBe(mayReach(role, "/pos/5EL/till"));
+  it("is offered to the managers, the Accountant and Reception only (D27-372)", () => {
+    for (const role of ["owner", "admin", "gm", "hotel_manager", "finance", "front_desk"] as const) {
+      expect(mayReach(role, "/pos/5EL/bill-history"), role).toBe(true);
     }
+    for (const role of ["pos", "bar", "chef", "kitchen_manager", "housekeeping", "read_only", "revenue_manager", "stores"] as const) {
+      expect(mayReach(role, "/pos/5EL/bill-history"), role).toBe(false);
+    }
+    /* The waiter and the bar keep the Till, and its one-day search. */
+    expect(mayReach("pos", "/pos/5EL/till")).toBe(true);
+    expect(mayReach("bar", "/pos/5EL/till")).toBe(true);
   });
 });

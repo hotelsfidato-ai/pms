@@ -11,7 +11,10 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
 export const mayRingUp = (role: Role): boolean =>
   can(role, "create", "payment") || role === "pos" || role === "bar";
 
-/* The restaurant's menu entries — the Point of sale section, which is
+/* Bill history's people (D27-372): the server's list, till.ts BILL_HISTORY_ROLES. */
+export const BILL_HISTORY_ROLES: readonly Role[] = ["owner", "admin", "gm", "hotel_manager", "finance", "front_desk"];
+
+/* The restaurant's menu entries —the Point of sale section, which is
    absent at a property without the POS module and, for reception, where
    "Reception can use the POS" is off (see the section in `navigation.ts`). */
 export const nav: ServiceNavEntry[] = [
@@ -32,12 +35,13 @@ export const nav: ServiceNavEntry[] = [
     label: "Till", to: "/pos/:code/till", icon: Receipt, resource: "payment",
     keywords: ["pos", "order", "restaurant bill"],
     canSee: (role) => mayRingUp(role) },
-  /* Every finished bill of any dates (D27-370): the Till's own rule, the people
-     who may list an earlier bill there (roleGate GET /till/bills). */
-  { section: "point-of-sale", order: 25, workingMenus: ["front_desk", "pos", "bar"],
+  /* Every finished bill of any dates (D27-370): the managers and the cashier
+     only (D27-372), as the server asks (till.ts BILL_HISTORY_ROLES). A waiter
+     and the bar keep the Till's own one-day search. */
+  { section: "point-of-sale", order: 25, workingMenus: ["front_desk"],
     label: "Bill history", to: "/pos/:code/bill-history", icon: History, resource: "payment",
     keywords: ["earlier bills", "old bills", "reprint", "duplicate bill", "void", "nc", "excel"],
-    canSee: (role) => mayRingUp(role) },
+    canSee: (role) => BILL_HISTORY_ROLES.includes(role) },
   /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
      one outlet, targets sized for a thumb rather than a mouse. */
   {

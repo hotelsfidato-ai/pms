@@ -73,6 +73,7 @@ const approve = async (summaryPart: string) => {
 let before: ReturnType<typeof totals>;
 let bills: { card: Order; asked: Order };
 let unpaid: Order;
+let oldUnpaid: Order;
 let strikes: { unsent: Order; unsentBare: Order; sent: Order; asked: Order };
 
 beforeAll(async () => {
@@ -114,6 +115,10 @@ beforeAll(async () => {
   unpaid = await openBill("unpaid", 3, false);
   const a = await call(waiter, `/till/orders/${unpaid.id}/abandon`, { reason: `${TAG} guest walked out` });
   expect(a.status, await a.clone().text()).toBe(200);
+  /* One closed before 28 October (D27-372): who and when were not kept then. */
+  oldUnpaid = await openBill("old unpaid", 1, false);
+  expect((await call(waiter, `/till/orders/${oldUnpaid.id}/abandon`, { reason: `${TAG} duplicate` })).status).toBe(200);
+  await sql("update pos_orders set abandoned_by = null, abandoned_at = null where id = $1", [oldUnpaid.id]);
 
   /* Struck dishes: before the kitchen had them (with a reason, and none)... */
   const unsent = await openBill("unsent", 2, false);
@@ -173,11 +178,17 @@ describe("the voids report", () => {
     expect(String(row!["reason"])).toContain(`${TAG} charged twice`);
   });
 
-  it("lists an order closed unpaid with its reason and amount; who and when are dashes (not recorded)", async () => {
+  it("lists an order closed unpaid with its reason, amount, who closed it and when (D27-372)", async () => {
     const [row] = at(mine(await readDoc()), "unpaid");
     expect(row).toMatchObject({
-      kind: "Closed unpaid", amount: unpaid.payable, reason: `${TAG} guest walked out`, by: null, asked: null, at: null,
+      kind: "Closed unpaid", amount: unpaid.payable, reason: `${TAG} guest walked out`, by: "VOIDRPT Waiter", asked: null,
     });
+    expect(Math.abs(Date.now() - Date.parse(String(row!["at"])))).toBeLessThan(120_000);
+  });
+
+  it("an order closed unpaid before who and when were kept shows dashes for both", async () => {
+    const [row] = at(mine(await readDoc()), "old unpaid");
+    expect(row).toMatchObject({ kind: "Closed unpaid", reason: `${TAG} duplicate`, by: null, at: null });
   });
 
   it("lists a dish struck before the kitchen had it, with or without a reason", async () => {
@@ -210,15 +221,15 @@ describe("the voids report", () => {
     const price = (o: Order) => o.lines[0]!.qty * o.lines[0]!.unitPrice;
     expect(after.bill[0]! - before.bill[0]!).toBe(2);
     expect(round(after.bill[1]! - before.bill[1]!)).toBe(round(bills.card.payable + bills.asked.payable));
-    expect(after.unpaid[0]! - before.unpaid[0]!).toBe(1);
-    expect(round(after.unpaid[1]! - before.unpaid[1]!)).toBe(round(unpaid.payable));
+    expect(after.unpaid[0]! - before.unpaid[0]!).toBe(2);
+    expect(round(after.unpaid[1]! - before.unpaid[1]!)).toBe(round(unpaid.payable + oldUnpaid.payable));
     expect(after.dish[0]! - before.dish[0]!).toBe(4);
     expect(round(after.dish[1]! - before.dish[1]!))
       .toBe(round(price(strikes.unsent) + price(strikes.unsentBare) + price(strikes.sent) + price(strikes.asked)));
   });
 
-  it("says in its notes that an order closed unpaid does not record who or when", async () => {
-    expect((await readDoc()).footnotes.join(" ")).toContain("does not record who closed it or when");
+  it("says in its notes that an order closed unpaid before 28 October has no who or when", async () => {
+    expect((await readDoc()).footnotes.join(" ")).toContain("before 28 October 2026 kept its reason only");
   });
 
   it("is refused to a waiter, on the screen's route and the file's", async () => {

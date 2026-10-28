@@ -193,11 +193,12 @@ describe("each person's menu", () => {
     /* Guest requests joined all three on 30 September (D27-181): food and
        drink is theirs. It sits in the Front desk section, so it comes first;
        where they land is unchanged (below). */
-    expect(menu("pos")).toEqual(["Guest requests", "Tables", "Till", "Bill history", "Terminal", "Close restaurant day"]);
+    /* Bill history is the managers' and the cashier's (D27-372): not the waiter's or the bar's. */
+    expect(menu("pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
     /* The Bar role (D27-324): the waiter's menu, Guest requests included
        (the owner's D27-329 (3)), and Bar stock beside it - the bar manager's
        sheet, bills and set up (the owner, 21 October evening, D27-354). */
-    expect(menu("bar")).toEqual(["Guest requests", "Tables", "Till", "Bill history", "Terminal", "Bar stock", "Close restaurant day"]);
+    expect(menu("bar")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Bar stock", "Close restaurant day"]);
     expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Notifications"]);
     /* The Store joined the kitchen manager's on 22 September (D22-19). */
     expect(menu("kitchen_manager")).toEqual(
