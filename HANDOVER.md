@@ -765,6 +765,14 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **29 October, 01:30: RELEASE 14 READY, the owner's to type** - `release/r14` at **bf74ce5a** (cp6), one complete
+> gate run green (web 1,472, API 2,918, db 1,816, replay 249, PG16), `index-D0bnQp9L.js`, printer 1.1.0 in
+> `.local/printer-r14`, steps `.local/release-14-steps.md` (A0 the n8n paste first). After the owner deploys: check it
+> read-only (code, migrations 239-249, the website bundle, latest.yml 1.1.0). **Building, five helpers:** release 15 -
+> full reset (migration 250), A1-A2 done, A3/A5/A6, A4 restore tool; release 16 - Restaurant tab + recipes (253), MRP
+> for NC (254). Keep 16's branches unmerged until release 15 is cut. Merging 15: reconcile `app.test_hotel_classes()`
+> and reset-property's lists; ONE gate run with helpers paused and dev servers stopped (load makes long tests time out).
+
 > **28 October, about 11:45: RELEASE 14 - three helpers on D27-372, then ONE gate run.** Merged on cp6 today:
 > table Move/Join (244), petty cash book (245), supplier dues (246, its test-hotel list now also carries 244's
 > pos_table_moves), Voids report, Bill history, the guest's company and GSTIN (247), the daily reports in one email
