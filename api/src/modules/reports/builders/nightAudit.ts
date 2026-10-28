@@ -149,13 +149,13 @@ export async function nightAuditReport(
               join folios f2 on f2.id = i.folio_id
              where f2.reservation_id = r.id and i.credits_id is null
              order by i.issued_at desc limit 1)                          as invoice,
-            (select to_char(al.at, 'YYYY-MM-DD"T"HH24:MI:SSOF')
+            (select to_char(al.at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
                from audit_log al
               where al.table_name = 'reservations' and al.row_id = r.id::text
                 and al.after->>'status' = 'checked_in'
                 and coalesce(al.before->>'status', '') <> 'checked_in'
               order by al.at limit 1)                                    as arrival,
-            (select to_char(al.at, 'YYYY-MM-DD"T"HH24:MI:SSOF')
+            (select to_char(al.at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
                from audit_log al
               where al.table_name = 'reservations' and al.row_id = r.id::text
                 and al.after->>'status' = 'checked_out'
@@ -330,7 +330,7 @@ export async function nightAuditReport(
             (-fp.amount)::text as amount,
             r.reference as booking, app.stay_room(r.id) as room,
             app.posted_by_name(fp.id) as user_name,
-            to_char(fp.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as entered_on,
+            to_char(fp.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as entered_on,
             case when rf.id is not null then 'Refund: ' || rf.reason
                    || coalesce(' (' || rf.reference || ')', '')
                  else p.reference end as remark
@@ -395,7 +395,7 @@ export async function nightAuditReport(
     `select fp.id::text, app.stay_room(r.id) as room, r.reference as booking,
             g.full_name as guest, fp.description,
             (fp.amount + fp.tax_amount)::text as amount,
-            to_char(fp.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as entered_on,
+            to_char(fp.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as entered_on,
             ou.name as outlet, o.order_no
        from folio_postings fp
        join folios f on f.id = fp.folio_id

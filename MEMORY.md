@@ -6561,6 +6561,22 @@ copy will see of theirs.**
 
 ---
 
+### 440 · FOUND: the live Night audit report prints its times raw, in GMT - "2026-10-26T09:15:03+00" (28 October)
+
+The Night audit report's Arrival, Departure (checked out) and Entered On (payments) were written with Postgres's
+`to_char(..., '...SSOF')`. `OF` prints the SESSION's offset, and the app never sets the session's time zone, so it is
+the server's: here India ("+05:30", which a browser reads), on the live box **GMT** (checked read-only: `show timezone`
+= GMT, `timedatectl` GMT). In GMT `OF` is "+00", which `new Date()` cannot read, so `formatCell` printed the raw
+string - in GMT, five and a half hours off the hotel's clock - on the screen and in the PDF emailed after every night
+audit. No test could see it: every test runs on this machine's India-time database. Noticed by the Voids helper (its
+own first draft did the same, fixed before any test), checked and fixed by the master. **Fixed:** all four write
+`to_char(x at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`, as Equipment and Voids do;
+`nightAuditTimes.test.ts` runs the builder on a connection `set time zone 'GMT'` and fails with the old form.
+**The rule:** a timestamp handed to the screen is written in UTC with a Z, never with `OF`/`TZH`; and a check that
+depends on a time zone runs in GMT, the live box's.
+
+---
+
 ### 439 · MINE: five helpers were started on release 13's code, not today's cp6 (27 October)
 
 The five D27-370 helpers (table Move/Join, petty cash book, supplier dues, Bill history, Voids report) were launched
