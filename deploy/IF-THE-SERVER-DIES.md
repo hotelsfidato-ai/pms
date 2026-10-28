@@ -19,7 +19,8 @@ by its name, so they follow when the name moves.
 | n8n's workflows | as of last night | the bucket, `n8n/` |
 | n8n's saved logins (the PMS's, WhatsApp's, email's) | **only with the old encryption key**, which never leaves the server; otherwise they are typed again | your password manager, if you keep the key there |
 | The settings only the server had (`api/.env`, `/etc/fidato-backup.env`) | as you have them | your password manager (below) |
-| **Files uploaded into the PMS** (bills, receipts, attachments in `/var/lib/fidato/uploads`) | **not today**: they are on the server's disk only, in no backup | - (a question to the owner) |
+| Files uploaded into the PMS (bills, receipts, attachments in `/var/lib/fidato/uploads`) | as of last night's 03:15 copy: a file uploaded after it is lost | the bucket, `uploads/fidato/` (D27-377), once its link is set (`deploy/README.md`, Backups, step 1.6) |
+| Guests' ID photos from online check-in | untouched: they were never on the server | Google Drive, encrypted (D27-209) |
 
 ## Keep these off the server, before the day
 
@@ -112,7 +113,9 @@ Fill `FIREBASE_SERVICE_ACCOUNT` (one line) and add every line of list item 3
 above. Do not change the lines `launch.sh` wrote (`DATABASE_URL`,
 `ADMIN_DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `UPLOAD_DIR`). Then the backup's
 settings, `deploy/README.md`, "Backups", step 3: the upload link (make a new
-one if the old is not to hand, step 1.5 there), `ALERT_URL`, `ALERT_SECRET`.
+one if the old is not to hand, step 1.5 there), `ALERT_URL`, `ALERT_SECRET`,
+and the uploaded files' own link in `/etc/fidato-uploads.env` (step 1.6
+there).
 
 **6 · The data (20 minutes)** *The Oracle console*: the bucket → Objects.
 Make a read link (`deploy/README.md`, "Getting a minute back", step 2). Then
@@ -137,6 +140,17 @@ one of:
   sudo -u postgres dropdb fidato && sudo -u postgres createdb -O postgres fidato
   sudo -u postgres pg_restore -d fidato /tmp/fidato.dump
   ```
+
+Then the uploaded files (bills, receipts), from the same read link, every one
+the restored database names (`deploy/README.md`, "Getting a copy back"). *The
+server*:
+
+```bash
+sudo -u postgres psql -d fidato -tAc "select storage_key from attachments where storage_backend = 'disk'" | sudo -u fidato env RESTORE_FROM='<the read link>' /usr/local/bin/fidato-uploads-backup get /var/lib/fidato/uploads fidato
+```
+
+It ends *"put back N file(s)"*; any it names *"not in the bucket"* were
+uploaded after the last night's copy and are lost.
 
 **7 · Again, and look (10 minutes)** *The server*: the same line as step 4
 (without `SKIP_TLS`). It applies the database's rights and changes, starts the
@@ -207,8 +221,9 @@ writing. Always Free has room for a second small A1 server beside the live one
    **with `SKIP_TLS=1`** and **without step 2**: the real names stay on the
    live server.
 2. In step 5, **only** `FIREBASE_SERVICE_ACCOUNT`, and nothing in
-   `/etc/fidato-backup.env`: no sending settings, so no guest is messaged from
-   the drill, and nothing is written into the bucket.
+   `/etc/fidato-backup.env` or `/etc/fidato-uploads.env`: no sending
+   settings, so no guest is messaged from the drill, and nothing is written
+   into the bucket.
 3. The proof, *the drill server*: `curl -s http://127.0.0.1:8787/health`
    answers, and `sudo -u postgres psql -d fidato -tAc "select count(*) from
    reservations"` matches the live figure.

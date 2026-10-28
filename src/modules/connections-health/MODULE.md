@@ -41,7 +41,7 @@ function for the page and the alert. Per-hotel facts come from
 | **WhatsApp (Meta)** | `messages_sent`, channel whatsapp; Meta's refusal is the detail | as above | as above | as above | as above |
 | **CRS bridge** | `crs_hotels` (last read, last error), `crs_bookings` (last booking taken = last success) | this hotel not connected | connected under 30 minutes ago, no read yet | the last read failed, or nothing read for **30 minutes** (the reader runs every 5) | the last read worked |
 | **Firebase sign-in** | the Admin SDK lists ONE account (read-only), 10 seconds allowed | no Firebase key on this server (development) | - | it did not answer | it answered |
-| **Backups** | the last `backup-status` line in `/var/log/fidato-backup.log` (`db/verify-backup.sh`) | no backup log on this server | no status line yet; or backed up but on this disk only | the last one failed, or none for **26 hours**; or, once a line has said `uploaded=yes` (a bucket is set), none has for **26 hours** (D27-373, A2). Restore to any minute (A3), once on: `pg_stat_archiver` failing (the last try failed after the last success); the push's `/var/log/fidato-wal.status` saying failed, or older than **30 minutes**; the last `base-backup-status` line failed, or none ok for **8 days** | backed up and copied off the server |
+| **Backups** | the last `backup-status` line in `/var/log/fidato-backup.log` (`db/verify-backup.sh`) | no backup log on this server | no status line yet; or backed up but on this disk only | the last one failed, or none for **26 hours**; or, once a line has said `uploaded=yes` (a bucket is set), none has for **26 hours** (D27-373, A2). Restore to any minute (A3), once on: `pg_stat_archiver` failing (the last try failed after the last success); the push's `/var/log/fidato-wal.status` saying failed, or older than **30 minutes**; the last `base-backup-status` line failed, or none ok for **8 days**. The uploaded files' nightly copy (`<UPLOAD_DIR>.status`, `db/uploads-backup.sh`) or n8n's own (`/var/log/n8n-backup.status`, `deploy/n8n.sh`) saying failed (its second line the last error), or older than **26 hours** (D27-377); each only once it has run here. Amber also when either says `off` (no bucket link) | backed up and copied off the server |
 | **Disk** | `statfs("/")`, counted as `df` does: used = blocks less free, free = what a non-root user (the database) may still write | - | **80%** used or more | **90%** used or more (D27-373, A2): the database stops when the disk is full | below 80% |
 | **Rivals' prices** | `market_rate_settings`, `market_rates` | switched off here | switched on, not checked yet; or the last check kept no prices (a failed search is only in the server log) | - (failures are not recorded) | the last check kept prices |
 
@@ -83,6 +83,8 @@ not unique (several people can be owner). The setting is explicit.
 | `api/.env.example` | `HEALTH_ALERT_EMAIL` |
 | `db/migrations/201_connections_health.sql` | `app.connection_facts(uuid)` |
 | `db/verify-backup.sh` | the `backup-status` line at the end of every run |
+| `db/uploads-backup.sh`, `deploy/launch.sh` | the uploaded files' nightly copy and its `<UPLOAD_DIR>.status` line, read through `storageRoot()` (`api/src/storage.ts`), so each customer's API reads its own folder's |
+| `deploy/n8n.sh` (the `n8n-backup` heredoc) | n8n's own nightly copy and its `/var/log/n8n-backup.status` line |
 | `deploy/n8n/pms-send-crs.json`, `deploy/n8n/IMPORT.md` | the `health-alert` email draft, and the owner's step to paste it into the live workflow |
 
 ## Open, for the owner

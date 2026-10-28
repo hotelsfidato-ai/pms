@@ -1,5 +1,21 @@
 # Changelog - connections-health
 
+## 29 October 2026 - the uploaded files' copy and n8n's own, watched (D27-377)
+
+- **Backups** also turns red when the nightly copy of the uploaded files to
+  the bucket (`db/uploads-backup.sh`, its status line beside the upload
+  folder: `<UPLOAD_DIR>.status`) or n8n's own nightly copy
+  (`/var/log/n8n-backup.status`) failed, its second line shown as the last
+  error, or has not run for 26 hours; amber while either says `off` (no
+  bucket link), naming what stays on the disk. Each counts only once it has
+  run here: no n8n (a customer's server, a fresh box) changes nothing. The
+  database's own states are judged first.
+- One reader for the three status files, `readNightly(job, text)`;
+  `readWalPush` is now a wrapper over it. `BackupFacts` gains `uploads`
+  and `n8n`.
+- The row stays one row: an n8n row of its own would be grey on every
+  customer's server, and the owner reads "are my backups safe" in one place.
+
 ## 29 October 2026 - restore to any minute watched (D27-373, plan A: A3)
 
 - **Backups** also turns red when the database cannot set a piece of its

@@ -732,6 +732,8 @@ install -m 755 "$APP_DIR/db/wal.sh"           /usr/local/bin/fidato-wal
 install -m 755 "$APP_DIR/db/base-backup.sh"   /usr/local/bin/fidato-base-backup
 install -m 755 "$APP_DIR/db/pitr-restore.sh"  /usr/local/bin/fidato-pitr-restore
 [ -e /var/log/fidato-wal.status ] || install -m 644 -o postgres -g postgres /dev/null /var/log/fidato-wal.status
+# The uploaded files' nightly copy (D27-377), below for each API's folder.
+install -m 755 "$APP_DIR/db/uploads-backup.sh" /usr/local/bin/fidato-uploads-backup
 
 # Where the copy goes and whom to tell: the server's own settings, never the
 # repository. Written EMPTY once and never overwritten; the owner fills it in
@@ -747,6 +749,18 @@ ENVEOF
 fi
 chown postgres:postgres /etc/fidato-backup.env
 chmod 600 /etc/fidato-backup.env
+
+# The uploaded files' copy runs as fidato, whose folder it is, and reads its
+# link from a file of its own: root's to write, fidato's to read. Reading
+# /etc/fidato-backup.env, postgres's to write, would let that account choose
+# where the hotel's files go (n8n's reason too, deploy/n8n.sh). Written EMPTY
+# once, filled in by the owner (deploy/README.md, "Backups", step 3).
+if [ ! -f /etc/fidato-uploads.env ]; then
+  printf '%s\n' '# Read by the nightly copy of uploaded files. See deploy/README.md, "Backups".' \
+    "BACKUP_UPLOAD_URL=''" > /etc/fidato-uploads.env
+fi
+chown root:fidato /etc/fidato-uploads.env
+chmod 640 /etc/fidato-uploads.env
 fi
 
 # Runs as `postgres`, NOT root. The script reaches the database over the unix
@@ -798,6 +812,22 @@ if grep -q "^BACKUP_UPLOAD_URL='..*'" /etc/fidato-backup.env; then
 else
   echo "  nightly at 03:00 - ON THE SAME DISK until /etc/fidato-backup.env names"
   echo "  a bucket. See README, \"Backups\"."
+fi
+
+# This API's uploaded files (D27-377): at 03:15, those not yet copied, to the
+# bucket under uploads/<database>/. The record of what went and the status
+# line sit beside the folder (whose parent is root's), where this API reads
+# the status. Made once, never emptied; the cron line is rewritten each run.
+for f in "$UPLOAD_DIR.sent" "$UPLOAD_DIR.status"; do
+  [ -e "$f" ] || install -m 644 -o fidato -g fidato /dev/null "$f"
+done
+echo "15 3 * * * fidato /usr/local/bin/fidato-uploads-backup $UPLOAD_DIR $DB_NAME > /dev/null 2>&1" \
+  > "/etc/cron.d/fidato-uploads${CUSTOMER:+-$CUSTOMER}"
+if grep -q "^BACKUP_UPLOAD_URL='..*'" /etc/fidato-uploads.env; then
+  echo "  uploaded files nightly at 03:15, to the bucket under uploads/$DB_NAME/"
+else
+  echo "  uploaded files - ON THE SAME DISK until /etc/fidato-uploads.env names"
+  echo "  the bucket. See README, \"Backups\"."
 fi
 
 # -----------------------------------------------------------------------------

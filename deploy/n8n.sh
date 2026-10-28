@@ -24,6 +24,11 @@
 #                                 then protected by its login alone
 #       All three rewrite the nginx site and touch nothing else.
 #
+#   sudo deploy/n8n.sh backups
+#       rewrites the nightly backup (/usr/local/bin/n8n-backup, its cron line)
+#       and runs it once. n8n is NOT restarted: for a release that changes only
+#       the backup (D27-377, its status line for Connection health).
+#
 #   Chosen by the owner on 14 September: "screen locked, webhooks open",
 #   on an address that changes. That is why it is the default and why
 #   `allow` exists.
@@ -130,7 +135,7 @@ die() { printf "\n\033[31m  x %s\033[0m\n\n" "$1" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "Run with sudo."
 
 case "$MODE" in
-  install|local) ;;
+  install|local|backups) ;;
   webhooks|lock|open|allow)
     # nginx only. The first version re-ran everything on `open`, which
     # restarted n8n under the person who had just created its owner and
@@ -139,7 +144,7 @@ case "$MODE" in
       || die "n8n is not on $N8N_DOMAIN yet. Run the install first."
     ;;
   *) die "Unknown mode '$MODE'. Use no argument, or one of:
-  local, allow, webhooks, lock, open" ;;
+  local, allow, webhooks, lock, open, backups" ;;
 esac
 
 # =============================================================================
@@ -300,6 +305,12 @@ install_backups() {
 # every night was "full": ~410 MB, nearly all run history, 6.4 GB for 16 nights.
 set -euo pipefail
 D=/var/backups/n8n; T=$(date +%Y%m%d-%H%M%S)
+# The night's result in one line, which the PMS's Connection health reads (its
+# Backups row, D27-377): ok, failed or off (no link: on this disk only); after
+# a failure a second line says why. "full", before an upgrade, writes none.
+S=/var/log/n8n-backup.status
+status() { { echo "n8n-backup $(date -u +%Y-%m-%dT%H:%M:%SZ) $1"; [ -z "${2:-}" ] || echo "$2"; } > "$S"; }
+[ "${1:-}" = full ] || trap 'status failed "stopped at: $BASH_COMMAND (exit $?)"' ERR
 if [ "${1:-}" = full ]; then
   podman volume export n8n_data > "$D/n8n-data-$T.tar"
   cp /etc/n8n/encryption-key "$D/encryption-key-$T"
@@ -334,6 +345,7 @@ find "$D" -mindepth 1 -maxdepth 1 -mtime +14 -exec rm -rf {} +
 [ -r /etc/n8n/backup.env ] && . /etc/n8n/backup.env
 if [ -z "${BACKUP_UPLOAD_URL:-}" ]; then
   echo "(no BACKUP_UPLOAD_URL in /etc/n8n/backup.env - this copy is on this disk only)"
+  status off
   exit 0
 fi
 F="$D/n8n-$T.tar.gz"
@@ -344,9 +356,11 @@ CODE=$(curl -sS --retry 3 -m 300 -o /dev/null -w "%{http_code}" \
 rm -f "$F"
 if [ "$CODE" != 200 ]; then
   echo "x the copy off the box FAILED (HTTP $CODE). The folder on this disk is fine." >&2
+  status failed "the copy off the box FAILED (HTTP $CODE)"
   exit 1
 fi
 echo "copied off the box: n8n/${F##*/}, checksum matched"
+status ok
 EOF
   chmod 700 /usr/local/bin/n8n-backup
   echo "30 3 * * * root /usr/local/bin/n8n-backup >> /var/log/n8n-backup.log 2>&1" \
@@ -358,6 +372,8 @@ EOF
     ok "nightly at 03:30 into $BACKUP_DIR -- ON THE SAME DISK until /etc/n8n/backup.env names the bucket (deploy/README.md, Backups)"
   fi
 }
+
+if [ "$MODE" = "backups" ]; then install_backups; exit 0; fi
 
 if [ "$MODE" != "local" ]; then
 # =============================================================================
