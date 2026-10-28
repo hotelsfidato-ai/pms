@@ -17,5 +17,7 @@ export const RESTAURANT_BY_NAME = {
     "the kitchen's KOTs",
     "the restaurant's outlets",
     "the restaurant's day",
+    /* The photo of a paid-out's bill, from the tin they record into (D27-370). */
+    "a paid-out's photo",
   ],
 } as const;
