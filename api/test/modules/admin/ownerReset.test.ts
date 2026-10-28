@@ -60,6 +60,12 @@ const call = (by: string, method: string, path: string, body?: unknown) =>
     headers: { "x-dev-staff-id": by, "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
+/** What the routes answer, as far as these tests read it. */
+type Body = {
+  error?: string; refusal?: string | null; tables?: unknown; guests?: number;
+  removed?: number; businessDate?: string; backup?: unknown;
+};
+const body = async (res: Response) => (await res.json()) as Body;
 const clear = (by: string, confirm?: unknown) =>
   call(by, "POST", "/api/admin/hotels/ORA/owner-reset", confirm === undefined ? {} : { confirm });
 const bookings = async () =>
@@ -167,12 +173,12 @@ describe("whose button it is (D27-342: one e-mail, never a role)", () => {
     delete process.env["RESET_DATABASE_URL"];
     let res = await clear(resetter, "ORA");
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/RESET_DATABASE_URL/);
+    expect((await body(res)).error).toMatch(/RESET_DATABASE_URL/);
     process.env["RESET_DATABASE_URL"] = `${SUPER}?options=-c%20role%3Dpms_owner_reset`;
     delete process.env["RESET_BACKUP_SOCKET"];
     res = await clear(resetter, "ORA");
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/RESET_BACKUP_SOCKET/);
+    expect((await body(res)).error).toMatch(/RESET_BACKUP_SOCKET/);
     expect(await bookings()).toBe(1);
   });
 });
@@ -181,20 +187,25 @@ describe("before anything goes", () => {
   it("the window's count is the script's own dry run", async () => {
     const res = await call(resetter, "GET", "/api/admin/hotels/ORA/owner-reset");
     expect(res.status).toBe(200);
-    const shown = await res.json();
+    const shown = await body(res);
     const script = (await sql("select owner_reset.counts('ORA', true) as d")).rows[0].d;
     expect(shown).toEqual(script);
     expect(shown).toMatchObject({
-      code: "ORA", name: "Owner Reset Hotel", refusal: null, guests: 1,
+      code: "ORA", name: "Owner Reset Hotel", refusal: null,
       tables: { reservations: 1, folios: 1, folio_postings: 2, payments: 1, invoices: 1, night_audit_runs: 1 },
     });
+    /* Its own guest, and any guest left with no stay anywhere by the files
+       before this one - a guest belongs to the group, and the sweep is the
+       script's (a guest is only ever made with a booking, so on a real
+       system these are this hotel's). */
+    expect(shown.guests).toBeGreaterThanOrEqual(1);
   });
 
   it("refuses without the hotel's code typed, and takes no backup", async () => {
     for (const typed of [undefined, "", "ORB", "RESET"]) {
       const res = await clear(resetter, typed);
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toBe("Type the hotel's code, ORA, to confirm. Nothing was cleared.");
+      expect((await body(res)).error).toBe("Type the hotel's code, ORA, to confirm. Nothing was cleared.");
     }
     expect(backups).toBe(0);
     expect(await bookings()).toBe(1);
@@ -208,11 +219,11 @@ describe("before anything goes", () => {
              h.business_date, h.business_date + 1, 3000, 'checked_in'
         from hotels h where h.id = '${ora}';`);
     const sentence = "A guest is still checked in at Owner Reset Hotel: Ravi Inhouse. Check them out before the hotel is cleared.";
-    const dry = await (await call(resetter, "GET", "/api/admin/hotels/ORA/owner-reset")).json();
+    const dry = await body(await call(resetter, "GET", "/api/admin/hotels/ORA/owner-reset"));
     expect(dry.refusal).toBe(sentence);
     const res = await clear(resetter, "ORA");
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toBe(sentence);
+    expect((await body(res)).error).toBe(sentence);
     expect(backups).toBe(0);
     expect(await bookings()).toBe(2);
     await sql("update reservations set status = 'checked_out' where hotel_id = $1 and status = 'checked_in'", [ora]);
@@ -223,7 +234,7 @@ describe("before anything goes", () => {
       + "\x1b[31m    is fine; the copy that survives this disk does not exist.\x1b[0m\n";
     const res = await clear(resetter, "ORA");
     expect(res.status).toBe(502);
-    expect((await res.json()).error).toBe(
+    expect((await body(res)).error).toBe(
       "The backup failed, so nothing was cleared. It said: is fine; the copy that survives this disk does not exist.");
     expect(backups).toBe(1);
     expect(await bookings()).toBe(2);
@@ -260,7 +271,7 @@ describe("the clear", () => {
 
     const res = await clear(resetter, "ora");
     expect(res.status, await res.clone().text()).toBe(200);
-    const done = await res.json();
+    const done = await body(res);
     expect(backups).toBe(1);
     expect(done.backup).toEqual({ file: "fidato-20261028-101500.dump", copiedOff: true });
     /* What went is what the dry run said would go. */
