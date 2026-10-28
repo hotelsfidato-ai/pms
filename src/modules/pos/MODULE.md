@@ -269,6 +269,10 @@ kot section (kotSection.ts, D27-292)
             POST   /:code/till/orders/:id/clear
             POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room · function (D17-21)
             POST   /:code/till/orders/:id/abandon
+            POST   /:code/till/orders/:id/move              D27-370: {tableId}, a free table of its section; no slip
+                                                            (tableMoves.ts, roleGate TILL, pos_table_moves 244)
+            POST   /:code/till/orders/:id/join              D27-370: {tableId}, that table's open bill comes onto this
+                                                            one and is closed 'joined', for good
             POST   /:code/till/orders/:id/void              D27-324: a PAID bill voided, {reason, reference?}; the
                                                             owner, an administrator or the GM (roleGate
                                                             VOID_PAID_BILL = reservation approve; the database's

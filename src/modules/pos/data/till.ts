@@ -275,7 +275,7 @@ export interface Order {
   /** `void`: a PAID bill voided by the owner, an administrator or the GM
       (D27-324). It keeps its number and reprints VOID. `no_charge`: an
       open bill given free, NC, by the same three (D27-351). */
-  status: "open" | "settled" | "abandoned" | "void" | "no_charge";
+  status: "open" | "settled" | "abandoned" | "void" | "no_charge" | "joined";
   businessDate: string;
   paymentMethod: string | null;
   /** The room a bill charged to a room went to; null otherwise. Optional:
@@ -296,6 +296,8 @@ export interface Order {
   requests?: PosRequest[];
   /** Its payment mode changed before the night audit (D27-363). */
   modeChanges?: { from: string; to: string; amount: number; reason: string; by: string | null; at: string }[];
+  /** Its table moves and joins (D27-370): from which table to which, who, when (HH:MM). */
+  moves?: { from: string; to: string; joined: boolean; by: string | null; at: string }[];
   /** Null when the reader may not see that person: a GM reading an order
       the group owner opened (D27-1). Printed as a dash. */
   openedBy: string | null;
@@ -1027,6 +1029,16 @@ export function abandonOrder(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/abandon`,
     { reason });
+}
+
+/** TABLE SHIFTING (D27-370): this open order to a free table of its section. */
+export function moveOrder(hotelId: string, orderId: string, tableId: string): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/move`, { tableId });
+}
+
+/** The open order on that table comes onto this one, and is closed as joined - for good (D27-370). */
+export function joinTable(hotelId: string, orderId: string, tableId: string): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/join`, { tableId });
 }
 
 /** VOID A PAID BILL (D27-324): the owner, an administrator or the GM, the

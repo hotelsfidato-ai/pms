@@ -22,6 +22,7 @@ import { registerTenderChanges, tenderChanges } from "./tenderChanges.ts";
 import { registerPosRequests } from "./posRequests.ts";
 import { registerOwnerAllowance, allowancePlan, setDiscount, maySettleAllowance, SETTLE_REFUSED,
   type AllowancePlan } from "./ownerAllowance.ts";
+import { registerTableMoves } from "./tableMoves.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -109,6 +110,8 @@ registerTenderChanges(till, hotelFor);
 registerPosRequests(till, hotelFor);
 /* The owner's restaurant allowance (D27-355, D27-366). */
 registerOwnerAllowance(till, hotelFor);
+/* Moving an order to another table, and joining two tables (D27-370). */
+registerTableMoves(till, hotelFor);
 
 async function receptionGate(
   c: Context<{ Variables: { subject: string } }>,
@@ -1683,7 +1686,7 @@ till.get("/:code/till/rooms", async (c) => {
 /* ── Orders ───────────────────────────────────────────────────────── */
 
 /** One order with its lines and what it comes to. */
-async function readOrder(client: Client, orderId: string) {
+export async function readOrder(client: Client, orderId: string) {
   const { rows: head } = await client.query<{
     id: string; order_no: string; outlet: string; outlet_name: string;
     hotel_name: string; hotel_city: string | null; hotel_gstin: string | null;
@@ -1896,6 +1899,13 @@ async function readOrder(client: Client, orderId: string) {
          from pos_tender_changes c left join staff s on s.id = c.changed_by
         where c.order_id = $1 order by c.changed_at`, [orderId])).rows
       .map((m) => ({ from: m.from_method, to: m.to_method, amount: Number(m.amount), reason: m.reason, by: m.by, at: m.at })),
+    /* Its table moves and joins (D27-370): who, when, from which table to which. */
+    moves: (await client.query<{ from_table: string; to_table: string; joined: boolean; by: string | null; at: string }>(
+      `select m.from_table, m.to_table, m.joined_order_id is not null as joined, s.full_name as by,
+              app.hotel_clock(m.hotel_id, m.moved_at, 'HH24:MI') as at
+         from pos_table_moves m left join staff s on s.id = m.moved_by
+        where m.order_id = $1 order by m.moved_at`, [orderId])).rows
+      .map((m) => ({ from: m.from_table, to: m.to_table, joined: m.joined, by: m.by, at: m.at })),
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two

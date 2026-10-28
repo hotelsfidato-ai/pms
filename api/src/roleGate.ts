@@ -447,6 +447,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/till/orders/:id`]: TILL,
   [`POST ${H}/till/orders/:id/settle`]: TILL,
   [`POST ${H}/till/orders/:id/abandon`]: TILL,
+  /* Table shifting: whoever takes orders moves one or joins two (D27-370). */
+  [`POST ${H}/till/orders/:id/move`]: TILL,
+  [`POST ${H}/till/orders/:id/join`]: TILL,
   [`POST ${H}/till/orders/:id/void`]: VOID_PAID_BILL,  // D27-324
   [`POST ${H}/till/orders/:id/no-charge`]: NO_CHARGE,  // D27-351
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
