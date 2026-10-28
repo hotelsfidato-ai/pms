@@ -166,6 +166,8 @@
     <li>Connection health's <span class="ui">Backups</span> row turns red when the journal or the weekly base copy is not reaching the bucket.</li>
     <li>Reading it back needs a read link you make in the Oracle console on the day, expiring the next day; the server never holds one.</li>
   </ul>
+  <h3>If the server itself is lost</h3>
+  <p><code>deploy/IF-THE-SERVER-DIES.md</code>: a new server, from nothing to working, in under two hours, each step labelled with where it runs <span class="d">D27-373</span> (A6). It lists what to keep off the server beforehand (the SSH key, your logins, the settings you typed in), and what does not come back today: the files uploaded into the PMS, which are on the server's disk only. The two hours are an estimate until you have rehearsed it once on a spare server, which is yours to do.</p>
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>A backup that has never been restored is not a backup: the classic disaster is a nightly job that ran for years and produced an empty or wrong file. So the nightly job restores what it took and compares it. It used to compare against fixed demo figures, and once printed "would not give you your hotel back" over a perfectly sound backup; it now compares with the source, so it never needs editing when the data changes (MEMORY 30, 34, 151).</p>

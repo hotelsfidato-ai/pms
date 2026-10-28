@@ -20,7 +20,9 @@
 #                   or a file already on this disk. It must be from BEFORE
 #                   the minute.
 #   the minute      a time with its offset from UTC (+05:30 for India), as
-#                   PostgreSQL's recovery_target_time takes it
+#                   PostgreSQL's recovery_target_time takes it; or `latest`,
+#                   everything in the bucket (a new server after the old one
+#                   died: deploy/IF-THE-SERVER-DIES.md)
 #   RESTORE_FROM    the read link the owner keeps off the server, or a folder
 #
 # A minute later than the last journal piece in the bucket stops with
@@ -54,7 +56,7 @@ TPORT="${PITR_PORT:-5499}"
 BASE="${1:-}"; TARGET="${2:-}"
 die() { printf "\033[31m  x %s\033[0m\n" "$1" >&2; exit 1; }
 [ -n "$BASE" ] && [ -n "$TARGET" ] \
-  || die "use: fidato-pitr-restore <base copy> '<YYYY-MM-DD HH:MM:SS+05:30>'"
+  || die "use: fidato-pitr-restore <base copy> '<YYYY-MM-DD HH:MM:SS+05:30>' (or latest)"
 case "$TARGET" in *"'"*|*\\*) die "the minute has a quote in it" ;; esac
 [ -n "${RESTORE_FROM:-}" ] || die "RESTORE_FROM is empty: the read link (or a folder)"
 export RESTORE_FROM
@@ -101,7 +103,7 @@ echo "-- 2 · replaying the journal up to $TARGET --------------"
 cat >> "$WORK/data/postgresql.auto.conf" <<EOF
 # db/pitr-restore.sh: a temporary copy, removed when it is done.
 restore_command = '$WAL_CMD get %f %p'
-recovery_target_time = '$TARGET'
+$([ "$TARGET" = latest ] || echo "recovery_target_time = '$TARGET'")
 recovery_target_action = 'promote'
 archive_mode = 'off'
 EOF

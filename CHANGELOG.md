@@ -50,6 +50,22 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15, plan A (D27-373): A6 the "if the server dies" runbook
+
+**Asked for:** the master: A6, in `deploy/`, from nothing to working in under two hours, each step labelled where it runs, the timed rehearsal marked as the owner's.
+
+**Shipped**
+- `deploy/IF-THE-SERVER-DIES.md`: what comes back and what does not; what to keep off the server beforehand; steps 0-9 with minutes (is it really gone, a new A1 server in the same subnet, the names first, the code with a new deploy key, `launch.sh`, the settings only the owner has, the data, `launch.sh` again and the practice-hotel checks, n8n with or without its old key, the rest); the owner's rehearsal on a spare `fidato-drill` (no real names, no sending settings, nothing written to the bucket, deleted with its boot volume after).
+- What the runbook needed of A3: `fidato-pitr-restore <base> latest` replays everything in the bucket (no target), and `db/wal.sh` keeps each server's journal under `wal/<system identifier>/`, read with `pg_controldata` in the data folder: a rebuilt server names its pieces from the beginning again, and in one folder a 412 would have hidden a piece that never arrived. A restore reads the identifier from its base copy.
+- Manual B9.6, "If the server itself is lost".
+
+**Proved**
+- `bash db/tests/pitr.sh` on 16.15: exit 0, 21 checks, now with `latest` (its copy has 0 bookings, as live, past the mistake) and the piece under this server's folder. `db/wal.test.mjs` 6/6 (one new: no identifier, refused). Break-and-run: the server folder out of `push` → 4 failed; restored, 6/6. `npx vitest run src/test/manual.test.ts db/wal.test.mjs` 9/9.
+- The runbook itself was not run: no server, no Oracle console, no DNS here. Its timings are estimates until the owner's rehearsal.
+
+**Left open**
+- Files uploaded into the PMS (`/var/lib/fidato/uploads`) are in no backup: lost with the server. A question to the owner.
+
 ## 2026-10-29 · Release 15, plan A (D27-373): A5 the practice hotel first, as a release step
 
 **Asked for:** the master: A5 as a release step only, a short checklist for the practice hotel AMRT after each deploy, in `deploy/README.md` and the release-steps template; no practice server.

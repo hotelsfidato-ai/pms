@@ -13,7 +13,8 @@
 #   3  bookings after it; the minute noted; then the mistake: all deleted
 #   4  db/pitr-restore.sh to that minute: fidato_pitr has them, the live
 #      database still has none, and the temporary copy archived nothing
-#   5  a minute after the last piece of journal: refused, nothing created
+#   5  a minute after the last piece of journal: refused, nothing created;
+#      `latest`: everything in the bucket, as live has it (a new server)
 #   6  the link emptied: pg_stat_archiver says failing, as the Backups row
 #      reads it; and well again once the link is back
 #
@@ -48,7 +49,8 @@ trap '"$BIN/pg_ctl" -D "$D" -m fast -w stop >/dev/null 2>&1; rm -rf "$S"' EXIT
 
 echo "-- 1 · archiving on, through db/wal.sh --------------------"
 mkdir -p "$S/bucket"
-export BACKUP_ENV="$S/backup.env" WAL_SPOOL="$S/spool" WAL_STATUS="$S/wal.status"
+# PGBIN: where wal.sh finds pg_controldata (on the server it is on the path).
+export BACKUP_ENV="$S/backup.env" WAL_SPOOL="$S/spool" WAL_STATUS="$S/wal.status" PGBIN="$BIN"
 echo "BACKUP_UPLOAD_URL='$S/bucket'" > "$BACKUP_ENV"
 push() { bash "$ROOT/db/wal.sh" push 2>/dev/null; }    # cron's job on the server
 # PostgreSQL on Windows runs a command through cmd, so bash is named; on the
@@ -86,7 +88,8 @@ until_true 60 "select coalesce(last_archived_wal >= '$SEG', false) from pg_stat_
   && ok "archive_command put the journal up to the mistake in the spool ($SEG)" || bad "$SEG never reached the spool"
 push
 check "the push's status line" "$(cut -d' ' -f1,3,5 "$WAL_STATUS")" "wal-push ok waiting=0"
-check "$SEG in the bucket" "$([ -s "$S/bucket/wal/$SEG.gz" ] && echo yes || echo no)" yes
+ID="$(q -d postgres -c "select system_identifier from pg_control_system()")"
+check "$SEG in the bucket, under this server's own folder" "$([ -s "$S/bucket/wal/$ID/$SEG.gz" ] && echo yes || echo no)" yes
 echo "    the minute: $MINUTE"
 
 restore() {                     # restore <minute> <new database> - pitr-restore.sh as the server runs it
@@ -101,7 +104,9 @@ printf "%s\n" "$OUT" | sed 's/^/    /'
 check "pitr-restore.sh" "$rc" 0
 check "bookings in fidato_pitr" "$(q -d fidato_pitr -c "select count(*) from reservations" 2>&1)" 150
 check "bookings in the live database (the mistake stands)" "$(q -d fidato -c "select count(*) from reservations")" 0
-check "pieces the temporary copy archived" "$(ls "$S/bucket/wal" "$S/spool" | grep -c '^00000002')" 0
+# Its own timeline, 2: a name that starts 00000002 (in the spool, after "<server>-").
+check "pieces the temporary copy archived" \
+  "$(find "$S/bucket/wal" "$S/spool" -name '00000002*' -o -name '*-00000002*' | wc -l | tr -d ' ')" 0
 check "the temporary folder" "$([ -e "$S/work" ] && echo there || echo removed)" removed
 
 echo "-- 5 · a minute after the last piece of journal ------------"
@@ -110,6 +115,12 @@ printf "%s\n" "$OUT" | tail -n 4 | sed 's/^/    /'
 check "refused" "$([ "$rc" -ne 0 ] && echo yes || echo no)" yes
 check "PostgreSQL's own reason" "$(printf "%s" "$OUT" | grep -c "recovery ended before configured recovery target was reached")" 1
 check "fidato_late created" "$(q -d postgres -c "select count(*) from pg_database where datname = 'fidato_late'")" 0
+
+echo "-- 5b · latest: everything in the bucket (a new server) ----"
+OUT="$(restore latest fidato_latest)"; rc=$?
+printf "%s\n" "$OUT" | grep -E "recovery|fidato_latest is" | sed 's/^/    /'
+check "pitr-restore.sh latest" "$rc" 0
+check "bookings in fidato_latest (past the mistake, as live)" "$(q -d fidato_latest -c "select count(*) from reservations" 2>&1)" 0
 
 echo "-- 6 · when it fails, what the Backups row reads ------------"
 push    # what the restores wrote meanwhile

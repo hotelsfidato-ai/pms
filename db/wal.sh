@@ -11,7 +11,7 @@
 #
 #   */5 * * * * postgres flock -n /var/lib/pgsql/wal-out.lock /usr/local/bin/fidato-wal push
 #       (cron) every piece in the spool, oldest first, to
-#       <BACKUP_UPLOAD_URL>/wal/<name>.gz with the nightly backup's
+#       <BACKUP_UPLOAD_URL>/wal/<server>/<name>.gz with the nightly backup's
 #       write-only link (/etc/fidato-backup.env); each one deleted from the
 #       spool once the bucket has it. One line, rewritten every run, in
 #       /var/log/fidato-wal.status, which Connection health reads (after a
@@ -20,7 +20,7 @@
 #
 #   restore_command = '/usr/local/bin/fidato-wal get %f %p'
 #       written by db/pitr-restore.sh into a TEMPORARY server only: fetches
-#       <RESTORE_FROM>/wal/<name>.gz, from the read link the owner makes on
+#       <RESTORE_FROM>/wal/<server>/<name>.gz, from the read link the owner makes on
 #       the day and passes on the command line
 #
 #   fidato-wal send <file> <name>
@@ -44,9 +44,9 @@
 #
 # ⚠ THE STATUS CODE, NOT curl's EXIT CODE (db/backup.sh): 200 is a copy.
 # 412 is "a file of that name is already there" (If-None-Match: *): an
-# earlier push reached the bucket and did not hear back. One server writes
-# these names, and a piece's name never comes back with other bytes on the
-# same timeline, so that is a copy too. In a folder, where it can, it
+# earlier push reached the bucket and did not hear back. Under one server's
+# folder a piece's name never comes back with other bytes on the same
+# timeline, so that is a copy too. In a folder, where it can, it
 # compares the bytes, as the PostgreSQL manual asks.
 # =============================================================================
 set -uo pipefail
@@ -74,18 +74,30 @@ send() {                        # send <file> <name> - to BACKUP_UPLOAD_URL
   esac
 }
 
+# WHICH SERVER'S JOURNAL: its system identifier, read in the data folder
+# PostgreSQL runs these commands in. The bucket keeps each server's pieces
+# under wal/<identifier>/, because a server built again after the old one died
+# (deploy/IF-THE-SERVER-DIES.md) names its pieces from the beginning again:
+# in one folder they would meet the old server's names, and a 412 would then
+# hide a piece that never arrived. A restore reads the identifier from its
+# base copy, so it finds that server's folder by itself.
+sysid() { LC_ALL=C "${PGBIN:+$PGBIN/}pg_controldata" . 2>/dev/null | sed -n 's/^Database system identifier: *//p'; }
+
 put() {                         # put <path> <name> - into the spool
+  local id; id=$(sysid)
+  [ -n "$id" ] || { echo "fidato-wal: no system identifier in $(pwd)" >&2; return 1; }
   # -n: no name or time in the header, so a piece always gzips to the same
   # bytes, and a folder's comparison holds.
-  mkdir -p "$SPOOL" && gzip -nc "$1" > "$SPOOL/$2.gz.part" && mv "$SPOOL/$2.gz.part" "$SPOOL/$2.gz"
+  mkdir -p "$SPOOL" && gzip -nc "$1" > "$SPOOL/$id-$2.gz.part" && mv "$SPOOL/$id-$2.gz.part" "$SPOOL/$id-$2.gz"
 }
 
 push() {                        # push - the spool to the bucket, oldest first
   # One at a time: cron runs it under flock (deploy/README.md).
-  local f sent=0 rc=0 why="" waiting
-  for f in "$SPOOL"/*.gz; do    # journal names sort oldest first
+  local f n sent=0 rc=0 why="" waiting
+  for f in "$SPOOL"/*.gz; do    # <identifier>-<journal name>, oldest first
     [ -e "$f" ] || break
-    why=$(send "$f" "wal/${f##*/}" 2>&1) || { rc=1; break; }
+    n=${f##*/}
+    why=$(send "$f" "wal/${n%%-*}/${n#*-}" 2>&1) || { rc=1; break; }
     rm -f "$f"; sent=$((sent + 1))
   done
   waiting=$(find "$SPOOL" -maxdepth 1 -name '*.gz' | wc -l)
@@ -96,13 +108,14 @@ push() {                        # push - the spool to the bucket, oldest first
 }
 
 get() {                         # get <name> <path> - from RESTORE_FROM
-  local from="${RESTORE_FROM:-}"
+  local from="${RESTORE_FROM:-}" id; id=$(sysid)
   [ -n "$from" ] || { echo "fidato-wal: no RESTORE_FROM" >&2; return 1; }
+  [ -n "$id" ] || { echo "fidato-wal: no system identifier in $(pwd)" >&2; return 1; }
   # Asked for names that were never archived (PostgreSQL does, on purpose):
   # a nonzero answer then is not an error, and nothing is left at <path>.
   case "$from" in
-    http*) curl -sSf --retry 3 -m 900 -o "$2.gz" "${from%/}/wal/$1.gz" ;;
-    *)     cp "$from/wal/$1.gz" "$2.gz" 2>/dev/null ;;
+    http*) curl -sSf --retry 3 -m 900 -o "$2.gz" "${from%/}/wal/$id/$1.gz" ;;
+    *)     cp "$from/wal/$id/$1.gz" "$2.gz" 2>/dev/null ;;
   esac || { rm -f "$2.gz"; return 1; }
   gzip -dc "$2.gz" > "$2.part" && rm -f "$2.gz" && mv "$2.part" "$2" \
     || { rm -f "$2.gz" "$2.part"; return 1; }
