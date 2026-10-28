@@ -725,6 +725,13 @@ say "Backups"
 if [ -z "$CUSTOMER" ]; then
 install -m 755 "$APP_DIR/db/backup.sh"        /usr/local/bin/fidato-backup
 install -m 755 "$APP_DIR/db/verify-backup.sh" /usr/local/bin/fidato-verify-backup
+# Restore to any minute (D27-373, A3): installed on every run, switched on
+# once by the owner (deploy/README.md, "Restore to any minute"). The status
+# file is the journal push's, read by Connection health.
+install -m 755 "$APP_DIR/db/wal.sh"           /usr/local/bin/fidato-wal
+install -m 755 "$APP_DIR/db/base-backup.sh"   /usr/local/bin/fidato-base-backup
+install -m 755 "$APP_DIR/db/pitr-restore.sh"  /usr/local/bin/fidato-pitr-restore
+[ -e /var/log/fidato-wal.status ] || install -m 644 -o postgres -g postgres /dev/null /var/log/fidato-wal.status
 
 # Where the copy goes and whom to tell: the server's own settings, never the
 # repository. Written EMPTY once and never overwritten; the owner fills it in
@@ -756,6 +763,17 @@ chown postgres:postgres /var/log/fidato-backup.log
 cat > /etc/cron.d/fidato-backup <<CRONEOF
 0 3 * * * postgres BACKUP_DIR=$BACKUP_DIR BACKUP_SH=/usr/local/bin/fidato-backup /usr/local/bin/fidato-verify-backup >> /var/log/fidato-backup.log 2>&1
 CRONEOF
+
+# The owner's full reset takes its backup through this socket (D27-375;
+# deploy/README.md, "The owner's full reset"). Installed and enabled on every
+# run, which changes nothing the second time and restarts nothing else; the API
+# is told where it is only by the owner (RESET_BACKUP_SOCKET in api/.env).
+install -m 644 "$APP_DIR/deploy/fidato-backup-now.socket" "$APP_DIR/deploy/fidato-backup-now@.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now fidato-backup-now.socket 2>/dev/null || true
+systemctl is-active --quiet fidato-backup-now.socket \
+  || die "fidato-backup-now.socket did not start. journalctl -u fidato-backup-now.socket -n 20"
+echo "  the backup on demand listens on /run/fidato-backup-now.sock"
 
 # Prove it works NOW rather than finding out at 03:00 that it never did: the
 # backup and its copy off the box. The restore test is 03:00's job.

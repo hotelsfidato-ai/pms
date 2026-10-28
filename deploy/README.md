@@ -325,6 +325,16 @@ to an Oracle Object Storage bucket**; restores it into a scratch database and
 compares it with the live one, figure by figure; and **tells the owner, pass
 or fail**, through n8n. Its output is in `/var/log/fidato-backup.log`.
 
+At 03:30 n8n's own backup (`/usr/local/bin/n8n-backup`, written by
+`deploy/n8n.sh`) saves its workflows and its saved logins, still encrypted, and
+**copies them to the same bucket, under `n8n/`** (D27-373, A1). The key that
+opens those logins stays on the server (`/etc/n8n/encryption-key`): it is a
+master password and is never copied anywhere. Its output is in
+`/var/log/n8n-backup.log`.
+
+Connection health (Settings) shows both the backups and the server's disk, and
+emails the owner when either turns red (below, "Watching it").
+
 The owner's choices, 27 September (D27-15): Oracle storage in Fidato's own
 account, **30 days** kept there, told by **WhatsApp through n8n**, with a free
 outside check as the backstop for the one case n8n cannot see.
@@ -339,6 +349,11 @@ alone). Nothing about them is in the repository.
 | `ALERT_URL` | the n8n webhook, over loopback: `http://127.0.0.1:5678/webhook/<path>` (step 2) |
 | `ALERT_SECRET` | a long random value; n8n drops any call without it in `x-alert-secret` |
 
+n8n's backup reads the same link from a file of its own, `/etc/n8n/backup.env`
+(root's alone), because it runs as root, and root running a file the
+`postgres` account may write would let that account choose where n8n's saved
+logins go. Step 3 copies the line across.
+
 ### Setting it up, once
 
 **1 · The bucket:** *the Oracle console, in your browser, signed in to
@@ -346,7 +361,8 @@ Fidato's account*
 
 1. **Storage → Buckets → Create Bucket.** Name `pms-backups`, in the same
    compartment as the server. Standard tier, Oracle-managed keys, **object
-   versioning off** (step 3 needs it off). It is private by default; leave it.
+   versioning off** (step 2 needs it off: a bucket with versioning on cannot
+   have a retention rule). It is private by default; leave it.
 2. **The bucket → Retention rules → Create rule.** Name `keep-30-days`,
    time-bound, **30 days**. Do not lock it. For 30 days nothing (not the
    server, not a break-in on it, not a mistake) can delete or overwrite a copy.
@@ -362,7 +378,8 @@ Fidato's account*
    target **Bucket**, access **Permit object writes**, expiry **a year from
    today**. Copy the URL: it is shown once. It can add files and nothing else:
    it cannot read, list or delete them. When it expires the nightly backup
-   fails and you are told; make a new one and paste it in.
+   fails and you are told; make a new one and put it in both files of step 3.
+   Note the expiry date in your calendar a week before.
 
 **2 · The alert:** *n8n, in your browser, n8n.fidatohotels.com*
 
@@ -409,6 +426,24 @@ ALERT_URL='http://127.0.0.1:5678/webhook/pms-backup'
 ALERT_SECRET='<the secret from step 2>'
 ```
 
+Save with Ctrl+O, Enter, and leave with Ctrl+X. Then the same link for n8n's
+backup, copied from that file (nothing to paste), and a look at its start:
+
+```bash
+sudo sh -c "umask 077; grep '^BACKUP_UPLOAD_URL=' /etc/fidato-backup.env > /etc/n8n/backup.env"
+sudo cut -c1-45 /etc/n8n/backup.env
+```
+
+The second line should print `BACKUP_UPLOAD_URL='https://objectstorage.` and
+a few letters more. Then install the n8n backup that copies (it restarts n8n,
+so webhooks pause for about a minute; pick a quiet hour):
+
+```bash
+sudo /opt/fidato/deploy/n8n.sh
+```
+
+It should end its "Backups" step with *"copied to the bucket under n8n/"*.
+
 **4 · Prove it:** *the server, over ssh as `opc`, after a `launch.sh` run
 that carries this change*
 
@@ -422,12 +457,29 @@ the n8n workflow should show the call. Then break it once on purpose: put a
 wrong character in `BACKUP_UPLOAD_URL`, run the line again, and see the
 WhatsApp arrive, and put it back.
 
+n8n's, *the same place*:
+
+```bash
+sudo /usr/local/bin/n8n-backup
+```
+
+It should end *"copied off the box: n8n/n8n-…tar.gz, checksum matched"*, and
+the bucket should show a folder `n8n` with that file in it. *The PMS, in your
+browser*: Settings → Connection health → **Backups** should read *"Backed up
+and copied off the server"* after the next 03:00 run.
+
 ### Getting a copy back
 
 *The Oracle console*: the bucket → Objects → the file → Download. *Your PC or
 the server*: `pg_restore -d <empty database> --no-owner --no-acl <file>`, or
 `db/verify-backup.sh <file>` to restore it into a scratch database and check
 it first. Do it once on purpose before it is needed.
+
+n8n's: the bucket → Objects → `n8n/` → the night's `.tar.gz`. It holds
+`workflows.json` and `credentials.json`; inside the n8n container
+`n8n import:workflow --input=…` and `n8n import:credentials --input=…` put them
+back. The logins open only with the key in `/etc/n8n/encryption-key`, which is
+on the server alone.
 
 ### Bringing back one hotel
 
@@ -510,6 +562,132 @@ is a job to plan with help: the database adds a new property's defaults
 (stores, payment methods, the series) the moment the row goes in. The tool
 prints the two commands that copy the row across; after them, run step 2 again.
 
+## Restore to any minute
+
+The nightly backup gives back last night. This gives back **any minute of the
+last 31 days** (D27-373, plan A, A3), for the day somebody deletes or changes
+the wrong thing at 14:05 and the backup is from 03:00.
+
+How it runs, once switched on:
+
+- PostgreSQL hands each finished piece of its change journal (the WAL: 16 MB,
+  a few hundred KB gzipped) to `fidato-wal put`, which sets it aside in
+  `/var/lib/pgsql/wal-out`, at least once an hour (`archive_timeout = 3600`).
+- Every 5 minutes cron's `fidato-wal push` copies those pieces into the bucket
+  under `wal/` with the backup's upload-only link, and writes one line to
+  `/var/log/fidato-wal.status`. So at most about an hour and five minutes of
+  changes are not yet off the server.
+- Sundays at 04:30 `fidato-base-backup` puts a base copy under `base/`: a
+  restore starts from one and replays the journal after it.
+- The bucket's rules (Backups, step 1) keep all of it 31 days.
+- Connection health's **Backups** row turns red when the database cannot set
+  a piece aside, when a push fails or has not run for 30 minutes, when the
+  last base copy failed, or when there has been none for 8 days. A piece that
+  cannot leave stays on this disk, which then fills: the Disk row shows it.
+- A restore **never goes over the live database**. It builds the past minute
+  in a temporary PostgreSQL of its own and copies the hotel database out of it
+  as a new database, `fidato_pitr`, beside the live one. You compare, then
+  decide.
+
+Rehearsed on this PC on PostgreSQL 16.15, the server's version, with a folder
+as the bucket: `bash db/tests/pitr.sh`. Not yet run on the server, and so not
+yet under its SELinux (MEMORY 191): step 3 is that proof.
+
+### Setting it up, once
+
+After Backups steps 1 and 3 (the bucket and its link), and a `launch.sh` run
+that carries this change (it installs `fidato-wal`, `fidato-base-backup` and
+`fidato-pitr-restore`).
+
+**1 · Switch the archiving on:** *the server, over ssh as `opc`, at a quiet
+hour: PostgreSQL and the PMS restart, for a few seconds*
+
+```bash
+sudo -u postgres psql -c "ALTER SYSTEM SET archive_mode = 'on'" -c "ALTER SYSTEM SET archive_command = '/usr/local/bin/fidato-wal put %p %f'" -c "ALTER SYSTEM SET archive_timeout = 3600"
+sudo systemctl restart postgresql
+systemctl is-active postgresql fidato-api
+```
+
+The last line should print `active` twice.
+
+**2 · The two timers:** *the same place*
+
+```bash
+sudo tee /etc/cron.d/fidato-wal > /dev/null <<'EOF'
+*/5 * * * * postgres flock -n /var/lib/pgsql/wal-out.lock /usr/local/bin/fidato-wal push > /dev/null 2>&1
+30 4 * * 0 postgres /usr/local/bin/fidato-base-backup >> /var/log/fidato-backup.log 2>&1
+EOF
+```
+
+**3 · Prove it:** *the same place*
+
+```bash
+sudo -u postgres psql -tAc "select pg_walfile_name(pg_switch_wal())"
+sudo -u postgres psql -xc "select archived_count, last_archived_wal, failed_count from pg_stat_archiver"
+```
+
+`last_archived_wal` should be the name the first line printed, and
+`failed_count` 0. Then:
+
+```bash
+sudo -u postgres /usr/local/bin/fidato-wal push; cat /var/log/fidato-wal.status
+sudo -u postgres bash -c '/usr/local/bin/fidato-base-backup >> /var/log/fidato-backup.log 2>&1'; tail -n 2 /var/log/fidato-backup.log
+```
+
+The first should end with a line `wal-push … ok sent=… waiting=0`, the second
+with `base-backup-status … ok`. The Oracle console should show `wal/` and
+`base/` in the bucket. If `failed_count` is not 0, or either line says
+failed, copy what it printed to the master chat. If the base copy says *no
+pg_hba.conf entry for replication connection*, let the database's own account
+make one, and run the base copy again:
+
+```bash
+echo "local replication postgres peer" | sudo tee -a "$(sudo -u postgres psql -tAc 'show hba_file')"
+sudo systemctl reload postgresql
+```
+
+**4 · Rehearse once:** the steps below with a minute from an hour ago, then
+`sudo -u postgres psql -c "DROP DATABASE fidato_pitr"`. Note how long it took.
+
+### Getting a minute back
+
+1. *The Oracle console*: the bucket → Objects → `base/`. Note the newest base
+   copy from **before** the minute. Its name is in UTC:
+   `base-20261101T230000Z.tar` is 1 November 23:00 UTC, 2 November 04:30 in
+   India.
+2. *The Oracle console*: the bucket → Pre-Authenticated Requests → Create.
+   Name `restore-` and today's date, target **Bucket**, access **Permit object
+   reads**, expiry **tomorrow**. Copy the URL. It can read, not write or
+   delete, and it is never saved on the server.
+3. *The server, over ssh as `opc`*, with the URL from 2, the base copy from 1
+   and the minute, with India's offset:
+
+   ```bash
+   sudo -u postgres env RESTORE_FROM='<the URL from 2>' /usr/local/bin/fidato-pitr-restore <the base copy from 1> '2026-11-03 14:05:00+05:30'
+   ```
+
+   It ends *"fidato_pitr is fidato as it was at …"*, with the bookings, bill
+   lines, invoices and guests of both side by side. A minute later than the
+   last piece in the bucket stops with *"recovery ended before configured
+   recovery target was reached"* and creates nothing. For a customer, put
+   `DB=fidato_<code>` after `env`.
+4. Look at `fidato_pitr` with the master chat (`sudo -u postgres psql -d
+   fidato_pitr`), and decide, **your explicit yes**, one of:
+   - **Take back only what was lost**, row by row, with the master chat (for
+     one hotel, the one-hotel restore tool, A4, when it is built).
+   - **Switch the whole database to that minute.** Everything after it is
+     lost, at every hotel. *The server, over ssh as `opc`*, the date in the
+     name being today's:
+
+     ```bash
+     sudo systemctl stop fidato-api
+     sudo -u postgres psql -c "ALTER DATABASE fidato RENAME TO fidato_before_20261103" -c "ALTER DATABASE fidato_pitr RENAME TO fidato"
+     sudo systemctl start fidato-api
+     ```
+
+     Keep `fidato_before_…` until you are sure, then drop it.
+   - **Neither:** `sudo -u postgres psql -c "DROP DATABASE fidato_pitr"`.
+
 ## The owner's full reset
 
 **Clear this hotel and start today** (D27-342, D27-365 (3)), on each real
@@ -552,15 +730,15 @@ needs to see it.
 
 **2 · The backup on demand, and RESET_BACKUP_SOCKET:** *the server, over ssh as `opc`*
 
+`deploy/launch.sh` installs and starts the backup on demand on every run
+(D27-375), so this is only the API's setting, after checking it listens:
+
 ```bash
-cd /opt/fidato
-sudo install -m 644 deploy/fidato-backup-now.socket deploy/fidato-backup-now@.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now fidato-backup-now.socket
+systemctl is-active fidato-backup-now.socket
 echo "RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock" | sudo tee -a /opt/fidato/api/.env >/dev/null
 ```
 
-The API may not run the backup itself (it runs as `postgres`, and the API's
+The first line should print `active`. The API may not run the backup itself (it runs as `postgres`, and the API's
 service may gain no privileges), so systemd runs it for each connection to a
 socket only the API's user may open. Every press makes one more file in
 `/var/backups/fidato`, kept with the nightly ones (the last 14).
@@ -593,6 +771,15 @@ server, its network or n8n itself goes down, n8n cannot say so.
 
 - **n8n** (above, step 2): a WhatsApp when `/health` stops answering or
   answers wrong, and when a backup fails or does not report.
+- **Connection health** (*the PMS, Settings → Connection health*), from inside
+  the API, with one email to `HEALTH_ALERT_EMAIL` when a row turns red (at most
+  once an hour):
+  - **Disk**: how full the server's disk is. Amber from 80% used, red from 90%:
+    a full disk stops the database.
+  - **Backups**: red when last night's backup failed, when none has run for 26
+    hours, or, once a copy has ever gone to the bucket, when none has for 26
+    hours; and, once restore to any minute is on, when the journal or the
+    weekly base copy is not reaching the bucket (above).
 - **UptimeRobot**, free, outside (*uptimerobot.com, in your browser*):
   commercial use is allowed on the free plan (its help centre, 27 Aug 2026).
   Add two HTTP(s) monitors at 5 minutes, `https://api.fidatohotels.com/health`
@@ -896,6 +1083,25 @@ sudo DOMAIN=api.… APP_ORIGIN=https://pms.… EMAIL=… deploy/launch.sh
 The night audit is **not scheduled and should not be** — somebody presses the
 button. A hotel that forgets simply stays on yesterday, which is safe and
 visible on every screen.
+
+### After every release: the practice hotel first
+
+One server runs every hotel, so an update reaches them all at once. Before the
+staff are told, the release is tried on the practice hotel **AMRT** (D27-373,
+plan A, A5: a release step only, no practice server). It is the last step the
+release prints (`scripts/release.mjs`). *Your PC, in the browser,
+https://pms.fidatohotels.com, AMRT chosen in the top bar:*
+
+1. **New booking** for tonight, one room: it saves and shows on the calendar.
+2. **Check it in** to a free, clean room, take a payment on its bill, and
+   open the bill to print.
+3. **Night audit** opens and shows today's business date.
+4. **What this release changed** (its notes): each once, here.
+5. **Settings → Connection health**: no row newly red.
+
+All right: tell the staff. Anything wrong: stop, note what you did and what it
+said, and send it to the master chat before anyone else uses that screen.
+AMRT keeps the practice booking; its card on Properties resets it when wanted.
 
 ---
 

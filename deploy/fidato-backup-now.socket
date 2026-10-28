@@ -12,10 +12,10 @@
 # Only the API's own user may connect (SocketUser/SocketMode). Connecting does
 # one thing: take a backup. It reads nothing and removes nothing.
 #
-# Installed by the owner (deploy/README.md, "The owner's full reset"):
-#   sudo install -m 644 deploy/fidato-backup-now.socket deploy/fidato-backup-now@.service /etc/systemd/system/
-#   sudo systemctl daemon-reload && sudo systemctl enable --now fidato-backup-now.socket
-# The API is told where it is: RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock
+# Installed and enabled by deploy/launch.sh on every run (D27-375), into
+# /etc/systemd/system/ with its service. The API is told where it is by the
+# owner alone (deploy/README.md, "The owner's full reset"):
+#   RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock
 # =============================================================================
 
 [Unit]

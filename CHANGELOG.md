@@ -50,6 +50,87 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15 (D27-375): launch.sh installs the full reset's backup socket
+
+**Asked for:** the master, the owner's D27-375: `deploy/launch.sh` installs `fidato-backup-now.socket` and `fidato-backup-now@.service`, re-runnable, restarting nothing else; no `RESET_*` written by it.
+
+**Shipped**
+- `deploy/launch.sh` (Fidato's run only, in "Backups"): `install -m 644` both into `/etc/systemd/system/`, `daemon-reload`, `enable --now` the socket, and it dies with the journal command if the socket is not active. A second run reinstalls the same files and changes nothing; no other unit is touched.
+- `deploy/README.md` "The owner's full reset", step 2 is now only the check and the `RESET_BACKUP_SOCKET` line (in the merge commit, with the conflict resolution); the socket file's comment says who installs it. `deploy/IF-THE-SERVER-DIES.md` step 9 names the reset's own steps.
+
+**Proved**
+- `bash -n deploy/launch.sh` parses; `npx vitest run deploy/customer.test.mjs deploy/n8n-backup.test.mjs db/wal.test.mjs scripts/release.test.mjs src/test` 28/28. Not run on a server (systemd is not on this PC).
+
+## 2026-10-29 · Release 15, plan A (D27-373): A6 the "if the server dies" runbook
+
+**Asked for:** the master: A6, in `deploy/`, from nothing to working in under two hours, each step labelled where it runs, the timed rehearsal marked as the owner's.
+
+**Shipped**
+- `deploy/IF-THE-SERVER-DIES.md`: what comes back and what does not; what to keep off the server beforehand; steps 0-9 with minutes (is it really gone, a new A1 server in the same subnet, the names first, the code with a new deploy key, `launch.sh`, the settings only the owner has, the data, `launch.sh` again and the practice-hotel checks, n8n with or without its old key, the rest); the owner's rehearsal on a spare `fidato-drill` (no real names, no sending settings, nothing written to the bucket, deleted with its boot volume after).
+- What the runbook needed of A3: `fidato-pitr-restore <base> latest` replays everything in the bucket (no target), and `db/wal.sh` keeps each server's journal under `wal/<system identifier>/`, read with `pg_controldata` in the data folder: a rebuilt server names its pieces from the beginning again, and in one folder a 412 would have hidden a piece that never arrived. A restore reads the identifier from its base copy.
+- Manual B9.6, "If the server itself is lost".
+
+**Proved**
+- `bash db/tests/pitr.sh` on 16.15: exit 0, 21 checks, now with `latest` (its copy has 0 bookings, as live, past the mistake) and the piece under this server's folder. `db/wal.test.mjs` 6/6 (one new: no identifier, refused). Break-and-run: the server folder out of `push` → 4 failed; restored, 6/6. `npx vitest run src/test/manual.test.ts db/wal.test.mjs` 9/9.
+- The runbook itself was not run: no server, no Oracle console, no DNS here. Its timings are estimates until the owner's rehearsal.
+
+**Left open**
+- Files uploaded into the PMS (`/var/lib/fidato/uploads`) are in no backup: lost with the server. A question to the owner.
+
+## 2026-10-29 · Release 15, plan A (D27-373): A5 the practice hotel first, as a release step
+
+**Asked for:** the master: A5 as a release step only, a short checklist for the practice hotel AMRT after each deploy, in `deploy/README.md` and the release-steps template; no practice server.
+
+**Shipped**
+- `scripts/release.mjs`: a new last step **A8** (after the website, A7, which the checks need; the plan said "after A6"): in AMRT, a booking for tonight, checked in to a free clean room, a payment and the bill; the night audit screen; what the release changed; Connection health with no row newly red; all right, tell the staff; wrong, stop and tell the master.
+- `deploy/README.md` "Day to day" → "After every release: the practice hotel first", the same five checks. Manual B9.3 gains the step.
+
+**Proved**
+- `node --check scripts/release.mjs`; `npx vitest run scripts/release.test.mjs src/test/manual.test.ts` 8/8; manual rebuilt. The printed A8 itself was not run (release.mjs prints only after a green full gates run on a release branch).
+
+## 2026-10-29 · Release 15, plan A (D27-373): A3 restore to any minute
+
+**Asked for:** the master: A3 in the plan's words (the journal archived off-site with the write-only link, `archive_timeout = 3600`, a weekly compressed `pg_basebackup` to the bucket, restore into a NEW database `fidato_pitr` never over live, rehearsed locally with a folder as the bucket; the server's settings and timer as owner steps; checked against PostgreSQL 16), its failed-archive alert on the Backups row.
+
+**Shipped**
+- `db/wal.sh` (`fidato-wal`): `put` is the archive_command, gzip into a spool `/var/lib/pgsql/wal-out`; `push` (cron, every 5 minutes, under flock) copies the spool to `<link>/wal/<name>.gz` with `If-None-Match: *` and `Content-MD5`, 200 or 412 ("already there") is a copy, deletes only then, and rewrites `/var/log/fidato-wal.status`; `get` is the restore_command; `send` one file. **Deviation from the plan's words:** the plan had archive_command upload itself; it spools instead, because the database runs under SELinux (enforcing on Oracle Linux, MEMORY 191) and nothing shows its policy lets it reach the internet, while cron's jobs are not confined that way. Cost: up to 5 minutes more before a piece is off the box.
+- `db/base-backup.sh` (`fidato-base-backup`): `pg_basebackup -Ft -z -X stream -c fast`, one `.tar` to `base/base-<UTC>.tar`, a `base-backup-status` line into the backup log.
+- `db/pitr-restore.sh` (`fidato-pitr-restore <base> '<minute+05:30>'`): a temporary PostgreSQL in its own folder on a socket only, archiving off, replays to the minute (`recovery_target_action = promote`), `pg_dump` out, `pg_restore` into a new `fidato_pitr` (owners and rights kept), counts side by side; refuses if `fidato_pitr` or the work folder exists; nothing created when the minute is past the journal.
+- `deploy/launch.sh` installs the three scripts and creates `/var/log/fidato-wal.status`. `deploy/README.md` "Restore to any minute": switching it on, the two timers, the proof, a rehearsal, getting a minute back (a read link made on the day, expiring the next), switching or dropping.
+- Connection health's Backups row: red on `pg_stat_archiver` failing, the push failed (its reason as the last error) or silent 30 minutes, the base copy failed or none for 8 days. Manual A17.14, B5.10, B9.6 ("Getting back any minute of the last month").
+- `db/tests/pitr.sh`: the rehearsal. `db/wal.test.mjs`: the script's own tests.
+
+**Proved**
+- **On PostgreSQL 16.15** (the official binaries in `.local/pg16`, as the pg16 gate; a throwaway cluster on 55497/55498, removed after): `bash db/tests/pitr.sh` exit 0, 19 checks: archiving on; the base copy into the folder bucket (4,432 KB); 150 bookings, the minute, all deleted; restored to the minute, PostgreSQL stopped "before commit of transaction 734" (the delete): `fidato_pitr` 150, live 0; the copy archived nothing; past the journal refused with "recovery ended before configured recovery target was reached", nothing created; the link emptied, the push's line failed with its reason, back to ok; the spool unwritable, `pg_stat_archiver` failing, then well again.
+- Break-and-run: `archive_mode = off` taken out of the temporary copy → the rehearsal failed ("pieces the temporary copy archived: 2, expected 0"); the 200/412 check out of `send` → `db/wal.test.mjs` 3 failed; 412 not accepted → 1 failed; the API's three A3 red rules out → 3 failed (36 passed); the two staleness rules out → 2 failed (37 passed); all restored.
+- Clean: API connections-health + System health **49/49**, API types exit 0; web types exit 0; `npx vitest run db/wal.test.mjs deploy/n8n-backup.test.mjs deploy/customer.test.mjs src/modules/connections-health src/test` **24/24**; manual rebuilt.
+
+**Found**
+- The first rehearsal named bash `bash.exe.exe` (cygpath already adds `.exe`); a second was edited while it ran and bash read the new lines mid-run (helper's mistakes, reported for MEMORY).
+
+**Left open**
+- Not run on the server, so not under its SELinux: README step 3 is the proof. `db/tests/pitr.sh` is not in `scripts/gates.sh` (the master's file).
+
+## 2026-10-28 · Release 15, plan A (D27-373): A1 off-site backups for n8n too, A2 disk and backup alerts
+
+**Asked for:** the master, for release 15: build A1 and A2 of `docs/plans/resilience-a.md` (the owner chose all of plan A, D27-373). A1: n8n's nightly backup goes to the PMS's bucket under `n8n/`, the same way and with the same status-code check; the owner's bucket steps complete and plain. A2: a Disk row on Connection health (amber 80%, red 90%, the hourly email on red); Backups red on a failed run or, once a bucket is set, no upload for 26 hours.
+
+**Shipped**
+- `deploy/n8n.sh`: the `n8n-backup` it installs now packs the night's folder (workflows, credentials still encrypted) into one `.tar.gz` and PUTs it to `<link>/n8n/n8n-<stamp>.tar.gz` with `Content-MD5`; only a 200 is a copy, anything else exits 1; no link, it says "on this disk only". **Not the encryption key** (HANDOVER 5: a master password, never pasted anywhere). The link comes from `/etc/n8n/backup.env` (root's alone), not `/etc/fidato-backup.env` (postgres may write it, and root running it would let that account steer n8n's credentials). Its install line says whether it copies.
+- `deploy/n8n-backup.test.mjs`: a dry run of that very script (extracted from `n8n.sh`) with a stand-in podman and a local listener as the bucket.
+- `api/src/modules/connections-health/health.ts`: the **Disk** row (`statfs("/")`, counted as `df`); `readBackupStatus` keeps `lastUploaded`; Backups red when copies stopped for 26 hours after one went. The sweep's email covers Disk with no code of its own.
+- `deploy/README.md` "Backups": n8n's part (step 3 copies the link line across, `sudo /opt/fidato/deploy/n8n.sh`; step 4 proves it), the versioning note corrected (step 2 needs it off, not step 3), the expiry note names both files; "Watching it" names the Disk and Backups rows. `db/backup.sh`: its comment no longer says versioning keeps overwritten copies.
+- The page's description names the disk. Manual A17.14, B5.10, B6.34, B9.6, B9.8; `manual.html` rebuilt.
+
+**Proved**
+- API: connections-health + System health **45/45** (`npm test -- test/modules/connections-health test/modules/admin/systemHealth.test.ts`). Break-and-run: amber threshold and the no-upload rule taken out → 2 failed (33 passed); red threshold out → 2 failed (the threshold test and the disk email); restored.
+- Deploy: `deploy/n8n-backup.test.mjs` **4/4**. Break-and-run: the 200 check out → 2 failed (400 and unreachable read as copies); `--exclude=encryption-key` out → 1 failed (the key in the archive); `Content-MD5` out → 1 failed; restored.
+- `npx tsc --noEmit -p tsconfig.json` (api) exit 0; `npx tsc -p tsconfig.app.json --noEmit` exit 0; `npx vitest run deploy/n8n-backup.test.mjs deploy/customer.test.mjs src/modules/connections-health src/test` **19/19** (after the manual build; before it, the manual's own check failed as it should).
+
+**Left open**
+- Pictures A17-49 and B5-01 show six rows, not seven: they need the local web and API running (`node docs/manual/tools/shoot.mjs a17 A17-49`, `... b5 B5-01`), which this helper may not start. The chapters say so under each.
+- Nothing tells anyone when n8n's own backup fails: questions for the owner (in the helper's report).
+
 ## 2026-10-29 · Release 14 (READY at bf74ce5a, the owner's to type): the restaurant, supplier dues, petty cash, the guest's GST, one daily email, the printer app (D27-365 to D27-372)
 
 **Asked for:** the owner's answers D27-365 to D27-372 (26-28 October): the allowance, the bar switch, Taxes and the KOT's design in Restaurant setup, the Dashboard's charts, the guest's proforma, NC, the printer updating itself; then table shifting, petty cash, credit purchases, bill history, order voids, the slow reprint, the guest's company and GSTIN, the daily reports in one email - and every helper question answered (D27-372).
