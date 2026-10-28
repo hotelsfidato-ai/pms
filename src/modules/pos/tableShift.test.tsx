@@ -141,6 +141,20 @@ describe("the Till - table shifting (D27-370)", () => {
       .toMatchObject({ method: "POST", body: { tableId: "T5" } }));
   });
 
+  it("a joined bill is not listed with the day's settled bills", async () => {
+    as("pos");
+    const bill = (id: string, orderNo: string, table: string, status: string) =>
+      ({ id, orderNo, outlet: "REST", table, status, businessDate: "2026-08-25", gross: status === "joined" ? 0 : 210,
+         paymentMethod: status === "settled" ? "cash" : null, openedAt: "2026-08-25T14:00:00Z", lines: status === "joined" ? 0 : 2 });
+    tillWith(() => open(), {
+      [`GET ${API}/till/orders`]: () => ({ businessDate: "2026-08-25", orders: [
+        bill("o-9", "20260825-9", "T9", "settled"), bill("o-6", "20260825-6", "T5", "joined"),
+      ] }),
+    });
+    expect(await screen.findByText(/20260825-9/)).toBeTruthy();
+    expect(screen.queryByText(/20260825-6/)).toBeNull();
+  });
+
   it("a parcel has neither button", async () => {
     as("pos");
     tillWith(() => open({ orderType: "takeaway", table: "Parcel · Ravi" }));

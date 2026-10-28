@@ -265,7 +265,9 @@ export default function TillPage() {
   const openOrders = (orders.data?.orders ?? []).filter(
     (o) => o.status === "open",
   );
-  const done = (orders.data?.orders ?? []).filter((o) => o.status !== "open");
+  /* A joined bill (D27-370) was not settled: its dishes are on the bill it
+     joined, so it is not listed with the day's bills. */
+  const done = (orders.data?.orders ?? []).filter((o) => o.status !== "open" && o.status !== "joined");
 
   /* POS-4. One line for the whole screen when a refresh failed but
      something is still shown — three strips for one dropped line would
