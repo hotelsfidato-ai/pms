@@ -262,6 +262,16 @@ function main() {
   A7 · your PC, PowerShell: publish the website FROM THE RELEASE COPY
        cd "${copy}"; firebase deploy --only hosting:app
        Expect "Deploy complete!". The live site should then load ${bundle}.
+
+  A8 · your PC, the browser: the practice hotel AMRT first, before the staff
+       are told (D27-373, A5; deploy/README.md, "After every release")
+       https://pms.fidatohotels.com, AMRT in the top bar:
+         1. New booking for tonight, one room: it saves and shows on the calendar.
+         2. Check it in to a free, clean room; take a payment on its bill; open the bill to print.
+         3. Night audit opens and shows today's business date.
+         4. What this release changed (its notes): each once, here.
+         5. Settings, Connection health: no row newly red.
+       All right: tell the staff. Anything wrong: stop, send the master what you saw.
 ${customerSteps(customers, commit)}`);
 }
 

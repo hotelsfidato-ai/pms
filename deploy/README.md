@@ -927,6 +927,25 @@ The night audit is **not scheduled and should not be** — somebody presses the
 button. A hotel that forgets simply stays on yesterday, which is safe and
 visible on every screen.
 
+### After every release: the practice hotel first
+
+One server runs every hotel, so an update reaches them all at once. Before the
+staff are told, the release is tried on the practice hotel **AMRT** (D27-373,
+plan A, A5: a release step only, no practice server). It is the last step the
+release prints (`scripts/release.mjs`). *Your PC, in the browser,
+https://pms.fidatohotels.com, AMRT chosen in the top bar:*
+
+1. **New booking** for tonight, one room: it saves and shows on the calendar.
+2. **Check it in** to a free, clean room, take a payment on its bill, and
+   open the bill to print.
+3. **Night audit** opens and shows today's business date.
+4. **What this release changed** (its notes): each once, here.
+5. **Settings → Connection health**: no row newly red.
+
+All right: tell the staff. Anything wrong: stop, note what you did and what it
+said, and send it to the master chat before anyone else uses that screen.
+AMRT keeps the practice booking; its card on Properties resets it when wanted.
+
 ---
 
 ## What is deliberately not here

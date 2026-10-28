@@ -50,6 +50,17 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15, plan A (D27-373): A5 the practice hotel first, as a release step
+
+**Asked for:** the master: A5 as a release step only, a short checklist for the practice hotel AMRT after each deploy, in `deploy/README.md` and the release-steps template; no practice server.
+
+**Shipped**
+- `scripts/release.mjs`: a new last step **A8** (after the website, A7, which the checks need; the plan said "after A6"): in AMRT, a booking for tonight, checked in to a free clean room, a payment and the bill; the night audit screen; what the release changed; Connection health with no row newly red; all right, tell the staff; wrong, stop and tell the master.
+- `deploy/README.md` "Day to day" → "After every release: the practice hotel first", the same five checks. Manual B9.3 gains the step.
+
+**Proved**
+- `node --check scripts/release.mjs`; `npx vitest run scripts/release.test.mjs src/test/manual.test.ts` 8/8; manual rebuilt. The printed A8 itself was not run (release.mjs prints only after a green full gates run on a release branch).
+
 ## 2026-10-29 · Release 15, plan A (D27-373): A3 restore to any minute
 
 **Asked for:** the master: A3 in the plan's words (the journal archived off-site with the write-only link, `archive_timeout = 3600`, a weekly compressed `pg_basebackup` to the bucket, restore into a NEW database `fidato_pitr` never over live, rehearsed locally with a folder as the bucket; the server's settings and timer as owner steps; checked against PostgreSQL 16), its failed-archive alert on the Backups row.
