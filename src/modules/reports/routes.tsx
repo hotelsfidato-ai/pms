@@ -10,6 +10,7 @@ import {
 import {
   CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage,
 } from "@/modules/reports/pages/Ledgers";
+import VoidsPage from "@/modules/reports/pages/Voids";
 import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
 import {
   StockOnHandPage, StockMovementsPage, StockConsumptionPage, StockWastagePage,
@@ -33,6 +34,7 @@ export const routes = (
     <Route path="/all-properties" element={<RequireAccess path="/all-properties" resource="report"><AllPropertiesPage /></RequireAccess>} />
     <Route path="/reports/manager" element={<RequireAccess path="/reports/manager" resource="report"><ManagerReportPage /></RequireAccess>} />
     <Route path="/reports/night-audit" element={<RequireAccess path="/reports/night-audit" resource="report"><NightAuditReportPage /></RequireAccess>} />
+    <Route path="/reports/voids" element={<RequireAccess path="/reports/voids" resource="report"><VoidsPage /></RequireAccess>} />
     <Route path="/reports/city-ledger" element={<RequireAccess path="/reports/city-ledger" resource="report"><CityLedgerPage /></RequireAccess>} />
     <Route path="/reports/no-show" element={<RequireAccess path="/reports/no-show" resource="report"><NoShowPage /></RequireAccess>} />
     <Route path="/reports/monthly-occupancy" element={<RequireAccess path="/reports/monthly-occupancy" resource="report"><MonthlyOccupancyPage /></RequireAccess>} />

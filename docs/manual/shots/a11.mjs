@@ -305,6 +305,18 @@ export const SHOTS = [
       { n: 3, at: "text:The counter's asks of the store made on this day, decided", side: "left" },
     ],
   },
+  /* The restaurant's voids (D27-370). The master first makes a voided bill, an order closed
+     unpaid and a struck dish on the demo (as api/test/modules/reports/voidsReport.test.ts does). */
+  {
+    id: "A11-26", title: "Voids", as: "General Manager", size: "wall",
+    path: "/reports/voids", steps: [LOADED("Every one, by outlet and day")],
+    marks: [
+      { n: 1, at: "label:From", side: "right" },
+      { n: 2, at: "text:Totals, by outlet and day", side: "left" },
+      { n: 3, at: "text:Every one, by outlet and day", side: "left" },
+      { n: 4, at: "text:REFUND REFERENCE", nth: 0, side: "top" },
+    ],
+  },
   /* The excise department's daily register, like the paper (D27-361). */
   {
     id: "A11-24", title: "FLR-1A/2A/3A register", as: "General Manager", size: "wall",

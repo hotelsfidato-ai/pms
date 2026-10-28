@@ -913,6 +913,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/monthly-statistics`]: REPORTS,
   [`GET ${H}/reports/yearly-statistics`]: REPORTS,
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
+  [`GET ${H}/reports/voids`]: REPORTS,  // D27-370: the night audit report's rule, which prints the same voids
   [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
   [`GET ${H}/reports/bar-stock`]: STORE_REPORTS,  // D27-354
   [`GET ${H}/reports/flr-daily`]: STORE_REPORTS,  // D27-361

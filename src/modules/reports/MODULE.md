@@ -42,6 +42,7 @@ most export CSV.
 | Manager report | `/reports/manager` | `pages/ManagerReport.tsx` | none |
 | Night audit report | `/reports/night-audit` | `pages/NightAudit.tsx` | search only |
 | City ledger | `/reports/city-ledger` | `pages/Ledgers.tsx` (`CityLedgerPage`) | search only |
+| Voids | `/reports/voids` | `pages/Voids.tsx` | search only |
 | No show | `/reports/no-show` | `pages/Ledgers.tsx` (`NoShowPage`) | search only |
 | Lodging tax | `/reports/lodging-tax` | `pages/Ledgers.tsx` (`LodgingTaxPage`) | search only |
 | Monthly occupancy | `/reports/monthly-occupancy` | `pages/Statistics.tsx` | search only |
@@ -74,6 +75,14 @@ missing one a dash. Till sales and the food cost (before GST, D27-242) show
 only to a reader holding `report`, as on the Store. A department not given is
 "(not said)". Count differences read `stock_count_lines`, not the
 adjustments.
+
+**The Voids report (D27-370)** is `builders/voids.ts`, key `voids`, over `from` to `asOn`
+(the screen's From and To): the restaurant's paid bills voided (`pos_orders` status
+`void`), orders closed unpaid (`abandoned`: the reason only - who and when are not
+recorded, so "-") and dishes struck (`pos_order_lines.voided`, with whether the kitchen
+had it, and the waiter who asked when the GM did it, from `pos_requests`), by the
+order's business day and outlet. Read by the `report` grant (roleGate `REPORTS`, as the
+Night audit report that prints the same voids); downloaded by the report exporters.
 
 - **The eight in the owner's layout** (D17-62) are Night audit, Manager, City
   ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics and
