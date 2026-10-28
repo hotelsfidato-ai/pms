@@ -10,16 +10,21 @@ import { readOrder } from "./till.ts";
    either - the Kitchen screen re-reads the order live (075).
 
    POST /:code/till/orders/:id/move  { tableId }  this order to a FREE
-        table of its section. Its KOTs and its bill hang off the order
-        and go with it; the old table is free.
+        table of its restaurant, any section. Its KOTs and its bill hang
+        off the order and go with it; the old table is free.
    POST /:code/till/orders/:id/join  { tableId }  the open order on that
-        table comes onto this one - its lines, and so its KOTs - and is
-        closed as JOINED (no sale, no void, not closed unpaid). For good.
+        table comes onto this one - its lines, and so its KOTs, and its
+        covers; this bill's waiter stays - and is closed as JOINED (no
+        sale, no void, not closed unpaid). For good. Its table shows
+        "joined to" this one's until this bill is settled or closed
+        (app.pos_joined_to, 248), and takes nothing meanwhile.
 
    Each is kept in pos_table_moves (244): who, when, from which table to
-   which. Every refusal comes before the first write (MEMORY 243). What the
-   owner has not settled - another section, a discount, a held order, a
-   function, a booked table - is refused in a plain sentence for now.
+   which. Every refusal comes before the first write (MEMORY 243). The
+   owner's D27-372 (28 October) opened the sections and set a booked
+   table's two hours; a join with a discount, a round-off or a payment
+   started, a held or a function's bill, another day's bill, a typed table,
+   a parcel and room service stay refused, each in a plain sentence.
 
    Registered on the till's router by till.ts, as the KOT section is.
    ══════════════════════════════════════════════════════════════════ */
@@ -32,22 +37,19 @@ const refuse = (reason: string) => ({ ok: false as const, reason });
 type Side = {
   id: string; order_no: string; status: string; order_type: string; outlet_id: string;
   business_date: string; table_id: string | null; table_ref: string | null;
-  section_id: string | null; section: string | null;
   held: boolean; event: boolean; adjusted: boolean;
 };
 
-/** The order and its floor table, locked, as both acts read it. */
+/** The order, locked, as both acts read it. */
 async function orderSide(client: Client, hotelId: string, where: string, arg: string): Promise<Side | undefined> {
   const { rows } = await client.query<Side>(
     `select o.id::text, o.order_no, o.status, o.order_type, o.outlet_id::text,
             to_char(o.business_date, 'YYYY-MM-DD') as business_date,
-            o.table_id::text, o.table_ref, t.section_id::text, s.name as section,
+            o.table_id::text, o.table_ref,
             o.held_at is not null as held, o.event_id is not null as event,
             (o.discount_amount <> 0 or o.promotion_id is not null
              or coalesce(o.round_off, 0) <> 0) as adjusted
        from pos_orders o
-       left join pos_tables t on t.id = o.table_id
-       left join pos_sections s on s.id = t.section_id
       where o.hotel_id = $1 and ${where}
       for update of o`,
     [hotelId, arg]);
@@ -63,20 +65,22 @@ function notMovable(o: Side | undefined): string | null {
   return null;
 }
 
-/** The table asked for, in this order's section. */
+/** The table asked for, in this order's restaurant, and not joined to a bill. */
 async function targetTable(
   client: Client, hotelId: string, from: Side, tableId: string,
 ): Promise<{ id: string; label: string } | string> {
-  const { rows: [t] } = await client.query<{ id: string; label: string; section_id: string; outlet_id: string }>(
-    `select t.id::text, t.label, t.section_id::text, s.outlet_id::text
+  const { rows: [t] } = await client.query<{ id: string; label: string; outlet_id: string }>(
+    `select t.id::text, t.label, s.outlet_id::text
        from pos_tables t join pos_sections s on s.id = t.section_id
       where t.id::text = $1 and t.hotel_id = $2 and t.is_active and s.is_active`,
     [tableId, hotelId]);
   if (!t) return "No such table.";
   if (t.id === from.table_id) return `Bill ${from.order_no} is already on ${t.label}.`;
   if (t.outlet_id !== from.outlet_id) return "That table is in another restaurant. An order stays in its own restaurant.";
-  if (t.section_id !== from.section_id) {
-    return `${t.label} is in another section. For now an order moves or joins only within ${from.section ?? "its section"}.`;
+  const { rows: [joined] } = await client.query<{ order_no: string; table_ref: string | null }>(
+    "select order_no, table_ref from app.pos_joined_to($1)", [t.id]);
+  if (joined) {
+    return `${t.label} is joined to ${joined.table_ref ?? "another table"} on bill ${joined.order_no} until that bill is settled. Choose another table.`;
   }
   return { id: t.id, label: t.label };
 }
@@ -107,13 +111,16 @@ export function registerTableMoves(till: App, hotelFor: HotelFor): void {
           ? `${t.label} already has ${busy.order_no} running on it. Join it instead, or choose a free table.`
           : `${t.label} still has bill ${busy.order_no} on it. Clear the table first.`);
       }
-      /* A table a hotel guest has booked for today (172) is not taken here. */
-      const { rows: [booked] } = await client.query<{ n: number }>(
-        `select count(*)::int as n from table_bookings b
+      /* A table a hotel guest has booked for today (172) is not taken from
+         two hours before the booking (D27-372); earlier in the day it is. */
+      const { rows: [booked] } = await client.query<{ at: string }>(
+        `select app.hotel_clock(b.hotel_id, b.at, 'HH24:MI') as at from table_bookings b
           where b.table_id = $1 and b.status = 'confirmed'
-            and app.hotel_clock(b.hotel_id, b.at, 'YYYY-MM-DD') = $2`,
+            and app.hotel_clock(b.hotel_id, b.at, 'YYYY-MM-DD') = $2
+            and now() >= b.at - interval '2 hours'
+          order by b.at limit 1`,
         [t.id, await businessDateFor(client, hotelId)]);
-      if (booked!.n > 0) return refuse(`${t.label} is booked by a hotel guest today. Choose another table.`);
+      if (booked) return refuse(`${t.label} is booked by a hotel guest at ${booked.at}. Choose another table.`);
 
       await client.query(
         `update pos_orders set table_id = $2, table_ref = $3, updated_at = now() where id = $1`,
@@ -180,6 +187,12 @@ export function registerTableMoves(till: App, hotelFor: HotelFor): void {
       await client.query(
         `update pos_orders set status = 'joined', joined_into = $1, cleared_at = now(), updated_at = now()
           where id = $2`, [keep.id, other.id]);
+      /* The two tables' covers, added (D27-372); a table nobody counted adds
+         nothing, and two nobody counted stay uncounted. This bill's waiter stays. */
+      await client.query(
+        `update pos_orders k set covers = case when k.covers is null and o.covers is null then null
+                                              else coalesce(k.covers, 0) + coalesce(o.covers, 0) end
+           from pos_orders o where k.id = $1 and o.id = $2`, [keep.id, other.id]);
       await client.query(
         `insert into pos_table_moves (hotel_id, order_id, joined_order_id, from_table, to_table, moved_by)
          values ($1, $2, $3, $4, $5, $6)`,

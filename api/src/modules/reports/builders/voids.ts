@@ -13,9 +13,9 @@ import { heading, type Property } from "../figures.ts";
 
      a voided paid bill     pos_orders status 'void' (222): who, when, why,
                             and the refund reference of a card or UPI bill;
-     an order closed unpaid pos_orders status 'abandoned' (028): the reason
-                            ONLY - the order records neither who closed it
-                            nor when, so both print "-" (see the footnote);
+     an order closed unpaid pos_orders status 'abandoned' (028): why, and
+                            since 28 October who and when (248, D27-372);
+                            one closed before then prints "-" for both;
      a struck dish          pos_order_lines voided (028, 151, 210): who,
                             when, why, and whether the kitchen had it.
 
@@ -56,7 +56,7 @@ export async function voidsReport(client: Client, property: Property, from: stri
          from pos_orders o where o.hotel_id = $1 and o.status = 'void'
        union all
        select 'unpaid', o.outlet_id, o.id, o.business_date, o.order_no, o.table_ref, null, null,
-              (select payable from app.pos_order_total(o.id)), null::uuid, null::uuid, null::timestamptz,
+              (select payable from app.pos_order_total(o.id)), o.abandoned_by, null::uuid, o.abandoned_at,
               o.abandoned_reason, null, null
          from pos_orders o where o.hotel_id = $1 and o.status = 'abandoned'
        union all
@@ -140,7 +140,7 @@ export async function voidsReport(client: Client, property: Property, from: stri
     ],
     footnotes: [
       "A voided bill's and a closed-unpaid order's amount is what the guest would have paid (after any discount, with GST). A struck dish's is its price times its quantity, before GST. The three are never added together.",
-      "An order closed unpaid keeps its reason only: the system does not record who closed it or when, so both show \"-\".",
+      "An order closed unpaid before 28 October 2026 kept its reason only: who closed it and when show \"-\".",
       "Done by is the person who voided or struck. Asked by is the waiter whose request to the GM it was, when it was one.",
       "Kitchen had it: Yes when the dish was struck after its KOT was sent (the GM's yes, and a reason, are needed); No when it was struck before.",
       "Days are business days. A bill given free (NC) and a discount are not voids and are not here.",

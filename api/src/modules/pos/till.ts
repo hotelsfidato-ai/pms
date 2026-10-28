@@ -2059,8 +2059,15 @@ till.get("/:code/till/orders", async (c) => {
    bill's number, table, guest (name or phone), payment mode, waiter and
    outlet, every part optional and every one a bound parameter. `date` is
    from = to = that day, so the Till asks as it always did. At most
-   BILLS_CAP rows answer; `capped` says so, and the screen says it. */
+   BILLS_CAP rows answer; `capped` says so, and the screen says it.
+
+   FOR MANAGERS AND THE CASHIER ONLY (the owner's D27-372, 28 October): a
+   range of dates or any of those filters is BILL_HISTORY_ROLES' (and a group
+   administrator's); everyone else this route answers - the waiter, the bar, a
+   Viewer - keeps the Till's own question, one day (`date`) or a number (`no`).
+   A bill charged to a room shows, and is found by, the stay's guest and room. */
 const BILLS_CAP = 500;
+export const BILL_HISTORY_ROLES: readonly string[] = ["owner", "admin", "gm", "hotel_manager", "finance", "front_desk"];
 const BILL_MODES = ["cash", "card", "upi", "room", "function", "allowance", "split"];
 const isoDay = (v: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
@@ -2096,14 +2103,28 @@ till.get("/:code/till/bills", async (c) => {
   }
   /* A phone is found however it was typed: 98765 43210 finds 9876543210. */
   const digits = /^[\d\s+()-]+$/.test(guest) ? guest.replace(/\D/g, "") : "";
+  const wide = Boolean((!day && (q("from") || q("to"))) || table || guest || mode || waiter || outlet);
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    if (wide) {
+      const { rows: [may] } = await client.query<{ ok: boolean }>(
+        `select app.is_group_admin() or exists (
+                  select 1 from staff_hotels sh
+                   where sh.staff_id = app.current_user_id() and sh.hotel_id = $1
+                     and sh.role = any($2::text[])) as ok`,
+        [hotelId, BILL_HISTORY_ROLES]);
+      if (!may!.ok) {
+        return { forbidden: "Bill history is for the managers, the Accountant and Reception. "
+          + "On the Till, look up one day's bills or a bill's number." };
+      }
+    }
     const { rows } = await client.query<{
       id: string; order_no: string; outlet: string; table_ref: string | null;
       status: string; business_date: string; gross: string; payable: string;
       payment_method: string | null; modes: string[]; opened_at: string; lines: string;
       waiter: string | null; customer_name: string | null; customer_phone: string | null;
+      settled_at: string | null; stay_guest: string | null; stay_room: string | null;
     }>(
       `select o.id::text, o.order_no, ou.code as outlet, o.table_ref,
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
@@ -2116,12 +2137,24 @@ till.get("/:code/till/bills", async (c) => {
               (select count(*) from pos_order_lines l
                 where l.order_id = o.id and not l.voided)::text as lines,
               coalesce(sw.full_name, so.full_name) as waiter,
-              o.customer_name, o.customer_phone
+              o.customer_name, o.customer_phone,
+              /* When it was paid - or given NC (D27-372). */
+              app.hotel_clock(o.hotel_id, coalesce(o.settled_at, o.nc_at), 'HH24:MI') as settled_at,
+              st.guest as stay_guest, st.room as stay_room
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          /* LEFT joins: a name staff's row security hides prints as a dash. */
          left join staff sw on sw.id = o.waiter_id
          left join staff so on so.id = o.opened_by
+         /* A bill charged to a room: the stay's guest and room (D27-372),
+            through the ticket that carried it, as a void names the room. */
+         left join lateral (
+           select g.full_name as guest, app.stay_room(f.reservation_id) as room
+             from pos_tickets t
+             join folios f on f.id = t.folio_id
+             left join reservations r on r.id = f.reservation_id
+             left join guests g on g.id = r.guest_id
+            where t.id = o.ticket_id and o.payment_method = 'room') st on true
         where o.hotel_id = $1 and o.status in ('settled', 'void', 'no_charge')
           and ($2::date is null or o.business_date >= $2::date)
           and ($3::date is null or o.business_date <= $3::date)
@@ -2129,6 +2162,8 @@ till.get("/:code/till/bills", async (c) => {
           and ($5 = '' or o.table_ref ilike '%' || $5 || '%' escape '\\')
           and ($6 = '' or o.customer_name ilike '%' || $6 || '%' escape '\\'
                or o.customer_phone ilike '%' || $6 || '%' escape '\\'
+               or st.guest ilike '%' || $6 || '%' escape '\\'
+               or upper(st.room) = upper($6)
                or ($7 <> '' and regexp_replace(coalesce(o.customer_phone, ''), '\\D', '', 'g') like '%' || $7 || '%'))
           and ($8 = '' or o.payment_method = $8
                or exists (select 1 from pos_order_tenders t where t.order_id = o.id and t.method = $8))
@@ -2149,12 +2184,14 @@ till.get("/:code/till/bills", async (c) => {
         modes: r.modes.length ? r.modes : r.payment_method ? [r.payment_method] : [],
         openedAt: r.opened_at, lines: Number(r.lines),
         waiter: r.waiter, guest: r.customer_name, phone: r.customer_phone,
+        settledAt: r.settled_at, stayGuest: r.stay_guest, room: r.stay_room,
       })),
       capped: rows.length > cap,
       cap,
       outlets,
     };
   });
+  if (body && "forbidden" in body) return c.json({ error: body.forbidden }, 403);
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
@@ -2176,11 +2213,15 @@ async function tableNamed(
   return rows[0]?.id ?? null;
 }
 
-/** The bill already running on a table, if any. */
+/** The bill already running on a table, if any - or the one it was joined
+    onto, until that is settled (D27-372). */
 async function runningOn(client: Client, tableId: string): Promise<string | null> {
   const { rows } = await client.query<{ order_no: string }>(
     `select order_no from pos_orders
-      where table_id = $1 and cleared_at is null and status = 'open'`,
+      where table_id = $1 and cleared_at is null and status = 'open'
+     union all
+     select order_no from app.pos_joined_to($1)
+     limit 1`,
     [tableId],
   );
   return rows[0]?.order_no ?? null;
@@ -3876,11 +3917,15 @@ till.get("/:code/till/floor", async (c) => {
       seats: number | null; row_no: number; col_no: number;
       order_id: string | null; order_no: string | null; state: string;
       minutes: number | null; payable: string | null; ready: string;
-      ready_ids: string[];
+      ready_ids: string[]; joined_to: string | null;
     }>(
+      /* A JOINED TABLE (D27-372) shows the bill it went onto - "joined to
+         AC3" - until that bill is settled or closed; then it is free. */
       `select section_id::text, section, table_id::text, label, seats,
-              row_no, col_no, order_id::text, order_no, state, minutes,
-              payable::text,
+              row_no, col_no, coalesce(f.order_id, j.order_id)::text as order_id,
+              coalesce(f.order_no, j.order_no) as order_no,
+              case when j.order_id is null then state else 'joined' end as state,
+              minutes, payable::text, j.table_ref as joined_to,
               /* Dishes the kitchen has made Ready and nobody has Taken
                  (D27-221): what the waiter walks to the pass for. Dishes,
                  not their sides - but an add-on line (D27-291) is carried
@@ -3894,7 +3939,8 @@ till.get("/:code/till/floor", async (c) => {
                      where l.order_id = f.order_id and l.kot_status = 'ready'
                        and not l.voided
                        and (l.parent_line_id is null or l.extra_kind is not null)) as ready_ids
-         from app.pos_floor($1) f`,
+         from app.pos_floor($1) f
+         left join lateral (select * from app.pos_joined_to(f.table_id) where f.state = 'blank') j on true`,
       [outlet[0].id],
     );
 
@@ -3908,7 +3954,7 @@ till.get("/:code/till/floor", async (c) => {
         row: number; col: number;
         orderId: string | null; orderNo: string | null;
         state: string; minutes: number | null; payable: number | null;
-        ready: number; readyIds: string[];
+        ready: number; readyIds: string[]; joinedTo?: string | null;
       }[];
     }[] = [];
 
@@ -3923,8 +3969,10 @@ till.get("/:code/till/floor", async (c) => {
         row: r.row_no, col: r.col_no,
         orderId: r.order_id, orderNo: r.order_no,
         /* blank · running · kot · printed · paid · closed (closed unpaid,
-           207). Derived, so the tile cannot disagree with the bill behind it. */
+           207) · joined (D27-372). Derived, so the tile cannot disagree with
+           the bill behind it. */
         state: r.state,
+        ...(r.state === "joined" ? { joinedTo: r.joined_to } : {}),
         minutes: r.minutes,
         payable: r.payable === null ? null : Number(r.payable),
         ready: Number(r.ready),
@@ -5166,11 +5214,12 @@ till.post("/:code/till/orders/:id/abandon", async (c) => {
       if (why) return refuse(why);
     }
 
+    /* Who and when, from now on (D27-372): the Voids report prints them. */
     const { rowCount } = await client.query(
       `update pos_orders
-          set status='abandoned', abandoned_reason=$1
+          set status='abandoned', abandoned_reason=$1, abandoned_by=$4, abandoned_at=now()
         where id = $2 and hotel_id = $3 and status = 'open'`,
-      [reason, orderId, hotelId],
+      [reason, orderId, hotelId, session.staffId],
     );
     if (!rowCount) return refuse("That order is not open.");
 

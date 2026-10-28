@@ -27,6 +27,7 @@ import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
+import { TableShift } from "@/modules/pos/components/TableShift";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { TestHotelStripe } from "@/components/app/TestHotel";
 
@@ -1140,6 +1141,10 @@ export default function TerminalPage() {
                       <Gift className="size-4" />
                       {mayNc ? "No charge (NC)" : "Ask the GM for NC"}
                     </button>
+                    {/* Move and Join, the Till's own two (D27-372). */}
+                    {order.orderType === "dine_in" && (
+                      <TableShift hotelId={hotelId} order={order} onChanged={refresh} className="w-full h-12 text-base" />
+                    )}
                     <button type="button" onClick={abandon}
                       className={cn(GHOST, "w-full h-12")}>
                       Close unpaid

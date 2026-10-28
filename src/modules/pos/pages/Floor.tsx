@@ -77,6 +77,7 @@ const TILE: Record<TableState, string> = {
   printed: "bg-success-50 ring-success-100 hover:ring-success",
   paid:    "bg-brand-yellow-50 ring-brand-yellow-100 hover:ring-brand-yellow",
   closed:  "bg-grey-100 ring-grey-200 hover:ring-grey-400",
+  joined:  "bg-grey-50 ring-grey-200",
 };
 
 /** A bill that is over - paid, or closed unpaid (POS-33) - takes no more
@@ -367,7 +368,29 @@ export default function FloorPage() {
                       not sent
                     </span>
                   )}
-                  {t.state === "blank" ? (
+                  {t.state === "joined" ? (
+                    /* JOINED (D27-372): its food is on another table's bill
+                       until that bill is settled; then the table is free.
+                       It takes nothing itself; the eye opens that bill. */
+                    <>
+                      <span className="text-xl font-medium text-grey-700 tabular tracking-[-0.02em]">
+                        {t.label}
+                      </span>
+                      <span className="text-sm font-medium text-grey-700">
+                        Joined to {t.joinedTo ?? "another table"}
+                      </span>
+                      <div className="flex gap-2 mt-auto pt-2">
+                        <button
+                          type="button"
+                          aria-label={`Open the bill ${t.label} is joined to`}
+                          onClick={() => navigate(`/pos/${hotelId}/till?order=${t.orderId}`)}
+                          className={TILE_ACTION}
+                        >
+                          <Eye className="size-4" />
+                        </button>
+                      </div>
+                    </>
+                  ) : t.state === "blank" ? (
                     <button
                       type="button"
                       disabled={busy === t.id || Boolean(closed)}
