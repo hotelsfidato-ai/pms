@@ -187,6 +187,9 @@ link to the bucket (`deploy/README.md`, "Backups", step 3, its second part).
   bucket, apart from the old one's.
 - The Fidato Printer installer back in `/var/www/fidato-downloads/`, as in
   release 13's steps.
+- The owner's full reset, if it was on: `deploy/README.md`, "The owner's full
+  reset", "Turning it on, once" (a new password for its login; `launch.sh`
+  has already started its backup socket).
 - Customers on the same server, if any: each one's `launch.sh` line from
   `deploy/README.md`, "Add a customer", and its data as in step 6 with
   `DB=fidato_<code>` after `env`.

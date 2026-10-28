@@ -764,6 +764,17 @@ cat > /etc/cron.d/fidato-backup <<CRONEOF
 0 3 * * * postgres BACKUP_DIR=$BACKUP_DIR BACKUP_SH=/usr/local/bin/fidato-backup /usr/local/bin/fidato-verify-backup >> /var/log/fidato-backup.log 2>&1
 CRONEOF
 
+# The owner's full reset takes its backup through this socket (D27-375;
+# deploy/README.md, "The owner's full reset"). Installed and enabled on every
+# run, which changes nothing the second time and restarts nothing else; the API
+# is told where it is only by the owner (RESET_BACKUP_SOCKET in api/.env).
+install -m 644 "$APP_DIR/deploy/fidato-backup-now.socket" "$APP_DIR/deploy/fidato-backup-now@.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now fidato-backup-now.socket 2>/dev/null || true
+systemctl is-active --quiet fidato-backup-now.socket \
+  || die "fidato-backup-now.socket did not start. journalctl -u fidato-backup-now.socket -n 20"
+echo "  the backup on demand listens on /run/fidato-backup-now.sock"
+
 # Prove it works NOW rather than finding out at 03:00 that it never did: the
 # backup and its copy off the box. The restore test is 03:00's job.
 runuser -u postgres -- /usr/local/bin/fidato-backup "$BACKUP_DIR"   || die "The nightly backup failed on its very first run. Fix this before

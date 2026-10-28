@@ -50,6 +50,17 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15 (D27-375): launch.sh installs the full reset's backup socket
+
+**Asked for:** the master, the owner's D27-375: `deploy/launch.sh` installs `fidato-backup-now.socket` and `fidato-backup-now@.service`, re-runnable, restarting nothing else; no `RESET_*` written by it.
+
+**Shipped**
+- `deploy/launch.sh` (Fidato's run only, in "Backups"): `install -m 644` both into `/etc/systemd/system/`, `daemon-reload`, `enable --now` the socket, and it dies with the journal command if the socket is not active. A second run reinstalls the same files and changes nothing; no other unit is touched.
+- `deploy/README.md` "The owner's full reset", step 2 is now only the check and the `RESET_BACKUP_SOCKET` line (in the merge commit, with the conflict resolution); the socket file's comment says who installs it. `deploy/IF-THE-SERVER-DIES.md` step 9 names the reset's own steps.
+
+**Proved**
+- `bash -n deploy/launch.sh` parses; `npx vitest run deploy/customer.test.mjs deploy/n8n-backup.test.mjs db/wal.test.mjs scripts/release.test.mjs src/test` 28/28. Not run on a server (systemd is not on this PC).
+
 ## 2026-10-29 · Release 15, plan A (D27-373): A6 the "if the server dies" runbook
 
 **Asked for:** the master: A6, in `deploy/`, from nothing to working in under two hours, each step labelled where it runs, the timed rehearsal marked as the owner's.
