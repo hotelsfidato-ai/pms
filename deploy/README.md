@@ -429,6 +429,87 @@ the server*: `pg_restore -d <empty database> --no-owner --no-acl <file>`, or
 `db/verify-backup.sh <file>` to restore it into a scratch database and check
 it first. Do it once on purpose before it is needed.
 
+### Bringing back one hotel
+
+For the day **one hotel's records are damaged** (a booking, a bill, a guest
+deleted by mistake) and the other hotels must not move (plan A, A4, D27-373).
+`deploy/restore-hotel.sh` puts last night's backup into a scratch database,
+compares that one hotel with the live system, table by table, and shows you
+what differs. It changes nothing until you run it a second time and type the
+hotel's code again. Restoring the whole database is a different job
+(`db/restore.sh`, above); do not use that for one hotel.
+
+**What it brings back, and what it never does.** Only rows that are **missing**
+in the live system come back, as they were in the backup, with the shared rows
+they need (the guest of a booking, its company), parents first (the guest, then
+the booking, then its bill), in one go: all of them or none. It never:
+
+- overwrites a row that changed since the backup (the live one is right);
+- touches a row that is new since the backup;
+- writes an **append-only** record: a bill line, a payment's line, an issued
+  invoice or VAT bill, a stock or equipment movement. A wrong one is reversed
+  in the PMS; a missing one is listed for you to decide, with everything that
+  needs it;
+- writes the invoice or bill **series**, so a number is never issued twice; nor
+  who works where, devices, bank details, outside systems (channel manager,
+  CRS) or what was sent. Those are listed too;
+- brings back a person or a property.
+
+Every rule the live database has (its checks, its keys, its triggers) applies
+to what goes back. If one refuses a row (a GR card number given to someone else
+since, a room booked since), nothing at all is written and it says which row
+and why.
+
+**1 · Find the backup:** *the server, over ssh as `opc`*
+
+```bash
+sudo ls -lt /var/backups/fidato | head
+```
+
+The nightly files are `fidato-<date>-<time>.dump`; pick the last one from
+before the damage. A file from the bucket (Oracle console → the bucket →
+Objects → Download) works too, once it is on the server.
+
+**2 · Look:** *the server, over ssh as `opc`*
+
+```bash
+sudo -u postgres bash /opt/fidato/deploy/restore-hotel.sh AMR /var/backups/fidato/fidato-20261028-030000.dump
+```
+
+`AMR` is the hotel's code, in capitals. For a customer on the shared server:
+`sudo -u postgres env DB=fidato_abc bash /opt/fidato-abc/deploy/restore-hotel.sh …`.
+For a copy already restored to a minute (A3, `fidato_pitr`), name the database
+instead of the file: it is read and left as it is.
+
+It takes under a minute and prints three lists:
+
+- **What differs:** each table where the hotel has rows missing in live,
+  changed since or new since.
+- **Stays missing:** what this tool will not write, and why.
+- **Could come back:** the rows the second step would write, in order.
+
+The hotels can keep working meanwhile: the look only reads the live system.
+
+**3 · Bring back:** *the server, over ssh as `opc`, only if the list in step 2
+is what you expected*
+
+```bash
+sudo -u postgres bash /opt/fidato/deploy/restore-hotel.sh AMR /var/backups/fidato/fidato-20261028-030000.dump --bring-back
+```
+
+It shows the lists again and asks you to type the hotel's code. Anything else
+and nothing is written. Then it says what came back, what the database itself
+did as they went in (its audit lines, for example), and `committed`.
+
+**4 · Check:** *the PMS, in your browser*: open the hotel and look at what
+came back. What "stays missing" is yours to decide; ask before acting on it.
+
+**If the hotel itself is gone** (its row in `hotels`), the tool refuses: every
+row of a hotel hangs off that row. It must come back first, by hand, and that
+is a job to plan with help: the database adds a new property's defaults
+(stores, payment methods, the series) the moment the row goes in. The tool
+prints the two commands that copy the row across; after them, run step 2 again.
+
 ## Watching it
 
 Two things watch the system, because n8n runs on the box it watches: if the
