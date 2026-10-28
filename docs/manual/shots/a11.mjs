@@ -203,7 +203,7 @@ export const SHOTS = [
     path: "/reports/supplier-dues", steps: [LOADED("Owed to each supplier")],
     marks: [
       { n: 1, at: "text:Owed to each supplier", side: "right" },
-      { n: 2, at: "text:Days overdue", nth: 0, side: "top" },
+      { n: 2, at: "text:DAYS OVERDUE", nth: 0, side: "top" },
       { n: 3, at: "text:Payments made", side: "right" },
     ],
   },
@@ -311,7 +311,7 @@ export const SHOTS = [
     id: "A11-26", title: "Voids", as: "General Manager", size: "wall",
     path: "/reports/voids", steps: [LOADED("Every one, by outlet and day")],
     marks: [
-      { n: 1, at: "label:From", side: "right" },
+      { n: 1, at: "text:From", nth: 0, side: "right" },
       { n: 2, at: "text:Totals, by outlet and day", side: "left" },
       { n: 3, at: "text:Every one, by outlet and day", side: "left" },
       { n: 4, at: "text:REFUND REFERENCE", nth: 0, side: "top" },
@@ -335,7 +335,7 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "css:input[aria-label=From]", side: "bottom" },
       { n: 2, at: "text:Expenses, by day", side: "left" },
-      { n: 3, at: "text:Approval", side: "top" },
+      { n: 3, at: "text:APPROVAL", nth: 0, side: "top" },
       { n: 4, at: "text:Total", nth: 0, side: "left" },
       { n: 5, at: "text:By category", side: "left" },
     ],
