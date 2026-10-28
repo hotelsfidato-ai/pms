@@ -270,6 +270,48 @@ export function recopyTestHotel(
   return call(`/api/admin/hotels/${encodeURIComponent(testCode)}/test-recopy`, "POST", { confirm });
 }
 
+/* ── The owner's full reset (D27-342) ──────────────────────────────
+   "Clear this hotel and start today", for ONE account: the e-mail in the
+   server's settings, never a role. The server asks on every call and
+   refuses anybody else in a sentence; `yours` only decides whether the
+   button is drawn. The count is the database's own dry run - the one
+   reset-property.ts prints - and the clear takes the hotel's code typed. */
+export interface OwnerResetCount {
+  code: string;
+  name: string;
+  businessDate: string;
+  /** What would go, by table: only the tables with something in them. */
+  tables: Record<string, number>;
+  /** Guests with no stay at any other hotel, who go too. */
+  guests: number;
+  /** Why it would be refused (a test hotel, a guest checked in); null if not. */
+  refusal: string | null;
+}
+export interface OwnerResetDone {
+  removed: number;
+  rooms: number;
+  businessDate: string;
+  backup: { file: string; copiedOff: boolean };
+}
+
+/** Whether the signed-in person is the one the server names. False on any doubt. */
+export async function ownerResetIsMine(): Promise<boolean> {
+  try {
+    return (await api<{ yours: boolean }>("/api/admin/owner-reset")).yours;
+  } catch {
+    return false;
+  }
+}
+
+export function ownerResetCount(code: string): Promise<AdminResult<OwnerResetCount>> {
+  return call(`/api/admin/hotels/${encodeURIComponent(code)}/owner-reset`, "GET");
+}
+
+/** Backs up, then clears `code` and puts it on today. `confirm` is the code as typed. */
+export function ownerReset(code: string, confirm: string): Promise<AdminResult<OwnerResetDone>> {
+  return call(`/api/admin/hotels/${encodeURIComponent(code)}/owner-reset`, "POST", { confirm });
+}
+
 /** ⚠ EVERY PROPERTY, CLOSED ONES INCLUDED. `listProperties()` reads
     `/api/hotels`, which ends `where is_active` — so a closed property
     is invisible to it and Reopen would have nothing to act on. Group

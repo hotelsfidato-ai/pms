@@ -1,0 +1,24 @@
+# =============================================================================
+# fidato-backup-now@.service — one backup, for one connection to its socket
+# =============================================================================
+# Started by fidato-backup-now.socket for each connection (Accept=yes). Runs
+# the server's nightly backup program once, as `postgres`, into the nightly
+# folder, and writes everything it prints back down the connection. Its last
+# line is the file it wrote - on success only; a backup that fails, or whose
+# copy off the server fails, ends on its reason instead, and the API clears
+# nothing. See fidato-backup-now.socket.
+# =============================================================================
+
+[Unit]
+Description=Fidato PMS - one backup on demand
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+ExecStart=/usr/local/bin/fidato-backup /var/backups/fidato
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+TimeoutStartSec=900

@@ -429,6 +429,82 @@ the server*: `pg_restore -d <empty database> --no-owner --no-acl <file>`, or
 `db/verify-backup.sh <file>` to restore it into a scratch database and check
 it first. Do it once on purpose before it is needed.
 
+## The owner's full reset
+
+**Clear this hotel and start today** (D27-342, D27-365 (3)), on each real
+hotel's card on Admin → Properties: a backup, then every booking, guest, bill,
+payment, invoice, order, banquet, night audit, cash shift and stock movement
+of that one hotel gone, in one go; the hotel, rooms, rates, menu, tables,
+staff, sign-ins and settings stay; the business date becomes today; invoice
+numbers carry on. It is what `npm run reset -- <CODE> --fresh-start --yes`
+does on the server, from the same functions in the database, and it is
+refused while any guest is checked in, and for a test hotel (it has its own
+Reset).
+
+**Only one account may press it**: the one whose sign-in e-mail is
+`RESET_OWNER_EMAIL`. Not the owner role, not an Admin. Until all three
+settings below are in `api/.env`, it is refused for everybody, in a
+sentence. Nothing about it is turned on by a deploy.
+
+| Setting | What it is |
+|---|---|
+| `RESET_OWNER_EMAIL` | the one account allowed, by its sign-in e-mail |
+| `RESET_DATABASE_URL` | the reset's own database login, `pms_owner_reset`. It may count and clear and do nothing else: no table, no other function. Made by the migrations **with no password**, so nobody can sign in as it until you set one (step 1) |
+| `RESET_BACKUP_SOCKET` | where the server's own backup (`fidato-backup`, which copies it off the server when the bucket is set up) listens for the API: `/run/fidato-backup-now.sock` (step 2) |
+
+### Turning it on, once
+
+After a release that carries it has been deployed (its migrations make the
+login). Each step is typed by you.
+
+**1 · The login's password and RESET_DATABASE_URL:** *the server, over ssh as `opc`*
+
+```bash
+P="$(head -c 32 /dev/urandom | base64 | tr -d '/+=')"
+sudo -u postgres psql -qc "alter role pms_owner_reset password '$P'"
+echo "RESET_DATABASE_URL=postgres://pms_owner_reset:$P@127.0.0.1:5432/fidato" | sudo tee -a /opt/fidato/api/.env >/dev/null
+unset P
+```
+
+The password is made on the server and written only into `api/.env`; nobody
+needs to see it.
+
+**2 · The backup on demand, and RESET_BACKUP_SOCKET:** *the server, over ssh as `opc`*
+
+```bash
+cd /opt/fidato
+sudo install -m 644 deploy/fidato-backup-now.socket deploy/fidato-backup-now@.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now fidato-backup-now.socket
+echo "RESET_BACKUP_SOCKET=/run/fidato-backup-now.sock" | sudo tee -a /opt/fidato/api/.env >/dev/null
+```
+
+The API may not run the backup itself (it runs as `postgres`, and the API's
+service may gain no privileges), so systemd runs it for each connection to a
+socket only the API's user may open. Every press makes one more file in
+`/var/backups/fidato`, kept with the nightly ones (the last 14).
+
+**3 · Who, and on:** *the server, over ssh as `opc`*
+
+```bash
+echo "RESET_OWNER_EMAIL=influvateseo@gmail.com" | sudo tee -a /opt/fidato/api/.env >/dev/null
+sudo systemctl restart fidato-api
+```
+
+**4 · Prove it:** *the PMS, in your browser, signed in as that account*
+
+Admin → Properties: **Clear this hotel and start today** is on each real
+hotel's card. Press it on a hotel and read the count, then **Cancel**. Nothing
+is removed until the code is typed and **Clear and start today** is pressed.
+Signed in as anybody else, the button is not there, and the server refuses
+it if asked directly.
+
+To turn it off again: remove `RESET_OWNER_EMAIL` from `api/.env` and restart
+the API (step 3's second line).
+
+A customer's copy on the same server (`deploy/customer.sh`) has none of this:
+leave its three settings empty and the button is refused there.
+
 ## Watching it
 
 Two things watch the system, because n8n runs on the box it watches: if the

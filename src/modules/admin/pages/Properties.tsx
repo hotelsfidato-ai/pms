@@ -7,11 +7,12 @@ import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, But
 import { listProperties } from "@/data/repositories";
 import { useSession } from "@/lib/session";
 import {
-  listAdminProperties, amendProperty, setPropertyOpen, PROPERTY_TYPES,
+  listAdminProperties, amendProperty, setPropertyOpen, PROPERTY_TYPES, ownerResetIsMine,
   type AdminProperty, type PropertyProfile,
 } from "@/modules/admin/data/admin";
 import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
 import { TestHotelControls, type TestHotelOf } from "@/modules/admin/components/TestHotelControls";
+import { OwnerReset } from "@/modules/admin/components/OwnerReset";
 import { plainName } from "@/lib/testHotel";
 import { TestTag } from "@/components/app/TestHotel";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
@@ -58,6 +59,11 @@ export function PropertiesPage() {
   const admin = useQuery({
     queryKey: ["admin-properties"], queryFn: listAdminProperties,
   });
+  /* D27-342: "Clear this hotel and start today" is drawn for the one account
+     the server names; the server asks again on every call. */
+  const resetIsMine = useQuery({
+    queryKey: ["owner-reset-mine"], queryFn: ownerResetIsMine, staleTime: Infinity,
+  }).data ?? false;
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["properties"] });
@@ -135,7 +141,8 @@ export function PropertiesPage() {
               <AdminPropertyCard key={h.id} hotel={h}
                                  onEdit={() => setEditing(h)}
                                  onToggle={() => void toggle(h)}
-                                 test={groupAdmin ? { of: testOf.get(h.code) ?? null, onChanged: refresh } : undefined} />
+                                 test={groupAdmin ? { of: testOf.get(h.code) ?? null, onChanged: refresh } : undefined}
+                                 onReset={resetIsMine ? refresh : undefined} />
             ))}
           </div>
 
@@ -148,7 +155,8 @@ export function PropertiesPage() {
                 {closed.map((h) => (
                   <AdminPropertyCard key={h.id} hotel={h}
                                      onEdit={() => setEditing(h)}
-                                     onToggle={() => void toggle(h)} />
+                                     onToggle={() => void toggle(h)}
+                                     onReset={resetIsMine ? refresh : undefined} />
                 ))}
               </div>
             </section>
@@ -227,11 +235,13 @@ export function PropertiesPage() {
   );
 }
 
-function AdminPropertyCard({ hotel, onEdit, onToggle, test }: {
+function AdminPropertyCard({ hotel, onEdit, onToggle, test, onReset }: {
   hotel: AdminProperty; onEdit: () => void; onToggle: () => void;
   /** Its test hotel's controls: an open hotel's card, for a group
       administrator only (D27-296 (10)). Absent, none are drawn. */
   test?: { of: TestHotelOf | null; onChanged: () => void };
+  /** The owner's full reset (D27-342), for the one account it is for. */
+  onReset?: () => void;
 }) {
   return (
     <Card className={cn(!hotel.isActive && "opacity-60")}>
@@ -304,6 +314,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle, test }: {
           <TestHotelControls real={{ code: hotel.code, name: hotel.name }}
                              test={test.of} onChanged={test.onChanged} />
         )}
+        {onReset && <OwnerReset hotel={{ code: hotel.code, name: hotel.name }} onChanged={onReset} />}
       </CardBody>
     </Card>
   );
