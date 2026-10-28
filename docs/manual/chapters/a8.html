@@ -352,7 +352,7 @@
 
   <!-- A8.7 -->
   <h2 id="a8-7"><span class="n">A8.7</span>The Till: the cash register</h2>
-  <p>The Till is where a bill is checked and paid. The menu is on the left: tapping a dish adds it to the open order at once. The bill is on the right. Under it are <span class="ui">Open orders</span>, <span class="ui">Settled today</span> and <span class="ui">An earlier day's bill</span>.</p>
+  <p>The Till is where a bill is checked and paid. The menu is on the left: tapping a dish adds it to the open order at once. The bill is on the right. Under it are <span class="ui">Open orders</span>, <span class="ui">Settled today</span> and <span class="ui">An earlier day's bill</span>. For bills of many days, see <span class="ui">Bill history</span> below.</p>
 
   <h3>To open an order on the Till</h3>
   <ol class="steps">
@@ -441,6 +441,33 @@
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>The team asked to reprint a bill of an earlier day (18 October); the owner asked for it on 20 October. A bill printed again says DUPLICATE: <span class="d">D27-292</span>. Who may print it is unchanged: whoever prints today's bills.</p>
+  </div>
+
+  <h3>Bill history: any dates</h3>
+  <p>The Till's card above finds one day, or one number. For anything wider, open <span class="ui">Bill history</span> in the restaurant's menu, under <span class="ui">Till</span>. It lists every paid, VOID and NC bill of the dates you choose, and nothing else: an order still open is on the Till, and a bill closed unpaid has nothing to print.</p>
+  <ol class="steps">
+    <li>It opens on today's business day. Change <span class="ui">From</span> and <span class="ui">To</span> to any dates. Leave one empty to go on without an end.</li>
+    <li>To narrow the list, fill any of these (all optional, and they work together): the <span class="ui">Bill number</span> (a part is enough), the <span class="ui">Table</span>, the <span class="ui">Guest name or phone</span> (a part of either; a phone is found however it was typed), <span class="ui">Paid by</span>, the <span class="ui">Waiter</span> and the <span class="ui">Outlet</span>. Tap <span class="ui">Show bills</span>. <span class="ui">Clear</span> empties the boxes.</li>
+    <li>Each line says the bill number, its date and time, outlet, table, guest, waiter, how it was paid, its total and its state: <span class="ui">Paid</span>, <b>VOID</b> (the total struck through) or <b>NC</b> (no value). A bill paid in two ways says both. A figure nobody holds shows a dash.</li>
+    <li>Tap a bill to see the whole bill, as it is on paper. <span class="ui">Print the bill</span> prints it as in A8.6, headed <b>BILL · DUPLICATE</b>.</li>
+    <li><span class="ui">Download to Excel</span> saves the list on the screen as a file Excel opens (a CSV, named with the hotel and the dates). Totals are plain numbers so Excel can add them; an NC bill's total is left empty. A VOID bill keeps its total in the file, so filter its <span class="ui">State</span> column before adding up.</li>
+  </ol>
+  <p>One ask shows at most 500 bills. If more matched, the screen says <b>Showing the first 500 bills</b> and the file holds those 500: narrow the dates or add a filter to see the rest.</p>
+
+  <figure class="shot" id="fig-A8-45">
+    <img src="img/A8-45.png" alt="Bill history: the From and To dates, the filter boxes, Show bills, Download to Excel, and the table of bills with their state and total">
+    <figcaption><b>Figure A8-45.</b> Bill history.</figcaption>
+    <ol class="callouts">
+      <li>From and To: any dates</li>
+      <li>Narrow by number, table, guest, how paid, waiter or outlet</li>
+      <li>Tap a bill to see it and print it again</li>
+      <li>Download to Excel</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The owner asked for a full bill history on 27 October: <span class="d">D27-370</span>. It answers the same question as the Till's earlier-bill card, so a reprint is the same DUPLICATE. It is in the menu for the people who see the Till.</p>
   </div>
 
   <h3>Voiding a paid bill</h3>

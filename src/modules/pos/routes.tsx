@@ -9,6 +9,7 @@ import DayEndPage from "@/modules/pos/pages/DayEnd";
 import KitchenPage from "@/modules/pos/pages/Kitchen";
 import TerminalPage from "@/modules/pos/pages/Terminal";
 import BillPage from "@/modules/pos/pages/Bill";
+import BillHistoryPage from "@/modules/pos/pages/BillHistory";
 import PosPage from "@/modules/pos/pages/Pos";
 import SetupPage from "@/modules/pos/pages/Setup";
 import TableBookingsPage from "@/modules/pos/pages/TableBookings";
@@ -90,6 +91,11 @@ export const routes = (
     <Route
       path="/pos/:code/terminal"
       element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
+    />
+    {/* Every finished bill of any dates (D27-370); the Till's rule, asked of the menu entry. */}
+    <Route
+      path="/pos/:code/bill-history"
+      element={<RequireAccess path="/pos/:code/bill-history" resource="payment"><PropertyScope /><PosGate><BillHistoryPage /></PosGate></RequireAccess>}
     />
     {/* Guarded by the Till's rule, its list (the owner's D27-279). */}
     <Route
