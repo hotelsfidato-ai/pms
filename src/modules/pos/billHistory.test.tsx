@@ -159,7 +159,12 @@ describe("Bill history", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
     show();
     await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
+    /* The file's link is freed 1 s later (csv.ts): run it while URL is still this
+       test's stand-in, not after, in another test (release 14's gates). */
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
     fireEvent.click(screen.getByRole("button", { name: /Download to Excel/ }));
+    vi.runAllTimers();
+    vi.useRealTimers();
     await vi.waitFor(() => expect(names).toHaveLength(1));
     expect(names).toEqual(["5el-bill-history-2026-08-25-to-2026-08-25.csv"]);
     const lines = (await blobs[0]!.text()).replace(/^﻿/, "").split("\r\n");
