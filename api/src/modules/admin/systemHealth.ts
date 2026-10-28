@@ -4,7 +4,7 @@ import { readFile, stat, statfs } from "node:fs/promises";
 import { withSession } from "../../auth.ts";
 import { pool, type Client } from "../../db.ts";
 import { STEPS_MS } from "../../telemetry.ts";
-import { readBackupStatus, BACKUP_LOG } from "../connections-health/index.ts";
+import { readBackupStatus, backupLog } from "../connections-health/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SYSTEM HEALTH (the owner's D27-91, 28 September)
@@ -60,7 +60,8 @@ export function backupFromLog(text: string, fileTime: string): BackupState {
 
 async function lastBackup(): Promise<BackupState> {
   try {
-    const [text, info] = await Promise.all([readFile(BACKUP_LOG, "utf8"), stat(BACKUP_LOG)]);
+    const log = backupLog();
+    const [text, info] = await Promise.all([readFile(log, "utf8"), stat(log)]);
     return backupFromLog(text, info.mtime.toISOString());
   } catch (error) {
     const code = (error as { code?: string }).code;

@@ -1,5 +1,15 @@
 # Changelog - connections-health
 
+## 29 October 2026 - each copy reads its own nightly backup (D27-379)
+
+- A customer's API read Fidato's `/var/log/fidato-backup.log`, so its
+  Backups row (and System health) showed Fidato's night, not its own.
+  `backupLog()` reads `BACKUP_LOG` from the API's settings, empty meaning
+  Fidato's; `deploy/launch.sh` writes it into each copy's `api/.env` once
+  (`/var/log/fidato-backup-<code>.log` for a customer, from
+  `deploy/customer.sh`). The journal, base copy and n8n stay the server's
+  own: one cluster, one n8n.
+
 ## 29 October 2026 - the uploaded files' copy and n8n's own, watched (D27-377)
 
 - **Backups** also turns red when the nightly copy of the uploaded files to

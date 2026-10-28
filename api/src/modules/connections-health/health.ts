@@ -298,8 +298,10 @@ export async function hotelFacts(client: Client, hotelId: string | null): Promis
 /* The nightly check's log (deploy/launch.sh, "Backups"), which System
    health also reads. Its last `backup-status <ISO time> ok|failed
    uploaded=yes|no` line is the result (db/verify-backup.sh, D27-276).
+   Each copy reads its own: launch.sh writes BACKUP_LOG into a customer's
+   api/.env, /var/log/fidato-backup-<code>.log (D27-379).
    ponytail: the whole log is read; it grows a few KB a night. */
-export const BACKUP_LOG = "/var/log/fidato-backup.log";
+export const backupLog = (): string => process.env["BACKUP_LOG"]?.trim() || "/var/log/fidato-backup.log";
 const STATUS_LINE = /^backup-status (\S+) (ok|failed) uploaded=(yes|no)$/gm;
 /* The weekly base copy writes into the same log (db/base-backup.sh). */
 const BASE_LINE = /^base-backup-status (\S+) (ok|failed)$/gm;
@@ -359,7 +361,7 @@ const walFacts = (): Promise<BackupFacts["wal"]> => withUser("", async (client) 
   return r?.on ? { failing: r.failing, lastArchived: r.last_archived, lastFailed: r.last_failed } : null;
 });
 
-async function backupFacts(path = BACKUP_LOG): Promise<BackupFacts> {
+async function backupFacts(path = backupLog()): Promise<BackupFacts> {
   const status = (file: string, job: string) => readFile(file, "utf8").then((t) => readNightly(job, t), () => null);
   const [wal, walPush, uploads, n8n] = await Promise.all([
     walFacts(),

@@ -565,6 +565,11 @@ install -d -o fidato -g fidato -m 700 "$UPLOAD_DIR"
 if ! grep -q '^UPLOAD_DIR=' "$ENV_FILE"; then
   echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$ENV_FILE"
 fi
+# Whose nightly backup Connection health and System health read: a customer's
+# own log, not Fidato's (D27-379; deploy/customer.sh names it).
+if ! grep -q '^BACKUP_LOG=' "$ENV_FILE"; then
+  echo "BACKUP_LOG=$BACKUP_LOG" >> "$ENV_FILE"
+fi
 echo "  $UPLOAD_DIR"
 
 chown fidato:fidato "$ENV_FILE" "$DB_PASS_FILE" 2>/dev/null || true

@@ -14,4 +14,4 @@ export const mounts: readonly Mount[] = [
 
 export { jobs } from "./alerts.ts";
 /* The backup status line's one reader, also read by System health (admin). */
-export { readBackupStatus, BACKUP_LOG } from "./health.ts";
+export { readBackupStatus, backupLog } from "./health.ts";

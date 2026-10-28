@@ -5,7 +5,7 @@ import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
 import { READ_RULES, whoMay } from "../../../src/roleGate.ts";
 import {
-  judge, readBackupStatus, readWalPush, readNightly, firebaseFact, hotelFacts, type HotelFacts, type ServerFacts,
+  judge, readBackupStatus, readWalPush, readNightly, firebaseFact, hotelFacts, backupLog, type HotelFacts, type ServerFacts,
 } from "../../../src/modules/connections-health/health.ts";
 import { runOnce } from "../../../src/modules/connections-health/alerts.ts";
 
@@ -153,6 +153,17 @@ describe("backups", () => {
   });
   it("is grey where there is no backup log at all", () => {
     expect(row("backups").status).toBe("grey");
+  });
+  it("reads its own copy's backup log: a customer's, not Fidato's (D27-379)", () => {
+    const was = process.env["BACKUP_LOG"];
+    try {
+      delete process.env["BACKUP_LOG"];
+      expect(backupLog()).toBe("/var/log/fidato-backup.log");
+      process.env["BACKUP_LOG"] = "/var/log/fidato-backup-abc.log";
+      expect(backupLog()).toBe("/var/log/fidato-backup-abc.log");
+    } finally {
+      if (was === undefined) delete process.env["BACKUP_LOG"]; else process.env["BACKUP_LOG"] = was;
+    }
   });
   it("is amber while the log has no status line yet", () => {
     expect(row("backups", facts(), server({ backup: readBackupStatus("old output only") })).status).toBe("amber");
