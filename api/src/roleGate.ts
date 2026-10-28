@@ -701,6 +701,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
   [`POST ${H}/bar/purchases/:id/photo`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
   [`POST ${H}/purchasing/dues/:id/payment`]: own("purchasing/supplierDues.ts: DUES_ROLES"),  // D27-370
+  [`POST ${H}/purchasing/dues/credit-notes`]: own("purchasing/supplierDues.ts: DUES_ROLES"),  // D27-372
+  [`POST ${H}/purchasing/dues/reverse`]: own("purchasing/supplierDues.ts: DUES_ROLES"),  // D27-372
 
   /* laundry */
   [`POST ${H}/laundry/price-list`]: LAUNDRY_PRICE_ADD,
@@ -934,6 +936,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/stock-cover`]: STORE_REPORTS,
   [`GET ${H}/reports/supplier-spend`]: STORE_REPORTS,
   [`GET ${H}/reports/supplier-dues`]: SUPPLIER_DUES,  // D27-370
+  [`GET ${H}/reports/tds`]: SUPPLIER_DUES,  // D27-372
+  [`GET ${H}/reports/supplier-statement`]: SUPPLIER_DUES,  // D27-372
   [`GET ${H}/reports/equipment`]: STORE_REPORTS,
   [`GET ${H}/reports/gst-sales`]: REPORTS,
   [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,

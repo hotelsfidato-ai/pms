@@ -23,6 +23,7 @@ let gm = "";
 let waiter = "";
 let keeper = "";
 let barman = "";
+let amit = "";
 
 async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -53,6 +54,11 @@ beforeAll(async () => {
   waiter = await person("barbill-waiter@fidato.in", "BARBILL Waiter", "pos");
   keeper = await person("barbill-keeper@fidato.in", "BARBILL Keeper", "stores");
   barman = await person("barbill-bar@fidato.in", "BARBILL Bar Manager", "bar");
+  /* The bill's supplier is picked from the list (D27-372). */
+  const [s] = await sql<{ id: string }>(
+    `insert into suppliers (hotel_id, name) select id, $1 from hotels where code = '5EL'
+     on conflict (hotel_id, name) do update set is_active = true returning id::text`, [`${TAG} Amit Traders`]);
+  amit = s!.id;
 });
 
 afterAll(async () => {
@@ -64,6 +70,7 @@ afterAll(async () => {
     await db.query("delete from bar_purchase_lines where purchase_id in (select id from bar_purchases where supplier like $1)", [`${TAG}%`]);
     await db.query("delete from stock_movements where bar_purchase_id in (select id from bar_purchases where supplier like $1)", [`${TAG}%`]);
     await db.query("delete from bar_purchases where supplier like $1", [`${TAG}%`]);
+    await db.query("delete from suppliers where name like $1", [`${TAG}%`]);
     await db.query("delete from stock_items where name like $1", [`${TAG}%`]);
     await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, keeper, barman]]);
   } finally {
@@ -79,7 +86,7 @@ const nip = (extra: object) => ({ perCase: 48, cases: 0, bottles: 0, ratePerCase
 describe("a bar bill recorded as printed (D27-354)", () => {
   it("a waiter is refused, by the server", async () => {
     const res = await call(waiter, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-1", billDate: today, total: 8000,
+      supplierId: amit, billNo: "A-1", billDate: today, total: 8000,
       lines: [nip({ newDrink: { name: `${TAG} Romanov Vodka 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 })],
     });
     expect(res.status).toBe(403);
@@ -90,7 +97,7 @@ describe("a bar bill recorded as printed (D27-354)", () => {
   it("the Inventory Manager and the bar manager record bills: cases and loose bottles in, at the line's amount over its bottles", async () => {
     /* 1 case of 48 at Rs 8,000; printed 8,000.40 - inside the bill's round-off. */
     const first = await call(keeper, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-2", billDate: today, total: 8000.4,
+      supplierId: amit, billNo: "A-2", billDate: today, total: 8000.4,
       lines: [nip({ newDrink: { name: `${TAG} Romanov Vodka 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 })],
     });
     expect(first.status, await first.clone().text()).toBe(200);
@@ -103,7 +110,7 @@ describe("a bar bill recorded as printed (D27-354)", () => {
     /* 24 loose NIPs at Rs 8,000 a case of 48 = 4,000; a case of 12 water at
        180; handling 100, TCS 40.40: 4,320.40. */
     const second = await call(barman, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-3", billDate: today, tpNo: "TP 4471",
+      supplierId: amit, billNo: "A-3", billDate: today, tpNo: "TP 4471",
       handling: 100, tcs: 40.4, total: 4320.4,
       lines: [nip({ itemId: vodka.id, bottles: 24 }),
               { newDrink: { name: `${TAG} Bisleri 1 L`, unit: "bottle", sizeMl: null },
@@ -135,22 +142,36 @@ describe("a bar bill recorded as printed (D27-354)", () => {
   it("a total the lines do not make, the same bill twice, a known drink, a future date and no rate are refused", async () => {
     const drink = nip({ newDrink: { name: `${TAG} Old Monk 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 });
     const off = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-8", billDate: today, total: 9000, lines: [drink] });
+      supplierId: amit, billNo: "A-8", billDate: today, total: 9000, lines: [drink] });
     expect(await reason(off)).toBe(
       "The lines, handling and TCS make ₹8,000.00; the bill says ₹9,000.00. Check the cases, the rates and the charges against the bill.");
     const again = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "a-2", billDate: today, total: 8000, lines: [drink] });
+      supplierId: amit, billNo: "a-2", billDate: today, total: 8000, lines: [drink] });
     expect(await reason(again)).toBe(`Bill a-2 from ${TAG} Amit Traders is already recorded.`);
     const known = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-9", billDate: today, total: 8000,
+      supplierId: amit, billNo: "A-9", billDate: today, total: 8000,
       lines: [{ ...drink, newDrink: { name: `${TAG} romanov vodka 180 ml`, unit: "bottle", sizeMl: 180 } }] });
     expect(await reason(known)).toBe(`"${TAG} Romanov Vodka 180 ml" is already on the store's list. Pick it instead.`);
     const later = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-10", billDate: "2999-01-01", total: 8000, lines: [drink] });
+      supplierId: amit, billNo: "A-10", billDate: "2999-01-01", total: 8000, lines: [drink] });
     expect(await reason(later)).toBe("A bill is not dated in the future.");
     const free = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Amit Traders`, billNo: "A-11", billDate: today, total: 8000, lines: [{ ...drink, ratePerCase: undefined }] });
+      supplierId: amit, billNo: "A-11", billDate: today, total: 8000, lines: [{ ...drink, ratePerCase: undefined }] });
     expect(await reason(free)).toBe("Type each line's rate per case as on the bill: zero or more.");
+    /* The supplier is picked from the list, not typed (D27-372); another hotel's is not on it. */
+    const typed = await call(gm, "POST", "/bar/purchases", {
+      supplier: `${TAG} Amit Traderss`, billNo: "A-12", billDate: today, total: 8000, lines: [drink] });
+    expect(await reason(typed)).toBe("Who is the bill from? Pick the supplier.");
+    const [elsewhere] = await sql<{ id: string }>(
+      `insert into suppliers (hotel_id, name) select id, $1 from hotels where code <> '5EL' limit 1
+       on conflict (hotel_id, name) do update set is_active = true returning id::text`, [`${TAG} Elsewhere`]);
+    const foreign = await call(gm, "POST", "/bar/purchases", {
+      supplierId: elsewhere!.id, billNo: "A-13", billDate: today, total: 8000, lines: [drink] });
+    expect(await reason(foreign)).toBe(
+      "That supplier is not on this hotel's list. Pick one, or add it in Places and suppliers.");
+    const offered = (await (await call(barman, "GET", "/bar/drinks")).json()) as { suppliers: { id: string; name: string }[] };
+    expect(offered.suppliers).toContainEqual({ id: amit, name: `${TAG} Amit Traders` });
+    expect(offered.suppliers.some((s) => s.id === elsewhere!.id)).toBe(false);
     const [n] = await sql<{ n: number }>(
       "select count(*)::int as n from bar_purchases where supplier like $1", [`${TAG}%`]);
     expect(n!.n, "nothing more was recorded").toBe(2);

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import { BUILT_KEYS, buildReport, switchedOff } from "./build.ts";
+import { BUILT_KEYS, buildReport, paramsProblem, switchedOff } from "./build.ts";
 import { BAR_STOCK_OFF } from "../stores/index.ts";
 import { propertyFor, isoDateParam } from "./figures.ts";
 import type { ReportParams } from "./document.ts";
@@ -32,6 +32,8 @@ for (const key of BUILT_KEYS) {
     }
     const from = q["from"] === undefined ? undefined : isoDateParam(q["from"]);
     if (from === null) return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
+    const missing = paramsProblem(key, q["supplier"]);
+    if (missing) return c.json({ error: missing }, 400);
 
     const doc = await withSession(c.get("subject"), async (client) => {
       const property = await propertyFor(client, c.req.param("code"));
@@ -42,6 +44,7 @@ for (const key of BUILT_KEYS) {
         ...(q["year"] ? { year: Number(q["year"]) } : {}),
         ...(from ? { from } : {}),
         ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
+        ...(q["supplier"] ? { supplier: q["supplier"] } : {}),
       };
       if (await switchedOff(client, property.id, key)) return "off" as const;
       return buildReport(client, property.id, key, params);

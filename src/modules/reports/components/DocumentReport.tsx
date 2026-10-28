@@ -30,6 +30,7 @@ function fileQuery(query: ReportQuery): string {
   if (query.year) params.set("year", String(query.year));
   if (query.from) params.set("from", query.from);
   if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
+  if (query.supplier) params.set("supplier", query.supplier);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }

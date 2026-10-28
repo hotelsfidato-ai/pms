@@ -92,9 +92,13 @@ beforeAll(async () => {
     `insert into pos_menu_items (hotel_id, category_id, name, price) values ($1, $2, $3, 270) returning id::text`,
     [hotel, cat!.id, `${TAG} Lager`]))[0]!.id;
 
-  /* The drinks, into the bar's store through a bar bill, as printed. */
+  /* The drinks, into the bar's store through a bar bill, as printed; its
+     supplier picked from the list (D27-372). */
+  const [wines] = await sql<{ id: string }>(
+    `insert into suppliers (hotel_id, name) values ($1, $2)
+     on conflict (hotel_id, name) do update set is_active = true returning id::text`, [hotel, `${TAG} Wines`]);
   const bill = await call(gm, "POST", "/bar/purchases", {
-    supplier: `${TAG} Wines`, billNo: "S-1", billDate: businessDate, total: 6560,
+    supplierId: wines!.id, billNo: "S-1", billDate: businessDate, total: 6560,
     lines: [
       { newDrink: { name: `${TAG} Blue 750 ml`, unit: "bottle", sizeMl: 750 }, perCase: 12, cases: 0, bottles: 6, ratePerCase: 6240 },
       { newDrink: { name: `${TAG} Blue 180 ml`, unit: "bottle", sizeMl: 180 }, perCase: 48, cases: 0, bottles: 4, ratePerCase: 6720 },
@@ -120,6 +124,7 @@ afterAll(async () => {
     await db.query("delete from pos_order_lines where order_id in (select id from pos_orders where table_ref like $1)", [`${TAG}%`]);
     await db.query("delete from pos_orders where table_ref like $1", [`${TAG}%`]);
     await db.query("delete from bar_purchases where supplier like $1", [`${TAG}%`]);
+    await db.query("delete from suppliers where name like $1", [`${TAG}%`]);
     await db.query("delete from stock_items where name like $1", [`${TAG}%`]);
     await db.query("delete from pos_menu_items where name like $1", [`${TAG}%`]);
     await db.query("delete from pos_menu_categories where name like $1", [`${TAG}%`]);

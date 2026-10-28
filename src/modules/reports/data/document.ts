@@ -69,6 +69,8 @@ export type ReportKey =
   | "flr-daily" | "flr-monthly"
   /* What we owe suppliers, and what was paid (D27-370). */
   | "supplier-dues"
+  /* TDS deducted from suppliers, and one supplier's statement (D27-372). */
+  | "tds" | "supplier-statement"
   /* The petty cash book (D27-370). */
   | "petty-cash";
 
@@ -93,6 +95,8 @@ export interface ReportQuery {
   year?: number;
   from?: string;
   ignoreZero?: boolean;
+  /** Supplier statement: the supplier's id (D27-372). */
+  supplier?: string;
 }
 
 /**
@@ -111,6 +115,7 @@ export async function getReport(
   if (query.year) params.set("year", String(query.year));
   if (query.from) params.set("from", query.from);
   if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
+  if (query.supplier) params.set("supplier", query.supplier);
   const qs = params.toString();
   try {
     return await api<ReportDoc>(

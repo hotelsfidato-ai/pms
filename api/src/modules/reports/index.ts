@@ -17,7 +17,7 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", dueOut],
 ];
 
-export { buildReport, BUILT_KEYS, switchedOff } from "./build.ts";
+export { buildReport, BUILT_KEYS, paramsProblem, switchedOff } from "./build.ts";
 export { REPORT_KEYS, STORE_REPORT_KEYS } from "./document.ts";
 /* ⚠ ADDED FOR PURCHASING (D18-3), by that chat — the master reviews it at
    merge. The three builders that exist so "no report spells a row by hand":

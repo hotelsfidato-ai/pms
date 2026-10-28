@@ -14,7 +14,7 @@ import {
 import { equipmentReport } from "./builders/equipment.ts";
 import { barStockReport } from "./builders/barStock.ts";
 import { flrDaily, flrMonthly } from "./builders/flr.ts";
-import { supplierDuesReport } from "./builders/supplierDues.ts";
+import { supplierDuesReport, tdsReport, supplierStatement } from "./builders/supplierDues.ts";
 import { voidsReport } from "./builders/voids.ts";
 import { pettyCashReport } from "./builders/pettyCash.ts";
 
@@ -64,6 +64,9 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
   /* Owed on the date, and paid in the window to it (D27-370). */
   "supplier-dues": (c, h, p) => supplierDuesReport(c, h, from(p), p.asOn),
+  /* TDS by section and supplier, and one supplier's ledger (D27-372). */
+  tds: (c, h, p) => tdsReport(c, h, from(p), p.asOn),
+  "supplier-statement": (c, h, p) => supplierStatement(c, h, p.supplier!, from(p), p.asOn),
   /* The petty cash book (D27-370): the 1st of the month to the date. */
   "petty-cash": (c, h, p) => pettyCashReport(c, h, from(p), p.asOn),
 };
@@ -76,6 +79,12 @@ export async function switchedOff(client: Client, hotelId: string, key: string):
   const { rows } = await client.query<{ on: boolean }>("select app.module_enabled($1, 'bar_stock') as on", [hotelId]);
   return !rows[0]!.on;
 }
+
+/** What a report needs that it was not given, in a sentence, or null. Asked by
+    the screen's route and the file route alike (D27-372: a statement is of one supplier). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const paramsProblem = (key: string, supplier: string | undefined): string | null =>
+  key === "supplier-statement" && !UUID.test(supplier ?? "") ? "Pick a supplier for the statement." : null;
 
 /** The reports built so far, each with its route (documents.ts). */
 export const BUILT_KEYS = Object.keys(BUILDERS) as ReportKey[];

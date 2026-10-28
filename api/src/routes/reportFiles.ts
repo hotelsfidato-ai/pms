@@ -3,7 +3,7 @@ import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import {
-  buildReport, BUILT_KEYS, REPORT_KEYS, STORE_REPORT_KEYS, switchedOff, type ReportParams,
+  buildReport, BUILT_KEYS, REPORT_KEYS, STORE_REPORT_KEYS, paramsProblem, switchedOff, type ReportParams,
 } from "../modules/reports/index.ts";
 import { BAR_STOCK_OFF } from "../modules/stores/index.ts";
 import { renderPdf, renderXlsx, renderCsv } from "../reportRender.ts";
@@ -40,7 +40,7 @@ const MONEY_REPORTS: readonly string[] = ["city-ledger", "petty-cash"];
 /* What we owe suppliers (the owner's D27-370): the accountant, the GM, the
    owner and an administrator - who hold `approve` on `invoice`, as the
    screen's own read asks (roleGate SUPPLIER_DUES). */
-const DUES_REPORTS: readonly string[] = ["supplier-dues"];
+const DUES_REPORTS: readonly string[] = ["supplier-dues", "tds", "supplier-statement"];
 
 /* The Store and equipment reports (phase 3A; the owner's D27-240): read by
    their own readers (roleGate STORE_REPORTS), downloaded by those of them
@@ -86,6 +86,8 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
   if (q["from"] !== undefined && !ISO_DATE.test(q["from"])) {
     return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
   }
+  const missing = paramsProblem(key, q["supplier"]);
+  if (missing) return c.json({ error: missing }, 400);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const { rows: hotels } = await client.query<{ id: string; timezone: string }>(
@@ -129,6 +131,7 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
       ...(q["year"] ? { year: Number(q["year"]) } : {}),
       ...(q["from"] ? { from: q["from"] } : {}),
       ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
+      ...(q["supplier"] ? { supplier: q["supplier"] } : {}),
     };
     if (await switchedOff(client, hotel.id, key)) return { status: 403 as const, error: BAR_STOCK_OFF };
     /* A builder that fails is a fault, not "no such report": it is left to

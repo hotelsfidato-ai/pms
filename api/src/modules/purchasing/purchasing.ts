@@ -274,13 +274,15 @@ purchasing.get("/:code/purchasing/requests/:id", async (c) => {
         where pl.request_id = $1
         order by pl.line_no`, [c.req.param("id")]);
 
-    /* On credit (D27-370): the supplier's bill, and when it was paid. */
+    /* On credit (D27-370): the supplier's bill standing (a reversed one is
+       followed by its correction, D27-372), and what is left on it. */
     const { rows: credit } = await client.query<{
-      billNo: string; billDate: string; amount: string; dueOn: string; paidOn: string | null;
+      billNo: string; billDate: string; amount: string; dueOn: string; owed: string;
     }>(
       `select bill_no as "billNo", to_char(bill_date, 'YYYY-MM-DD') as "billDate", amount::text as amount,
-              to_char(due_on, 'YYYY-MM-DD') as "dueOn", to_char(paid_on, 'YYYY-MM-DD') as "paidOn"
-         from supplier_bills where purchase_request_id = $1`, [c.req.param("id")]);
+              to_char(due_on, 'YYYY-MM-DD') as "dueOn", app.supplier_bill_owed(b.id)::text as owed
+         from supplier_bills b where purchase_request_id = $1
+          and not exists (select 1 from supplier_reversals x where x.bill_id = b.id)`, [c.req.param("id")]);
 
     return {
       request: asRequest(rows[0]),
@@ -655,9 +657,9 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
     if (!hotelId) return null;
 
     const { rows } = await client.query<{
-      status: string; store_id: string; reference: string; supplier: string | null;
+      status: string; store_id: string; reference: string; supplier: string | null; supplier_id: string | null;
     }>(
-      `select r.status, r.store_id::text, r.reference, sup.name as supplier
+      `select r.status, r.store_id::text, r.reference, sup.name as supplier, r.supplier_id::text
          from purchase_requests r
          left join suppliers sup on sup.id = r.supplier_id
         where r.hotel_id = $1 and r.id = $2`,
@@ -763,7 +765,7 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
     /* On credit: the supplier's bill goes on the Supplier dues (D27-370). */
     if (credit) {
       await recordCredit(client, {
-        hotelId, staffId: session.staffId, supplier: order.supplier!,
+        hotelId, staffId: session.staffId, supplier: order.supplier!, supplierId: order.supplier_id,
         credit: credit as Required<CreditIn>, purchaseRequestId: c.req.param("id"),
       });
     }

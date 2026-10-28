@@ -331,22 +331,31 @@ end $$;
 
 
 -- =============================================================================
--- SUPPLIER DUES (the owner's D27-370, 27 October; migration 246)
+-- SUPPLIER DUES (the owner's D27-370, 27 October; migration 246; D27-372, 249)
 -- =============================================================================
 -- A bill on credit comes from one delivery or one bar bill; it is due on its
 -- own date or later; its amount is more than zero; it is on the dues once. A
--- payment is all of it or none, by cash, cheque, bank or UPI, and once: a paid
--- bill is not paid again. The app writes a bill and its payment, never changes
--- the bill's facts and never deletes one.
+-- payment (249) is part of what is left, by cash, cheque, bank or UPI, a
+-- non-cash one with its reference, any TDS whole; payments and credit notes
+-- never settle more than the bill; a reversal undoes one thing, once, with a
+-- reason; a bill is reversed only after its payments, and corrected once. The
+-- app writes these rows and reads them, never changes or deletes one.
 -- =============================================================================
 do $$
-declare h uuid; v_staff uuid; v_bp uuid; v_bill uuid;
+declare h uuid; v_staff uuid; v_bp uuid; v_bill uuid; v_pay uuid; v_sup uuid;
   ins constant text := $q$insert into supplier_bills
       (hotel_id, purchase_request_id, bar_purchase_id, supplier, bill_no, bill_date, amount, due_on, recorded_by)
     values (%L, null, %L, 'Shah Wines', 'W-9', current_date, %s, %s, %L)$q$;
+  pay constant text := $q$insert into supplier_payments
+      (hotel_id, bill_id, paid_on, method, reference, amount, handed_over_by, tds_section, tds_rate, tds_amount, recorded_by)
+    values (%L, %L, current_date, %L, %s, %s, 'Ravi', %s, %s, %s, %L)$q$;
+  note constant text := $q$insert into supplier_credit_notes
+      (hotel_id, supplier_id, bill_id, issued_by, note_no, note_date, amount, reason, recorded_by)
+    values (%L, %L, %L, 'supplier', 'CN-1', current_date, %s, 'Two cases broken', %L)$q$;
 begin
   h := app.provision_property_unchecked('PSD', 'Supplier Dues Test', 'Nowhere');
   select id into v_staff from staff where email = 'owner@fidato.in';
+  insert into suppliers (hotel_id, name) values (h, 'Shah Wines') returning id into v_sup;
   insert into bar_purchases (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by, bill_total)
   values (h, 'Shah Wines', 'W-9', current_date, current_date, v_staff, 5000) returning id into v_bp;
 
@@ -361,18 +370,78 @@ begin
   perform test.raises('supplier dues', 'a bar bill is on the dues once',
     format(ins, h, v_bp, 5000, 'current_date + 30', v_staff), '23505');
 
-  perform test.raises('supplier dues', 'a payment is all of it or none',
-    format($q$update supplier_bills set paid_on = current_date where id = %L$q$, v_bill), '23514');
+  -- ── 249 (D27-372): part payments, TDS, credit notes, reversals ──────────────
+  perform test.raises('supplier dues', 'a payment is more than zero',
+    format(pay, h, v_bill, 'cash', 'null', 0, 'null', 'null', 'null', v_staff), '23514');
   perform test.raises('supplier dues', 'paid by cash, cheque, bank or UPI',
-    format($q$update supplier_bills set paid_on = current_date, paid_method = 'card', paid_by = %L, paid_at = now()
-              where id = %L$q$, v_staff, v_bill), '23514');
-  update supplier_bills set paid_on = current_date, paid_method = 'upi', paid_reference = 'UTR 1',
-         paid_by = v_staff, paid_at = now() where id = v_bill;
-  perform test.raises('supplier dues', 'a paid bill is not paid again',
-    format($q$update supplier_bills set paid_method = 'cash', paid_reference = null where id = %L$q$, v_bill), '23514');
+    format(pay, h, v_bill, 'card', '''X''', 100, 'null', 'null', 'null', v_staff), '23514');
+  perform test.raises('supplier dues', 'a cheque, bank or UPI payment carries its reference',
+    format(pay, h, v_bill, 'upi', 'null', 100, 'null', 'null', 'null', v_staff), '23514');
+  perform test.raises('supplier dues', 'TDS is section, rate and amount, or none',
+    format(pay, h, v_bill, 'cash', 'null', 100, '''194C''', 'null', 10, v_staff), '23514');
+  perform test.raises('supplier dues', 'TDS is under 194C, 194Q, 194J or 194I',
+    format(pay, h, v_bill, 'cash', 'null', 100, '''194A''', 2, 2, v_staff), '23514');
+  perform test.raises('supplier dues', 'a payment and its TDS never settle more than the bill',
+    format(pay, h, v_bill, 'bank', '''NEFT 1''', 4950, '''194C''', 2, 100, v_staff), '23514');
 
-  perform test.ok('supplier dues', 'the app records a payment',
-    has_column_privilege('pms_app', 'supplier_bills', 'paid_on', 'UPDATE'));
+  execute format(pay, h, v_bill, 'bank', '''NEFT 1''', 1960, '''194C''', 2, 40, v_staff);
+  select id into v_pay from supplier_payments where bill_id = v_bill;
+  perform test.ok('supplier dues', 'a part payment and its TDS leave the rest owed',
+    app.supplier_bill_owed(v_bill) = 3000.00, app.supplier_bill_owed(v_bill)::text);
+  perform test.ok('supplier dues', 'owed on a day before the payment: all of it',
+    app.supplier_bill_owed(v_bill, current_date - 1) = 5000.00, app.supplier_bill_owed(v_bill, current_date - 1)::text);
+
+  perform test.raises('supplier dues', 'a credit note never takes more than is left on its bill',
+    format(note, h, v_sup, v_bill, 3000.01, v_staff), '23514');
+  execute format(note, h, v_sup, v_bill, 1000, v_staff);
+  perform test.ok('supplier dues', 'a credit note on the bill lowers what is owed',
+    app.supplier_bill_owed(v_bill) = 2000.00, app.supplier_bill_owed(v_bill)::text);
+
+  perform test.raises('supplier dues', 'a bill is reversed only once its payments are',
+    format($q$insert into supplier_reversals (hotel_id, bill_id, reason, reversed_on, reversed_by)
+              values (%L, %L, 'wrong', current_date, %L)$q$, h, v_bill, v_staff), '23514');
+  perform test.raises('supplier dues', 'a reversal names exactly one thing',
+    format($q$insert into supplier_reversals (hotel_id, bill_id, payment_id, reason, reversed_on, reversed_by)
+              values (%L, %L, %L, 'wrong', current_date, %L)$q$, h, v_bill, v_pay, v_staff), '23514');
+  perform test.raises('supplier dues', 'a reversal has its reason',
+    format($q$insert into supplier_reversals (hotel_id, payment_id, reason, reversed_on, reversed_by)
+              values (%L, %L, ' ', current_date, %L)$q$, h, v_pay, v_staff), '23514');
+  insert into supplier_reversals (hotel_id, payment_id, reason, reversed_on, reversed_by)
+  values (h, v_pay, 'Cheque bounced', current_date, v_staff);
+  perform test.ok('supplier dues', 'a payment reversed counts for nothing',
+    app.supplier_bill_owed(v_bill) = 4000.00, app.supplier_bill_owed(v_bill)::text);
+  perform test.raises('supplier dues', 'a payment is reversed once',
+    format($q$insert into supplier_reversals (hotel_id, payment_id, reason, reversed_on, reversed_by)
+              values (%L, %L, 'again', current_date, %L)$q$, h, v_pay, v_staff), '23505');
+
+  insert into supplier_reversals (hotel_id, credit_note_id, reason, reversed_on, reversed_by)
+  select h, id, 'Typed against the wrong bill', current_date, v_staff from supplier_credit_notes where bill_id = v_bill;
+  insert into supplier_reversals (hotel_id, bill_id, reason, reversed_on, reversed_by)
+  values (h, v_bill, 'Wrong amount', current_date, v_staff);
+  perform test.ok('supplier dues', 'a reversed bill owes nothing',
+    app.supplier_bill_owed(v_bill) = 0, app.supplier_bill_owed(v_bill)::text);
+  perform test.raises('supplier dues', 'nothing is paid on a reversed bill',
+    format(pay, h, v_bill, 'cash', 'null', 10, 'null', 'null', 'null', v_staff), '23514');
+  execute format($q$insert into supplier_bills (hotel_id, bar_purchase_id, supplier, bill_no, bill_date, amount, due_on,
+                      recorded_by, replaces_id) values (%L, %L, 'Shah Wines', 'W-9', current_date, 4500, current_date + 30, %L, %L)$q$,
+                 h, v_bp, v_staff, v_bill);
+  perform test.raises('supplier dues', 'a reversed bill is corrected once',
+    format($q$insert into supplier_bills (hotel_id, bar_purchase_id, supplier, bill_no, bill_date, amount, due_on,
+                recorded_by, replaces_id) values (%L, %L, 'Shah Wines', 'W-9', current_date, 4500, current_date + 30, %L, %L)$q$,
+           h, v_bp, v_staff, v_bill), '23505');
+
+  perform test.ok('supplier dues', 'the app no longer writes 246''s payment columns',
+    not has_column_privilege('pms_app', 'supplier_bills', 'paid_on', 'UPDATE'));
+  perform test.ok('supplier dues', 'payments, credit notes and reversals: written and read, never changed or deleted',
+    (select bool_and(has_table_privilege('pms_app', t, 'INSERT') and has_table_privilege('pms_app', t, 'SELECT')
+                     and not has_table_privilege('pms_app', t, 'UPDATE') and not has_table_privilege('pms_app', t, 'DELETE'))
+       from unnest(array['supplier_payments', 'supplier_credit_notes', 'supplier_reversals']) t));
+  perform test.ok('supplier dues', 'their rows are kept to their own hotel',
+    (select bool_and(relrowsecurity and relforcerowsecurity) from pg_class
+      where relname in ('supplier_payments', 'supplier_credit_notes', 'supplier_reversals')));
+  perform test.ok('supplier dues', 'a test hotel counts them as trading',
+    (select count(*) = 3 from app.test_hotel_classes() c
+      where c.table_name in ('supplier_payments', 'supplier_credit_notes', 'supplier_reversals') and c.class = 'trading'));
   perform test.ok('supplier dues', 'the app cannot change a bill''s amount',
     not has_column_privilege('pms_app', 'supplier_bills', 'amount', 'UPDATE'));
   perform test.ok('supplier dues', 'the app cannot delete a bill',
