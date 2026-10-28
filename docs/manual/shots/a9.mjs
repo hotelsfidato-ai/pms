@@ -771,7 +771,7 @@ export const SHOTS = [
   {
     id: "A9-47", title: "Recording a payment", as: "Accountant",
     steps: [
-      { click: "text:Record payment", nth: 0 }, { waitFor: "text:Mark paid" },
+      { click: "text:Record payment", nth: 0 }, { waitFor: "text:Handed over by" },
       choose("How", "Cheque"),
       { eval: "(() => { const set = (t, v) => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith(t)); const i = document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, v); i.dispatchEvent(new Event('input', { bubbles: true })); }; set('Reference', 'CHQ 004512'); })()" },
       { wait: 400 },
@@ -779,8 +779,9 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:How", side: "top" },
       { n: 2, at: "text:Reference", side: "top" },
-      { n: 3, at: "text:Paid on", side: "top" },
-      { n: 4, at: MAIN, side: "top" },
+      { n: 3, at: "text:Amount paid", side: "top" },
+      { n: 4, at: "text:TDS deducted", side: "left" },
+      { n: 5, at: MAIN, side: "top" },
     ],
   },
   /* Not paid in the pictures: the bill stays on the dues for the report (A11-25). */

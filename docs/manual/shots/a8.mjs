@@ -562,7 +562,7 @@ export const SHOTS = [
     id: "A8-48", title: "Join another table: said before it is done", as: "General Manager",
     steps: [
       { click: "text:Join another table" }, { waitFor: "text:its own bill closes as joined", ms: 10000 },
-      { click: "text:AC5 ·", nth: 0 }, { waitFor: "text:This cannot be undone", ms: 10000 }, { wait: 400 },
+      { click: "text:AC5 (A/C)", nth: 0 }, { waitFor: "text:This cannot be undone", ms: 10000 }, { wait: 400 },
     ],
     marks: [
       { n: 1, at: "text:This cannot be undone", side: "left" },
