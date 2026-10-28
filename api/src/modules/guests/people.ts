@@ -76,11 +76,24 @@ people.get("/:code/guests/returning", async (c) => {
     const { rows } = await client.query<{
       guest_id: string; full_name: string; visits: number;
       is_blacklisted: boolean; blacklist_reason: string | null; suggested: boolean;
+      co_name: string | null; co_gstin: string | null; co_address: string | null;
     }>(
-      `select guest_id::text, full_name, visits, is_blacklisted, blacklist_reason, suggested
-         from app.guest_suggestions($1, $2)
-        where suggested or is_blacklisted
-        order by suggested desc, visits desc, full_name, guest_id
+      /* THEIR LAST COMPANY (D27-372): on a suggestion only, the company of
+         their most recent booking that had one (247), for the clerk to
+         confirm on New booking - never filled by itself. Row security keeps
+         it to the hotels this clerk works at. */
+      `select s.guest_id::text, s.full_name, s.visits, s.is_blacklisted, s.blacklist_reason, s.suggested,
+              lc.guest_company_name as co_name, lc.guest_company_gstin as co_gstin,
+              lc.guest_company_address as co_address
+         from app.guest_suggestions($1, $2) s
+         left join lateral (
+           select r.guest_company_name, r.guest_company_gstin, r.guest_company_address
+             from reservations r
+            where s.suggested and r.guest_id = s.guest_id
+              and (r.guest_company_name is not null or r.guest_company_gstin is not null)
+            order by r.created_at desc limit 1) lc on true
+        where s.suggested or s.is_blacklisted
+        order by s.suggested desc, s.visits desc, s.full_name, s.guest_id
         limit 5`,
       [phone, email]);
 
@@ -91,6 +104,8 @@ people.get("/:code/guests/returning", async (c) => {
           /* Only a suggestion carries the id a booking may use - the server
              checks it again when the booking arrives. */
           ...(r.suggested ? { guestId: r.guest_id, visits: r.visits } : {}),
+          ...(r.co_name || r.co_gstin
+            ? { lastCompany: { name: r.co_name, gstin: r.co_gstin, address: r.co_address } } : {}),
           name: r.full_name,
           suggested: r.suggested,
           blacklisted: r.is_blacklisted,

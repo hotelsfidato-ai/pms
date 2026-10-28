@@ -88,4 +88,34 @@ describe("Edit guest", () => {
         body: { name: "Acme", gstin: "27AAPFU0939F1ZV", address: "4 Park Street, Pune" } },
     ]));
   });
+
+  it("says Salutation and Full name, as New booking does (D27-372)", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EditGuestFlow hotelId="5EL" guestId="g-1" open onOpenChange={() => {}} />
+      </QueryClientProvider>,
+    );
+    await screen.findByDisplayValue("Asha Kulkarny");
+    expect(screen.getByLabelText("Salutation", { selector: "select" })).toBeTruthy();
+    expect((screen.getByLabelText("Full name") as HTMLInputElement).value).toBe("Asha Kulkarny");
+    expect(screen.queryByLabelText("Title")).toBeNull();
+    expect(screen.queryByLabelText("Name")).toBeNull();
+  });
+
+  it("hides the stay's company when Settings' Company section is off (D27-372)", async () => {
+    const base = vi.mocked(apiModule.api).getMockImplementation()!;
+    vi.mocked(apiModule.api).mockImplementation(async (path: string, init?: RequestInit) =>
+      path.endsWith("/modules")
+        ? { modules: [{ module: "booking_company", enabled: false }] } as never
+        : base(path, init));
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EditGuestFlow hotelId="5EL" guestId="g-1" open onOpenChange={() => {}}
+          stay={{ id: "s-1", company: { name: "Acme", gstin: null, address: null } }} />
+      </QueryClientProvider>,
+    );
+    await screen.findByDisplayValue("Asha Kulkarny");
+    await waitFor(() => expect(document.querySelector("[data-stay-company]")).toBeNull());
+    expect(screen.queryByLabelText("Company name")).toBeNull();
+  });
 });

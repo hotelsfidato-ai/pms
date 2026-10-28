@@ -100,6 +100,9 @@ export interface GstSalesRow {
   total: number;
   /** Set on a credit note: the invoice it cancels. */
   creditsInvoice: string | null;
+  /** B2B when the invoice carries a GSTIN, else B2C; a credit note takes
+      its invoice's (D27-372). */
+  type: "B2B" | "B2C";
 }
 
 export interface GstSales {

@@ -255,6 +255,7 @@ const GST_COLUMNS = [
   { key: "issued", label: "Date" },
   { key: "recipient", label: "Recipient" },
   { key: "gstin", label: "GSTIN" },
+  { key: "type", label: "Type" },
   { key: "pos", label: "Place" },
   { key: "taxable", label: "Taxable", numeric: true },
   { key: "cgst", label: "CGST", numeric: true },
@@ -291,12 +292,12 @@ export function GstSalesPage() {
            own row with the invoice they credit, because that is how the
            return reads them — not as an adjustment to the original. */
         headers: [
-          "Invoice number", "Issued", "Recipient", "Recipient GSTIN",
+          "Invoice number", "Issued", "Recipient", "Recipient GSTIN", "Type",
           "Place of supply", "SAC", "Taxable value",
           "CGST", "SGST", "Total", "Credits invoice",
         ],
         rows: rows.map((r) => [
-          r.number, r.issued, r.recipient ?? "", r.gstin ?? "",
+          r.number, r.issued, r.recipient ?? "", r.gstin ?? "", r.type,
           r.placeOfSupply ?? "", r.sac,
           r.taxable, r.cgst, r.sgst, r.total, r.creditsInvoice ?? "",
         ]),
@@ -324,6 +325,7 @@ export function GstSalesPage() {
                         fact; a code invented here would not be. */}
                     {r.gstin ?? <span className="text-grey-500">-</span>}
                   </td>
+                  <td className="px-4 py-2 text-grey-600" data-gst-type>{r.type}</td>
                   <td className="px-4 py-2 text-grey-600">{r.placeOfSupply ?? "-"}</td>
                   <td className="px-4 py-2 text-right"><Amount value={r.taxable} format={money} /></td>
                   <td className="px-4 py-2 text-right"><Amount value={r.cgst} format={money} /></td>
@@ -333,13 +335,13 @@ export function GstSalesPage() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-center text-grey-500">
+                  <td colSpan={10} className="px-4 py-6 text-center text-grey-500">
                     No invoice was issued in this period.
                   </td>
                 </tr>
               )}
               <tr className="bg-grey-50 border-t-2 border-ink-900">
-                <td colSpan={5} className="px-4 py-2.5 font-semibold text-ink-900">
+                <td colSpan={6} className="px-4 py-2.5 font-semibold text-ink-900">
                   Total · {rows.length} document{rows.length === 1 ? "" : "s"}
                 </td>
                 <td className="px-4 py-2.5 text-right"><Amount value={t.taxable} format={money} bold /></td>

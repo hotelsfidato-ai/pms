@@ -23,7 +23,12 @@ export interface ReturningMatch {
   suggested: boolean;
   blacklisted: boolean;
   blacklistReason: string | null;
+  /** A suggestion's company from their most recent booking that had one
+      (D27-372), offered to the clerk on New booking; absent when none. */
+  lastCompany?: GuestCompany;
 }
+
+export interface GuestCompany { name: string | null; gstin: string | null; address: string | null }
 
 export async function findReturningGuest(
   hotelId: string, phone: string, email: string,

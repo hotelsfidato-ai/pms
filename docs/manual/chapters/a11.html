@@ -448,7 +448,7 @@
   <p>The tax columns carry the room rent less its discount. Everything else on those bills is in <b>Other Bills</b>, except alcohol and its VAT, which are not on this sheet.</p>
 
   <h3>GST sales register</h3>
-  <p><span class="ui">GST sales register</span> (<code>/reports/gst-sales</code>) is every invoice and credit note issued from the 1st of the month to the business date, as GSTR-1 wants them: invoice, date, recipient, GSTIN, place, taxable value, CGST, SGST, total.</p>
+  <p><span class="ui">GST sales register</span> (<code>/reports/gst-sales</code>) is every invoice and credit note issued from the 1st of the month to the business date, as GSTR-1 wants them: invoice, date, recipient, GSTIN, type (B2B or B2C), place, taxable value, CGST, SGST, total.</p>
 
   <figure class="shot" id="fig-A11-15">
     <img src="img/A11-15.png" alt="GST sales register: Print and CSV, the GSTR-1 extract line, no invoices in this period, Total 0 documents and the note">
@@ -462,7 +462,7 @@
     </ol>
   </figure>
   <p>An invoice is listed on the business day it belongs to, not the moment it was printed. A credit note says which invoice it credits.</p>
-  <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column: that is a B2B invoice in GSTR-1. A dash under GSTIN is an unregistered recipient (B2C).</p>
+  <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column, and <span class="ui">Type</span> says <b>B2B</b>. A dash under GSTIN is an unregistered recipient, and Type says <b>B2C</b>. A credit note has the type of the invoice it credits. The CSV carries the same Type column: <span class="d">D27-372</span>.</p>
 
   <h3>Form III register</h3>
   <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>

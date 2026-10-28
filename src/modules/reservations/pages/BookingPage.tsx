@@ -491,7 +491,7 @@ export default function BookingPage() {
     !guestName.trim() ? "Type the guest's name."
       /* X-2 (round D): the server's own phone and email rules, said first. */
       : (missing ? `${required[missing]![0]} is needed for a booking at this hotel.` : null)
-      ?? phoneProblem(phone) ?? emailProblem(email) ?? gstinProblem(companyGstin)
+      ?? phoneProblem(phone) ?? emailProblem(email) ?? (show.company ? gstinProblem(companyGstin) : null)
       ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
           : (dayUse && lines.some((l) => !l.comp && !(Number(l.rate) > 0)) ? "Type the day-use price." : null)
@@ -572,7 +572,7 @@ export default function BookingPage() {
       ...(specialRequest.trim() ? { specialRequest: specialRequest.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
-      ...(companyName.trim() || companyGstin.trim() || companyAddress.trim()
+      ...(show.company && (companyName.trim() || companyGstin.trim() || companyAddress.trim())
         ? { guestCompany: { name: companyName.trim(), gstin: companyGstin.trim(), address: companyAddress.trim() } }
         : {}),
       lines: lines.map((l, i) => ({
@@ -717,9 +717,14 @@ export default function BookingPage() {
                 </Field>
               </div>
               <ReturningGuest hotelId={hotelId} phone={phone} email={email}
-                chosen={returning} onChoose={setReturning} />
+                chosen={returning} onChoose={setReturning}
+                {...(show.company ? { onUseCompany: (c: { name: string | null; gstin: string | null; address: string | null }) => {
+                  setCompanyName(c.name ?? ""); setCompanyGstin(c.gstin ?? ""); setCompanyAddress(c.address ?? "");
+                } } : {})} />
               {/* D27-371: the guest's own company, all optional. With a GSTIN
-                  the tax invoice is made out to it; the guest still pays. */}
+                  the tax invoice is made out to it; the guest still pays.
+                  D27-372: the Company section switched off hides it too. */}
+              {show.company && <>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Company name">
                   {(f) => (
@@ -743,6 +748,7 @@ export default function BookingPage() {
                     onChange={(e) => setCompanyAddress(e.target.value)} className="h-12 text-base" />
                 )}
               </Field>
+              </>}
               {/* D27-176: WhatsApp stays in sight (vouchers and the check-in
                   code need it); offers and the single-lady tick fold away. */}
               <Switch checked={whatsapp} onCheckedChange={setWhatsapp}

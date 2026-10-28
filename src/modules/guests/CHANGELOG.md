@@ -8,7 +8,28 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
-## 2026-10-28 · Edit guest carries the booking's company (the owner's D27-371)
+## 2026-10-28 · Salutation and Full name; the last company; the switch (D27-372)
+
+**Shipped:** Edit guest says **Salutation** and **Full name** (was Title and
+Name), as New booking. Its "this booking's company" section is hidden when
+Settings' Company section (`booking_company`) is off (read through the core's
+`getModules`; unreadable is not off). `GET /guests/returning` (people.ts): a
+suggestion now carries `lastCompany` {name, gstin, address} - the company of
+their most recent booking that had one (name or GSTIN), read under row
+security, so only from hotels the clerk works at; absent when none, so the
+shape of a match without one is unchanged. `ReturningGuest` shows it after
+**Same person** with **Use this company** when the page passes
+`onUseCompany` (New booking only).
+
+**Proved:** API `guestCompany.test.ts` (new: offered, newest-with-a-company
+wins over a later booking without one) - failed with the `lastCompany` line
+removed, and with the order reversed; `oneGuestOneRecord.test.ts` unchanged
+and green. `editGuest.test.tsx` 4/4 (two new: the labels; the switch hides the
+section) - each failed with its change undone.
+
+**Left open:** the stay panel's read-only "Guest's company" line stays shown
+when the switch is off (it is what the invoice will name) - a question for the
+owner.
 
 **Shipped.** `EditGuestFlow` takes an optional `stay`: opened from the stay
 panel by someone who may change a booking, it shows that stay's Company name,
