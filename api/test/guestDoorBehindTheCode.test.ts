@@ -787,6 +787,13 @@ describe("the guest's bill", () => {
     const res = await asGuest(`/${link}/bill`, "GET", undefined, unlock);
     expect(res.status, await res.clone().text()).toBe(200);
     const bill = (await res.json()) as Proforma;
+    /* The ₹1 taken for this read goes back at once: the demo's receipts are
+       calibrated to the paisa (businessDate.test.ts), and a stray payment
+       moved them by ₹1 in release 14's gate run. */
+    const payId = ((await paid.json()) as { data?: { id: string } }).data!.id;
+    const undo = await asStaff(ownerId, `/5EL/stays/${stayId}/charges/${payId}/reverse`, "POST",
+      { reason: "guest-page proforma test" });
+    expect(undo.status, await undo.clone().text()).toBeLessThan(400);
     const { rows: [mine] } = await sql(
       "select r.reference, g.full_name from reservations r join guests g on g.id = r.guest_id where r.id = $1",
       [stayId]);

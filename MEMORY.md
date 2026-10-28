@@ -6561,6 +6561,24 @@ copy will see of theirs.**
 
 ---
 
+### 441 · MINE: release 14's gates caught four faults the helpers' own runs could not - and I then ran four tests on the dev database (28 October)
+
+Release 14's full gate run (36f7690c) failed its API step with 4 of 2,918: (1) the property reset did not know the new
+supplier dues tables (supplier_bills points at bar_purchases); (2) the Roles screen's restaurant line lacked "a
+paid-out's photo", a read the petty cash book gave the Bar and the Waiter; (3) and (4) two calibrated demo totals moved
+- room-nights 132 to 134 and receipts by Rs 1 - because the guest-company test left its bookings and the guest-page
+proforma test left a Rs 1 payment. Each helper had run its OWN files alone, where none of this shows: the reset test
+and the calibrated tests live in other files, and leaks show only when the whole suite runs in one database. Fixed on
+cp6: the four supplier tables in reset-property's CLEAR (children first); the line and its test sentence; the two
+tests now remove what they make (the payment reversed, the bookings with their bills and links deleted). **Then my own
+slip:** to reproduce it I ran `npx vitest run` in api/ instead of `npm test` - that skips `with-test-db.sh`, so four
+test files ran against the LOCAL DEV database `fidato`: a few invoices and credit notes were issued on demo stays there
+(local only; nothing live). **The rules:** API tests run only through `npm test` (the scratch database), never bare
+vitest; and a helper's report is not the suite - merges wait for one full gate run, which is the only place leaks and
+cross-file lists are caught.
+
+---
+
 ### 440 · FOUND: the live Night audit report prints its times raw, in GMT - "2026-10-26T09:15:03+00" (28 October)
 
 The Night audit report's Arrival, Departure (checked out) and Entered On (payments) were written with Postgres's

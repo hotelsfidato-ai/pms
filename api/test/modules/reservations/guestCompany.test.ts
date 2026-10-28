@@ -98,6 +98,18 @@ beforeAll(async () => {
 afterAll(async () => {
   await sql(`update reservations set guest_company_name = null, guest_company_gstin = null,
                guest_company_address = null, company_id = null where id = any($1::uuid[])`, [touched]);
+  /* The bookings this file made go too: the demo's room-nights are calibrated
+     (inventory.test.ts), and two left behind moved them in release 14's gates. */
+  const made = (await sql<{ id: string }>(
+    "select r.id::text from reservations r join guests g on g.id = r.guest_id where g.full_name like $1",
+    [`${TAG} %`])).map((r) => r.id);
+  await sql("delete from guest_links where reservation_id = any($1::uuid[])", [made]);
+  await sql("delete from folios where reservation_id = any($1::uuid[])", [made]);
+  await sql("delete from reservations where id = any($1::uuid[])", [made]);
+  await sql("alter table guests disable trigger guests_no_delete");
+  try {
+    await sql("delete from guests where full_name like $1", [`${TAG} %`]);
+  } finally { await sql("alter table guests enable trigger guests_no_delete"); }
   await closePool();
 });
 

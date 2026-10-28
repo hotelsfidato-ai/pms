@@ -214,6 +214,13 @@ export const CLEAR: [table: string, how: string][] = [
   ["bar_request_lines", "hotel_id = $1"],
   ["bar_requests",      "hotel_id = $1"],
   ["bar_closed_days",   "hotel_id = $1"],
+  /* Supplier dues (D27-370, D27-372; 246, 249): a credit bill points at its bar
+     bill or purchase request, its payments, credit notes and reversals at it -
+     the reversals first, then payments and notes, then the bills. */
+  ["supplier_reversals",    "hotel_id = $1"],
+  ["supplier_payments",     "hotel_id = $1"],
+  ["supplier_credit_notes", "hotel_id = $1"],
+  ["supplier_bills",        "hotel_id = $1"],
   ["bar_purchase_lines", "hotel_id = $1"],
   ["stock_count_lines", "hotel_id = $1"],
   ["stock_movements",   "hotel_id = $1"],
