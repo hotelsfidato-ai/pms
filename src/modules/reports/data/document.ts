@@ -64,6 +64,7 @@ export type ReportKey =
   | "stock-on-hand" | "stock-movements" | "stock-consumption" | "stock-wastage"
   | "stock-count-differences" | "stock-dead" | "stock-cover" | "supplier-spend" | "equipment"
   | "bar-stock"
+  | "voids"
   /* The excise registers, as the bar keeps them on paper (D27-361). */
   | "flr-daily" | "flr-monthly";
 

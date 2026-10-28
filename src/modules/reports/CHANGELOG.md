@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-28 · The Voids report (the owner's D27-370)
+
+Branch `worktree-agent-a2db7e340a555ebc7`, copy `.claude\worktrees\agent-a2db7e340a555ebc7`, on cp6 at `dc06985a`.
+**Asked for:** one report of every voided paid bill, order closed unpaid and struck dish, per outlet and day: what, how much, who, when, why; on screen, as a PDF and Excel; who reads it not decided.
+**Shipped:** `api/src/modules/reports/builders/voids.ts` (key `voids`, over `from` to `asOn`; one query over `pos_orders` void and abandoned and `pos_order_lines` voided, names through `app.hotel_people`, the waiter who asked from `pos_requests`; a Totals section by outlet and day with each outlet's total and the total of all outlets, by kind, then every one listed), the key in `document.ts` (both copies) and `build.ts`, the rule in `roleGate.ts` (`REPORTS`), `pages/Voids.tsx` (From and To), its menu entry (search only), route and a card in All reports; manual A11.4 (Voids), the tables in A11.1, A11.2 and A11.10, the plan of picture A11-25 (to be taken), `manual.html` rebuilt; `MODULE.md`. No migration; no change to the till.
+**Found:** an order closed unpaid records the reason only (`pos_orders.abandoned_reason`): not who closed it, not when. The report prints "-" for both and says so; nothing was added (a question for the owner). A dish struck before the kitchen had it may have no reason. A voided bill's and an unpaid order's amount has GST; a struck dish's (the till's own `value`, as Close restaurant day shows it) does not, so the three are never added. `OF` in `to_char` gives "+00" in a UTC session, which JavaScript cannot read: the moment is sent as UTC with a Z (the Night audit report's "Entered On" uses `OF`; not touched).
+**Proved:** `api/test/modules/reports/voidsReport.test.ts`, 10 of 10 (each kind made through the till's routes, the rows and totals read back, the refusal of a waiter on the screen's route and the PDF's, the three files, an empty range); `src/modules/reports/voids.test.tsx`, 3 of 3. Each guard failed when its code was taken out and passed when put back: the rule given to `TILL_READ` (the waiter's refusal failed); `'abandoned'` misspelt (3 failed); `l.voided and` removed (2 failed); `'void'` misspelt (3 failed); the menu entry's `canSee: () => true` (2 failed).
+**Left open:** the questions in the report to the master (who reads it; who and when of an order closed unpaid; NC bills; strikes before the kitchen; GST; the front desk). Picture A11-25 is to be taken.
+
+---
+
 ## 2026-10-26 · The Dashboard's chart row (the owner's D27-217 to D27-219 and D27-365; the render of 30 September)
 
 Branch `worktree-agent-a011853c140d93183`, copy `.claude\worktrees\agent-a011853c140d93183`.

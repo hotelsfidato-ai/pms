@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, Ban,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -46,6 +46,11 @@ export const nav: ServiceNavEntry[] = [
     label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report",
     canSee: seesMoney,
     keywords: ["company accounts", "receivables"], listed: false },
+  /* The restaurant's voided bills, orders closed unpaid and struck dishes (D27-370):
+     the server's rule is the night audit report's (roleGate), which prints the same voids. */
+  { section: "reports", order: 55,
+    label: "Voids", to: "/reports/voids", icon: Ban, resource: "report",
+    keywords: ["voided bill", "struck dish", "closed unpaid", "restaurant", "cancelled"], listed: false },
   { section: "reports", order: 50,
     label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report", listed: false },
   { section: "reports", order: 60,

@@ -5,7 +5,7 @@ import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
   FileSpreadsheet, Plane, ScrollText, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck,
-  Hourglass, Gauge, Truck, Refrigerator, Wine, type LucideIcon,
+  Hourglass, Gauge, Truck, Refrigerator, Wine, Ban, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -60,6 +60,12 @@ const GROUPS: Group[] = [
         icon: ScrollText,
         path: "/reports/night-audit",
         description: "What happened on one day, to the paisa: rooms charged, who left, every receipt, the restaurant.",
+      },
+      {
+        title: "Voids",
+        icon: Ban,
+        path: "/reports/voids",
+        description: "Every voided bill, order closed unpaid and struck dish in the restaurant, by outlet and day: what, how much, who, when and why.",
       },
       {
         title: "Monthly occupancy",
