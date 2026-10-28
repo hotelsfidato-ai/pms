@@ -74,22 +74,39 @@ it("a voucher without a link, even when ready: the CRS template, unchanged", () 
   expect(build(out).graphBody.template.components.some((c) => c.type === "button")).toBe(false);
 });
 
-it("a daily report: the figures as a table, the PDF attached", () => {
+const SETTINGS_LINE = "Sent after the night audit. The owner, an Administrator or the GM changes who gets it in Settings, Messages, Daily report emails.";
+
+it("the daily reports in one email (D27-371): each report's title and table, every PDF attached", () => {
+  const files = [{ ...pdf, name: "Night-audit-report.pdf" }, { ...pdf, name: "Manager-report.pdf", base64: "JVBERi0x" },
+    { ...pdf, name: "Bar-stock.pdf", base64: "JVBERi0y" }];
+  const out = read({
+    channel: "email", kind: "daily-report", hotel, to: { email: "gm@example.com" }, file: files[0], files,
+    data: { reportTitle: "Night audit report, Manager report, Bar stock", hotelName: "5 Elements Akkalkot", businessDate: "26/10/2026",
+      keyFigures: "Night audit report\nRooms occupied: 14 of 20\nA <b> figure: 3\n\nManager report\nOccupancy: 70.00%\n\nBar stock\nBar bills: ₹4,200" },
+  });
+  expect(out.json).toMatchObject({ stop: false, email: true, to: "gm@example.com", attachments: "data,data1,data2",
+    subject: "5 Elements Akkalkot daily reports - 26/10/2026" });
+  expect(Object.values(out.binary).map((b) => [b.fileName, b.data]), "each PDF once, in the PMS's order").toEqual(
+    files.map((f) => [f.name, f.base64]));
+  expect(out.json.text).toBe("The daily reports for 5 Elements Akkalkot, business date 26/10/2026.\n\n"
+    + "Night audit report\n\nRooms occupied: 14 of 20\nA <b> figure: 3\n\nManager report\n\nOccupancy: 70.00%\n\n"
+    + `Bar stock\n\nBar bills: ₹4,200\n\nEach report is attached as its own PDF.\n\n${SETTINGS_LINE}`);
+  expect(out.json.html.match(/<table/g), "a table for each report").toHaveLength(3);
+  expect(out.json.html.match(/<tr>/g)).toHaveLength(4);
+  expect(out.json.html).toContain(">Manager report</p>");
+  expect(out.json.html).toContain("A &lt;b&gt; figure");
+});
+
+it("a daily report from the PMS before D27-371: one PDF, its title from reportTitle", () => {
   const out = read({
     channel: "email", kind: "daily-report", hotel, to: { email: "gm@example.com" }, file: { ...pdf, name: "Night-audit.pdf" },
     data: { reportTitle: "Night audit report", hotelName: "5 Elements", businessDate: "05/10/2026",
-      keyFigures: "Occupancy: 82%\nRoom revenue: ₹1,20,000\nA <b> figure: 3" },
+      keyFigures: "Occupancy: 82%\nRoom revenue: ₹1,20,000" },
   });
-  expect(out.json).toMatchObject({ stop: false, email: true, to: "gm@example.com", attachments: "data",
-    subject: "Night audit report - 5 Elements - 05/10/2026" });
+  expect(out.json).toMatchObject({ attachments: "data", subject: "5 Elements daily reports - 05/10/2026" });
   expect(out.binary.data.fileName).toBe("Night-audit.pdf");
-  expect(out.json.text).toBe("Night audit report for 5 Elements, business date 05/10/2026.\n\n"
-    + "Occupancy: 82%\nRoom revenue: ₹1,20,000\nA <b> figure: 3\n\nThe whole report is attached as a PDF.\n\n"
-    + "Sent after the night audit. The owner, an Administrator or the GM changes who gets it in Settings, Messages, Daily report emails.");
-  expect(out.json.html).toContain("<table");
-  expect(out.json.html.match(/<tr>/g)).toHaveLength(3);
-  expect(out.json.html).toContain(">Room revenue</td>");
-  expect(out.json.html).toContain("A &lt;b&gt; figure");
+  expect(out.json.text).toBe("The daily reports for 5 Elements, business date 05/10/2026.\n\n"
+    + `Night audit report\n\nOccupancy: 82%\nRoom revenue: ₹1,20,000\n\nEach report is attached as its own PDF.\n\n${SETTINGS_LINE}`);
 });
 
 it("a connection health alert", () => {

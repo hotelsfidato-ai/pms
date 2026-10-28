@@ -37,8 +37,11 @@ let folioId: string;
 let companyFolioId: string;
 let server: Server;
 type Sent = { kind: string; channel: string; action?: string; to: Record<string, string | null>;
-  data: Record<string, string>; file?: { name: string; base64: string } };
+  data: Record<string, string>; file?: { name: string; base64: string }; files?: { name: string; base64: string }[];
+  messageId: string };
 let received: Sent[] = [];
+/** The receiver refuses everything while this is true. */
+let refuse = false;
 /** A demo day with rooms on it and no night audit of its own, audited here. */
 let auditedDay: string | null = null;
 
@@ -102,6 +105,7 @@ beforeAll(async () => {
     req.on("end", () => {
       if (req.headers["x-fidato-secret"] !== SECRET) { res.writeHead(401).end(); return; }
       received.push(JSON.parse(raw));
+      if (refuse) { res.writeHead(500).end("the mailbox is down"); return; }
       res.writeHead(200).end("sent");
     });
   });
@@ -110,6 +114,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   received = [];
+  refuse = false;
   process.env["CRS_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
   process.env["CRS_N8N_SECRET"] = SECRET;
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
@@ -367,6 +372,7 @@ describe("daily report emails after the night audit (D27-280)", () => {
     expect(sent().every(isPdf), "each with the whole report as a PDF").toBe(true);
     expect(sent()[0]!.data).toMatchObject({ reportTitle: "Night audit report", businessDate: "03/02/2000" });
     expect(sent()[0]!.file?.name).toBe("Night-audit-report-5EL-2000-02-03.pdf");
+    expect(sent()[0]!.files?.map((f) => f.name)).toEqual(["Night-audit-report-5EL-2000-02-03.pdf"]);
 
     received = [];
     await runReportEmails();
@@ -387,6 +393,64 @@ describe("daily report emails after the night audit (D27-280)", () => {
       [hotelId])).toEqual([{ n: 2 }]);
   });
 
+  /* D27-371: one email per address, every report owed to it, a PDF each. */
+  const rowsFor = (day: string) => sql(
+    `select about_id, status, count(*)::int as n from messages_sent
+      where hotel_id = $1 and kind = 'daily-report' and about_id like $2 || '/%'
+      group by about_id, status order by about_id, status`, [hotelId, day]);
+  const twoReports = (day: string) => [
+    `${day}/manager/gm@example.com`, `${day}/manager/owner@example.com`,
+    `${day}/night-audit/gm@example.com`, `${day}/night-audit/owner@example.com`];
+
+  it("go in ONE email per address: every report owed to it, a PDF each, in the list's order", async () => {
+    await save(gmId, ["manager", "night-audit"].map((key) =>
+      ({ key, isOn: true, addresses: ["owner@example.com", "gm@example.com"] })));
+    await audit("2000-02-04");
+    const ran = await runReportEmails();
+    expect(ran).toEqual({ due: 4, sent: 4 });
+    expect(sent().map((m) => m.to["email"]).sort(), "two addresses, two emails").toEqual(["gm@example.com", "owner@example.com"]);
+    for (const m of sent()) {
+      expect(m.files?.map((f) => f.name), "night audit first, as Settings lists them").toEqual([
+        "Night-audit-report-5EL-2000-02-04.pdf", "Manager-report-5EL-2000-02-04.pdf"]);
+      expect(m.files!.every((f) => Buffer.from(f.base64, "base64").subarray(0, 5).toString("latin1") === "%PDF-")).toBe(true);
+      expect(m.file?.name, "the first also as `file`, for the workflow before D27-371").toBe(m.files![0]!.name);
+      expect(m.data).toMatchObject({ hotelName: expect.any(String), businessDate: "04/02/2000",
+        reportTitle: "Night audit report, Manager report" });
+      expect(m.data["keyFigures"]!.split("\n\n").map((g) => g.split("\n")[0]), "each report's figures under its title")
+        .toEqual(["Night audit report", "Manager report"]);
+    }
+    expect(await rowsFor("2000-02-04"), "written down per report and address")
+      .toEqual(twoReports("2000-02-04").map((about_id) => ({ about_id, status: "sent", n: 1 })));
+
+    received = [];
+    expect(await runReportEmails()).toEqual({ due: 0, sent: 0 });
+    expect(sent(), "never twice").toEqual([]);
+  });
+
+  it("try a failed email again with every report in it, three tries and no more", async () => {
+    await save(gmId, ["manager", "night-audit"].map((key) =>
+      ({ key, isOn: true, addresses: ["owner@example.com", "gm@example.com"] })));
+    await audit("2000-02-05");
+    refuse = true;
+    await runReportEmails();
+    const first = new Map(sent().map((m) => [m.to["email"], m.messageId]));
+    expect(await rowsFor("2000-02-05"), "each report failed with its email")
+      .toEqual(twoReports("2000-02-05").map((about_id) => ({ about_id, status: "failed", n: 1 })));
+
+    refuse = false;
+    received = [];
+    await runReportEmails();
+    expect(sent().map((m) => m.files?.length), "both reports again, in each email").toEqual([2, 2]);
+    expect(sent().every((m) => first.get(m.to["email"]) === m.messageId), "the same message, so n8n sends it once").toBe(true);
+    expect((await rowsFor("2000-02-05")).filter((r) => r.status === "sent").map((r) => r.about_id))
+      .toEqual(twoReports("2000-02-05"));
+
+    await audit("2000-02-06");
+    refuse = true;
+    for (let i = 0; i < 4; i++) await runReportEmails();
+    expect((await rowsFor("2000-02-06")).map((r) => r.n), "three tries each, then given up").toEqual([3, 3, 3, 3]);
+  });
+
   it("carry the report's own key figures in the email, on a day with rooms on it", async () => {
     auditedDay = (await sql(
       `select d::text as d from (select distinct business_date as d from folio_postings
@@ -396,11 +460,13 @@ describe("daily report emails after the night audit (D27-280)", () => {
     await save(gmId, ALL.map((key) => ({ key, isOn: true, addresses: ["owner@example.com"] })));
     await audit(auditedDay);
     await runReportEmails();
-    const got = new Map(sent().map((m) => [m.data["reportTitle"], m]));
-    expect([...got.keys()].sort()).toEqual(["Manager report", "Money owed", "Night audit report", "Restaurant and stock"]);
-    expect(sent().every(isPdf)).toBe(true);
+    expect(sent(), "one email with all four").toHaveLength(1);
+    const email = sent()[0]!;
+    expect(email.files?.length).toBe(4);
+    const got = new Map(email.data["keyFigures"]!.split("\n\n").map((g) => [g.split("\n")[0]!, g.split("\n").slice(1)]));
+    expect([...got.keys()]).toEqual(["Night audit report", "Manager report", "Money owed", "Restaurant and stock"]);
 
-    const figures = (title: string) => Object.fromEntries(got.get(title)!.data["keyFigures"]!.split("\n")
+    const figures = (title: string) => Object.fromEntries(got.get(title)!
       .map((l) => [l.slice(0, l.indexOf(": ")), l.slice(l.indexOf(": ") + 2)]));
     const report = async (path: string) => {
       const res = await call(gmId, "GET", path);

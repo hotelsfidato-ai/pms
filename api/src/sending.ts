@@ -120,6 +120,10 @@ export interface Message {
   } | null;
   /** The A4 the desk prints (D18-20). */
   file?: SendableFile | null;
+  /** Several documents in one email (D27-371: the daily reports, a PDF
+      each), posted as `files`; the first also goes as `file`, so a
+      workflow that reads only `file` still attaches one. */
+  files?: SendableFile[] | null;
   /** Values this KIND of message needs and a document does not — the guest
       link's six-digit code is the first, read in n8n as `{{$json.data.code}}`.
       Kept as plain named strings rather than a second shape per kind: the
@@ -128,6 +132,10 @@ export interface Message {
   data?: Record<string, string> | undefined;
   /** What it is about, so the desk can answer "was it sent?" */
   about?: { kind: string; id: string } | null;
+  /** In place of `about`, one email about several things (D27-371): one
+      row each, each with the file at the same place in `files`, all sent
+      or failed together. */
+  abouts?: Array<{ kind: string; id: string }>;
   /** Null where the system sent it by itself. */
   sentBy?: { id: string; name: string } | null;
 }
@@ -191,15 +199,7 @@ export async function send(client: Client, message: Message): Promise<SendResult
   const { rows: test } = await client.query<{ test: boolean }>(
     "select app.is_test_hotel($1::uuid) as test", [message.hotel.id]);
   if (test[0]?.test) {
-    await client.query(
-      `select app.record_message_sent(
-         $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::integer, $11, $12, $13::uuid
-       )`,
-      [message.hotel.id, message.channel, message.kind,
-       message.to.name ?? null, message.to.phone ?? null, message.to.email ?? null,
-       message.about?.kind ?? null, message.about?.id ?? null,
-       message.file?.name ?? null, message.file?.bytes.byteLength ?? null,
-       "failed", NOTHING_SENT, message.sentBy?.id ?? null]);
+    await record(client, message, "failed", NOTHING_SENT);
     return { ok: false, reason: NOTHING_SENT };
   }
 
@@ -216,6 +216,7 @@ export async function send(client: Client, message: Message): Promise<SendResult
     };
   }
 
+  const firstFile = message.file ?? message.files?.[0] ?? null;
   const body = {
     messageId: message.id ?? randomUUID(),
     /* The CRS workflow reads no action; "mark" is the sales inbox being
@@ -238,15 +239,8 @@ export async function send(client: Client, message: Message): Promise<SendResult
     /* base64, and named, so the workflow forwards it without knowing what
        is in it. Absent rather than null when there is no document, so a
        workflow can branch on its presence. */
-    ...(message.file
-      ? {
-          file: {
-            name: message.file.name,
-            contentType: message.file.contentType,
-            base64: Buffer.from(message.file.bytes).toString("base64"),
-          },
-        }
-      : {}),
+    ...(firstFile ? { file: posted(firstFile) } : {}),
+    ...(message.files?.length ? { files: message.files.map(posted) } : {}),
     sentBy: message.sentBy?.name ?? null,
   };
 
@@ -261,7 +255,7 @@ export async function send(client: Client, message: Message): Promise<SendResult
   let marked = "";
   const inbox = m2rTarget();
   if (inbox && message.channel === "whatsapp") {
-    const { file: _file, ...rest } = body as typeof body & { file?: unknown };
+    const { file: _file, files: _files, ...rest } = body as typeof body & { file?: unknown; files?: unknown };
     const mark = await post(inbox, { ...rest, action: "mark" }, MARK_TIMEOUT_MS, "ten");
     if (!mark.ok) marked = ` The sales inbox was not told the guest is booked: ${mark.detail}`;
   }
@@ -270,30 +264,50 @@ export async function send(client: Client, message: Message): Promise<SendResult
   const status: "sent" | "failed" = answer.ok ? "sent" : "failed";
   const detail = answer.detail + marked;
 
-  /* ⚠ THROUGH THE DEFINER FUNCTION, NOT A BARE INSERT (migration 117).
-     `messages_sent` is FORCE row-secured and scoped to
-     `app.auth_hotel_ids()`, which answers for a signed-in member of
-     staff — and most messages have no staff behind them at all. The
-     guest's own door was the first caller and was refused outright; the
-     confirmation the CRS triggers, the reminder the day before and the
-     review request after check-out would all have been refused the same
-     way. Found by this file's own test, 19 September.
-
-     The hotel is named by a caller that already reached the booking
-     legitimately. Reading what was sent is still governed by the
-     policy on the table, unchanged. */
-  const { rows } = await client.query<{ id: string }>(
-    `select app.record_message_sent(
-       $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::integer, $11, $12, $13::uuid
-     )::text as id`,
-    [message.hotel.id, message.channel, message.kind,
-     message.to.name ?? null, message.to.phone ?? null, message.to.email ?? null,
-     message.about?.kind ?? null, message.about?.id ?? null,
-     message.file?.name ?? null, message.file?.bytes.byteLength ?? null,
-     status, detail.slice(0, 500), message.sentBy?.id ?? null],
-  );
+  const id = await record(client, message, status, detail.slice(0, 500));
 
   return status === "sent"
-    ? { ok: true, id: rows[0]!.id }
+    ? { ok: true, id }
     : { ok: false, reason: detail };
+}
+
+const posted = (f: SendableFile) =>
+  ({ name: f.name, contentType: f.contentType, base64: Buffer.from(f.bytes).toString("base64") });
+
+/* ⚠ THROUGH THE DEFINER FUNCTION, NOT A BARE INSERT (migration 117).
+   `messages_sent` is FORCE row-secured and scoped to
+   `app.auth_hotel_ids()`, which answers for a signed-in member of
+   staff — and most messages have no staff behind them at all. The
+   guest's own door was the first caller and was refused outright; the
+   confirmation the CRS triggers, the reminder the day before and the
+   review request after check-out would all have been refused the same
+   way. Found by this file's own test, 19 September.
+
+   The hotel is named by a caller that already reached the booking
+   legitimately. Reading what was sent is still governed by the
+   policy on the table, unchanged.
+
+   ONE ROW PER THING IT IS ABOUT (D27-371): the daily reports go in one
+   email, and each report is still written down for its address on its own,
+   with its own PDF - so a report is never sent twice and a failed email is
+   tried again for every report in it. The first row's id is the answer. */
+async function record(
+  client: Client, message: Message, status: "sent" | "failed", detail: string,
+): Promise<string> {
+  const files = message.files ?? [message.file ?? null];
+  let first = "";
+  for (const [i, about] of (message.abouts ?? [message.about ?? null]).entries()) {
+    const file = files[i] ?? null;
+    const { rows } = await client.query<{ id: string }>(
+      `select app.record_message_sent(
+         $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::integer, $11, $12, $13::uuid
+       )::text as id`,
+      [message.hotel.id, message.channel, message.kind,
+       message.to.name ?? null, message.to.phone ?? null, message.to.email ?? null,
+       about?.kind ?? null, about?.id ?? null,
+       file?.name ?? null, file?.bytes.byteLength ?? null,
+       status, detail, message.sentBy?.id ?? null]);
+    first ||= rows[0]!.id;
+  }
+  return first;
 }

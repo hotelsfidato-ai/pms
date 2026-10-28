@@ -13,6 +13,11 @@ import { MOST_ATTEMPTS } from "./jobs.ts";
    per business date, report and address; three tries
    (app.daily_reports_owed, migration "daily report emails").
 
+   ONE EMAIL PER ADDRESS (D27-371, 27 October): everything owed to one
+   address for one hotel's business date goes in one email - each report's
+   key figures under its title, each report its own PDF attached. The
+   subject ('<Hotel> daily reports - <date>') and the words are n8n's.
+
    NOBODY GETS ANYTHING UNTIL AN ADDRESS IS TYPED. The night audit report
    is on until switched off; the other three are off until switched on.
 
@@ -186,46 +191,71 @@ export async function runReportEmails(
   const owed = await asNobody((c) => reportsOwed(c));
   result.due = owed.length;
 
-  /* Built once for all its addresses; each address its own message. */
-  const builds = new Map<string, Owed[]>();
+  /* Each report built once for all its addresses. A report that cannot be
+     built is left out of the email and stays owed (nothing is written about
+     it), so it goes by itself on a later sweep once it builds. */
+  const built = new Map<string, { title: string; figures: Figure[]; bytes: Uint8Array } | null>();
+  const buildKey = (o: Owed) => [o.hotelId, o.businessDate, o.report, o.builtBy].join("/");
   for (const o of owed) {
-    const key = [o.hotelId, o.businessDate, o.report, o.builtBy].join("/");
-    builds.set(key, [...(builds.get(key) ?? []), o]);
-  }
-  for (const list of builds.values()) {
-    const o = list[0]!;
+    if (built.has(buildKey(o))) continue;
     try {
-      const { bytes, figures } = await asPerson(o.builtBy, async (client) => {
+      built.set(buildKey(o), await asPerson(o.builtBy, async (client) => {
         const doc = await dailyReport(client, o.hotelId, o.report, o.businessDate);
         return {
-          bytes: await renderPdf(doc, { name: "Sent after the night audit", at: new Date(), timezone: o.timezone }),
+          title: titleOf(o.report),
           figures: keyFigures(o.report, doc),
+          bytes: await renderPdf(doc, { name: "Sent after the night audit", at: new Date(), timezone: o.timezone }),
         };
-      });
-      const title = titleOf(o.report);
-      for (const to of list) {
-        const sent = await asNobody((client) => send(client, {
-          id: messageIdFor("daily-report", to.hotelId, to.businessDate, to.report, to.address),
-          channel: "email",
-          kind: "daily-report",
-          hotel: { id: to.hotelId, code: to.hotelCode, name: to.hotelName },
-          to: { email: to.address },
-          data: {
-            reportTitle: title, hotelName: to.hotelName, businessDate: dateReport(to.businessDate),
-            /* One "Label: value" a line; the workflow sets them out as a table. */
-            keyFigures: figures.map((f) => `${f.label}: ${f.value}`).join("\n"),
-          },
-          file: { name: `${title.replace(/[^A-Za-z0-9]+/g, "-")}-${to.hotelCode}-${to.businessDate}.pdf`,
-            contentType: "application/pdf", bytes },
-          about: { kind: "night-audit", id: `${to.businessDate}/${to.report}/${to.address}` },
-          sentBy: null,
-        }));
-        if (sent.ok) result.sent += 1;
-      }
+      }));
     } catch (error) {
-      console.error("[guest-messaging] could not email the daily report", o.report, o.businessDate,
+      built.set(buildKey(o), null);
+      console.error("[guest-messaging] could not build the daily report", o.report, o.businessDate,
         error instanceof Error ? error.message : error);
     }
+  }
+
+  /* ONE EMAIL PER HOTEL, BUSINESS DATE AND ADDRESS (D27-371): every report
+     owed to that address that day, in DAILY_REPORTS's order, a PDF each. */
+  const emails = new Map<string, Owed[]>();
+  for (const o of owed) {
+    if (!built.get(buildKey(o))) continue;
+    const key = [o.hotelId, o.businessDate, o.address].join("/");
+    emails.set(key, [...(emails.get(key) ?? []), o]);
+  }
+  const order = (o: Owed) => DAILY_REPORTS.findIndex((r) => r.key === o.report);
+  for (const list of emails.values()) {
+    list.sort((a, b) => order(a) - order(b));
+    const to = list[0]!;
+    const reports = list.map((o) => built.get(buildKey(o))!);
+    const sent = await asNobody((client) => send(client, {
+      /* Same reports, same id: the workflow drops a retry it has sent. */
+      id: messageIdFor("daily-report", to.hotelId, to.businessDate, to.address, ...list.map((o) => o.report)),
+      channel: "email",
+      kind: "daily-report",
+      hotel: { id: to.hotelId, code: to.hotelCode, name: to.hotelName },
+      to: { email: to.address },
+      data: {
+        /* The titles, for a workflow from before D27-371 (its subject). */
+        reportTitle: reports.map((r) => r.title).join(", "), hotelName: to.hotelName,
+        businessDate: dateReport(to.businessDate),
+        /* Each report: its title on a line, then one "Label: value" a line;
+           a blank line between reports. The workflow sets each out as a table. */
+        keyFigures: reports.map((r) => [r.title, ...r.figures.map((f) => `${f.label}: ${f.value}`)].join("\n"))
+          .join("\n\n"),
+      },
+      files: reports.map((r) => ({
+        name: `${r.title.replace(/[^A-Za-z0-9]+/g, "-")}-${to.hotelCode}-${to.businessDate}.pdf`,
+        contentType: "application/pdf", bytes: r.bytes,
+      })),
+      /* Written down per report and address, as before: all sent, or all failed. */
+      abouts: list.map((o) => ({ kind: "night-audit", id: `${o.businessDate}/${o.report}/${o.address}` })),
+      sentBy: null,
+    })).catch((error) => {
+      console.error("[guest-messaging] could not email the daily reports", to.businessDate, to.address,
+        error instanceof Error ? error.message : error);
+      return { ok: false };
+    });
+    if (sent.ok) result.sent += list.length;
   }
   return result;
 }

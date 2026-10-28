@@ -186,7 +186,13 @@ booking's Booked card, the booking panel) - one line each.
   typed.** After each completed night audit (the sweep, within a minute): each
   report on, to each address, once per business date (`app.daily_reports_owed`),
   kind `daily-report` - the key figures in `data.keyFigures`, read out of the
-  same document as the PDF attached. Built under the session of whoever saved
+  same document as the PDF attached. **One email per hotel, business date and
+  address (D27-371):** every report owed to that address, in `DAILY_REPORTS`'s
+  order, each built once, `files` a PDF each, `data.keyFigures` a title line
+  then "Label: value" lines per report, a blank line between; the subject
+  "<Hotel> daily reports - <date>" is n8n's. Still written down per report and
+  address (`send()`'s `abouts`: one `messages_sent` row each, all sent or all
+  failed), so never twice and three tries each. Built under the session of whoever saved
   it while they still run the hotel, else whoever runs it now. Owner,
   Administrator or GM (role gate `room_config`, `app.manages_hotel`, and the
   table's `hotel_isolation` policy). The page `pages/DailyReportEmails.tsx`

@@ -52,6 +52,7 @@ interface Seen {
     to?: { name?: string | null; phone?: string | null; email?: string | null };
     document?: { total?: string } | null;
     file?: { name?: string; contentType?: string; base64?: string };
+    files?: { name: string; base64: string }[];
     sentBy?: string | null;
   };
 }
@@ -222,6 +223,38 @@ describe("the one door out", () => {
     expect(seen!.body.file?.contentType).toBe("application/pdf");
     const arrived = new Uint8Array(Buffer.from(seen!.body.file!.base64!, "base64"));
     expect([...arrived], "the document arrived unchanged").toEqual([...bytes]);
+    expect(seen!.body.files, "one document is `file` alone, as before D27-371").toBeUndefined();
+  });
+
+  /* D27-371: the daily reports in one email, a PDF each. */
+  it("carries several files, the first also as `file`, and writes each thing it is about down with its own file", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const a = new Uint8Array([0x25, 0x50, 0x44, 0x46, 1]);
+    const b = new Uint8Array([0x25, 0x50, 0x44, 0x46, 2, 3]);
+
+    const out = await attempt(async (client) => {
+      const result = await send(client, {
+        ...aBill(hotel), channel: "email", to: { email: "gm@example.com" }, about: null,
+        abouts: [{ kind: "reservation", id: MINE }, { kind: "reservation", id: `${MINE}-2` }],
+        files: [{ name: "A.pdf", contentType: "application/pdf", bytes: a },
+          { name: "B.pdf", contentType: "application/pdf", bytes: b }],
+      });
+      const { rows } = await client.query<{ about_id: string; document_name: string; document_bytes: number; status: string }>(
+        `select about_id, document_name, document_bytes, status from messages_sent
+          where about_id like $1 || '%' order by about_id`, [MINE]);
+      return { result, rows };
+    });
+
+    expect(out!.result.ok).toBe(true);
+    const files = seen!.body.files!;
+    expect(files.map((f) => f.name)).toEqual(["A.pdf", "B.pdf"]);
+    expect([...Buffer.from(files[1]!.base64, "base64")]).toEqual([...b]);
+    expect(seen!.body.file?.name, "a workflow that reads only `file` still gets one").toBe("A.pdf");
+    expect(out!.rows).toEqual([
+      { about_id: MINE, document_name: "A.pdf", document_bytes: 5, status: "sent" },
+      { about_id: `${MINE}-2`, document_name: "B.pdf", document_bytes: 6, status: "sent" },
+    ]);
   });
 
   it("refuses a guest with no number for the way it is going, and records nothing", async () => {
