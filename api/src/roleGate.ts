@@ -330,6 +330,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/groups/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/cashier-shift/open`]: DRAWER,
   [`POST ${H}/cashier-shift/movements`]: DRAWER,
+  /* A paid-out's photo of its bill (D27-370): whoever records one. */
+  [`POST ${H}/cashier-shift/movements/:id/photo`]: DRAWER,
   [`POST ${H}/cashier-shift/count`]: DRAWER,
   [`POST ${H}/cashier-shift/close`]: DRAWER,
   /* Cash deposits (D27-191): record, reverse and explain - the owner, an
@@ -484,6 +486,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* Open the day, the float counted (D27-190): whoever closes it. */
   [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
+  [`POST ${H}/till/day-end/movements/:id/photo`]: DAY_END,  // D27-370
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
   /* pos: restaurant setup */
@@ -923,6 +926,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,
   [`GET ${H}/reports/guest-ledger`]: MONEY_REPORT,
   [`GET ${H}/reports/cashier-shift`]: MONEY_REPORT,
+  /* The petty cash book (D27-370): money paid out, read as Cashier shift is. */
+  [`GET ${H}/reports/petty-cash`]: MONEY_REPORT,
   [`GET ${H}/reports/balances-by-source`]: MONEY_REPORT,
   [`GET ${H}/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("routes/reportFiles.ts: REPORT_EXPORTERS, and `invoice` for the money reports"),
   [`GET ${H}/statistics/daily`]: see(["report", "rate"], "occupancy and ADR"),
@@ -985,6 +990,11 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/waiters`]: TILL_READ,
   [`GET ${H}/banquet/attachable`]: TILL_READ,
   [`GET ${H}/till/day-end`]: see("payment", "the restaurant's day", ["pos", "bar", "kitchen_manager"]),
+  /* A paid-out's photo (D27-370): who sees the drawer or the tin it came
+     out of, and who reads the Petty cash report (MONEY_REPORT's `invoice`). */
+  [`GET ${H}/till/day-end/movements/:id/photo`]:
+    see(["payment", "invoice"], "a paid-out's photo", ["pos", "bar", "kitchen_manager"]),
+  [`GET ${H}/cashier-shift/movements/:id/photo`]: see(["payment", "invoice"], "a paid-out's photo"),
   [`GET ${H}/kitchen`]: see("payment", "the kitchen's queue", ["chef", "kitchen_manager"]),
 
   /* ── Store, equipment, purchasing, places ── */

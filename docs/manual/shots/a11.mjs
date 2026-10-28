@@ -304,4 +304,17 @@ export const SHOTS = [
       { n: 3, at: "text:OPENING BALANCE", nth: 0, side: "top" },
     ],
   },
+  /* The petty cash book (D27-370): both places, by day and by category. Needs
+     A8-45's and A4-22's expenses recorded (not cancelled), one approved. */
+  {
+    id: "A11-25", title: "Petty cash", as: "General Manager", size: "wall",
+    path: "/reports/petty-cash", steps: [LOADED("By category")],
+    marks: [
+      { n: 1, at: "css:input[aria-label=From]", side: "bottom" },
+      { n: 2, at: "text:Expenses, by day", side: "left" },
+      { n: 3, at: "text:Approval", side: "top" },
+      { n: 4, at: "text:Total", nth: 0, side: "left" },
+      { n: 5, at: "text:By category", side: "left" },
+    ],
+  },
 ];

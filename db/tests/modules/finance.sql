@@ -663,3 +663,36 @@ begin
   set constraints folio_postings_refund_has_row deferred;
   perform set_config('app.user_id', '', true);
 end $$;
+
+-- THE PETTY CASH BOOK (the owner's D27-370): a paid-out's category is one of five
+-- words, the same in the restaurant's tin and the front desk's drawer, and only on
+-- an expense. One recorded before it has none (the routes require it of a new one).
+do $$
+declare h uuid; s uuid; sh uuid; o uuid;
+begin
+  h := app.provision_property_unchecked('PCB', 'Petty Cash Test', 'Nowhere');
+  insert into staff (email, full_name) values ('pcb-clerk@fidato.in', 'Petty Cash Clerk') returning id into s;
+  insert into cashier_shifts (hotel_id, staff_id, business_date) values (h, s, current_date) returning id into sh;
+  insert into pos_outlets (hotel_id, code, name, staff_id) values (h, 'PCB', 'Petty Cash Cafe', s) returning id into o;
+
+  perform test.allows('finance petty cash', 'a desk paid-out with one of the five, and one from before with none',
+    format($q$insert into cashier_movements (hotel_id, shift_id, kind, amount, reason, recorded_by, category)
+              values (%L,%L,'expense',100,'courier',%L,'Office'), (%L,%L,'expense',50,'old taxi',%L,null)$q$,
+           h, sh, s, h, sh, s));
+  perform test.raises('finance petty cash', 'the desk refuses a sixth word',
+    format($q$insert into cashier_movements (hotel_id, shift_id, kind, amount, reason, recorded_by, category)
+              values (%L,%L,'expense',100,'lunch',%L,'Food')$q$, h, sh, s), '23514');
+  perform test.raises('finance petty cash', 'and a category on money in',
+    format($q$insert into cashier_movements (hotel_id, shift_id, kind, amount, reason, recorded_by, category)
+              values (%L,%L,'top_up',100,'change',%L,'Office')$q$, h, sh, s), '23514');
+
+  perform test.allows('finance petty cash', 'a restaurant expense with one of the five',
+    format($q$insert into pos_cash_movements (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by, category)
+              values (%L,%L,current_date,'expense',80,'vegetables',%L,'Kitchen')$q$, h, o, s));
+  perform test.raises('finance petty cash', 'the tin refuses a sixth word',
+    format($q$insert into pos_cash_movements (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by, category)
+              values (%L,%L,current_date,'expense',80,'gas',%L,'kitchen')$q$, h, o, s), '23514');
+  perform test.raises('finance petty cash', 'and a category on a due paid',
+    format($q$insert into pos_cash_movements (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by, category)
+              values (%L,%L,current_date,'due_collection',80,'room 101',%L,'Other')$q$, h, o, s), '23514');
+end $$;

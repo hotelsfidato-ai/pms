@@ -11,6 +11,8 @@ import {
   NativeSelect,
 } from "@/components/ui";
 import { getCashierDrawer, openCashierShift, recordCashierMovement, countCashierDrawer, closeCashierShift, type CashierDrawer } from "@/modules/finance/data/cashier";
+import { attachExpensePhoto, expensePhotoPath } from "@/modules/finance/data/expenses";
+import { ExpenseFields, ExpensePhoto } from "@/modules/finance/flows/ExpenseFields";
 
 /* ══════════════════════════════════════════════════════════════════
    CASHIERING — the front desk shift
@@ -277,8 +279,16 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
                       <div className="min-w-0 flex-1">
                         <p className="text-base">{m.reason}</p>
                         <p className="text-sm text-grey-500">
-                          {spec?.label ?? m.kind} · {m.recordedBy} · {m.at}
+                          {spec?.label ?? m.kind}
+                          {/* The petty cash book (D27-370): a dash before it. */}
+                          {m.kind === "expense" && ` · ${m.category ?? "-"}`} · {m.recordedBy} · {m.at}
                         </p>
+                        {m.kind === "expense" && (
+                          <div className="mt-1">
+                            <ExpensePhoto path={expensePhotoPath(hotelId, "desk", m.id)} photo={Boolean(m.photo)}
+                              title={`Bill: ${m.reason}`} onAdded={onDone} />
+                          </div>
+                        )}
                         {/* A paid-out waits for the GM's or owner's yes (D27-242). */}
                         {waitsOrRefused(m) && (
                           <p className={cn("text-sm", m.approval === "rejected" ? "text-danger" : "text-warning-dark")}>
@@ -463,16 +473,23 @@ function MovementDialog({ hotelId, onClose, onDone }: {
   const [kind, setKind] = useState<"expense" | "top_up" | "withdrawal">("expense");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  /* The petty cash book (D27-370): a paid-out's category and bill. */
+  const [category, setCategory] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const chosen = MOVEMENTS.find((m) => m.kind === kind)!;
+  const expense = kind === "expense";
 
   const submit = async () => {
     setBusy(true);
     const res = await recordCashierMovement(hotelId,
-      { kind, amount: Number(amount), reason });
+      { kind, amount: Number(amount), reason, ...(expense ? { category } : {}) });
+    if (!res.ok) { setBusy(false); return toast.error("Not recorded", res.reason); }
+    const photo = expense && file && res.id
+      ? await attachExpensePhoto(expensePhotoPath(hotelId, "desk", res.id), file) : { ok: true as const };
     setBusy(false);
-    if (!res.ok) return toast.error("Not recorded", res.reason);
-    toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
+    if (photo.ok) toast.success("Recorded", `${chosen.label} - ${money(Number(amount))}`);
+    else toast.error("Recorded, without its photo", photo.reason);
     onClose();
     onDone();
   };
@@ -512,12 +529,14 @@ function MovementDialog({ hotelId, onClose, onDone }: {
             )}
           </Field>
 
+          {expense && <ExpenseFields category={category} onCategory={setCategory} onFile={setFile} />}
+
           <div className="flex gap-2">
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Cancel</Button>
             </DialogClose>
             <Button variant="primary" className="h-12 flex-1"
-                    disabled={busy || !amount || !reason.trim()}
+                    disabled={busy || !amount || !reason.trim() || (expense && !category)}
                     onClick={() => void submit()}>
               Record
             </Button>

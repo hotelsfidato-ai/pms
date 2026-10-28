@@ -7,7 +7,9 @@ import type { PoolClient as Client } from "pg";
 /* The banquet service's rule for which functions an order may go on
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
-import { overCashLimit, panFor, CASH_REFUND_CEILING } from "../finance/index.ts";
+import {
+  overCashLimit, panFor, CASH_REFUND_CEILING, categoryProblem, putExpensePhoto, serveExpensePhoto,
+} from "../finance/index.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
 import {
@@ -4187,10 +4189,13 @@ till.get("/:code/till/day-end", async (c) => {
       id: string; kind: string; amount: string; reason: string;
       recorded_by_name: string | null; recorded_at: string;
       approval: string | null; approval_note: string | null;
+      category: string | null; photo: boolean;
     }>(
       /* A LEFT join (D27-9): a name the reader may not see - the group
          owner's, to a GM (MEMORY 283) - is null, not the whole movement. */
-      `select m.id::text, m.kind, m.amount::text, m.reason,
+      `select m.id::text, m.kind, m.amount::text, m.reason, m.category,
+              exists (select 1 from attachments a where a.subject_table = 'pos_cash_movements'
+                         and a.subject_id = m.id) as photo,
               s.full_name as recorded_by_name,
               app.hotel_clock(m.hotel_id, m.recorded_at, 'HH24:MI') as recorded_at,
               ${PAID_OUT_DECISION("status")} as approval,
@@ -4268,6 +4273,8 @@ till.get("/:code/till/day-end", async (c) => {
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
         /* A paid-out's yes (D27-242); null where nobody was asked. */
         approval: m.approval, approvalNote: m.approval_note,
+        /* The petty cash book (D27-370): null on one from before it. */
+        category: m.category, photo: m.photo,
       })),
       cash: {
         opening: opening ?? 0,
@@ -4339,7 +4346,7 @@ till.post("/:code/till/day-end/open", async (c) => {
 
 till.post("/:code/till/day-end/movements", async (c) => {
   type MoveBody = {
-    outlet?: string; kind?: string; amount?: number; reason?: string;
+    outlet?: string; kind?: string; amount?: number; reason?: string; category?: string;
   };
   const input = await c.req.json<MoveBody>().catch(() => ({}) as MoveBody);
 
@@ -4357,6 +4364,9 @@ till.post("/:code/till/day-end/movements", async (c) => {
   if (!reason) {
     return c.json(refuse("What was it for? This is the line somebody asks about."), 409);
   }
+  /* The petty cash book's category (D27-370): one of five, on a paid-out. */
+  const noCategory = categoryProblem(input.kind, input.category);
+  if (noCategory) return c.json(refuse(noCategory), 409);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -4384,11 +4394,12 @@ till.post("/:code/till/day-end/movements", async (c) => {
 
     const { rows: made } = await client.query<{ id: string }>(
       `insert into pos_cash_movements
-         (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by)
-       values ($1,$2,$3,$4,$5,$6,$7)
+         (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by, category)
+       values ($1,$2,$3,$4,$5,$6,$7,$8)
        returning id::text`,
       [hotelId, outlet[0].id, businessDate, input.kind,
-       Number(input.amount).toFixed(2), reason, session.staffId],
+       Number(input.amount).toFixed(2), reason, session.staffId,
+       input.kind === "expense" ? input.category : null],
     );
     /* A paid-out waits for the GM's or the owner's yes (D27-242); it counts
        in the tin only once given (app.cash_expense_counts, 189). */
@@ -4400,12 +4411,18 @@ till.post("/:code/till/day-end/movements", async (c) => {
          Number(input.amount).toFixed(2), session.staffId]);
     }
 
-    return { ok: true as const };
+    /* Its id, for the photo of the bill that may follow (D27-370). */
+    return { ok: true as const, id: made[0]!.id };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
+
+/* A paid-out's photo of its bill (D27-370), when recorded or afterwards - a
+   closed day's too: the photo changes no figure. Finance's door, wrapped. */
+till.post("/:code/till/day-end/movements/:id/photo", (c) => putExpensePhoto(c, "pos_cash_movements"));
+till.get("/:code/till/day-end/movements/:id/photo", (c) => serveExpensePhoto(c, "pos_cash_movements"));
 
 till.post("/:code/till/day-end/count", async (c) => {
   type CountBody = {

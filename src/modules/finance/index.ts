@@ -31,3 +31,7 @@ export { issueGroupInvoice } from "./data/billing";
 /* D27-315 B: the Refund step, for the bill and for the check-out dialog to
    show when the bill is overpaid. */
 export { RefundStep } from "./flows/RefundStep";
+/* D27-370, the petty cash book: a paid-out's category and photo, for the
+   restaurant's Cash step as for Cashiering - one copy. */
+export { ExpenseFields, ExpensePhoto } from "./flows/ExpenseFields";
+export { EXPENSE_CATEGORIES, attachExpensePhoto, expensePhotoPath } from "./data/expenses";

@@ -109,6 +109,12 @@ const GROUPS: Group[] = [
         path: "/reports/cashier-shift",
         description: "What each cashier took today, by method. Reversed receipts excluded.",
       },
+      {
+        title: "Petty cash",
+        icon: Wallet,
+        path: "/reports/petty-cash",
+        description: "Every expense paid out of the restaurant's tin and the front desk's drawer, by day and category.",
+      },
     ],
   },
   {

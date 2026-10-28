@@ -36,6 +36,10 @@ export interface CashierMovement {
       null where nobody was asked. Optional to the reader (MEMORY 360). */
   approval?: string | null;
   approvalNote?: string | null;
+  /** The petty cash book (D27-370): a paid-out's category, null on one from
+      before it; whether its bill's photo is on it. */
+  category?: string | null;
+  photo?: boolean;
 }
 
 export interface CashierDrawer {
@@ -89,7 +93,7 @@ export async function getCashierDrawer(
   }
 }
 
-type ShiftResult = { ok: true } | { ok: false; reason: string };
+type ShiftResult<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 
 export async function openCashierShift(
   hotelId: string, opening: number,
@@ -99,8 +103,8 @@ export async function openCashierShift(
 
 export async function recordCashierMovement(
   hotelId: string,
-  input: { kind: "expense" | "top_up" | "withdrawal"; amount: number; reason: string },
-): Promise<ShiftResult> {
+  input: { kind: "expense" | "top_up" | "withdrawal"; amount: number; reason: string; category?: string },
+): Promise<ShiftResult<{ id?: string }>> {
   return shiftCall(hotelId, "movements", input);
 }
 
@@ -129,12 +133,13 @@ export async function closeCashierShift(
 
 async function shiftCall(
   hotelId: string, path: string, body: unknown,
-): Promise<ShiftResult> {
+): Promise<ShiftResult<{ id?: string }>> {
   try {
-    await api(`/api/hotels/${hotelId}/cashier-shift/${path}`, {
+    const res = await api<{ id?: string } | null>(`/api/hotels/${hotelId}/cashier-shift/${path}`, {
       method: "POST", body: JSON.stringify(body),
     });
-    return { ok: true };
+    /* A movement's id, for the photo of its bill (D27-370). */
+    return res?.id ? { ok: true, id: res.id } : { ok: true };
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;

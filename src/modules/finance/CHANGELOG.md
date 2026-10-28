@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-27 · The petty cash book (the owner's D27-370), a helper's lane
+
+**Asked for:** each paid-out, at the desk and in a restaurant, gets a category (Kitchen, Housekeeping, Maintenance, Office, Other) and a photo of its bill; a Petty cash report shows them by day and category, both places together. No float, top-ups or balance.
+
+**Shipped** Migration 245: `category` on `cashier_movements` and `pos_cash_movements`, held to the five words and to expenses by `*_category_known` checks (nullable: an expense from before shows a dash). `api/src/modules/finance/expenses.ts`: `EXPENSE_CATEGORIES`, `categoryProblem` (a new expense needs one, money in takes none; refused before the first write), `putExpensePhoto`/`serveExpensePhoto` (the photo in `attachments` against the movement, behind the paid-out's own door, as a bar bill's). Through finance's front door for the till. `cashier.ts`: the category taken and stored, the movement's id returned, each movement's `category` and `photo`, and `POST/GET /:code/cashier-shift/movements/:id/photo` (roleGate: DRAWER to add; `payment` or `invoice` view to read). Web: `data/expenses.ts` (the list, the photo calls), `flows/ExpenseFields.tsx` (`ExpenseFields`: Category and Photo of the bill; `ExpensePhoto`: open it or Add photo), both on the front door for the restaurant's Cash step; Cashiering's Record dialog and list use them. Manual A4.10 and A12.7.
+
+**Proved** `api/test/modules/finance/pettyCash.test.ts` (both places, the photo, the report), `src/modules/finance/pettyCash.test.tsx`, `db/tests/modules/finance.sql` (petty cash). The numbers are in the helper's report to the master.
+
+**Left open** Whether the photo is required; whether waiting and refused expenses belong in the report's totals; who reads the report - the owner's (questions with the helper's report).
+
 ## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Shipped** The interim bill is the **proforma bill**, drawn by the tax invoice's own sheet (`flows/BillPrint.tsx` `proformaOf`, `InvoiceSheet`'s `proforma` in `pages/Invoice.tsx`; the Bill tab's button and `pages/InterimBill.tsx`), with the hotel's contacts, each line's HSN/SAC, the stay and the payments (`folios.ts` GET bill, `stayFacts`/`paymentsOn` in `invoices.ts`). **The tax invoice at check-out** follows the hotel's setting (229): issued and printed by itself in two copies, ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER (`useInvoicePrinter`, `useInvoiceCopies`, `flows/TaxInvoiceStep.tsx`), or offered, or left to Invoices. The invoice prints the **G.R. card no** (230). A kind's code is **HSN/SAC**, 4, 6 or 8 digits (232; `tax.ts`, `TaxRulesCard`). Front door: `proformaOf`, `InvoiceSheet`, `useInvoiceCopies`; the server's `stayFacts`. **Proved** `billPrint`, `printedBills`, `billTabControls`, `invoiceLayout`, `taxInvoiceAtCheckOut`, `taxSacP3`, `testHotel` (snapshots updated on purpose). The root `CHANGELOG.md` has the whole entry and the gate numbers.

@@ -51,6 +51,10 @@ export { overCashLimit, panFor, PAN_NEEDED } from "./cashLimit.ts";
    the refunds' cash ceiling (D27-315 B) until the CA answers - the till uses
    finance's, not a second copy. */
 export { CASH_REFUND_CEILING } from "./refunds.ts";
+/* D27-370, the petty cash book: a paid-out's five categories and its photo's
+   door, for the restaurant's tin as for the desk's drawer - one copy. The
+   till wraps the two handlers in its own route (MEMORY 436). */
+export { EXPENSE_CATEGORIES, categoryProblem, putExpensePhoto, serveExpensePhoto } from "./expenses.ts";
 /* D27-195: a room rate that includes GST, split for the booking (reservations). */
 export { roomRateBeforeGst } from "./tax.ts";
 export type { ChargeToPost } from "./postings.ts";

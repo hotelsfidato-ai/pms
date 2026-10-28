@@ -65,7 +65,9 @@ export type ReportKey =
   | "stock-count-differences" | "stock-dead" | "stock-cover" | "supplier-spend" | "equipment"
   | "bar-stock"
   /* The excise registers, as the bar keeps them on paper (D27-361). */
-  | "flr-daily" | "flr-monthly";
+  | "flr-daily" | "flr-monthly"
+  /* The petty cash book (D27-370). */
+  | "petty-cash";
 
 export interface ReportDoc {
   /* ⚠ Kept identical to the server's copy, as the note at the top of both

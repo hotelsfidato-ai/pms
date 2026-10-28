@@ -35,7 +35,7 @@ export const REPORT_EXPORTERS: readonly string[] = [
 /* Money owed, which the screen's own read asks `invoice` view of (roleGate
    MONEY_REPORT; the owner's D27-147: not the revenue manager). The file
    asks the same, so the download is no way round the screen. */
-const MONEY_REPORTS: readonly string[] = ["city-ledger"];
+const MONEY_REPORTS: readonly string[] = ["city-ledger", "petty-cash"];
 
 /* The Store and equipment reports (phase 3A; the owner's D27-240): read by
    their own readers (roleGate STORE_REPORTS), downloaded by those of them

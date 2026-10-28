@@ -30,7 +30,8 @@ const as = (who: string, method: string, path: string, body?: unknown) =>
 
 const people: Record<string, string> = {};
 const move = (who: string, kind: string, amount: number, reason: string) =>
-  as(who, "POST", "/cashier-shift/movements", { kind, amount, reason: `${TAG} ${reason}` });
+  as(who, "POST", "/cashier-shift/movements",
+    { kind, amount, reason: `${TAG} ${reason}`, ...(kind === "expense" ? { category: "Office" } : {}) });
 const drawer = async (who: string) => (await (await as(who, "GET", "/cashier-shift")).json()) as {
   shift: { id: string; expected: number; waiting: number;
            movements: { reason: string; approval: string | null; approvalNote: string | null }[] } | null;
@@ -139,7 +140,7 @@ describe("a paid-out from a restaurant's tin (D27-242)", () => {
     const before = (await (await as(desk, "GET", "/till/day-end?outlet=REST")).json()) as
       { cash: { expected: number; waiting: number } };
     const res = await as(desk, "POST", "/till/day-end/movements",
-      { outlet: "REST", kind: "expense", amount: 120, reason: `${TAG} vegetables` });
+      { outlet: "REST", kind: "expense", amount: 120, reason: `${TAG} vegetables`, category: "Kitchen" });
     expect(res.status, await res.clone().text()).toBe(200);
     const after = (await (await as(desk, "GET", "/till/day-end?outlet=REST")).json()) as
       { cash: { expected: number; waiting: number } };

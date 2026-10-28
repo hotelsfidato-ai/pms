@@ -99,7 +99,9 @@ export type ReportKey =
   | "bar-stock"
   /* The excise registers, as the bar keeps them on paper (D27-361). */
   | "flr-daily"
-  | "flr-monthly";
+  | "flr-monthly"
+  /* The petty cash book (D27-370). */
+  | "petty-cash";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -122,6 +124,7 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "bar-stock",
   "flr-daily",
   "flr-monthly",
+  "petty-cash",
 ];
 
 /** The Store and equipment reports (phase 3A): read by D27-240's readers,

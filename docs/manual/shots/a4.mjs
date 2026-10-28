@@ -340,4 +340,23 @@ export const SHOTS = [
       { n: 3, at: "text:Balance due", side: "left" },
     ],
   },
+  /* The petty cash book (D27-370): a paid-out's category and the photo of its bill.
+     Needs Reception's drawer open (A4-21's float, or a payment taken first). */
+  {
+    id: "A4-22", title: "A paid-out: its category, and the photo of its bill", as: "Reception",
+    path: "/h/5EL/cashiering",
+    steps: [
+      { click: "text:Record" }, { waitFor: "text:Money in or out" },
+      { type: ["css:[role=dialog] input[type='number']", "150"] },
+      { type: ["css:[role=dialog] textarea", "Courier"] },
+      { eval: `(() => { const s = document.querySelectorAll('[role=dialog] select')[1];
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'Office');
+        s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()` },
+    ],
+    marks: [
+      { n: 1, at: "text:Category", side: "left" },
+      { n: 2, at: "text:Photo of the bill", side: "left" },
+      { n: 3, at: "text:Record", nth: 1, side: "top" },
+    ],
+  },
 ];
