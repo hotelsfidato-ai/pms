@@ -1125,6 +1125,7 @@ declare
   g1 uuid; g2 uuid; g3 uuid; outlet uuid; kitchen uuid; cat uuid; item uuid; loc uuid; si uuid;
   stay uuid; stay2 uuid; inhouse uuid; fol uuid; fol2 uuid; pid bigint; ord uuid; line bigint;
   fy text; bd date; dry jsonb; done jsonb; v text; n bigint; s record;
+  rg_here uuid; rg_bill uuid; rg_led uuid;
 begin
   begin
     select id into owner from staff where email = 'owner@fidato.in';
@@ -1158,6 +1159,13 @@ begin
     values (h, app.next_reference(h), g2, rt, bd - 5, bd - 4, 3000, 'checked_out');
     insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
     values (other, app.next_reference(other), g2, rt_o, bd + 10, bd + 11, 3000, 'confirmed') returning id into stay2;
+    -- Booking groups: one only here (goes); one with no bookings and its bill
+    -- at the other hotel, and one the other hotel leads (both stay).
+    insert into reservation_groups (name) values ('ORS here') returning id into rg_here;
+    update reservations set group_id = rg_here where id = stay;
+    insert into reservation_groups (name) values ('ORS bill elsewhere') returning id into rg_bill;
+    insert into folios (hotel_id, group_id) values (other, rg_bill);
+    insert into reservation_groups (name, lead_hotel_id) values ('ORT leads', other) returning id into rg_led;
     insert into folios (hotel_id, reservation_id) values (h, stay) returning id into fol;
     insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
     values (h, fol, bd - 1, 'room', 'Room 101 · 1 night', 3000, 12, 360);
@@ -1277,6 +1285,10 @@ begin
       'ok', not exists (select 1 from guests where id in (g1, g3))
             and exists (select 1 from guests where id = g2)
             and exists (select 1 from guest_documents where guest_id = g2));
+    res := res || jsonb_build_object('n', 'a booking group goes only when nothing at another hotel holds it: not its bill there, not that hotel leading it',
+      'ok', not exists (select 1 from reservation_groups where id = rg_here)
+            and exists (select 1 from reservation_groups where id = rg_bill)
+            and exists (select 1 from reservation_groups where id = rg_led));
     res := res || jsonb_build_object('n', 'the other hotel is untouched',
       'ok', exists (select 1 from reservations where id = stay2)
             and exists (select 1 from folio_postings where hotel_id = other and description = 'ORT charge'));

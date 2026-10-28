@@ -85,9 +85,14 @@ grant usage on schema owner_reset to pms_owner_reset;
 --     repair's costs at the work order - none cascades.
 --   * a guest's papers go only when the guest has no stay at ANOTHER property
 --     (a guest is a person for the whole group; D27-298).
---   * a booking group has no hotel: it goes once no booking at another hotel
---     points at it. (Written so, rather than "no booking anywhere", the count
---     before the clear is the same as what the clear removes.)
+--   * a booking group has no hotel of its own: it goes once nothing at another
+--     hotel points at it - no booking and no group bill there - and it is not
+--     led by another hotel. (Written so, rather than "no booking anywhere",
+--     the count before the clear is what the clear removes. 29 October: the
+--     old clause took a group with no bookings whose bill was at another
+--     hotel, and the clear stopped on the key - found by running the script
+--     on the database suite's own data; and it took a group another hotel
+--     leads that had no bookings yet.)
 --   * the Store: count lines, then movements (an undo and its movement in one
 --     statement); a bar bill's lines, movements, then the bills.
 --   * what is owed to suppliers (246, 249; release 14's gate run, 28 October)
@@ -152,7 +157,7 @@ as $fn$
         ["room_blocks",               "hotel_id = $1"],
         ["banquet_events",            "hotel_id = $1"],
         ["reservations",              "hotel_id = $1"],
-        ["reservation_groups",        "not exists (select 1 from reservations r where r.group_id = reservation_groups.id and r.hotel_id <> $1)"],
+        ["reservation_groups",        "(lead_hotel_id is null or lead_hotel_id = $1) and not exists (select 1 from reservations r where r.group_id = reservation_groups.id and r.hotel_id <> $1) and not exists (select 1 from folios f where f.group_id = reservation_groups.id and f.hotel_id <> $1)"],
         ["night_audit_runs",          "hotel_id = $1"],
         ["bar_request_lines",         "hotel_id = $1"],
         ["bar_requests",              "hotel_id = $1"],
