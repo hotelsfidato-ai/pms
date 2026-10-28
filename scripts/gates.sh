@@ -76,8 +76,8 @@ step "strip"     "$S/g-strip.log"    -- bash -c 'cd api && npm run strip-check';
 step "web tests" "$S/g-web.log"      "Test Files +[0-9]+ passed" -- npx vitest run; w=$?
 
 if [ "$mode" = "quick" ]; then
-  a=0; d=0; r=0; p=0
-  echo "  (quick: the API suite, the database, the replay and PostgreSQL 16 were not run)" >> "$P"
+  a=0; d=0; r=0; p=0; h=0; t=0
+  echo "  (quick: the API suite, the database, the replay, PostgreSQL 16 and the two restores were not run)" >> "$P"
 else
   # Every step that builds a database waits its turn in the queue: roles are
   # shared by the whole cluster, and a replay beside a helper's migrate failed
@@ -88,6 +88,10 @@ else
   # The live server's PostgreSQL 16 (the owner, 4 Oct). Its own cluster, shared
   # by every copy, so it waits its turn in the database queue.
   step "pg16"      "$S/g-pg16.log"  "all [0-9]+ migrations are re-runnable" -- q bash db/tests/pg16.sh; p=$?
+  # The two restores (D27-376, D27-377): one hotel back from a night's backup,
+  # and the whole system back to a chosen minute, on PostgreSQL 16.
+  step "restore 1" "$S/g-restore.log" "all [0-9]+ checks passed" -- q bash db/tests/restore-hotel.sh; h=$?
+  step "to minute" "$S/g-pitr.log"    "restore to any minute: every check passed" -- q bash db/tests/pitr.sh; t=$?
 fi
 
 echo "  finished $RUN" >> "$P"
@@ -109,11 +113,13 @@ if [ "$mode" != "quick" ]; then
   echo "  database   exit $d   $dbline"
   echo "  replay     exit $r   $(strip "$S/g-rerun.log" | grep -E "re-runnable|abort|CUT SHORT" | xargs)"
   echo "  pg16       exit $p   $(strip "$S/g-pg16.log" | grep -E "PostgreSQL\) 16|assertions passed|re-runnable|FAILED|abort|x |CUT SHORT" | tr '\n' ' ' | xargs)"
+  echo "  restore 1  exit $h   $(strip "$S/g-restore.log" | grep -E "checks passed|checks FAILED|CUT SHORT" | xargs)"
+  echo "  to minute  exit $t   $(strip "$S/g-pitr.log" | grep -E "every check passed|check\(s\) failed|x no|CUT SHORT" | xargs)"
 else
-  echo "  QUICK RUN - the API suite, the database, the replay and PostgreSQL 16 were NOT run."
+  echo "  QUICK RUN - the API suite, the database, the replay, PostgreSQL 16 and the two restores were NOT run."
 fi
 if [ $w -ne 0 ]; then strip "$S/g-web.log" | grep -E "× |→ " | head -6 | sed 's/^/    /'; fi
 if [ $a -ne 0 ]; then strip "$S/g-api.log" | grep -E "× |→ " | head -6 | sed 's/^/    /'; fi
 if [ $wt -ne 0 ]; then head -8 "$S/g-webtypes.log" | sed 's/^/    /'; fi
 if [ $at -ne 0 ]; then head -8 "$S/g-apitypes.log" | sed 's/^/    /'; fi
-[ $wt -eq 0 ] && [ $at -eq 0 ] && [ $sc -eq 0 ] && [ $w -eq 0 ] && [ $a -eq 0 ] && [ $d -eq 0 ] && [ $r -eq 0 ] && [ $p -eq 0 ]
+[ $wt -eq 0 ] && [ $at -eq 0 ] && [ $sc -eq 0 ] && [ $w -eq 0 ] && [ $a -eq 0 ] && [ $d -eq 0 ] && [ $r -eq 0 ] && [ $p -eq 0 ] && [ $h -eq 0 ] && [ $t -eq 0 ]

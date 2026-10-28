@@ -32,7 +32,7 @@ import { pathToFileURL } from "node:url";
 
 const API = "https://api.fidatohotels.com";
 const EMAIL = "influvateseo@gmail.com";
-const FULL = ["web types", "api types", "strip", "web tests", "api tests", "database", "replay", "pg16"];
+const FULL = ["web types", "api types", "strip", "web tests", "api tests", "database", "replay", "pg16", "restore 1", "to minute"];
 
 /** release/all-5oct -> release-all-5oct, the release copy's folder. */
 export const copyName = (branch) => branch.replaceAll("/", "-");

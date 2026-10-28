@@ -12984,7 +12984,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><code>bash scripts/gates.sh &lt;label&gt;</code> runs everything. This is the run that counts.</li>
     <li><code>bash scripts/gates.sh &lt;label&gt; quick</code> runs only the type checks, the strip check and the website tests (about four minutes), for checking work in progress. It says on its last line that the rest were <b>not</b> run.</li>
   </ol>
-  <p>The full run has eight steps. The website build (B8.3) is run straight after it, by hand and again by the release script.</p>
+  <p>The full run has ten steps. The website build (B8.3) is run straight after it, by hand and again by the release script.</p>
   <table>
     <thead><tr><th style="width:15%">Step</th><th style="width:35%">What it does</th><th style="width:25%">What it proves</th><th>What it cannot prove</th></tr></thead>
     <tbody>
@@ -12996,6 +12996,8 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>database</td><td>Builds an empty scratch database, applies every migration from the first, then runs the database's own assertions: the core suite, one file per service, and the isolation suite.</td><td>The constraints, triggers and money rules hold (for example, the ledger only grows: a wrong line is reversed by a line of its own, never edited or deleted). The isolation suite runs <b>as the application's own login</b> and proves one hotel cannot read another's rows.</td><td>That the screens use those rules well.</td></tr>
       <tr><td>replay</td><td>Builds a scratch database, migrates it, adds a hotel as a real database would have, then applies every migration <b>again</b>.</td><td>An update can be installed on a database that already holds data. Every deploy does exactly this.</td><td>That a particular live database has no oddity the scratch one lacks.</td></tr>
       <tr><td>pg16</td><td>The database suite and the replay once more, on PostgreSQL 16.15, in a database of its own on this PC.</td><td>Nothing in the code needs PostgreSQL 17 (this PC's version) when the live server runs 16.15.</td><td>Anything about the server other than its database version.</td></tr>
+      <tr><td>restore 1</td><td>Builds the demo hotel and two others, takes a backup, deletes one booking with its bill and guest, changes a room, then runs the one-hotel restore tool (<code>deploy/restore-hotel.sh</code>): a look, a refused wrong code, then the bring-back.</td><td>Only what is missing comes back, exactly as it was; a record changed since stays as it is now; bill lines, payments and the invoice series are listed, never written; no other hotel moves.</td><td>That last night's real backup is sound, or what the live server's own rules add on the way in. Your first look on the server proves that (B9.6).</td></tr>
+      <tr><td>to minute</td><td>On PostgreSQL 16.15, in a throw-away server of its own: the journal saved and copied to a folder standing in for the bucket, a weekly base copy, a delete, then the system rebuilt to the minute before it as a new database beside the live one.</td><td>Restore to any minute brings back what was there at that minute, refuses a minute past the last journal piece, and the alarms turn red when the journal stops.</td><td>That the real bucket and the server's own settings work: the owner's one rehearsal on the server proves that (B9.6).</td></tr>
     </tbody>
   </table>
 
@@ -13007,6 +13009,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li><b>database, as the application's login</b>: a test run as the database's superuser passes every privacy rule, because a superuser ignores them. The isolation suite connects as the application does, so an open door shows.</li>
       <li><b>replay</b>: an early attempt to answer "can the migrations run twice?" was made on a real database, half-applied, and the database had to be rebuilt (MEMORY 119). Later, older migrations quietly undid newer ones on a second run (MEMORY 284, 293, 299). The replay runs on a scratch database holding a hotel, so it catches both.</li>
       <li><b>pg16</b>: the live server runs PostgreSQL 16.15 while this PC runs 17. A backup made on 17 could not be read by 16 (MEMORY 190); a migration using something only 17 knows would stop a live update half-way. Your yes, 4 October.</li>
+      <li><b>restore 1 and to minute</b>: a restore is only needed on a bad day, which is the worst day to find it broken. A database change could quietly stop either one working; run on every release, they cannot break unseen. Your yes, 29 October (D27-376, D27-377).</li>
     </ul>
   </div>
 
@@ -13022,7 +13025,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>The build is <b>not</b> one of the eight steps of <code>gates.sh</code>. It is run beside it, and the release script (B9.3) builds again in the release copy and checks the result. Twice the gates were green and the website would not build (MEMORY 337, 378).</li>
+      <li>The build is <b>not</b> one of the ten steps of <code>gates.sh</code>. It is run beside it, and the release script (B9.3) builds again in the release copy and checks the result. Twice the gates were green and the website would not build (MEMORY 337, 378).</li>
     </ul>
   </div>
 
