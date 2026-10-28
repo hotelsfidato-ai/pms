@@ -508,3 +508,84 @@ begin
   perform test.ok('bar stock', 'a test hotel copies what each dish takes as setup',
     exists (select 1 from app.test_hotel_classes() c where c.table_name = 'bar_pours' and c.class = 'setup'));
 end $$;
+
+-- =============================================================================
+-- THE KITCHEN'S STOCK AND RECIPES (the owner's D27-373, D27-374; migration 253)
+-- =============================================================================
+-- Nothing is marked the kitchen's store by the migration, and the bar's never
+-- is. A line SENT takes its dish's recipe and its size's on top; a line still
+-- waiting and a dish with no recipe take nothing; nothing is taken twice.
+-- Struck once sent, the issue is undone and written again as wastage with the
+-- reason - stock does not move. A recipe line has one owner.
+-- =============================================================================
+do $$
+declare
+  h uuid; v_staff uuid; v_out uuid; v_cat uuid; v_dish uuid; v_plain uuid; v_full uuid; v_paneer uuid;
+  v_kitchen uuid; v_bar uuid; v_order uuid; v_line bigint; v_bare bigint; bd date; n numeric;
+begin
+  h := app.provision_property_unchecked('PKS', 'Kitchen Stock Test', 'Nowhere');
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  select id into v_kitchen from locations where hotel_id = h and name = 'Kitchen store';
+  select id into v_bar from locations where hotel_id = h and is_bar_store;
+  bd := app.business_date(h);
+  perform test.ok('kitchen stock', 'no store is marked the kitchen''s by the migration',
+    not exists (select 1 from locations where hotel_id = h and is_kitchen_store));
+  perform test.raises('kitchen stock', 'the bar''s store is never the kitchen''s',
+    format('update locations set is_kitchen_store = true where id = %L', v_bar), '23514');
+  update locations set is_kitchen_store = true where id = v_kitchen;
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'KSR', 'Kitchen Stock Restaurant', 'food', v_staff) returning id into v_out;
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (h, 'Mains', 'restaurant') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price) values (h, v_cat, 'Tikka', 300) returning id into v_dish;
+  insert into pos_menu_items (hotel_id, category_id, name, price) values (h, v_cat, 'Dal', 200) returning id into v_plain;
+  insert into pos_item_variations (hotel_id, item_id, label, price) values (h, v_dish, 'Full', 400) returning id into v_full;
+  insert into stock_items (hotel_id, name, unit, category) values (h, 'Paneer', 'kg', 'Dairy') returning id into v_paneer;
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, moved_by)
+  values (h, v_paneer, v_kitchen, bd, 'receipt', 5, v_staff);
+
+  perform test.raises('kitchen stock', 'a recipe line has one owner',
+    format($q$insert into recipe_lines (hotel_id, item_id, numbered_addon_id, stock_item_id, quantity)
+              values (%L, %L, gen_random_uuid(), %L, 1)$q$, h, v_dish, v_paneer), '23514');
+  perform test.raises('kitchen stock', 'a recipe takes more than none',
+    format($q$insert into recipe_lines (hotel_id, item_id, stock_item_id, quantity) values (%L, %L, %L, 0)$q$,
+           h, v_dish, v_paneer), '23514');
+  insert into recipe_lines (hotel_id, item_id, stock_item_id, quantity) values (h, v_dish, v_paneer, 0.1);
+  insert into recipe_lines (hotel_id, item_id, variation_id, stock_item_id, quantity) values (h, v_dish, v_full, v_paneer, 0.1);
+  perform test.raises('kitchen stock', 'an item once per recipe',
+    format($q$insert into recipe_lines (hotel_id, item_id, stock_item_id, quantity) values (%L, %L, %L, 0.2)$q$,
+           h, v_dish, v_paneer), '23505');
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, h, v_dish, v_full, 'Tikka (Full)', 2, 400, 5, v_staff) returning id into v_line;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, h, v_plain, 'Dal', 3, 200, 5, v_staff) returning id into v_bare;
+  perform test.ok('kitchen stock', 'a line still waiting takes nothing',
+    app.stock_on_hand(v_paneer, v_kitchen) = 5, app.stock_on_hand(v_paneer, v_kitchen)::text);
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where order_id = v_order;
+  n := app.stock_on_hand(v_paneer, v_kitchen);
+  perform test.ok('kitchen stock', 'sent, two Full take the dish''s 0.1 and the size''s 0.1 each', n = 4.6, n::text);
+  perform test.ok('kitchen stock', 'as one issue to the outlet, marked with the line',
+    exists (select 1 from stock_movements where pos_line_id = v_line and kind = 'issue'
+             and to_outlet = v_out and quantity = -0.4), 'not found');
+  perform test.ok('kitchen stock', 'a dish with no recipe takes nothing',
+    not exists (select 1 from stock_movements where pos_line_id = v_bare), 'took');
+  update pos_order_lines set kot_status = 'ready' where id = v_line;
+  perform test.ok('kitchen stock', 'nothing is taken twice as it moves along',
+    app.stock_on_hand(v_paneer, v_kitchen) = 4.6, app.stock_on_hand(v_paneer, v_kitchen)::text);
+
+  update pos_order_lines set voided = true, voided_by = v_staff, voided_at = now(), void_reason = 'burnt'
+   where id = v_line;
+  perform test.ok('kitchen stock', 'struck once sent: the stock does not move',
+    app.stock_on_hand(v_paneer, v_kitchen) = 4.6, app.stock_on_hand(v_paneer, v_kitchen)::text);
+  perform test.ok('kitchen stock', 'struck once sent: the issue undone, wastage with the reason',
+    not exists (select 1 from stock_movements m where m.pos_line_id = v_line and m.kind = 'issue'
+                 and not exists (select 1 from stock_movements r where r.reverses_id = m.id))
+    and exists (select 1 from stock_movements where pos_line_id = v_line and kind = 'wastage'
+                 and quantity = -0.4 and note = 'Struck after the KOT: burnt'), 'not as expected');
+  perform test.ok('kitchen stock', 'a test hotel copies recipes as setup',
+    exists (select 1 from app.test_hotel_classes() c where c.table_name = 'recipe_lines' and c.class = 'setup'));
+end $$;
