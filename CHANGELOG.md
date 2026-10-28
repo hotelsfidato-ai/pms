@@ -50,6 +50,26 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-28 · Release 15, plan A (D27-373): A1 off-site backups for n8n too, A2 disk and backup alerts
+
+**Asked for:** the master, for release 15: build A1 and A2 of `docs/plans/resilience-a.md` (the owner chose all of plan A, D27-373). A1: n8n's nightly backup goes to the PMS's bucket under `n8n/`, the same way and with the same status-code check; the owner's bucket steps complete and plain. A2: a Disk row on Connection health (amber 80%, red 90%, the hourly email on red); Backups red on a failed run or, once a bucket is set, no upload for 26 hours.
+
+**Shipped**
+- `deploy/n8n.sh`: the `n8n-backup` it installs now packs the night's folder (workflows, credentials still encrypted) into one `.tar.gz` and PUTs it to `<link>/n8n/n8n-<stamp>.tar.gz` with `Content-MD5`; only a 200 is a copy, anything else exits 1; no link, it says "on this disk only". **Not the encryption key** (HANDOVER 5: a master password, never pasted anywhere). The link comes from `/etc/n8n/backup.env` (root's alone), not `/etc/fidato-backup.env` (postgres may write it, and root running it would let that account steer n8n's credentials). Its install line says whether it copies.
+- `deploy/n8n-backup.test.mjs`: a dry run of that very script (extracted from `n8n.sh`) with a stand-in podman and a local listener as the bucket.
+- `api/src/modules/connections-health/health.ts`: the **Disk** row (`statfs("/")`, counted as `df`); `readBackupStatus` keeps `lastUploaded`; Backups red when copies stopped for 26 hours after one went. The sweep's email covers Disk with no code of its own.
+- `deploy/README.md` "Backups": n8n's part (step 3 copies the link line across, `sudo /opt/fidato/deploy/n8n.sh`; step 4 proves it), the versioning note corrected (step 2 needs it off, not step 3), the expiry note names both files; "Watching it" names the Disk and Backups rows. `db/backup.sh`: its comment no longer says versioning keeps overwritten copies.
+- The page's description names the disk. Manual A17.14, B5.10, B6.34, B9.6, B9.8; `manual.html` rebuilt.
+
+**Proved**
+- API: connections-health + System health **45/45** (`npm test -- test/modules/connections-health test/modules/admin/systemHealth.test.ts`). Break-and-run: amber threshold and the no-upload rule taken out → 2 failed (33 passed); red threshold out → 2 failed (the threshold test and the disk email); restored.
+- Deploy: `deploy/n8n-backup.test.mjs` **4/4**. Break-and-run: the 200 check out → 2 failed (400 and unreachable read as copies); `--exclude=encryption-key` out → 1 failed (the key in the archive); `Content-MD5` out → 1 failed; restored.
+- `npx tsc --noEmit -p tsconfig.json` (api) exit 0; `npx tsc -p tsconfig.app.json --noEmit` exit 0; `npx vitest run deploy/n8n-backup.test.mjs deploy/customer.test.mjs src/modules/connections-health src/test` **19/19** (after the manual build; before it, the manual's own check failed as it should).
+
+**Left open**
+- Pictures A17-49 and B5-01 show six rows, not seven: they need the local web and API running (`node docs/manual/tools/shoot.mjs a17 A17-49`, `... b5 B5-01`), which this helper may not start. The chapters say so under each.
+- Nothing tells anyone when n8n's own backup fails: questions for the owner (in the helper's report).
+
 ## 2026-10-25 · Release 13 (LIVE 26 Oct, with 12.1, at 2e7a5b4a): the bar's store and counter, as the excise registers keep it (D27-361); the printer installer from our server (D27-362)
 
 **Asked for:** the owner, 22 October, with photos of FORM FLR-1A/2A/3A and FLR-3: "2 places - the store where it's counted whole, and the counter ... the counter requested 5 bottles so the approval will be given to move ... closing count ... then the night audit, and the morning audit of stock". Answers (D27-361): a Bar store and a Bar counter, the counter asks and the GM or the Inventory Manager approves; counted three ways (poured, whole, packet); the night audit waits for the closing count, the GM may mark "Bar closed today"; a morning count by the bar manager; both registers like the paper; a NIP sold the day it is opened (to confirm with the CA); release 13, after 12. And D27-362: the Fidato Printer installer hosted on our server. Asked while the checks ran (D27-364): **"Other moves"** on the store's sheet and the Simple one, so every row adds up.

@@ -148,7 +148,8 @@ fi
 #       an Oracle Object Storage pre-authenticated request on the whole
 #       bucket, "Permit object writes" only. It can add files and cannot
 #       read, list or delete them, so a break-in on this box cannot reach
-#       back and empty the bucket (versioning keeps anything overwritten).
+#       back and empty the bucket (its 30-day retention rule stops anything
+#       being overwritten or deleted; versioning is off, as that rule needs).
 #
 # Content-MD5 makes Object Storage hash what arrived and refuse it with a 400
 # if it differs from what left, so a success here means the bytes match.

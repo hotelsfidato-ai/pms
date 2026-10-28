@@ -325,6 +325,16 @@ to an Oracle Object Storage bucket**; restores it into a scratch database and
 compares it with the live one, figure by figure; and **tells the owner, pass
 or fail**, through n8n. Its output is in `/var/log/fidato-backup.log`.
 
+At 03:30 n8n's own backup (`/usr/local/bin/n8n-backup`, written by
+`deploy/n8n.sh`) saves its workflows and its saved logins, still encrypted, and
+**copies them to the same bucket, under `n8n/`** (D27-373, A1). The key that
+opens those logins stays on the server (`/etc/n8n/encryption-key`): it is a
+master password and is never copied anywhere. Its output is in
+`/var/log/n8n-backup.log`.
+
+Connection health (Settings) shows both the backups and the server's disk, and
+emails the owner when either turns red (below, "Watching it").
+
 The owner's choices, 27 September (D27-15): Oracle storage in Fidato's own
 account, **30 days** kept there, told by **WhatsApp through n8n**, with a free
 outside check as the backstop for the one case n8n cannot see.
@@ -339,6 +349,11 @@ alone). Nothing about them is in the repository.
 | `ALERT_URL` | the n8n webhook, over loopback: `http://127.0.0.1:5678/webhook/<path>` (step 2) |
 | `ALERT_SECRET` | a long random value; n8n drops any call without it in `x-alert-secret` |
 
+n8n's backup reads the same link from a file of its own, `/etc/n8n/backup.env`
+(root's alone), because it runs as root, and root running a file the
+`postgres` account may write would let that account choose where n8n's saved
+logins go. Step 3 copies the line across.
+
 ### Setting it up, once
 
 **1 · The bucket:** *the Oracle console, in your browser, signed in to
@@ -346,7 +361,8 @@ Fidato's account*
 
 1. **Storage → Buckets → Create Bucket.** Name `pms-backups`, in the same
    compartment as the server. Standard tier, Oracle-managed keys, **object
-   versioning off** (step 3 needs it off). It is private by default; leave it.
+   versioning off** (step 2 needs it off: a bucket with versioning on cannot
+   have a retention rule). It is private by default; leave it.
 2. **The bucket → Retention rules → Create rule.** Name `keep-30-days`,
    time-bound, **30 days**. Do not lock it. For 30 days nothing (not the
    server, not a break-in on it, not a mistake) can delete or overwrite a copy.
@@ -362,7 +378,8 @@ Fidato's account*
    target **Bucket**, access **Permit object writes**, expiry **a year from
    today**. Copy the URL: it is shown once. It can add files and nothing else:
    it cannot read, list or delete them. When it expires the nightly backup
-   fails and you are told; make a new one and paste it in.
+   fails and you are told; make a new one and put it in both files of step 3.
+   Note the expiry date in your calendar a week before.
 
 **2 · The alert:** *n8n, in your browser, n8n.fidatohotels.com*
 
@@ -409,6 +426,24 @@ ALERT_URL='http://127.0.0.1:5678/webhook/pms-backup'
 ALERT_SECRET='<the secret from step 2>'
 ```
 
+Save with Ctrl+O, Enter, and leave with Ctrl+X. Then the same link for n8n's
+backup, copied from that file (nothing to paste), and a look at its start:
+
+```bash
+sudo sh -c "umask 077; grep '^BACKUP_UPLOAD_URL=' /etc/fidato-backup.env > /etc/n8n/backup.env"
+sudo cut -c1-45 /etc/n8n/backup.env
+```
+
+The second line should print `BACKUP_UPLOAD_URL='https://objectstorage.` and
+a few letters more. Then install the n8n backup that copies (it restarts n8n,
+so webhooks pause for about a minute; pick a quiet hour):
+
+```bash
+sudo /opt/fidato/deploy/n8n.sh
+```
+
+It should end its "Backups" step with *"copied to the bucket under n8n/"*.
+
 **4 · Prove it:** *the server, over ssh as `opc`, after a `launch.sh` run
 that carries this change*
 
@@ -422,12 +457,29 @@ the n8n workflow should show the call. Then break it once on purpose: put a
 wrong character in `BACKUP_UPLOAD_URL`, run the line again, and see the
 WhatsApp arrive, and put it back.
 
+n8n's, *the same place*:
+
+```bash
+sudo /usr/local/bin/n8n-backup
+```
+
+It should end *"copied off the box: n8n/n8n-…tar.gz, checksum matched"*, and
+the bucket should show a folder `n8n` with that file in it. *The PMS, in your
+browser*: Settings → Connection health → **Backups** should read *"Backed up
+and copied off the server"* after the next 03:00 run.
+
 ### Getting a copy back
 
 *The Oracle console*: the bucket → Objects → the file → Download. *Your PC or
 the server*: `pg_restore -d <empty database> --no-owner --no-acl <file>`, or
 `db/verify-backup.sh <file>` to restore it into a scratch database and check
 it first. Do it once on purpose before it is needed.
+
+n8n's: the bucket → Objects → `n8n/` → the night's `.tar.gz`. It holds
+`workflows.json` and `credentials.json`; inside the n8n container
+`n8n import:workflow --input=…` and `n8n import:credentials --input=…` put them
+back. The logins open only with the key in `/etc/n8n/encryption-key`, which is
+on the server alone.
 
 ## Watching it
 
@@ -436,6 +488,14 @@ server, its network or n8n itself goes down, n8n cannot say so.
 
 - **n8n** (above, step 2): a WhatsApp when `/health` stops answering or
   answers wrong, and when a backup fails or does not report.
+- **Connection health** (*the PMS, Settings → Connection health*), from inside
+  the API, with one email to `HEALTH_ALERT_EMAIL` when a row turns red (at most
+  once an hour):
+  - **Disk**: how full the server's disk is. Amber from 80% used, red from 90%:
+    a full disk stops the database.
+  - **Backups**: red when last night's backup failed, when none has run for 26
+    hours, or, once a copy has ever gone to the bucket, when none has for 26
+    hours.
 - **UptimeRobot**, free, outside (*uptimerobot.com, in your browser*):
   commercial use is allowed on the free plan (its help centre, 27 Aug 2026).
   Add two HTTP(s) monitors at 5 minutes, `https://api.fidatohotels.com/health`

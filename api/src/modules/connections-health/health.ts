@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { readFile } from "node:fs/promises";
+import { readFile, statfs } from "node:fs/promises";
 import { getAuth } from "firebase-admin/auth";
 import { firebaseApp, withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
@@ -22,6 +22,7 @@ import { canSend } from "../../sending.ts";
      firebase   whether the Admin SDK answers one read-only question
      backups    the status line the nightly check writes into its log
                 (db/verify-backup.sh, "backup-status")
+     disk       the server's root file system: how full it is (resilience A2)
      rivals     rivals' prices: the last check day and the prices it kept
 
    The hotel's facts come through app.connection_facts (migration
@@ -31,7 +32,7 @@ import { canSend } from "../../sending.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export type Status = "green" | "amber" | "red" | "grey";
-export type Key = "email" | "whatsapp" | "crs" | "firebase" | "backups" | "rivals";
+export type Key = "email" | "whatsapp" | "crs" | "firebase" | "backups" | "disk" | "rivals";
 
 export interface Row {
   key: Key;
@@ -78,6 +79,15 @@ export interface BackupFacts {
   last: { at: string; ok: boolean; uploaded: boolean } | null;
   lastOk: string | null;
   lastFailed: string | null;
+  /** The last run that copied the backup off the server: once there is one, a bucket is set. */
+  lastUploaded: string | null;
+}
+
+/** The root file system, as `df` counts it: what is written, and what the
+    database (not root) may still write. */
+export interface DiskFacts {
+  usedBytes: number;
+  freeBytes: number;
 }
 
 export interface ServerFacts {
@@ -85,6 +95,8 @@ export interface ServerFacts {
   sending: boolean;
   firebase: FirebaseFacts;
   backup: BackupFacts;
+  /** Null: it could not be read. */
+  disk: DiskFacts | null;
 }
 
 export const LABELS: Record<Key, string> = {
@@ -93,6 +105,7 @@ export const LABELS: Record<Key, string> = {
   crs: "CRS bridge",
   firebase: "Firebase sign-in",
   backups: "Backups",
+  disk: "Disk",
   rivals: "Rivals' prices",
 };
 
@@ -105,6 +118,9 @@ export const FAILED_IN_A_ROW = 3;
 export const CRS_STALE_MINUTES = 30;
 /** The backup runs nightly at 03:00: the n8n watch's own 26 hours (deploy/README.md). */
 export const BACKUP_STALE_HOURS = 26;
+/** Amber from this much of the disk used, red from the next (resilience A2). */
+export const DISK_AMBER_PERCENT = 80;
+export const DISK_RED_PERCENT = 90;
 
 const minutesSince = (at: string, now: Date) => (now.getTime() - Date.parse(at)) / 60_000;
 
@@ -157,9 +173,24 @@ function backups(f: BackupFacts, now: Date): Omit<Row, "key" | "label"> {
     return { ...base, status: "red", summary: `No backup has run for over ${BACKUP_STALE_HOURS} hours.` };
   }
   if (!f.last.ok) return { ...base, status: "red", summary: "The last backup failed." };
+  if (f.lastUploaded && minutesSince(f.lastUploaded, now) > BACKUP_STALE_HOURS * 60) {
+    return { ...base, status: "red", summary: `Nothing copied off the server for over ${BACKUP_STALE_HOURS} hours, though it was before: check the bucket link in the server's backup settings.` };
+  }
   return f.last.uploaded
     ? { ...base, status: "green", summary: "Backed up and copied off the server." }
     : { ...base, status: "amber", summary: "Backed up, but on this server's disk only: nothing is copied off it." };
+}
+
+const gb = (bytes: number) => `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+
+function disk(f: DiskFacts | null): Omit<Row, "key" | "label"> {
+  const base = { lastSuccess: null, lastError: null };
+  if (!f) return { ...base, status: "amber", summary: "This server's disk space could not be read." };
+  const used = (f.usedBytes / (f.usedBytes + f.freeBytes)) * 100;
+  const said = `${Math.floor(used)}% used, ${gb(f.freeBytes)} free.`;
+  if (used >= DISK_RED_PERCENT) return { ...base, status: "red", summary: `${said} Make room now: the database stops when the disk is full.` };
+  if (used >= DISK_AMBER_PERCENT) return { ...base, status: "amber", summary: `${said} Make room before it reaches ${DISK_RED_PERCENT}%.` };
+  return { ...base, status: "green", summary: said };
 }
 
 function rivals(f: HotelFacts["rivals"]): Omit<Row, "key" | "label"> {
@@ -181,6 +212,7 @@ export function judge(h: HotelFacts, s: ServerFacts, now: Date): Row[] {
     crs: crs(h.crs, now),
     firebase: firebase(s.firebase),
     backups: backups(s.backup, now),
+    disk: disk(s.disk),
     rivals: rivals(h.rivals),
   };
   return (Object.keys(LABELS) as Key[]).map((key) => ({ key, label: LABELS[key], ...rows[key] }));
@@ -204,10 +236,11 @@ export const BACKUP_LOG = "/var/log/fidato-backup.log";
 const STATUS_LINE = /^backup-status (\S+) (ok|failed) uploaded=(yes|no)$/gm;
 
 export function readBackupStatus(text: string): BackupFacts {
-  const facts: BackupFacts = { found: true, last: null, lastOk: null, lastFailed: null };
+  const facts: BackupFacts = { found: true, last: null, lastOk: null, lastFailed: null, lastUploaded: null };
   for (const [, at, result, uploaded] of text.matchAll(STATUS_LINE)) {
     facts.last = { at: at!, ok: result === "ok", uploaded: uploaded === "yes" };
     if (result === "ok") facts.lastOk = at!; else facts.lastFailed = at!;
+    if (uploaded === "yes") facts.lastUploaded = at!;
   }
   return facts;
 }
@@ -216,7 +249,18 @@ async function backupFacts(path = BACKUP_LOG): Promise<BackupFacts> {
   try {
     return readBackupStatus(await readFile(path, "utf8"));
   } catch {
-    return { found: false, last: null, lastOk: null, lastFailed: null };
+    return { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null };
+  }
+}
+
+/* The disk, read at each page load and each sweep. System health reads it
+   too, its own way: two services may not import each other's insides. */
+async function diskFacts(): Promise<DiskFacts | null> {
+  try {
+    const s = await statfs("/");
+    return { usedBytes: (s.blocks - s.bfree) * s.bsize, freeBytes: s.bavail * s.bsize };
+  } catch {
+    return null;
   }
 }
 
@@ -248,11 +292,12 @@ export async function firebaseFact(
 }
 
 export async function serverFacts(): Promise<ServerFacts> {
-  const [firebase, backup] = await Promise.all([
+  const [firebase, backup, disk] = await Promise.all([
     firebaseFact(!!env.firebaseServiceAccount, () => getAuth(firebaseApp()).listUsers(1)),
     backupFacts(),
+    diskFacts(),
   ]);
-  return { sending: canSend(), firebase, backup };
+  return { sending: canSend(), firebase, backup, disk };
 }
 
 /** The owner's address for the alert email: the server's setting, read when

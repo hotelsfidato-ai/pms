@@ -40,7 +40,8 @@ const facts = (over: Partial<HotelFacts> = {}): HotelFacts => ({
 const server = (over: Partial<ServerFacts> = {}): ServerFacts => ({
   sending: true,
   firebase: { configured: false, answering: false, lastOk: null, lastError: null },
-  backup: { found: false, last: null, lastOk: null, lastFailed: null },
+  backup: { found: false, last: null, lastOk: null, lastFailed: null, lastUploaded: null },
+  disk: { usedBytes: 50, freeBytes: 50 },
   ...over,
 });
 const row = (key: string, h = facts(), s = server()) => judge(h, s, NOW).find((r) => r.key === key)!;
@@ -143,7 +144,7 @@ describe("backups", () => {
     expect(readBackupStatus(text)).toEqual({
       found: true,
       last: { at: "2026-10-03T21:30:00Z", ok: false, uploaded: false },
-      lastOk: "2026-10-02T21:30:00Z", lastFailed: "2026-10-03T21:30:00Z",
+      lastOk: "2026-10-02T21:30:00Z", lastFailed: "2026-10-03T21:30:00Z", lastUploaded: "2026-10-02T21:30:00Z",
     });
   });
   it("is grey where there is no backup log at all", () => {
@@ -162,6 +163,31 @@ describe("backups", () => {
     expect(row("backups", facts(), server({
       backup: readBackupStatus(`backup-status ${ago(400)} failed uploaded=no`) })).status).toBe("red");
     expect(row("backups", facts(), server({ backup: readBackupStatus(ok(ago(26 * 60 + 1))) })).status).toBe("red");
+  });
+  it("once a copy has gone off the server, is red when none has for over 26 hours (resilience A2)", () => {
+    const stopped = readBackupStatus([ok(ago(27 * 60)), ok(ago(400), "no")].join("\n"));
+    expect(stopped.lastUploaded).toBe(ago(27 * 60));
+    const r = row("backups", facts(), server({ backup: stopped }));
+    expect(r.status).toBe("red");
+    expect(r.summary).toMatch(/Nothing copied off the server for over 26 hours/);
+    expect(row("backups", facts(), server({
+      backup: readBackupStatus([ok(ago(25 * 60)), ok(ago(400), "no")].join("\n")) })).status, "within 26 hours").toBe("amber");
+  });
+});
+
+describe("the disk (resilience A2)", () => {
+  const at = (usedPercent: number) => row("disk", facts(), server({
+    disk: { usedBytes: usedPercent * 1024 ** 3, freeBytes: (100 - usedPercent) * 1024 ** 3 } }));
+  it("is green below 80% used, amber from 80%, red from 90%", () => {
+    expect(at(79.9).status).toBe("green");
+    expect(at(79.9).summary).toBe("79% used, 20.1 GB free.");
+    expect(at(80).status).toBe("amber");
+    expect(at(90).status).toBe("red");
+    expect(at(97).status).toBe("red");
+    expect(at(97).summary).toMatch(/^97% used, 3\.0 GB free\. Make room now/);
+  });
+  it("is amber when the disk could not be read", () => {
+    expect(row("disk", facts(), server({ disk: null })).status).toBe("amber");
   });
 });
 
@@ -262,7 +288,7 @@ describe("the page's read", () => {
     const res = await call(gmId);
     expect(res.status).toBe(200);
     const body = await res.json() as { alertsTo: boolean; connections: Array<{ key: string; status: string }> };
-    expect(body.connections.map((c) => c.key)).toEqual(["email", "whatsapp", "crs", "firebase", "backups", "rivals"]);
+    expect(body.connections.map((c) => c.key)).toEqual(["email", "whatsapp", "crs", "firebase", "backups", "disk", "rivals"]);
     expect(body.connections.find((c) => c.key === "email")!.status, "no sending settings in the tests").toBe("grey");
     expect(body.alertsTo).toBe(false);
   });
@@ -332,6 +358,12 @@ describe("the alert, by email only", () => {
     expect(posted).toEqual([]);
     await message("email", "sent", 0);
     expect((await runOnce({ server: firebaseRed, memory, now: NOW })).sent).toEqual(["firebase"]);
+  });
+
+  it("emails the owner when the disk turns red, with nothing but the server named", async () => {
+    const full = async () => server({ disk: { usedBytes: 92, freeBytes: 8 } });
+    expect((await runOnce({ server: full, memory: new Set(), now: NOW })).sent).toEqual(["disk"]);
+    expect(posted[0]).toMatchObject({ kind: "health-alert", data: { connection: "Disk", hotelName: "" } });
   });
 
   it("sends nothing without the owner's address in the server's settings", async () => {

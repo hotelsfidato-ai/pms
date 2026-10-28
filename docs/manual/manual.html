@@ -10778,11 +10778,16 @@ figure.shot.phone img { max-width: 72mm; }
       <li>Last success (and the last error, when there is one)</li>
     </ol>
   </figure>
-  <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span> and <span class="ui">Rivals' prices</span>. Backups and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
+  <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span>, <span class="ui">Disk</span> and <span class="ui">Rivals' prices</span>. Backups, the disk and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
+  <ul>
+    <li><span class="ui">Disk</span> says how full the server's disk is and how much is free. Needs a look from 80% used; Not working from 90%, because the database stops when the disk is full. Tell whoever looks after the server at once.</li>
+    <li><span class="ui">Backups</span> turns Not working when last night's backup failed, when none has run for 26 hours, or, once copies have been going to the off-site bucket, when none has gone for 26 hours.</li>
+  </ul>
+  <p class="muted">The picture above was taken before the Disk row was added; the page now shows it between Backups and Rivals' prices.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The module switches are the owner's and an Admin's: <span class="d">D17-36</span>. Rivals' prices, 30 nights twice a week, the lowest public price: <span class="d">D27-270</span>. One page for every outside connection: <span class="d">D27-276</span>.</p>
+    <p>The module switches are the owner's and an Admin's: <span class="d">D17-36</span>. Rivals' prices, 30 nights twice a week, the lowest public price: <span class="d">D27-270</span>. One page for every outside connection: <span class="d">D27-276</span>. The disk and the off-site copies watched there too: <span class="d">D27-373</span> (plan A, A2).</p>
   </div>
 
   <!-- A17.15 -->
@@ -11938,7 +11943,8 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Emails, WhatsApp</td><td>The last three tries all failed.</td></tr>
       <tr><td>CRS bridge</td><td>The last read failed, or nothing has been read for 30 minutes (the reader runs every five).</td></tr>
       <tr><td>Firebase sign-in</td><td>It did not answer.</td></tr>
-      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours. Amber when backed up but on the server's disk only.</td></tr>
+      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours; or, once copies have gone to the off-site bucket, none has for 26 hours <span class="d">D27-373</span>. Amber when backed up but on the server's disk only.</td></tr>
+      <tr><td>Disk</td><td>The server's disk is 90% used or more: the database stops when it is full. Amber from 80% <span class="d">D27-373</span>. The picture above was taken before this row was added.</td></tr>
       <tr><td>Rivals' prices</td><td>Never red; amber when switched on and nothing kept yet.</td></tr>
     </tbody>
   </table>
@@ -12649,11 +12655,12 @@ figure.shot.phone img { max-width: 72mm; }
   <p>One page showing each outside connection green, amber, red or grey, and one email when one turns red. Built.</p>
   <table>
     <tbody>
-      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Connection health</span> (owner, admins, GMs). Rows: Emails, WhatsApp, the CRS bridge, Firebase sign-in, Backups, Rivals' prices.</td></tr>
+      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Connection health</span> (owner, admins, GMs). Rows: Emails, WhatsApp, the CRS bridge, Firebase sign-in, Backups, Disk, Rivals' prices.</td></tr>
       <tr><th>Decided</th><td>
         <ul>
           <li>One page for every connection, with the last success and the last error; alerts by email only (<span class="d">D27-276</span>), to the address you set (<span class="d">D27-285</span>).</li>
           <li>Red after 3 failures; the CRS after 30 minutes; backups after 26 hours; emails and WhatsApp on separate rows (<span class="d">D27-279</span>).</li>
+          <li>The server's disk: amber from 80% used, red from 90%; backups red too when copies stop reaching the off-site bucket for 26 hours (plan A, A2: <span class="d">D27-373</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>A row for the channel manager. Rivals' prices failures are not recorded, so that row never turns red.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
@@ -13265,6 +13272,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Writes one status line to its log, which System health and Connection health read, and tells you, pass or fail, through n8n when the alert link is set.</li>
   </ol>
   <p>Each customer's database, when there are customers, is backed up at 03:30, one after another, each with its own log.</p>
+  <p>At 03:30 n8n's own backup saves its workflows and its saved logins (still locked) and copies them to the same bucket, in a folder <code>n8n</code>, when n8n's copy of the upload link is set. The key that unlocks those logins never leaves the server <span class="d">D27-373</span> (A1).</p>
   <div class="box watch">
     <h4>Watch out: today the backups do not leave the server</h4>
     <ul>
@@ -13295,7 +13303,7 @@ figure.shot.phone img { max-width: 72mm; }
     <thead><tr><th style="width:28%">Watcher</th><th>What it watches</th><th style="width:26%">Who is told, how</th></tr></thead>
     <tbody>
       <tr><td>System health (inside the PMS, owner and admins)</td><td>Each request's time and result, errors and slow queries, kept 180 days on our own server; each hotel's business date; the last backup (<span class="d">D27-91</span>, <span class="d">D27-92</span>, <span class="d">D27-113</span>, <span class="d">D27-114</span>).</td><td>Whoever opens it. Nothing leaves the server.</td></tr>
-      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
+      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups, the server's disk and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>). The disk is amber from 80% used and red from 90% (<span class="d">D27-373</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
       <tr><td>The n8n workflow "PMS alerts"</td><td>The nightly backup's result, a night with no backup report, and whether the API answers (every 5 minutes).</td><td>A WhatsApp to you on a failure, and when the API goes down or comes back. Needs the alert link of B9.6.</td></tr>
       <tr><td>UptimeRobot (free, outside)</td><td>Whether the API and n8n answer at all, from outside the server.</td><td>Email. It is the backstop for the one case n8n cannot report: the server itself down (<span class="d">D27-20</span>).</td></tr>
     </tbody>

@@ -8,10 +8,11 @@ import { getConnectionsHealth, type Connection, type ConnectionStatus } from "..
    SETTINGS → MODULES AND CONNECTIONS → CONNECTION HEALTH (D27-276)
 
    Every outside connection - emails and WhatsApp through n8n, the CRS,
-   Firebase sign-in, the backups, rivals' prices - green, amber, red or
-   grey, with its last success and its last error. Judged on the server
+   Firebase sign-in, the backups, the server's disk (resilience A2),
+   rivals' prices - green, amber, red or grey, with its last success and
+   its last error. Judged on the server
    (api/src/modules/connections-health/health.ts), for the hotel in the
-   top bar; the backups and Firebase are the server's own. Read only.
+   top bar; the backups, the disk and Firebase are the server's own. Read only.
    ══════════════════════════════════════════════════════════════════ */
 
 const PILL: Record<ConnectionStatus, { tone: Tone; words: string }> = {
@@ -47,7 +48,7 @@ export default function ConnectionHealth() {
   return (
     <Page>
       <PageHeader title="Connection health"
-        description="Every outside connection this system uses, for the property in the top bar. Backups and Firebase are the server's own." />
+        description="Every outside connection this system uses, for the property in the top bar. Backups, the disk and Firebase are the server's own." />
       {q.isError && <ReadFailed error={q.error} what="the connections' health" onRetry={() => void q.refetch()} />}
       {q.isPending && !q.isError && <SkeletonCards count={3} />}
       {q.data && (

@@ -141,6 +141,7 @@
     <li>Writes one status line to its log, which System health and Connection health read, and tells you, pass or fail, through n8n when the alert link is set.</li>
   </ol>
   <p>Each customer's database, when there are customers, is backed up at 03:30, one after another, each with its own log.</p>
+  <p>At 03:30 n8n's own backup saves its workflows and its saved logins (still locked) and copies them to the same bucket, in a folder <code>n8n</code>, when n8n's copy of the upload link is set. The key that unlocks those logins never leaves the server <span class="d">D27-373</span> (A1).</p>
   <div class="box watch">
     <h4>Watch out: today the backups do not leave the server</h4>
     <ul>
@@ -171,7 +172,7 @@
     <thead><tr><th style="width:28%">Watcher</th><th>What it watches</th><th style="width:26%">Who is told, how</th></tr></thead>
     <tbody>
       <tr><td>System health (inside the PMS, owner and admins)</td><td>Each request's time and result, errors and slow queries, kept 180 days on our own server; each hotel's business date; the last backup (<span class="d">D27-91</span>, <span class="d">D27-92</span>, <span class="d">D27-113</span>, <span class="d">D27-114</span>).</td><td>Whoever opens it. Nothing leaves the server.</td></tr>
-      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
+      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups, the server's disk and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>). The disk is amber from 80% used and red from 90% (<span class="d">D27-373</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
       <tr><td>The n8n workflow "PMS alerts"</td><td>The nightly backup's result, a night with no backup report, and whether the API answers (every 5 minutes).</td><td>A WhatsApp to you on a failure, and when the API goes down or comes back. Needs the alert link of B9.6.</td></tr>
       <tr><td>UptimeRobot (free, outside)</td><td>Whether the API and n8n answer at all, from outside the server.</td><td>Email. It is the backstop for the one case n8n cannot report: the server itself down (<span class="d">D27-20</span>).</td></tr>
     </tbody>

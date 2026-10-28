@@ -677,11 +677,12 @@
   <p>One page showing each outside connection green, amber, red or grey, and one email when one turns red. Built.</p>
   <table>
     <tbody>
-      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Connection health</span> (owner, admins, GMs). Rows: Emails, WhatsApp, the CRS bridge, Firebase sign-in, Backups, Rivals' prices.</td></tr>
+      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Connection health</span> (owner, admins, GMs). Rows: Emails, WhatsApp, the CRS bridge, Firebase sign-in, Backups, Disk, Rivals' prices.</td></tr>
       <tr><th>Decided</th><td>
         <ul>
           <li>One page for every connection, with the last success and the last error; alerts by email only (<span class="d">D27-276</span>), to the address you set (<span class="d">D27-285</span>).</li>
           <li>Red after 3 failures; the CRS after 30 minutes; backups after 26 hours; emails and WhatsApp on separate rows (<span class="d">D27-279</span>).</li>
+          <li>The server's disk: amber from 80% used, red from 90%; backups red too when copies stop reaching the off-site bucket for 26 hours (plan A, A2: <span class="d">D27-373</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>A row for the channel manager. Rivals' prices failures are not recorded, so that row never turns red.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>

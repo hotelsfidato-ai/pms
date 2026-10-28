@@ -319,12 +319,44 @@ else
 fi
 # Fourteen nights. The PMS keeps its own backups.
 find "$D" -mindepth 1 -maxdepth 1 -mtime +14 -exec rm -rf {} +
+[ "${1:-}" = full ] && exit 0
+
+# Off the box (A1, D27-373): the nightly folder, as one .tar.gz, into the PMS's
+# bucket under n8n/, the way db/backup.sh copies the PMS's. The link is in a
+# file of n8n's own, root's alone: /etc/fidato-backup.env is the postgres
+# account's to write, and root running it would let that account choose where
+# n8n's credentials go.
+#
+# NOT THE KEY. The encryption key stays on this server (HANDOVER 5: "a master
+# password, never paste it anywhere"); the credentials go still encrypted.
+#
+# ⚠ THE STATUS CODE, NOT curl's EXIT CODE (db/backup.sh): only a 200 is a copy.
+[ -r /etc/n8n/backup.env ] && . /etc/n8n/backup.env
+if [ -z "${BACKUP_UPLOAD_URL:-}" ]; then
+  echo "(no BACKUP_UPLOAD_URL in /etc/n8n/backup.env - this copy is on this disk only)"
+  exit 0
+fi
+F="$D/n8n-$T.tar.gz"
+tar -czf - -C "$D" --exclude=encryption-key "$T" > "$F"
+CODE=$(curl -sS --retry 3 -m 300 -o /dev/null -w "%{http_code}" \
+         -H "Content-MD5: $(openssl dgst -md5 -binary "$F" | base64)" -T "$F" \
+         "${BACKUP_UPLOAD_URL%/}/n8n/${F##*/}") || true
+rm -f "$F"
+if [ "$CODE" != 200 ]; then
+  echo "x the copy off the box FAILED (HTTP $CODE). The folder on this disk is fine." >&2
+  exit 1
+fi
+echo "copied off the box: n8n/${F##*/}, checksum matched"
 EOF
   chmod 700 /usr/local/bin/n8n-backup
   echo "30 3 * * * root /usr/local/bin/n8n-backup >> /var/log/n8n-backup.log 2>&1" \
     > /etc/cron.d/n8n-backup
   /usr/local/bin/n8n-backup >/dev/null
-  ok "nightly at 03:30 into $BACKUP_DIR -- ON THE SAME DISK, like the PMS's"
+  if grep -q "^BACKUP_UPLOAD_URL='..*'" /etc/n8n/backup.env 2>/dev/null; then
+    ok "nightly at 03:30 into $BACKUP_DIR, and copied to the bucket under n8n/"
+  else
+    ok "nightly at 03:30 into $BACKUP_DIR -- ON THE SAME DISK until /etc/n8n/backup.env names the bucket (deploy/README.md, Backups)"
+  fi
 }
 
 if [ "$MODE" != "local" ]; then

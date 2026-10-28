@@ -1,5 +1,18 @@
 # Changelog - connections-health
 
+## 28 October 2026 - the disk and the off-site copies (D27-373, plan A: A2)
+
+- **Disk**, a new row (server's own, between Backups and Rivals' prices):
+  `statfs("/")` counted as `df` counts it; amber from 80% used, red from 90%.
+  The existing sweep emails the owner when it turns red (once an hour at most),
+  with no hotel named. Unreadable: amber.
+- **Backups**: `readBackupStatus` also keeps `lastUploaded`, the last line with
+  `uploaded=yes`. Once there is one (a bucket is set), the row is red when none
+  has gone for 26 hours, which catches the link emptied or its file unreadable
+  while the nightly backup itself still passes.
+- The page's description names the disk; the rows come from the server, so
+  nothing else on the page changed.
+
 ## 5 October 2026 - the backup reader shared (D27-284 (5), the master's change)
 
 - `api/src/modules/connections-health/index.ts` now also exports
