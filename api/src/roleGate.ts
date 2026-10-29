@@ -637,6 +637,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/bar/requests`]: own("stores/stockGrants.ts: BAR_KEEPERS"),
   [`POST ${H}/bar/requests/:id/approve`]: own("stores/barRequests.ts: BAR_APPROVERS, never one's own ask"),
   [`POST ${H}/bar/requests/:id/reject`]: own("stores/barRequests.ts: BAR_APPROVERS, never one's own ask"),
+  /* D27-373, D27-374: the kitchen's count, its store, its recipes. */
+  [`POST ${H}/kitchen-stock/count`]: own("stores/stockGrants.ts: KITCHEN_KEEPERS"),
+  [`PUT ${H}/kitchen-stock/store`]: own("stores/stockGrants.ts: KITCHEN_KEEPERS"),
+  [`PUT ${H}/kitchen-stock/recipes`]: own("stores/stockGrants.ts: KITCHEN_KEEPERS"),
   [`POST ${H}/stores/transfers`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
   [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
@@ -1021,6 +1025,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/bar/pours`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),
   [`GET ${H}/bar/sheet`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),  // D27-354
   [`GET ${H}/bar/requests`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),  // D27-361
+  [`GET ${H}/kitchen-stock/sheet`]: own("stores/stockGrants.ts: STOCK_ROLES.view"),  // D27-373
+  [`GET ${H}/kitchen-stock/recipes`]: own("stores/stockGrants.ts: STOCK_ROLES.view"),  // D27-374
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),

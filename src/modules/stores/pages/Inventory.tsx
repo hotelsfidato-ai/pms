@@ -2,16 +2,18 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getModules } from "@/data/repositories";
 import { FileText } from "lucide-react";
-import { Page, PageHeader, Card, CardBody, Button, Segmented } from "@/components/ui";
+import { Page, PageHeader, Button, Segmented } from "@/components/ui";
 import { BarStockBody } from "@/modules/stores/pages/BarStock";
+import { KitchenStockBody } from "@/modules/stores/pages/KitchenStock";
 
 /* ══════════════════════════════════════════════════════════════════
-   INVENTORY (the owner's D27-354): Bar, and Restaurant to come
+   INVENTORY (the owner's D27-354): Bar and Restaurant
 
    The owner: "in the inventory section, there's two different things,
-   bar and restaurant ... leave restaurant open for now". BAR is the Bar
-   stock page's three parts - today's sheet, bills, set up - the same page
-   the Restaurant menu opens as "Bar stock" (BarStock.tsx).
+   bar and restaurant". BAR is the Bar stock page's parts - today's sheet,
+   requests, bills, set up - the same page the Restaurant menu opens as
+   "Bar stock" (BarStock.tsx). RESTAURANT (D27-373, D27-374) is the kitchen
+   store's daily sheet and the recipes every KOT takes (KitchenStock.tsx).
    ══════════════════════════════════════════════════════════════════ */
 
 export default function InventoryPage() {
@@ -28,7 +30,7 @@ export default function InventoryPage() {
         title="Inventory"
         description={tab === "bar"
           ? "The bar's day: what came, what was sold, what is left, and the count."
-          : "The restaurant's stock comes next."}
+          : "The kitchen's day: what came, what the KOTs used, what was wasted, what is left, and the count."}
         actions={tab === "bar" && (
           <Button asChild variant="secondary" leadingIcon={<FileText />}>
             <Link to="/reports/bar-stock">Bar stock report</Link>
@@ -40,11 +42,7 @@ export default function InventoryPage() {
         options={barOn ? [{ value: "bar", label: "Bar" }, { value: "restaurant", label: "Restaurant" }]
           : [{ value: "restaurant", label: "Restaurant" }]} />
 
-      {tab === "restaurant" ? (
-        <Card><CardBody className="text-sm text-grey-600">
-          The restaurant's stock is being built next. Until then the Store keeps the kitchen's stock, as it does today.
-        </CardBody></Card>
-      ) : <BarStockBody code={code} />}
+      {tab === "restaurant" ? <KitchenStockBody code={code} /> : <BarStockBody code={code} />}
     </Page>
   );
 }

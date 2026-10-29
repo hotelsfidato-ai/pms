@@ -40,6 +40,18 @@ and both stay. A list can be imported from a file.
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Store | `/h/:code/stores` | `pages/Stores.tsx` | housekeeping, stores |
+| Inventory | `/h/:code/inventory` (`?tab=restaurant`, `&part=recipes`) | `pages/Inventory.tsx`: Bar (`BarStock.tsx`), Restaurant (`KitchenStock.tsx`) | stores |
+| Kitchen stock (Restaurant menu, after Kitchen) | `/pos/:code/kitchen-stock` | `pages/KitchenStock.tsx` (the Restaurant tab's two parts) | kitchen_manager, chef (`canSee`: only they, D27-378) |
+
+- **Inventory, Restaurant** (D27-373, D27-374, release 16): **Today's sheet** -
+  the kitchen store's day per item (Opening, Received, Moved in, Moved out,
+  Used by KOTs, Wastage, Corrected, Closing - which adds them up - Counted,
+  Difference), below zero in red, the day's wastage with its reasons, the
+  closing count typed into it; the kitchen store picked here when none is
+  marked, or **Change**. **Recipes** - the dishes with no recipe listed first;
+  every food dish (not a bar or alcohol section), each size, each side and each
+  numbered add-on, with **Edit** for the keepers. The keepers (owner, Admin, GM,
+  Inventory Manager) write; whoever sees the Store reads.
 
 - The entry needs the `stock` grant (`resource: "stock"`, no `canSee`), and
   the route is guarded by `RequireAccess` with the same resource (STO-1).
@@ -198,6 +210,25 @@ POST   /:code/stores/import                   create   items from a file; a row 
                                                        "Warn below" is the Main store's level, and
                                                        needs edit too
 ```
+
+**The kitchen's stock** (D27-373, D27-374; `kitchenSheet.ts`, migration 253).
+Under `/kitchen-stock/`, not `/kitchen/`: the till's `/:code/kitchen/*` gates
+(POS switched on, reception) would have applied to it.
+
+```
+GET    /:code/kitchen-stock/sheet?date=       STOCK view   the kitchen store's day per item; the day's
+                                                           wastage with notes; `stores` it may be marked
+POST   /:code/kitchen-stock/count             KITCHEN_KEEPERS  the closing count (saveCount)
+PUT    /:code/kitchen-stock/store             KITCHEN_KEEPERS  which store is the kitchen's (never the bar's)
+GET    /:code/kitchen-stock/recipes           STOCK view   dishes, sizes, sides, add-ons, their lines;
+                                                           the dishes with none
+PUT    /:code/kitchen-stock/recipes           KITCHEN_KEEPERS  one owner's lines, all replaced; none clears
+```
+
+`KITCHEN_KEEPERS` (`stockGrants.ts`) is the owner, an Admin, the GM and the
+Inventory Manager. Every KOT takes a recipe off the kitchen store through
+migration 253's trigger `pos_order_lines_take_from_kitchen`, never through
+this service's code; struck once sent, it rewrites the issue as wastage.
 
 **Names in a history** come through `staff` as before, and for the Inventory
 Manager through `app.colleague_name` (096) as well — the owner's answer to
@@ -462,6 +493,14 @@ service's claim.
 
 ## Requests from this service to the master
 
+- **29 October · the kitchen's stock (D27-373, D27-374).** (1) `api/src/roleGate.ts`:
+  the five `/kitchen-stock/` routes are listed beside the bar's, as
+  `own("stores/stockGrants.ts: …")` - added in this branch, for the master to
+  review at merge. (2) **Kitchen stock in the kitchen manager's and the chef's
+  menus** (the owner's D27-378, the owner allowed the navigation files for it):
+  the entry is in this service's `nav.ts`; their pinned menus are updated in
+  `src/components/app/navigation.test.ts` and `spaces.test.tsx`, with a
+  `mayReach` check beside Bar stock's - for the master to review at merge.
 - **25 September · the role gate** (`api/src/roleGate.ts`, shared): the two
   new writes are listed under `/* stores */` as `own("stores/stockGrants.ts")`
   - `PATCH …/stores/items/:id` and `POST …/stores/counts` - the way the

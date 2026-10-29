@@ -100,6 +100,12 @@ export async function mayStock(
     owner, 21 October evening) and the Inventory Manager. */
 export const BAR_KEEPERS: readonly string[] = ["owner", "admin", "gm", "bar", "stores"];
 
+/** Who sets recipes, marks the kitchen's store and counts it (D27-374, the
+    master's brief of 28 October): the owner, an administrator, the GM and
+    the Inventory Manager. The kitchen manager and the chef read the sheet,
+    as everybody who sees the Store does (STOCK_ROLES.view). */
+export const KITCHEN_KEEPERS: readonly string[] = ["owner", "admin", "gm", "stores"];
+
 /** Does the signed-in person hold one of these roles here? A group
     administrator holds every role everywhere. */
 export async function holdsRoleAt(

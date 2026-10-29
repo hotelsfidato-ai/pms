@@ -3,6 +3,7 @@ import { stores } from "./stores.ts";
 import { barPours } from "./barPours.ts";
 import { barSheet } from "./barSheet.ts";
 import { barRequests } from "./barRequests.ts";
+import { kitchenSheet } from "./kitchenSheet.ts";
 
 /* The front door of the store service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -15,6 +16,8 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", barSheet],
   /* The counter asks the store; the GM or the Inventory Manager approves (D27-361). */
   ["/api/hotels", barRequests],
+  /* The kitchen's daily sheet, its count and recipes (D27-373, D27-374). */
+  ["/api/hotels", kitchenSheet],
 ];
 
 /* ⚠ ADDED FOR PURCHASING (116), AND BY THAT CHAT — the master reviews it
