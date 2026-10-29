@@ -81,6 +81,22 @@ export const SHOTS = [
     ],
   },
   {
+    /* D27-342, D27-379: the owner's full reset, opened and left unsaved. Only the account the server's
+       RESET_OWNER_EMAIL names sees the button: taken with the local API started with it set to the demo
+       owner (owner@fidato.in) and a reset login of its own; nothing is typed, nothing cleared. */
+    id: "A16-17", title: "Clear this hotel and start today: what goes, what stays, the code to type", as: "Owner",
+    path: "/properties", steps: [{ waitFor: "text:Clear this hotel and start today", ms: 20000 }, { wait: 800 },
+      { eval: `document.querySelector("[data-owner-reset=PHN] button").click()` },
+      { waitFor: "text:Clear Practice Hotel Nashik and start today", ms: 15000 }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Clear Practice Hotel Nashik and start today", side: "left" },
+      { n: 2, at: "text:Deleted:", side: "left" },
+      { n: 3, at: "text:Kept:", side: "left" },
+      { n: 4, at: "css:[role=dialog] input", side: "left" },
+      { n: 5, at: "text:Clear and start today", side: "bottom" },
+    ],
+  },
+  {
     id: "A16-04", title: "Edit a property: what prints on its invoices", as: "Owner",
     steps: [{ click: "text:Edit" }, { waitFor: "text:These print on this property's invoices." }, { wait: 400 }],
     marks: [
