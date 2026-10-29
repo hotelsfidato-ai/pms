@@ -807,6 +807,19 @@ does on the server, from the same functions in the database, and it is
 refused while any guest is checked in, and for a test hotel (it has its own
 Reset).
 
+**The guests' ID photos go from Google Drive too** (D27-379: a cleared hotel
+keeps no IDs; the backup keeps the records, the photos go for good). The
+window says how many before the code is typed. Drive is asked only after the
+clear has committed, through the photo store the photos went in by
+(`ID_PHOTO_N8N_URL`, `ID_PHOTO_N8N_SECRET`), so a refused clear deletes no
+photo. The answer says how many were deleted and how many were not; one
+Drive did not delete is written down in the database
+(`owner_reset.id_photos_in_drive`: the file's id and its hotel, nothing of the
+guest) and is tried again at the hotel's next clear. A hotel with ID photos
+on a server without the photo store's two settings is refused, the button and
+the script alike. The script reads them from `api/.env`, so it is run as the
+API's user (`sudo -u fidato`), as its own message says.
+
 **Only one account may press it**: the one whose sign-in e-mail is
 `RESET_OWNER_EMAIL`. Not the owner role, not an Admin. Until all three
 settings below are in `api/.env`, it is refused for everybody, in a

@@ -34,6 +34,12 @@ const NAMED: [table: string, one: string, many: string][] = [
 ];
 const count = (n: number, one: string, many: string) => `${number(n)} ${n === 1 ? one : many}`;
 
+/* What Drive did with the guests' ID photos, after the clear (D27-379). */
+const photos = ({ deleted, notDeleted }: OwnerResetDone["idPhotos"]) =>
+  (deleted ? ` ${count(deleted, "ID photo", "ID photos")} deleted from Google Drive.` : "")
+  + (notDeleted ? ` ${count(notDeleted, "ID photo", "ID photos")} could not be deleted from Google Drive `
+    + "now: written down, and tried again at this hotel's next clear." : "");
+
 function WhatGoes({ c }: { c: OwnerResetCount }) {
   const named = NAMED.filter(([t]) => c.tables[t]).map(([t, one, many]) => count(c.tables[t]!, one, many));
   if (c.guests) named.splice(1, 0, count(c.guests, "guest", "guests"));
@@ -47,6 +53,11 @@ function WhatGoes({ c }: { c: OwnerResetCount }) {
         <span className="font-medium text-ink-900">Deleted:</span>{" "}
         {named.length ? `${named.join(", ")}.` : "nothing - there are no bookings, bills or orders."}
       </p>
+      {c.idPhotos > 0 && (
+        <p><span className="font-medium text-ink-900">Also deleted, for good:</span>{" "}
+          {count(c.idPhotos, "ID photo", "ID photos")} of guests, from Google Drive. The backup keeps
+          the records, not the photos.</p>
+      )}
       <p><span className="font-medium text-ink-900">Kept:</span> the hotel, its rooms, rates,
         menu, tables, staff, sign-ins and settings. Invoice numbers carry on.</p>
       <p>A backup of the whole system is taken first. The business date becomes today
@@ -97,7 +108,7 @@ export function OwnerReset({ hotel, onChanged }: {
           run={(confirm) => ownerReset(hotel.code, confirm)}
           done={(r) => `Removed ${count(r.removed, "record", "records")}. The backup is ${r.backup.file}, `
             + `${r.backup.copiedOff ? "copied off the server" : "on the server only"}. `
-            + `The business date is now ${dateShort(r.businessDate)}.`}
+            + `The business date is now ${dateShort(r.businessDate)}.${photos(r.idPhotos)}`}
           onClose={() => setAsking(null)}
           onDone={onChanged}
         />

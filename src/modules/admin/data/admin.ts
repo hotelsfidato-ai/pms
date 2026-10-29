@@ -284,6 +284,8 @@ export interface OwnerResetCount {
   tables: Record<string, number>;
   /** Guests with no stay at any other hotel, who go too. */
   guests: number;
+  /** The guests' ID photos in Google Drive, deleted after the clear (D27-379). */
+  idPhotos: number;
   /** Why it would be refused (a test hotel, a guest checked in); null if not. */
   refusal: string | null;
 }
@@ -292,6 +294,8 @@ export interface OwnerResetDone {
   rooms: number;
   businessDate: string;
   backup: { file: string; copiedOff: boolean };
+  /** What Drive did with the ID photos, after the clear: counts only. */
+  idPhotos: { deleted: number; notDeleted: number };
 }
 
 /** Whether the signed-in person is the one the server names. False on any doubt. */

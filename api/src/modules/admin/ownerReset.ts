@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import pg from "pg";
 import { connect } from "node:net";
 import { withSession } from "../../auth.ts";
+import { pool } from "../../db.ts";
+import { photoStoreSet, removeListed } from "../../routes/idPhotos.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CLEAR THIS HOTEL AND START TODAY (D27-342, D27-365 (3))
@@ -14,7 +16,8 @@ import { withSession } from "../../auth.ts";
      GET  /api/admin/hotels/:code/owner-reset  the dry run: what would go, and
                                                why it would be refused
      POST /api/admin/hotels/:code/owner-reset  { confirm: "<CODE>" }
-          -> { removed, tables, guests, rooms, businessDate, backup }
+          -> { removed, tables, guests, rooms, businessDate, backup,
+               idPhotos: { deleted, notDeleted } }
 
    WHO: only the signed-in account whose e-mail is the server setting
    RESET_OWNER_EMAIL - not the owner role, not an administrator. Unset, it is
@@ -33,6 +36,13 @@ import { withSession } from "../../auth.ts";
    RESET_BACKUP_SOCKET (deploy/fidato-backup-now.socket). Its last line is
    the file it wrote; anything else is a failed backup and nothing is
    cleared. Unset, the button is refused.
+
+   THEN THE ID PHOTOS (D27-379: a cleared hotel keeps no IDs). The clear
+   lists the cleared guests' ID photo files in Google Drive; only once it
+   has COMMITTED does Drive delete them, the way a removed photo's file is
+   deleted (idPhotos.ts), on the API's own connection. The answer says how
+   many went and how many did not - never which; one Drive would not delete
+   stays listed for the next try.
 
    A refusal carries its sentence as `reason` and as `error`, as the test
    hotels' routes do.
@@ -112,10 +122,18 @@ async function onResetLogin(
 
 interface DryRun {
   code: string; name: string; businessDate: string;
-  tables: Record<string, number>; guests: number; refusal: string | null;
+  tables: Record<string, number>; guests: number; idPhotos: number; refusal: string | null;
 }
-const dryRun = async (client: pg.Client, code: string): Promise<DryRun> =>
-  (await client.query<{ d: DryRun }>("select owner_reset.counts($1, true) as d", [code])).rows[0]!.d;
+/** The database's dry run - and refused here too when the hotel has ID
+    photos in Drive and this server cannot reach the photo store to delete
+    them (D27-379): a clear that would keep IDs is not done. */
+async function dryRun(client: pg.Client, code: string): Promise<DryRun> {
+  const d = (await client.query<{ d: DryRun }>("select owner_reset.counts($1, true) as d", [code])).rows[0]!.d;
+  if (d.refusal || d.idPhotos === 0 || photoStoreSet()) return d;
+  return { ...d, refusal: `${d.name} has ${d.idPhotos === 1 ? "an ID photo" : `${d.idPhotos} ID photos`} in Google `
+    + "Drive, and the photo store is not in this server's settings (ID_PHOTO_N8N_URL), so they could not be "
+    + "deleted. Nothing can be cleared until it is." };
+}
 
 /** The server's backup, through its socket: the file it wrote, or why not. */
 export function takeBackup(
@@ -182,10 +200,12 @@ ownerReset.post("/admin/hotels/:code/owner-reset", async (c) => {
     /* One transaction: all of it or none of it. The database asks again
        whether anybody checked in meanwhile, under the guards' locks. */
     await client.query("begin");
-    const { rows } = await client.query<{ r: object }>(
+    const { rows } = await client.query<{ r: { idPhotos: { hotelCode: string; driveFileId: string }[] } }>(
       "select owner_reset.clear($1, true, $2, $3) as r", [code, me.staffId, backup.file]);
     await client.query("commit");
-    return { status: 200, body: { ...rows[0]!.r, backup } };
+    /* Only now, committed: Drive. The list itself never leaves the server. */
+    const { idPhotos, ...done } = rows[0]!.r;
+    return { status: 200, body: { ...done, backup, idPhotos: await removeListed(pool, idPhotos) } };
   });
   return c.json(answer.body, answer.status);
 });

@@ -1114,8 +1114,10 @@ select set_config('app.user_id',
 -- pms_app shut out; every guard lifted for the clear - a paid bill, a closed
 -- day, an invoice, key cards, a struck KOT line, the Store - and put back; a
 -- test hotel and a guest checked in refused; another hotel untouched; and the
--- dry run's count being what went. The API's half (one e-mail, the typed
--- code, the backup, all or nothing over the wire) is
+-- dry run's count being what went; the ID photos whose file Drive still
+-- holds listed for Drive, exactly this hotel's (D27-379). The API's half (one
+-- e-mail, the typed code, the backup, all or nothing over the wire, Drive
+-- asked only after the commit) is
 -- api/test/modules/admin/ownerReset.test.ts. Everything here is undone.
 -- =============================================================================
 do $$
@@ -1193,6 +1195,17 @@ begin
      where id = ord;
     insert into stock_movements (hotel_id, item_id, business_date, kind, quantity, location_id, moved_by)
     values (h, si, bd, 'receipt', 25, loc, owner);
+    -- ID photos (D27-379): two whose file Drive still holds (kept; removed
+    -- with Drive's delete owed), one Drive already deleted, one that never
+    -- reached it - and the other hotel's own.
+    insert into guest_id_photos (hotel_id, hotel_code, reservation_id, guest_id, uploaded_by, sides, notice_version,
+                                 status, stored_at, drive_file_id, cipher_sha256, cipher_bytes,
+                                 removed_at, removed_reason, drive_delete_failed_at)
+    values (h, 'ORS', stay, g1, owner, '{front}', 't', 'stored', now(), 'ors-1', repeat('a', 64), 10, null, null, null),
+           (h, 'ORS', stay, g1, owner, '{front}', 't', 'removed', now(), 'ors-2', repeat('a', 64), 10, now(), 'deleted: t', now()),
+           (h, 'ORS', stay, g1, owner, '{front}', 't', 'removed', now(), 'ors-3', repeat('a', 64), 10, now(), 'deleted: t', null),
+           (h, 'ORS', stay, g1, owner, '{front}', 't', 'pending', null, null, null, null, null, null, null),
+           (other, 'ORT', stay2, g2, owner, '{front}', 't', 'stored', now(), 'ort-1', repeat('a', 64), 10, null, null, null);
     update rooms set occupancy_status = 'occupied', housekeeping_status = 'dirty' where id = r101;
     update hotels set business_date = bd - 3 where id = h;
     -- The other hotel's own ledger, which must stay.
@@ -1230,9 +1243,14 @@ begin
     v := null;
     begin perform owner_reset.steps(true); exception when others then v := sqlstate; end;
     res := res || jsonb_build_object('n', 'not even the clear''s own parts: it counts and clears, nothing else', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin perform count(*) from owner_reset.id_photos_in_drive; exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'nor reads the list of ID photos still in Drive', 'ok', v = '42501', 'd', v);
     dry := owner_reset.counts('ORS');
     reset role;
     res := res || jsonb_build_object('n', 'it counts', 'ok', (dry -> 'tables' ->> 'reservations') = '3', 'd', dry::text);
+    res := res || jsonb_build_object('n', 'and counts the ID photos Drive still holds: not one already deleted, not one that never reached it, not the other hotel''s',
+      'ok', (dry ->> 'idPhotos')::int = 2, 'd', dry ->> 'idPhotos');
 
     -- ---------- refused: a guest checked in, a test hotel ----------
     res := res || jsonb_build_object('n', 'the dry run names the guest checked in',
@@ -1245,6 +1263,7 @@ begin
     res := res || jsonb_build_object('n', 'and the clear refuses, saying who, with nothing gone and every guard on',
       'ok', v like '23514: A guest is still checked in at Owner Reset Real: ORS In House.%'
             and (select count(*) from reservations where hotel_id = h) = 3
+            and not exists (select 1 from owner_reset.id_photos_in_drive where hotel_id = h)
             and (select count(*) from owner_reset.guards(true) g join pg_trigger tr on tr.tgname = g.trigger_name
                   where tr.tgenabled <> 'O') = 0,
       'd', v);
@@ -1292,6 +1311,22 @@ begin
     res := res || jsonb_build_object('n', 'the other hotel is untouched',
       'ok', exists (select 1 from reservations where id = stay2)
             and exists (select 1 from folio_postings where hotel_id = other and description = 'ORT charge'));
+    res := res || jsonb_build_object('n', 'the ID photos Drive still holds are listed for Drive, and handed back: exactly this hotel''s two; the other hotel''s photo kept, not listed',
+      'ok', (select array_agg(drive_file_id order by drive_file_id) from owner_reset.id_photos_in_drive
+              where hotel_id in (h, other)) = array['ors-1', 'ors-2']
+            and (select jsonb_agg(x order by x ->> 'driveFileId') from jsonb_array_elements(done -> 'idPhotos') x)
+                = '[{"hotelCode": "ORS", "driveFileId": "ors-1"}, {"hotelCode": "ORS", "driveFileId": "ors-2"}]'
+            and not exists (select 1 from guest_id_photos where hotel_id = h)
+            and exists (select 1 from guest_id_photos where hotel_id = other and drive_file_id = 'ort-1'),
+      'd', done -> 'idPhotos');
+    v := null;
+    set local role pms_app;
+    delete from owner_reset.id_photos_in_drive where drive_file_id = 'ors-1';
+    begin perform owner_reset.counts('ORS'); exception when others then v := sqlstate; end;
+    reset role;
+    res := res || jsonb_build_object('n', 'the API''s own role strikes one off once Drive has deleted it - and still cannot count',
+      'ok', v = '42501' and not exists (select 1 from owner_reset.id_photos_in_drive where drive_file_id = 'ors-1'),
+      'd', v);
     res := res || jsonb_build_object('n', 'rooms vacant and clean, the business date today, the setup kept',
       'ok', not exists (select 1 from rooms where hotel_id = h and (occupancy_status <> 'vacant' or housekeeping_status <> 'clean'))
             and (select business_date from hotels where id = h) = (now() at time zone (select timezone from hotels where id = h))::date
@@ -1300,10 +1335,11 @@ begin
     res := res || jsonb_build_object('n', 'invoice numbers carry on, never reused',
       'ok', (select next_number from invoice_series where hotel_id = h and fin_year = fy) = 2
             and app.next_invoice_number(h, fy) like '%/00002');
-    res := res || jsonb_build_object('n', 'one audit line: who, which hotel, how many rows, the backup',
+    res := res || jsonb_build_object('n', 'one audit line: who, which hotel, how many rows, the backup, how many ID photos for Drive',
       'ok', (select count(*) from audit_log where hotel_id = h and action = 'OWNER_RESET') = 1
             and exists (select 1 from audit_log where hotel_id = h and action = 'OWNER_RESET' and actor = owner
                          and after ->> 'backup' = 'fidato-20261028-101500.dump'
+                         and (after ->> 'idPhotos')::int = 2
                          and (after ->> 'removed')::bigint = (done ->> 'removed')::bigint));
     res := res || jsonb_build_object('n', 'every guard is back on after it',
       'ok', (select count(*) from owner_reset.guards(true) g join pg_trigger tr on tr.tgname = g.trigger_name

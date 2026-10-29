@@ -10,7 +10,8 @@ import { BundleError, open, seal } from "../aesZip.ts";
 
      put      the photos in → one encrypted bundle → Google Drive
      get      Drive → checked against its hash → decrypted IN MEMORY
-     remove   the Drive file deleted
+     remove   the Drive file deleted (removeListed: every file an owner's
+              full reset listed, after its clear - D27-379)
 
    ⚠ NOTHING IS KEPT ON THIS SERVER (D27-209). No file, no temp file, no
    cache: a photo exists here only inside one request's memory. What is
@@ -210,6 +211,37 @@ export async function get(
 export async function remove(hotelCode: string, driveFileId: string): Promise<boolean> {
   const answer = await ask({ action: "delete", hotel: hotelCode.toUpperCase(), fileId: driveFileId });
   return answer?.["deleted"] === true;
+}
+
+/** Whether this server, or this run of a script, can reach the store at all. */
+export const photoStoreSet = (): boolean => store() !== null;
+
+/** THE OWNER'S FULL RESET, AFTER ITS CLEAR HAS COMMITTED (D27-379): the
+    files the clear listed (owner_reset.id_photos_in_drive), each deleted as
+    `remove` deletes one and struck off the list once Drive has. One Drive
+    would not delete stays listed, and the next clear of the hotel tries it
+    again. Called by the API (ownerReset.ts) and by reset-property.ts.
+    Counts only: no id is ever said. */
+export async function removeListed(
+  db: { query(text: string, values: unknown[]): Promise<unknown> },
+  files: readonly { hotelCode: string; driveFileId: string }[],
+): Promise<{ deleted: number; notDeleted: number }> {
+  const queue = [...files];
+  const until = Date.now() + 20_000;
+  let deleted = 0;
+  /* ponytail: 8 at a time, and none started after 20 s, so the answer comes
+     inside nginx's five minutes even after a four-minute backup and with
+     Drive hanging; a bigger hotel's rest stays listed for the next try. */
+  await Promise.all(Array.from({ length: 8 }, async () => {
+    for (let f = queue.shift(); f && Date.now() < until; f = queue.shift()) {
+      if (!(await remove(f.hotelCode, f.driveFileId))) continue;
+      deleted += 1;
+      /* Left listed if this fails: Drive answers "already gone" next time. */
+      await db.query("delete from owner_reset.id_photos_in_drive where drive_file_id = $1", [f.driveFileId])
+        .catch(() => {});
+    }
+  }));
+  return { deleted, notDeleted: files.length - deleted };
 }
 
 /* ── Reading an upload ────────────────────────────────────────────── */

@@ -27,6 +27,7 @@ try {
 
 import { fileURLToPath } from "node:url";
 import { databaseForScript } from "./scriptDatabase.ts";
+import { photoStoreSet, removeListed } from "../src/routes/idPhotos.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CLEAR A PROPERTY AND BRING IT TO TODAY
@@ -73,6 +74,15 @@ import { databaseForScript } from "./scriptDatabase.ts";
    api/test/resetOrder.test.ts checks the list against the schema's keys.
    Like the button, it refuses a test hotel (it has its own Reset) and a
    hotel with a guest checked in, saying who.
+
+   AND, LIKE THE BUTTON, THE GUESTS' ID PHOTOS GO FROM GOOGLE DRIVE
+   (D27-379), after the clear has committed, through the API's own
+   idPhotos.ts and the photo store's settings in api/.env - which this
+   script reads when run as the API's user (`sudo -u fidato`, as below).
+   Run without them (as postgres, which cannot read api/.env) on a hotel
+   with ID photos, it REFUSES before anything is written: a clear that
+   would leave IDs in Drive is not done. One Drive would not delete is
+   said, by count, and stays listed for the next try.
    ══════════════════════════════════════════════════════════════════ */
 
 /* ⚠ WHICH CONNECTION, AND WHY IT IS NOT DATABASE_URL.
@@ -103,6 +113,8 @@ interface DryRun {
   tables: Record<string, number>;
   /** Guests left with no stay at any other hotel, who go too. */
   guests: number;
+  /** ID photo files in Google Drive the clear has Drive delete. */
+  idPhotos: number;
   /** Why a clear would be refused, in a sentence; null when it would not. */
   refusal: string | null;
 }
@@ -164,11 +176,23 @@ async function main() {
       .map(([table, n]) => `${n} ${table.replaceAll("_", " ")}`);
     say(lines.length ? `goes: ${lines.join(" · ")}` : "nothing to remove");
     say(`and ${d.guests} guests with no stay at another property`);
+    say(`and ${d.idPhotos} ID photos in Google Drive, deleted after the clear`);
     if (fresh) say("(a fresh start: the equipment register itself and the audit trail stay)");
     console.log();
 
     if (d.refusal) {
       console.error(`  ${d.refusal}\n  Nothing was changed.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (d.idPhotos > 0 && !photoStoreSet()) {
+      console.error(
+        "  This run cannot reach the ID photo store (ID_PHOTO_N8N_URL and\n"
+        + "  ID_PHOTO_N8N_SECRET, in api/.env), so the ID photos would stay in\n"
+        + "  Google Drive. Run it as the API's user, which reads api/.env:\n"
+        + "    cd /opt/fidato/api && sudo -u fidato env HOME=/tmp \\\n"
+        + `      npm run reset -- ${code}${fresh ? " --fresh-start" : ""} --yes\n`
+        + "  Nothing was changed.\n");
       process.exitCode = 1;
       return;
     }
@@ -184,13 +208,23 @@ async function main() {
     /* One transaction: all of it, or none of it. */
     await client.query("begin");
     const { rows: [done] } = await client.query<{
-      r: { removed: number; rooms: number; businessDate: string };
+      r: { removed: number; rooms: number; businessDate: string;
+           idPhotos: { hotelCode: string; driveFileId: string }[] };
     }>("select owner_reset.clear($1, $2, null, null) as r", [code, fresh]);
     await client.query("commit");
+    /* Committed: now Drive, and only counts are printed. */
+    const drive = await removeListed(client, done!.r.idPhotos);
 
     say(`${done!.r.removed} rows removed`);
     say(`${done!.r.rooms} rooms kept, all vacant and clean`);
     say(`business date is now ${done!.r.businessDate}`);
+    say(`${drive.deleted} ID photos deleted from Google Drive`);
+    if (drive.notDeleted) {
+      console.error(`  ${drive.notDeleted} ID photos are STILL in Google Drive: Drive did not delete them.\n`
+        + "  They stay listed (owner_reset.id_photos_in_drive) and the next clear of\n"
+        + "  this hotel tries them again.");
+      process.exitCode = 1;
+    }
     console.log();
     say("The property is empty and on today. Rooms, rates, staff, the");
     say("menu and the front desk's hours are untouched.");
