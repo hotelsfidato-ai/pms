@@ -50,6 +50,24 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 16 (READY at 312c52e2, the owner's to type, after release 15): the Restaurant tab with recipes, MRP for NC bills, the Drive photos retried hourly (D27-373, D27-374, D27-378, D27-380)
+
+**Shipped** (`release/r16` = cp6 at 312c52e2, on release 15 759ce4fa; migrations 251, 252 - renumbered from the
+helpers' 253/254 at the merge, 1db53942): Inventory → Restaurant - recipes and the kitchen's daily sheet, every KOT
+taking its recipe off the marked Kitchen store (struck after the KOT = wastage with the reason), Kitchen stock in the
+kitchen manager's and chef's menu (e4b63bfa); a dish's MRP on the Menu, NC bills valued at it in Consumption only
+(d31cfe34); a photo Drive would not delete at a full reset asked again every hour (a81c6043). Pictures A8-49, A8-34,
+A9-48, A9-49, A11-28 taken after demo data through the local API (312c52e2); every new screen opened, Kitchen stock
+also as the chef.
+
+**Proved:** one complete gate run on 312c52e2, 40 minutes: web 1,499/1,499, API 2,962/2,962, database 1,857/1,857, 252
+migrations re-runnable, PostgreSQL 16, restore one hotel 40/40, restore to any minute; `release.mjs` once:
+`index-DlJbrWWh.js`.
+
+**Left open:** the owner deploys release 15, then 16 (`.local/release-16-steps.md`). New ideas after launch.
+
+---
+
 ## 2026-10-29 · Release 15 (READY at 759ce4fa, the owner's to type): backups off the server, restore to any minute, the one-hotel restore tool, the owner's full reset (D27-342, D27-373, D27-375 to D27-380)
 
 **Asked for:** the owner's "start all … complete all" (D27-373): the owner-only full reset, and all of plan A - A1 off-site

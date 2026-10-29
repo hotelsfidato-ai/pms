@@ -765,6 +765,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **29 October, 14:30: RELEASES 15 AND 16 READY, the owner's to type, in that order.** r15 `759ce4fa`
+> (`index-bwfWMrZK.js`, `.local/release-15-steps.md`, Parts A-E); r16 `312c52e2` on top of it (`index-DlJbrWWh.js`,
+> `.local/release-16-steps.md`). Both had one full gate run green first time (r16: web 1,499, API 2,962, db 1,857,
+> replay 252, PG16, restore 1, to minute). Release 14 is LIVE (checked). After each deploy: check read-only. After
+> release 15 Part B: confirm the bucket copies through Connection health; after Part E: read the restore tool's
+> output with the owner. All helpers finished and their copies recycled. Nothing else is being built.
+
 > **29 October, 13:00: RELEASE 15 READY, the owner's to type** - `release/r15` at **759ce4fa**, one full gate run
 > green (web 1,493, API 2,949, db 1,840, replay 250, PG16, restore 1 40/40, to minute), `index-bwfWMrZK.js`, steps
 > `.local/release-15-steps.md` (A the release; B bucket + links - live backups are still `uploaded=no`; C archiving;
