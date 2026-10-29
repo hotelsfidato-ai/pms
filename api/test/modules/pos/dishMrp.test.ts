@@ -5,7 +5,7 @@ import type { ReportDoc } from "../../../src/modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A DISH'S MRP, AND A BILL GIVEN FREE (NC) VALUED AT IT IN THE STOCK
-   (the owner's D27-351 and D27-373; migration 254)
+   (the owner's D27-351 and D27-373; migration 252)
 
    The MRP is typed on the Menu by whoever may change the menu (`menu:
    edit`: the owner, an Admin, the GM, the kitchen manager); empty is a

@@ -211,7 +211,7 @@ POST   /:code/stores/import                   create   items from a file; a row 
                                                        needs edit too
 ```
 
-**The kitchen's stock** (D27-373, D27-374; `kitchenSheet.ts`, migration 253).
+**The kitchen's stock** (D27-373, D27-374; `kitchenSheet.ts`, migration 251).
 Under `/kitchen-stock/`, not `/kitchen/`: the till's `/:code/kitchen/*` gates
 (POS switched on, reception) would have applied to it.
 
@@ -227,7 +227,7 @@ PUT    /:code/kitchen-stock/recipes           KITCHEN_KEEPERS  one owner's lines
 
 `KITCHEN_KEEPERS` (`stockGrants.ts`) is the owner, an Admin, the GM and the
 Inventory Manager. Every KOT takes a recipe off the kitchen store through
-migration 253's trigger `pos_order_lines_take_from_kitchen`, never through
+migration 251's trigger `pos_order_lines_take_from_kitchen`, never through
 this service's code; struck once sent, it rewrites the issue as wastage.
 
 **Names in a history** come through `staff` as before, and for the Inventory

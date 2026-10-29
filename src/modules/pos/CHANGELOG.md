@@ -14,7 +14,7 @@ Work that touches the core or several services still goes in the root
 ## 2026-10-29 · A dish's MRP, for NC bills in the stock (D27-351, D27-373)
 
 **Asked for** The owner: NC has no value anywhere; "the stock will show it at MRP, which the GM sets up", typed per dish in the Menu, empty a dash.
-**Shipped** Migration 254 (`mrp` on dish and variation); `POST /till/menu/items/:id/mrp` (roleGate MENU); the variations save's `mrp` on a first-type choice; the menu read's `mrp`; `noChargeAtMrp` through the front door; the Menu's MRP button and the form's MRP box. The full entry is in the root `CHANGELOG.md` (it crosses into reports).
+**Shipped** Migration 252 (`mrp` on dish and variation); `POST /till/menu/items/:id/mrp` (roleGate MENU); the variations save's `mrp` on a first-type choice; the menu read's `mrp`; `noChargeAtMrp` through the front door; the Menu's MRP button and the form's MRP box. The full entry is in the root `CHANGELOG.md` (it crosses into reports).
 **Proved** `api/test/modules/pos/dishMrp.test.ts` 6/6 and `ownerDecisions.test.tsx` 24/24, every guard failing when taken out (root entry).
 **Left open** The owner's questions in the hand-back; pictures A8-49 and A11-28.
 

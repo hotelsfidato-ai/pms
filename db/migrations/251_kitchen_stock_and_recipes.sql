@@ -1,5 +1,5 @@
 -- =============================================================================
--- 253 · The kitchen's stock: recipes, taken off the kitchen store by every KOT
+-- 251 · The kitchen's stock: recipes, taken off the kitchen store by every KOT
 --       (the owner's D27-373 and D27-374, 28 October)
 -- =============================================================================
 -- Inventory's Restaurant tab, "all needed for a full-fledged POS system": the

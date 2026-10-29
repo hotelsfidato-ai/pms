@@ -510,7 +510,7 @@ begin
 end $$;
 
 -- =============================================================================
--- THE KITCHEN'S STOCK AND RECIPES (the owner's D27-373, D27-374; migration 253)
+-- THE KITCHEN'S STOCK AND RECIPES (the owner's D27-373, D27-374; migration 251)
 -- =============================================================================
 -- A new hotel's "Kitchen store" is marked the kitchen's (D27-378), and the
 -- bar's never is. A line SENT takes its dish's recipe and its size's on top; a line still

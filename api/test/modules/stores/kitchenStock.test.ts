@@ -8,7 +8,7 @@ import { closePool } from "../../../src/db.ts";
    Recipes: what one of a dish takes from the kitchen store, in each Store
    item's unit; a size, a side and a numbered add-on take their own lines on
    top of the dish's (none: nothing extra). Every KOT takes them off the
-   kitchen store (migration 253's trigger), and always goes - an item below
+   kitchen store (migration 251's trigger), and always goes - an item below
    zero is shown red. A dish with no recipe takes nothing and is listed. A
    dish struck before its KOT took nothing; struck after (or fewer of it),
    it stays used and counts as wastage with the strike's reason. The daily

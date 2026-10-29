@@ -1,5 +1,5 @@
 -- =============================================================================
--- 254 · A dish's MRP, so a bill given free (NC) is valued in the stock
+-- 252 · A dish's MRP, so a bill given free (NC) is valued in the stock
 --       (the owner's D27-351 and D27-373: "the stock will show it at MRP,
 --       which the GM sets up"; "the MRP typed by the GM per dish in the Menu
 --       (empty is a dash; never in sales or tax)")

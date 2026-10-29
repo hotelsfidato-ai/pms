@@ -11,7 +11,7 @@ import { countLinesProblem, saveCount } from "./stores.ts";
 
    THE SHEET: per Store item, the day's Opening, Received (deliveries),
    Moved in and Moved out (moves between stores, hand issues, returns),
-   Used by KOTs (the issues migration 253's trigger made), Wastage (the
+   Used by KOTs (the issues migration 251's trigger made), Wastage (the
    Store's and every dish struck after its KOT, with the reason), Corrected
    (the counts) and Closing - which is all of them added up - and the day's
    closing count. Below zero is shown red; a delivery or a count puts it right.
@@ -113,7 +113,7 @@ kitchenSheet.get("/:code/kitchen-stock/sheet", async (c) => {
       [hotelId, store.id, date]);
 
     /* The day's wastage, each with its reason: the Store's own, and every dish
-       struck after its KOT (253). */
+       struck after its KOT (251). */
     const { rows: wasted } = await client.query<{
       item: string; unit: string; quantity: string; note: string | null; reference: string | null;
     }>(
@@ -171,7 +171,7 @@ kitchenSheet.put("/:code/kitchen-stock/store", async (c) => {
     if (!(await holdsRoleAt(client, hotelId, KITCHEN_KEEPERS))) return { forbidden: KEEP_REFUSED };
     const store = (await storesToMark(client, hotelId)).find((s) => s.id === input.locationId);
     if (!store) return refuse("That is not a store switched on at this property, or it is the bar's.");
-    /* One per hotel (253's index): the old mark goes first. */
+    /* One per hotel (251's index): the old mark goes first. */
     await client.query(
       "update locations set is_kitchen_store = false where hotel_id = $1 and is_kitchen_store and id <> $2",
       [hotelId, store.id]);
