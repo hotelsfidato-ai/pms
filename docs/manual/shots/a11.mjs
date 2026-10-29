@@ -344,7 +344,8 @@ export const SHOTS = [
      with a dish that has an MRP and one that has none (A8-38's will do). */
   {
     id: "A11-28", title: "Consumption: given free (NC), at MRP", as: "General Manager", size: "wall",
-    path: "/reports/stock-consumption", steps: [LOADED("Given free (NC), at MRP")],
+    path: "/reports/stock-consumption", steps: [LOADED("Given free (NC), at MRP"),
+      { scroll: "text:Given free (NC), at MRP" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:Given free (NC), at MRP", side: "left" },
       { n: 2, at: "text:VALUE AT MRP", nth: 0, side: "top" },

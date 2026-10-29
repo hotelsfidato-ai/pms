@@ -787,4 +787,36 @@ export const SHOTS = [
   /* Not paid in the pictures: the bill stays on the dues for the report (A11-25). */
   { id: "A9-47b", title: "Not this time: Cancel", noShot: true, as: "Accountant",
     steps: [{ click: "text:Cancel" }, { wait: 500 }] },
+  /* ── The kitchen's stock (D27-373, D27-374, D27-378) ─────────────────
+     The demo (5EL), as the GM: Paneer Tikka (paneer 0.15 kg, butter 0.01 kg), Bhaaji Pau (butter 0.02 kg;
+     its sizes take nothing extra) and Dal Tadka (toor dal 0.08 kg, butter 0.01 kg) have recipes; table T4's
+     KOT took 2 Paneer Tikka and a Dal Tadka, struck after the KOT ("guest changed their mind"); nothing
+     was delivered, so the kitchen store runs below zero; the paneer was counted at 0. */
+  {
+    id: "A9-48", title: "Recipes", as: "General Manager",
+    path: "/h/5EL/inventory?tab=restaurant&part=recipes",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-recipes]", ms: 20000 },
+      { type: ["label:Find a dish", "pa"] }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:dishes have no recipe", side: "right" },
+      { n: 2, at: "text:Butter 0.01 kg, Paneer 0.15 kg", side: "right" },
+      { n: 3, at: "text:Nothing extra", nth: 0, side: "right" },
+      { n: 4, at: "text:Edit", nth: 0, side: "left" },
+    ],
+  },
+  {
+    id: "A9-49", title: "The kitchen's sheet, with the closing count typed in", as: "General Manager", size: "wall",
+    path: "/h/5EL/inventory?tab=restaurant&part=sheet",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Toor dal", ms: 20000 },
+      { type: ["label:Counted, A9 Test Basmati rice, kg", "3.8"] }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Kitchen store", nth: 0, side: "top" },
+      { n: 2, at: "text:USED BY KOTS", side: "top" },
+      { n: 3, at: "text:WASTAGE", nth: 0, side: "top" },
+      { n: 4, at: "text:-0.08", nth: 0, side: "left" },
+      { n: 5, at: "label:Counted, A9 Test Basmati rice, kg", side: "left" },
+      { n: 6, at: "text:Save the closing count (1)", side: "top" },
+      { n: 7, at: "text:Wastage on this day", side: "right" },
+    ],
+  },
 ];

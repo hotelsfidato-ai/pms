@@ -574,10 +574,12 @@ export const SHOTS = [
      empty, so the picture shows a figure and a dash. */
   {
     id: "A8-49", title: "A dish's MRP on the Menu", as: "General Manager",
-    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }],
+    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Paneer Tikka", ms: 20000 },
+      { scroll: "text:Chicken 65" }, { wait: 600 }],
     marks: [
-      { n: 1, at: "label:MRP of", nth: 0, side: "bottom" },
-      { n: 2, at: "text:(MRP", nth: 0, side: "bottom" },
+      { n: 1, at: "label:MRP of Paneer Tikka", side: "left" },
+      { n: 2, at: "label:MRP of Chicken 65", side: "left" },
+      { n: 3, at: "text:(MRP", nth: 0, side: "bottom" },
     ],
   },
 ];
