@@ -185,6 +185,9 @@ menu        GET    /:code/till/menu                         a dish's taxRate is 
                                                             restaurant, bar, banquet, other; alcohol only where
                                                             served. The menu's grant (roleGate MENU)
             POST   /:code/till/menu/items/:id/prep
+            POST   /:code/till/menu/items/:id/mrp           D27-373: the dish's MRP, {mrp} above 0, or null / ""
+                                                            to clear it (a dash); the menu's grant (MENU). Values
+                                                            an NC bill in the stock only (noChargeAtMrp, 254)
             POST   /:code/till/menu/categories/:id/prep
             POST   /:code/till/menu/items/:id/toggle
             POST   /:code/till/menu/items/:id/off
@@ -193,7 +196,8 @@ menu        GET    /:code/till/menu                         a dish's taxRate is 
             POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
 variations  PUT    /:code/till/menu/items/:id/variations   the dish's whole set, one transaction (D27-192):
                                                            {types:[{kind, heading?, choices:[{id?, label,
-                                                           price, free}]}], dishPrice?, dishFree?}; a choice
+                                                           price, free, mrp?}]}], dishPrice?, dishFree?} - mrp
+                                                           on a first-type choice only (D27-373); a choice
                                                            keeps its row by type and name (a removed one
                                                            comes back), else by id; one left out is switched
                                                            off, never deleted; emptying it needs dishPrice.
@@ -479,6 +483,8 @@ pos_denominations
   status 'no_charge', nc_by/_at, nc_reason;    "a restaurant bill given free: NC" (233, D27-351):
   app.gives_pos_no_charge;                     the guard (who, an open bill, never on a function;
   pos_bill_prints heading 'nc'                 who and when are the database's; NC for good)
+  mrp on pos_menu_items and                    254_dish_mrp.sql (D27-373): optional, above 0; an NC
+    pos_item_variations                        bill's dishes valued at it in the stock only
   the kitchen's NOTIFY trigger                 075_live_orders.sql
   audit trigger on pos_menu_items              076_approvals.sql
   prep_minutes on dish and category            079_prep_times.sql
@@ -529,6 +535,10 @@ room and function bills included, which the Store sets its issues against.
 And `voidedBills` (14 October, D27-324): the paid bills voided on a business
 day - who, when, why, how much, how paid - which Close restaurant day, the
 night audit's run and the Night audit report's "POS Bills Voided" all read.
+And `noChargeAtMrp` (D27-373): the dishes on NC bills in a window, per outlet and
+dish, with the MRP typed on the Menu (a first-type choice's for a dish sold by
+variation; null is a dash) - the Consumption report's "Given free (NC), at MRP"
+reads it; no sales figure does.
 
 ---
 

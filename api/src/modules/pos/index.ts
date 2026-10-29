@@ -26,6 +26,8 @@ export { struckAfterKitchen } from "./till.ts";
 export { voidedBills } from "./till.ts";
 /* And the bills given free, NC (D27-351): who, when and why, no value. */
 export { noChargeBills } from "./till.ts";
+/* And their dishes at the MRP the GM typed (D27-373): the stock reports' only. */
+export { noChargeAtMrp } from "./till.ts";
 /* A waiter's request to the GM, done or refused when the GM decides it in
    the Approvals inbox (D27-363): the approvals route comes through here. */
 export { performPosRequest, rejectPosRequest } from "./posRequests.ts";

@@ -50,6 +50,25 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 16: a dish's MRP, and NC bills valued at it in the stock only (D27-351, D27-373)
+
+**Asked for:** the owner, D27-351: an NC bill has "no value anywhere"; "the stock will show it at MRP, which the GM sets up". D27-373: "NC bills valued at MRP in the stock and Inventory reports, the MRP typed by the GM per dish in the Menu (empty is a dash; never in sales or tax)".
+
+**Shipped** (helper branch `worktree-agent-a9e1acbb1774af69b`)
+- Migration 254 (`db/migrations/254_dish_mrp.sql`): `pos_menu_items.mrp` and `pos_item_variations.mrp`, optional, above 0 (guarded constraints). The test hotels' copy reads the columns, so it carries them unasked.
+- The server (`api/src/modules/pos/till.ts`): the menu read sends `mrp` on a dish and on each choice; `POST /till/menu/items/:id/mrp` sets or clears it (roleGate `MENU`, the menu's own rule: owner, Admin, GM, kitchen manager); the variations save takes `mrp` on a first-type choice only (a later type only adds to the price, so it has none); `noChargeAtMrp` (through the POS front door) lists the NC bills' dishes per outlet and dish with the MRP - a sized dish's from its choice, never the dish's filled in; struck lines, sides and extras are not dishes.
+- The Consumption report (`api/src/modules/reports/builders/stock.ts`): a last section, **Given free (NC), at MRP** - outlet, dish, quantity, MRP, value at MRP, a total of the known values; a dish with no MRP is a dash, left out, and the note says how many lacked one. Nothing else changed: sales, tax, the Day book, the night audit and Close restaurant day read `status = 'settled'` as before; the NC lists show no value.
+- The Menu screen (`src/modules/pos/pages/Menu.tsx`): an **MRP** button beside a dish's price ("MRP -" until typed; tap, type, Enter; empty clears), and an MRP box beside each first-type price on the variations form; the variation line reads "Half ₹180.00 (MRP ₹150.00)".
+- Manual: A8.11 (the MRP), A8.7's NC part (only the stock values it), A11.9 (Consumption's new section); picture plans A8-49 and A11-28 for the master. `manual.html` rebuilt.
+
+**Proved** (numbers run in the helper's copy, 29 Oct)
+- `api/test/modules/pos/dishMrp.test.ts` 6/6; with the NC, day end, reports, Day book, business date, Inventory, Store, role gate and report-file tests: 42 files, 703/703 (`npm test`, scratch database). `npx tsc --noEmit -p tsconfig.json` (api) and `npx tsc -p tsconfig.app.json --noEmit` clean. `npx vitest run src/modules/pos src/modules/reports src/test`: 264/265 - the one is `migrationNumbers` reporting the gap 250-253, expected in a copy that has 254 and not the numbers before it. `db/tests/run.sh`: 1,820 assertions (pos mrp 4); `rerun.sh`: all 250 re-runnable.
+- Each guard taken out failed its test: the role rule (a waiter got 200), above zero (500 for 409), a later type's MRP (Hot kept 40), the dish's MRP filled into a choice (Full read 999), struck lines (Lassi 5 for 2), extras ("Extra ice" listed), paid bills counted (Lassi 3), the Day book counting NC (pos not 50); on the screen, the dish's button on a sized dish and the form's MRP; in the database, both constraints (2 failed).
+
+**Left open:** the owner's questions in the hand-back (whose MRP - today's or the bill's day's; the kitchen manager; add-ons and later types; where else it shows). Inventory's Restaurant tab is another helper's; `noChargeAtMrp` is ready for it. The two pictures.
+
+---
+
 ## 2026-10-29 · Release 15 (D27-375): launch.sh installs the full reset's backup socket
 
 **Asked for:** the master, the owner's D27-375: `deploy/launch.sh` installs `fidato-backup-now.socket` and `fidato-backup-now@.service`, re-runnable, restarting nothing else; no `RESET_*` written by it.
@@ -130,6 +149,8 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 **Left open**
 - Pictures A17-49 and B5-01 show six rows, not seven: they need the local web and API running (`node docs/manual/tools/shoot.mjs a17 A17-49`, `... b5 B5-01`), which this helper may not start. The chapters say so under each.
 - Nothing tells anyone when n8n's own backup fails: questions for the owner (in the helper's report).
+
+---
 
 ## 2026-10-29 · Release 14 (READY at bf74ce5a, the owner's to type): the restaurant, supplier dues, petty cash, the guest's GST, one daily email, the printer app (D27-365 to D27-372)
 

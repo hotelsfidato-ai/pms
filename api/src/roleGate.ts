@@ -412,6 +412,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/menu/items/:id/course`]: MENU,
   [`POST ${H}/till/menu/categories/:id/course`]: MENU,
   [`POST ${H}/till/menu/items/:id/prep`]: MENU,
+  /* A dish's MRP, for valuing NC bills in the stock (D27-373): the menu's. */
+  [`POST ${H}/till/menu/items/:id/mrp`]: MENU,
   [`POST ${H}/till/menu/categories/:id/prep`]: MENU,
   /* A section's tax heading on the Menu screen (D22-4): the menu's, as the
      import that also sets it. The tax card's own picker stays GST. */

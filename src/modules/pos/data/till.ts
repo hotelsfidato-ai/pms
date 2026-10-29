@@ -21,6 +21,10 @@ export interface MenuItem {
       variation carries the price, and the database refuses a line that
       names none. */
   price: number;
+  /** What a bill given free (NC) values this dish at in the stock reports
+      (D27-351, D27-373), typed by the GM. Null - or absent on a menu cached
+      before it - is none typed: a dash, never 0 and never the price. */
+  mrp?: number | null;
   /** Per ITEM, not per outlet: 5% on food, 18% on packaged water. The
       rate the till RINGS it at - its own, else its section's - as the
       server resolves it. Null is "none set": a dash, never 0% (POS-15). */
@@ -64,6 +68,8 @@ export interface MenuVariation {
   label: string;
   /** Type 1: the dish's price. A later type: what it adds (D27-192). */
   price: number;
+  /** Type 1 only: its MRP, as the dish's (D27-373). Null is a dash. */
+  mrp?: number | null;
   /* Its type. Absent on a menu cached before 30 September: read as type 1
      with no kind, which is what every choice was then. */
   typeNo?: number;
@@ -1312,7 +1318,8 @@ export interface VariationSet {
   types: {
     kind: VariationKind;
     heading?: string;
-    choices: { id?: string; label: string; price: string; free: boolean }[];
+    /** mrp: the first type's only, as typed - empty is none (D27-373). */
+    choices: { id?: string; label: string; price: string; free: boolean; mrp?: string }[];
   }[];
   /** Needed when every type is removed: the dish is one price again. */
   dishPrice?: string;
@@ -1322,6 +1329,11 @@ export interface VariationSet {
 /** A dish's whole set of variation types, saved at once (D27-192). */
 export function saveVariations(hotelId: string, itemId: string, set: VariationSet): Done {
   return simplePost(menuPath(hotelId, `items/${itemId}/variations`), set, "PUT");
+}
+
+/** A dish's MRP (D27-373): null clears it to a dash. */
+export function setItemMrp(hotelId: string, itemId: string, mrp: number | null): Done {
+  return simplePost(menuPath(hotelId, `items/${itemId}/mrp`), { mrp });
 }
 
 /** Every group the hotel has, with the dishes that offer it — including

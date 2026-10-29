@@ -1175,3 +1175,26 @@ begin
 
   perform set_config('app.user_id', '', true);
 end $$;
+
+
+-- =============================================================================
+-- A DISH'S MRP (the owner's D27-373, 254): optional - none is NULL, a dash -
+-- and a typed one is above zero, on a dish and on a variation alike.
+-- =============================================================================
+do $$
+declare h uuid; cat uuid; dish uuid;
+begin
+  select id into h from hotels where code = 'PNC';
+  insert into pos_menu_categories (hotel_id, name) values (h, 'MRP Test') returning id into cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (h, cat, 'Lassi', 50, 5) returning id into dish;
+  perform test.ok('pos mrp', 'a new dish has none, whatever its price',
+    (select mrp is null from pos_menu_items where id = dish));
+  perform test.raises('pos mrp', 'a dish''s MRP is above zero',
+    format('update pos_menu_items set mrp = 0 where id = %L', dish), '23514');
+  perform test.allows('pos mrp', 'and is kept as typed',
+    format('update pos_menu_items set mrp = 60 where id = %L', dish));
+  perform test.raises('pos mrp', 'a variation''s MRP is above zero too',
+    format($q$insert into pos_item_variations (hotel_id, item_id, label, price, kind, mrp)
+              values (%L, %L, 'Half', 30, 'quantity', -1)$q$, h, dish), '23514');
+end $$;

@@ -54,7 +54,7 @@ most export CSV.
 | Cashier shift | `/reports/cashier-shift` | `pages/Compliance.tsx` | search only |
 | Closing stock | `/reports/stock-on-hand` | `pages/Store.tsx` | search only |
 | Stock movement by day | `/reports/stock-movements` | `pages/Store.tsx` | search only |
-| Consumption | `/reports/stock-consumption` | `pages/Store.tsx` | search only |
+| Consumption | `/reports/stock-consumption` | `pages/Store.tsx` | search only. Its last section, "Given free (NC), at MRP" (D27-373), is the POS door's `noChargeAtMrp`: each NC dish at quantity x the Menu's MRP; no MRP a dash, left out of the total and counted. The only place an NC bill has a value |
 | Wastage and breakage | `/reports/stock-wastage` | `pages/Store.tsx` | search only |
 | Count differences | `/reports/stock-count-differences` | `pages/Store.tsx` | search only |
 | Dead stock | `/reports/stock-dead` | `pages/Store.tsx` | search only |

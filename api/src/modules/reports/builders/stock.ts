@@ -1,6 +1,6 @@
 import type { Client } from "../../../db.ts";
 import { ROLES, can } from "../../../permissions.ts";
-import { outletSales } from "../../pos/index.ts";
+import { outletSales, noChargeAtMrp } from "../../pos/index.ts";
 import {
   col, row, total, band, round2, pct,
   type Cell, type ReportDoc, type ReportRow, type ReportSection,
@@ -362,8 +362,33 @@ export async function stockConsumption(
         : "Till sales and the food cost are for those who read the hotel's reports.",
     },
     perGroup("departments", "Per department", "Department", departments, departmentValues, "(not said)"),
+    await givenFree(client, property.id, from, to),
   ];
   return doc(property, "stock-consumption", "Consumption", windowFacts(from, to), sections);
+}
+
+/* Bills given free, NC (D27-351, D27-373): their dishes are stock given away,
+   valued at quantity x the MRP the GM typed on the Menu. Here and nowhere
+   else - an NC bill is no sale and carries no tax. A dish with no MRP is a
+   dash, left out of the total, and counted. */
+async function givenFree(client: Client, hotelId: string, from: string, to: string): Promise<ReportSection> {
+  const dishes = (await noChargeAtMrp(client, hotelId, from, to))
+    .map((d) => ({ ...d, value: d.mrp === null ? null : round2(d.qty * d.mrp) }));
+  const k = known(dishes.map((d) => d.value));
+  const lacking = k.missing === 0 ? ""
+    : ` ${k.missing} dish${k.missing === 1 ? " has" : "es have"} no MRP and ${k.missing === 1 ? "is" : "are"} left out of the total.`;
+  return {
+    key: "nc", title: "Given free (NC), at MRP",
+    columns: [col("outlet", "Outlet", "text"), col("dish", "Dish", "text"),
+      col("quantity", "Quantity", "ratio"), col("mrp", "MRP"), col("value", "Value at MRP")],
+    rows: dishes.length ? [
+      ...dishes.map((d) => row({ outlet: d.outlet, dish: d.dish, quantity: d.qty, mrp: d.mrp, value: d.value })),
+      total({ outlet: "Total", dish: null, quantity: null, mrp: null, value: k.sum }),
+    ] : [],
+    empty: "No bill was given free (NC) in this window.",
+    note: "The dishes on bills given free, at the MRP typed on the Menu today. "
+      + "No sale and no tax: the restaurant's sales leave NC bills out." + lacking,
+  };
 }
 
 /* ── 4 · Wastage and breakage, and 5 · the count ─────────────────────── */
