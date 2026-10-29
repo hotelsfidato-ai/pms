@@ -42,7 +42,7 @@ const row = (code: string, name: string) => ({
 });
 const LIST = { hotels: [row(HOTEL, "5 Elements Akkalkot"), row("AGR", "Fidato Agra")] };
 const COUNT = {
-  code: "AGR", name: "Fidato Agra", businessDate: "2026-10-20", guests: 2, refusal: null,
+  code: "AGR", name: "Fidato Agra", businessDate: "2026-10-20", guests: 2, idPhotos: 3, refusal: null,
   tables: { reservations: 3, folios: 3, invoices: 1, folio_postings: 9, room_assignments: 3 },
 };
 
@@ -84,6 +84,7 @@ describe("Properties: clear this hotel and start today", () => {
       "POST /api/admin/hotels/AGR/owner-reset": () => ({
         removed: 21, rooms: 10, businessDate: "2026-10-28",
         backup: { file: "fidato-20261028-101500.dump", copiedOff: true },
+        idPhotos: { deleted: 2, notDeleted: 1 },
       }),
     });
     renderPage();
@@ -92,6 +93,9 @@ describe("Properties: clear this hotel and start today", () => {
     expect(within(dialog).getByText("Clear Fidato Agra and start today")).toBeTruthy();
     expect(within(dialog).getByText(/3 bookings, 2 guests, 3 bills, 1 invoice, 12 other records\./)).toBeTruthy();
     expect(within(dialog).getByText(/Invoice numbers carry on/)).toBeTruthy();
+    /* D27-379: the guests' ID photos go from Google Drive too, said before the code is typed. */
+    expect(within(dialog).getByText(/3 ID photos of guests, from Google Drive\. The backup keeps the records, not the photos\./))
+      .toBeTruthy();
     expect(within(dialog).getByText(/A backup of the whole system is taken first/)).toBeTruthy();
 
     const go = within(dialog).getByRole("button", { name: "Clear and start today" }) as HTMLButtonElement;
@@ -106,7 +110,8 @@ describe("Properties: clear this hotel and start today", () => {
     fireEvent.click(go);
     expect(await within(dialog).findByText(
       "Removed 21 records. The backup is fidato-20261028-101500.dump, copied off the server. "
-      + "The business date is now 28 Oct 2026.")).toBeTruthy();
+      + "The business date is now 28 Oct 2026. 2 ID photos deleted from Google Drive. 1 ID photo could not be "
+      + "deleted from Google Drive now: written down, and tried again at this hotel's next clear.")).toBeTruthy();
     expect(calls.filter((c) => c.method === "POST")).toEqual([
       { path: "/api/admin/hotels/AGR/owner-reset", method: "POST", body: { confirm: "AGR" } },
     ]);

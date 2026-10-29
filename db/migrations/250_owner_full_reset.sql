@@ -22,12 +22,17 @@
 --                               business date becomes today, invoice numbers
 --                               carry on, and one audit line says who, which
 --                               hotel, how many rows and the backup's name.
+--   owner_reset.id_photos_in_drive   the cleared guests' ID photos still to
+--                               delete from Google Drive (D27-379), listed by
+--                               the clear, each struck off once Drive has
+--                               deleted it - after the commit (section 1b)
 --
 -- WHO MAY CALL IT. A login of its own, pms_owner_reset, which may do exactly
 -- two things - count and clear - and nothing else: no table, no other
 -- function, not the `app` schema. The functions run as their owner (the table
--- owner, pms_migrate), which is what may lift a guard. pms_app cannot reach
--- them at all. The API connects as pms_owner_reset only for this, through
+-- owner, pms_migrate), which is what may lift a guard. pms_app cannot call
+-- them at all (it reads and strikes off the ID photo list, nothing more).
+-- The API connects as pms_owner_reset only for this, through
 -- RESET_DATABASE_URL, after checking the signed-in e-mail against
 -- RESET_OWNER_EMAIL (api/src/modules/admin/ownerReset.ts).
 --
@@ -63,6 +68,38 @@ create schema if not exists owner_reset;
 alter schema owner_reset owner to pms_migrate;
 revoke all on schema owner_reset from public;
 grant usage on schema owner_reset to pms_owner_reset;
+
+
+-- =============================================================================
+-- 1b · THE ID PHOTOS STILL IN GOOGLE DRIVE (D27-379)
+-- =============================================================================
+-- The owner, 29 October: a cleared hotel keeps no IDs - the backup keeps the
+-- records, the photos go for good. A photo's row goes with its booking, but
+-- the photo is an encrypted file in Drive (D27-209), and Drive is asked only
+-- AFTER the clear has committed, so a refused or undone clear deletes
+-- nothing. The clear therefore lists the files here, in its own transaction,
+-- and whoever ran it - the API (ownerReset.ts) or reset-property.ts - asks
+-- Drive through idPhotos.ts's own `remove` and strikes each off once Drive
+-- has deleted it. One Drive would not delete stays listed, and the next
+-- clear of the hotel lists it again and tries it. Nothing of a guest is
+-- here: the file's id and its hotel.
+--
+-- pms_app may read and strike off (the API, after the commit, on its own
+-- connection); the reset login may not even read it.
+create table if not exists owner_reset.id_photos_in_drive (
+  drive_file_id text primary key,
+  hotel_id      uuid not null references hotels(id),
+  -- The photo's own copy of its hotel's code: Drive's folder is chosen by it.
+  hotel_code    text not null,
+  listed_at     timestamptz not null default now()
+);
+alter table owner_reset.id_photos_in_drive owner to pms_migrate;
+revoke all on owner_reset.id_photos_in_drive from public;
+grant usage on schema owner_reset to pms_app;
+grant select, delete on owner_reset.id_photos_in_drive to pms_app;
+
+comment on table owner_reset.id_photos_in_drive is
+  'D27-379: a cleared hotel''s ID photo files still to delete from Google Drive. Listed by owner_reset.clear, struck off after the commit once Drive has deleted each.';
 
 
 -- =============================================================================
@@ -243,6 +280,27 @@ as $fn$
      and not exists (select 1 from banquet_events b where b.guest_id = g.id and b.hotel_id <> p_hotel)
 $fn$;
 
+-- The ID photo files a clear of the hotel has Drive delete (D27-379): of the
+-- photo rows the clear removes (guest_id_photos, `hotel_id = $1` in the list
+-- above) the ones whose file Drive still holds - kept, or removed with
+-- Drive's delete still owed (`drive_delete_failed_at`) - and any an earlier
+-- clear listed that Drive has not deleted yet. Not a pending row (no file
+-- was ever named on it) and not a removed one Drive already deleted.
+create or replace function owner_reset.drive_files(p_hotel uuid)
+returns table (drive_file_id text, hotel_code text)
+language sql
+stable
+as $fn$
+  select p.drive_file_id, p.hotel_code
+    from guest_id_photos p
+   where p.hotel_id = p_hotel and p.drive_file_id is not null
+     and (p.status = 'stored' or p.drive_delete_failed_at is not null)
+  union
+  select l.drive_file_id, l.hotel_code
+    from owner_reset.id_photos_in_drive l
+   where l.hotel_id = p_hotel
+$fn$;
+
 -- Null when the hotel may be cleared; otherwise the sentence that says why not.
 --   * a test hotel keeps its own Reset (D27-365 (3), the fourth answer);
 --   * a guest checked in would lose an open bill (the second answer): named.
@@ -273,7 +331,8 @@ $fn$;
 -- 4 · THE DRY RUN
 -- =============================================================================
 -- What would go, table by table (only the tables with something in them), the
--- guests, and the refusal if there is one. The screen's window and the
+-- guests, the ID photos Drive is then asked to delete, and the refusal if
+-- there is one. The screen's window and the
 -- script's dry run both print this, so they cannot disagree.
 create or replace function owner_reset.counts(p_code text, p_fresh boolean default true)
 returns jsonb
@@ -304,6 +363,7 @@ begin
     'businessDate', h.business_date,
     'tables',       v_tables,
     'guests',       coalesce(cardinality(owner_reset.orphans(h.id)), 0),
+    'idPhotos',     (select count(*) from owner_reset.drive_files(h.id)),
     'refusal',      owner_reset.refusal(h.id));
 end $fn$;
 
@@ -329,6 +389,7 @@ declare
   v_tables  jsonb := '{}';
   v_orphans uuid[];
   v_refusal text;
+  v_photos  jsonb;
 begin
   -- One clear of a hotel at a time.
   select * into h from hotels where code = upper(btrim(p_code)) for update;
@@ -346,6 +407,15 @@ begin
   if v_refusal is not null then
     raise exception '%', v_refusal using errcode = 'check_violation';
   end if;
+
+  -- The ID photos' Drive files, listed before their rows go, in this same
+  -- transaction: undone with it, kept with it (D27-379, section 1b).
+  insert into owner_reset.id_photos_in_drive (drive_file_id, hotel_id, hotel_code)
+  select f.drive_file_id, h.id, f.hotel_code from owner_reset.drive_files(h.id) f
+  on conflict (drive_file_id) do nothing;
+  select coalesce(jsonb_agg(jsonb_build_object('hotelCode', l.hotel_code, 'driveFileId', l.drive_file_id)), '[]')
+    into v_photos
+    from owner_reset.id_photos_in_drive l where l.hotel_id = h.id;
 
   for s in select * from owner_reset.steps(p_fresh) loop
     execute format('delete from public.%I where %s', s.table_name, s.where_sql) using h.id;
@@ -398,6 +468,7 @@ begin
             'removed',    v_removed,
             'backup',     p_backup,
             'freshStart', p_fresh,
+            'idPhotos',   jsonb_array_length(v_photos),
             'by', coalesce((select full_name from staff where id = p_actor),
                            'reset-property.ts, on the server')));
 
@@ -406,7 +477,10 @@ begin
     'tables',       v_tables,
     'guests',       v_guests,
     'rooms',        (select count(*) from rooms where hotel_id = h.id),
-    'businessDate', (select business_date from hotels where id = h.id));
+    'businessDate', (select business_date from hotels where id = h.id),
+    -- For whoever ran it to have Drive delete AFTER the commit. Never shown:
+    -- the API and the script say how many, not which.
+    'idPhotos',     v_photos);
 end $fn$;
 
 

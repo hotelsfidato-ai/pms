@@ -9341,13 +9341,14 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>Clear this hotel and start today</h3>
   <p>For one account only: the one the server's settings name, which is the owner's own. Nobody else sees it, whatever their role, and the server refuses anybody else who asks. It is on every real hotel's card, under <span class="ui">Start afresh</span>: <span class="msg">“Deletes every booking, bill and order here, after a backup. The setup stays.”</span> Use it to start a hotel afresh once its practice is over.</p>
   <ol class="steps">
-    <li>On the hotel's card, click <span class="ui">Clear this hotel and start today</span>. The window says what would be deleted, in numbers: bookings, guests, bills, invoices, payments, restaurant orders, functions, night audits, cash shifts, stock movements, and how many other records.</li>
+    <li>On the hotel's card, click <span class="ui">Clear this hotel and start today</span>. The window says what would be deleted, in numbers: bookings, guests, bills, invoices, payments, restaurant orders, functions, night audits, cash shifts, stock movements, and how many other records. When guests' ID photos are kept for the hotel, it says how many go too: <span class="msg">“Also deleted, for good: 3 ID photos of guests, from Google Drive. The backup keeps the records, not the photos.”</span></li>
     <li>Read what is kept: the hotel, its rooms, rates, menu, tables, staff, sign-ins and settings. Invoice numbers carry on from where they are.</li>
     <li>Type the hotel's code (for example <b>AMR</b>) in the box. <span class="ui">Clear and start today</span> stays off until the code is typed exactly.</li>
     <li>Click <span class="ui">Clear and start today</span>. A backup of the whole system is taken first, then the hotel is cleared in one go: all of it or none of it.</li>
-    <li>The window says how many records went, the backup's file name and whether it was copied off the server, and the new business date: today.</li>
+    <li>The window says how many records went, the backup's file name and whether it was copied off the server, and the new business date: today. Then, once the hotel is cleared, the guests' ID photos are deleted from Google Drive, and it says how many: <span class="msg">“3 ID photos deleted from Google Drive.”</span></li>
   </ol>
-  <p>It is refused, and nothing is deleted, while a guest is checked in at the hotel. The card names them: <span class="msg">“A guest is still checked in at Hotel Amrapali: Ravi Kumar. Check them out before the hotel is cleared.”</span> It is refused too when the backup fails, and on a test hotel, which keeps its own <span class="ui">Reset</span>.</p>
+  <p>If Google Drive does not answer, the hotel is still cleared, and the window says how many photos are left: <span class="msg">“1 ID photo could not be deleted from Google Drive now: written down, and tried again at this hotel's next clear.”</span> The window never shows a guest's name or where a photo is kept, only how many.</p>
+  <p>It is refused, and nothing is deleted, while a guest is checked in at the hotel. The card names them: <span class="msg">“A guest is still checked in at Hotel Amrapali: Ravi Kumar. Check them out before the hotel is cleared.”</span> It is refused too when the backup fails, on a test hotel, which keeps its own <span class="ui">Reset</span>, and when the hotel has ID photos in Google Drive but the server's settings have no way to reach them, since the photos would stay.</p>
 
   <h3>Everyone else</h3>
   <figure class="shot" id="fig-A16-06">
@@ -9367,7 +9368,7 @@ figure.shot.phone img { max-width: 72mm; }
     <ul>
       <li><b>Close does not ask first.</b> The property leaves the pickers at once. Reopen undoes it.</li>
       <li>Reset and Re-copy setup cannot be undone. They touch the test hotel only, never the real one.</li>
-      <li><b>Clear this hotel and start today cannot be undone</b> from the screen. What it deleted is only in the backup it names; getting it back is a job on the server.</li>
+      <li><b>Clear this hotel and start today cannot be undone</b> from the screen. What it deleted is only in the backup it names; getting it back is a job on the server. The guests' ID photos are not in the backup: they are gone for good.</li>
     </ul>
   </div>
 

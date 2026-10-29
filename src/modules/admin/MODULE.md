@@ -174,6 +174,15 @@ properties and people.
   (`owner_reset.counts`, `owner_reset.clear`, migration "owner full
   reset"), run as its own login `pms_owner_reset` (`RESET_DATABASE_URL`);
   the backup through `RESET_BACKUP_SOCKET` (`deploy/fidato-backup-now.*`).
+  **The guests' ID photos go from Google Drive too (D27-379, 29 October):**
+  the count says how many (`idPhotos`); the clear lists their files in
+  `owner_reset.id_photos_in_drive` in its own transaction, and only after
+  it has committed does the API (or the script) have Drive delete them
+  through `idPhotos.ts` (`removeListed`, the same `remove` a removed photo
+  uses), striking each off once deleted; the answer is counts only
+  (`idPhotos: { deleted, notDeleted }`), and one Drive did not delete stays
+  listed for the hotel's next clear. Refused, before anything, for a hotel
+  with ID photos on a server without the photo store's settings.
   Turned on by the owner on the server: `deploy/README.md`, "The owner's
   full reset". Tests: `ownerReset.test.tsx`;
   `api/test/modules/admin/ownerReset.test.ts`; `db/tests/modules/admin.sql`

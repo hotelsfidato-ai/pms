@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { createServer, type Server } from "node:net";
+import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,7 +22,15 @@ import { join } from "node:path";
    privilege is the login's own. The server's backup is stood in for by a
    socket that answers as `fidato-backup` does.
 
-   Builds its own real hotel (ORA) and clears it; removes it after.
+   THE ID PHOTOS (D27-379): the guests' ID photo files in Google Drive go
+   too - only after the clear has committed, never another hotel's, none
+   for a refused or undone clear, and one Drive would not delete is said
+   and kept for the next try. The photo store (the CRS's n8n, and Drive
+   behind it) is stood in for by a server here, as guestIdPhoto.test.ts
+   does; nothing reaches Google.
+
+   Builds its own real hotels (ORA, cleared; ORB, another hotel with an ID
+   photo of its own) and removes them after.
    ══════════════════════════════════════════════════════════════════ */
 
 const { app } = await import("../../../src/server.ts");
@@ -54,6 +66,19 @@ const OK_BACKUP =
   + "/var/backups/fidato/fidato-20261028-101500.dump\n";
 let server: Server;
 
+/* ── The stand-in for the photo store (n8n, and Drive behind it) ─────
+   Each delete asked for is written down with whether ORA's clear had
+   committed at that moment (its bookings gone, read on another connection). */
+const STORE_SECRET = "owner-reset-store-secret";
+let store: HttpServer;
+let drive: Set<string>;                     // the files "in Drive"
+let refuse = new Set<string>();             // the files Drive will not delete
+let deletes: { fileId: string; hotel: string; committed: boolean }[] = [];
+const listed = async () => (await sql(
+  "select drive_file_id from owner_reset.id_photos_in_drive where hotel_id in ($1, $2) order by 1",
+  [ora, orb])).rows.map((r) => r.drive_file_id as string);
+let orb: string;
+
 const call = (by: string, method: string, path: string, body?: unknown) =>
   app.request(path, {
     method,
@@ -63,7 +88,7 @@ const call = (by: string, method: string, path: string, body?: unknown) =>
 /** What the routes answer, as far as these tests read it. */
 type Body = {
   error?: string; refusal?: string | null; tables?: unknown; guests?: number;
-  removed?: number; businessDate?: string; backup?: unknown;
+  removed?: number; businessDate?: string; backup?: unknown; idPhotos?: unknown;
 };
 const body = async (res: Response) => (await res.json()) as Body;
 const clear = (by: string, confirm?: unknown) =>
@@ -74,6 +99,22 @@ const bookings = async () =>
 beforeAll(async () => {
   server = createServer((socket) => { backups += 1; socket.end(backupSays); });
   await new Promise<void>((done) => server.listen(SOCKET, done));
+  store = createHttpServer((req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => { raw += chunk; });
+    req.on("end", async () => {
+      const answer = (status: number, body: unknown) =>
+        res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
+      if (req.headers["x-fidato-secret"] !== STORE_SECRET) return answer(401, { error: "no secret" });
+      const call = JSON.parse(raw) as { action: string; hotel: string; fileId: string };
+      if (call.action !== "delete") return answer(400, { error: "only deletes here" });
+      deletes.push({ fileId: call.fileId, hotel: call.hotel, committed: (await bookings()) === 0 });
+      if (refuse.has(call.fileId)) return answer(502, { ok: false, error: "Drive answered 500 to the delete." });
+      drive.delete(call.fileId);
+      return answer(200, { ok: true, deleted: true });
+    });
+  });
+  await new Promise<void>((done) => store.listen(0, "127.0.0.1", done));
 
   groupOwner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
   await sql(`begin;
@@ -116,28 +157,69 @@ beforeAll(async () => {
       -- set back to a day in the past, so "today" afterwards means something
       update hotels set business_date = bd - 3 where id = h;
     end $$;`);
+
+  /* The ID photos of ORA's stay: one kept, one removed whose Drive delete
+     failed (both still in Drive), one removed and already deleted, one that
+     never reached Drive. And ORB, another real hotel, with one of its own. */
+  await sql(`begin;
+    select set_config('app.user_id', '${groupOwner}', true);
+    select app.provision_property_unchecked('ORB', 'Owner Reset Other', 'Nowhere');
+    commit;`);
+  orb = (await sql("select id::text from hotels where code = 'ORB'")).rows[0].id;
+  await sql(`do $$
+    declare b uuid := '${orb}'; rt uuid; g uuid;
+    begin
+      select id into rt from room_types where hotel_id = b order by code limit 1;
+      insert into guests (full_name, phone) values ('ORB Only Guest', '9822200002') returning id into g;
+      insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+      values (b, app.next_reference(b), g, rt, app.business_date(b) - 1, app.business_date(b), 3000, 'checked_out');
+    end $$;`);
+  await sql(
+    `insert into guest_id_photos (hotel_id, hotel_code, reservation_id, guest_id, uploaded_by, sides,
+                                  notice_version, status, stored_at, drive_file_id, cipher_sha256, cipher_bytes,
+                                  removed_at, removed_reason, drive_delete_failed_at)
+     select r.hotel_id, h.code, r.id, r.guest_id, $1, '{front}', 'test', x.status,
+            case when x.file is not null then now() end, x.file,
+            case when x.file is not null then repeat('a', 64) end, case when x.file is not null then 10 end,
+            case when x.status = 'removed' then now() end, case when x.status = 'removed' then 'deleted: test' end,
+            x.failed
+       from reservations r join hotels h on h.id = r.hotel_id
+       join (values ('ORA', 'stored',  'ora-file-1', null::timestamptz),
+                    ('ORA', 'removed', 'ora-file-2', now()),
+                    ('ORA', 'removed', 'ora-file-3', null),
+                    ('ORA', 'pending', null,         null),
+                    ('ORB', 'stored',  'orb-file-1', null)) x(code, status, file, failed) on x.code = h.code
+      where h.id in ($2, $3)`, [groupOwner, ora, orb]);
+  drive = new Set(["ora-file-1", "ora-file-2", "orb-file-1"]);
 });
 
 beforeEach(() => {
   process.env["RESET_OWNER_EMAIL"] = RESETTER;
   process.env["RESET_DATABASE_URL"] = `${SUPER}?options=-c%20role%3Dpms_owner_reset`;
   process.env["RESET_BACKUP_SOCKET"] = SOCKET;
+  process.env["ID_PHOTO_N8N_URL"] = `http://127.0.0.1:${(store.address() as AddressInfo).port}/pms-id-photos`;
+  process.env["ID_PHOTO_N8N_SECRET"] = STORE_SECRET;
   backupSays = OK_BACKUP;
   backups = 0;
+  deletes = [];
 });
 
 afterAll(async () => {
-  for (const name of ["RESET_OWNER_EMAIL", "RESET_DATABASE_URL", "RESET_BACKUP_SOCKET"]) delete process.env[name];
+  for (const name of ["RESET_OWNER_EMAIL", "RESET_DATABASE_URL", "RESET_BACKUP_SOCKET",
+    "ID_PHOTO_N8N_URL", "ID_PHOTO_N8N_SECRET"]) delete process.env[name];
   await sql(`begin;
     update reservations set status = 'checked_out' where hotel_id = '${ora}' and status = 'checked_in';
     select owner_reset.clear('ORA', true, null, null);
-    delete from staff_hotels where hotel_id = '${ora}';
+    select owner_reset.clear('ORB', true, null, null);
+    delete from owner_reset.id_photos_in_drive where hotel_id in ('${ora}', '${orb}');
+    delete from staff_hotels where hotel_id in ('${ora}', '${orb}');
     alter table hotels disable trigger hotels_no_delete;
-    delete from hotels where id = '${ora}';
+    delete from hotels where id in ('${ora}', '${orb}');
     alter table hotels enable trigger hotels_no_delete;
     commit;`).catch((e) => console.error("ownerReset cleanup:", e.message));
   await sql("update staff set is_active = false where email like $1", [`%-${RUN}@fidato.in`]);
   await new Promise<void>((done) => server.close(() => done()));
+  await new Promise<void>((done) => store.close(() => done()));
   await closePool();
 });
 
@@ -192,7 +274,11 @@ describe("before anything goes", () => {
     expect(shown).toEqual(script);
     expect(shown).toMatchObject({
       code: "ORA", name: "Owner Reset Hotel", refusal: null,
-      tables: { reservations: 1, folios: 1, folio_postings: 2, payments: 1, invoices: 1, night_audit_runs: 1 },
+      tables: { reservations: 1, folios: 1, folio_postings: 2, payments: 1, invoices: 1, night_audit_runs: 1,
+                guest_id_photos: 4 },
+      /* The two Drive still holds: not the one already deleted, not the one
+         that never reached it, not ORB's. */
+      idPhotos: 2,
     });
     /* Its own guest, and any guest left with no stay anywhere by the files
        before this one - a guest belongs to the group, and the sweep is the
@@ -226,7 +312,22 @@ describe("before anything goes", () => {
     expect((await body(res)).error).toBe(sentence);
     expect(backups).toBe(0);
     expect(await bookings()).toBe(2);
+    expect(deletes, "nothing asked of Drive").toEqual([]);
+    expect(await listed()).toEqual([]);
     await sql("update reservations set status = 'checked_out' where hotel_id = $1 and status = 'checked_in'", [ora]);
+  });
+
+  it("refuses when the hotel has ID photos in Drive and the photo store is not set - before the backup", async () => {
+    delete process.env["ID_PHOTO_N8N_URL"];
+    const sentence = "Owner Reset Hotel has 2 ID photos in Google Drive, and the photo store is not in this "
+      + "server's settings (ID_PHOTO_N8N_URL), so they could not be deleted. Nothing can be cleared until it is.";
+    expect((await body(await call(resetter, "GET", "/api/admin/hotels/ORA/owner-reset"))).refusal).toBe(sentence);
+    const res = await clear(resetter, "ORA");
+    expect(res.status).toBe(409);
+    expect((await body(res)).error).toBe(sentence);
+    expect(backups).toBe(0);
+    expect(await bookings()).toBe(2);
+    expect(await listed()).toEqual([]);
   });
 
   it("clears nothing when the backup fails, and says what it said", async () => {
@@ -238,6 +339,7 @@ describe("before anything goes", () => {
       "The backup failed, so nothing was cleared. It said: is fine; the copy that survives this disk does not exist.");
     expect(backups).toBe(1);
     expect(await bookings()).toBe(2);
+    expect(deletes, "nothing asked of Drive").toEqual([]);
   });
 });
 
@@ -257,6 +359,10 @@ describe("the clear", () => {
     expect(await bookings()).toBe(2);
     expect(Number((await sql("select count(*) from invoices where hotel_id = $1", [ora])).rows[0].count)).toBe(1);
     expect(Number((await sql("select count(*) from audit_log where hotel_id = $1 and action = 'OWNER_RESET'", [ora])).rows[0].count)).toBe(0);
+    /* The ID photos: nothing asked of Drive, the list undone with the rest. */
+    expect(deletes, "nothing asked of Drive").toEqual([]);
+    expect(await listed()).toEqual([]);
+    expect([...drive].sort()).toEqual(["ora-file-1", "ora-file-2", "orb-file-1"]);
     /* And every guard is back on. */
     const { rows } = await sql(
       "select count(*) from owner_reset.guards(true) g join pg_trigger t on t.tgname = g.trigger_name where t.tgenabled <> 'O'");
@@ -269,9 +375,20 @@ describe("the clear", () => {
       "select next_number from invoice_series where hotel_id = $1 and fin_year = $2", [ora, fy])).rows[0].next_number);
     expect(series).toBeGreaterThan(1);
 
+    refuse = new Set(["ora-file-2"]);     // Drive will not delete this one
     const res = await clear(resetter, "ora");
     expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.clone().text(), "no Drive id reaches the screen").not.toMatch(/file-/);
     const done = await body(res);
+    /* The ID photos: both of ORA's asked for, only after the commit; one
+       deleted, one not - said, and kept on the list. ORB's untouched. */
+    expect(done.idPhotos).toEqual({ deleted: 1, notDeleted: 1 });
+    expect(deletes.map((d) => d.fileId).sort()).toEqual(["ora-file-1", "ora-file-2"]);
+    expect(deletes.every((d) => d.committed && d.hotel === "ORA"), JSON.stringify(deletes)).toBe(true);
+    expect([...drive].sort()).toEqual(["ora-file-2", "orb-file-1"]);
+    expect(await listed()).toEqual(["ora-file-2"]);
+    expect(Number((await sql("select count(*) from guest_id_photos where hotel_id = $1", [orb])).rows[0].count)).toBe(1);
+    expect(Number((await sql("select count(*) from guest_id_photos where hotel_id = $1", [ora])).rows[0].count)).toBe(0);
     expect(backups).toBe(1);
     expect(done.backup).toEqual({ file: "fidato-20261028-101500.dump", copiedOff: true });
     /* What went is what the dry run said would go. */
@@ -301,6 +418,59 @@ describe("the clear", () => {
     expect(audit).toHaveLength(1);
     expect(audit[0].actor).toBe(resetter);
     expect(audit[0].after).toMatchObject({
-      removed: done.removed, backup: "fidato-20261028-101500.dump", by: "The Resetter", freshStart: true });
+      removed: done.removed, backup: "fidato-20261028-101500.dump", by: "The Resetter", freshStart: true,
+      idPhotos: 2 });
+  });
+
+  it("an ID photo Drive would not delete is counted in the next dry run, and the next clear deletes it", async () => {
+    refuse = new Set();
+    expect((await body(await call(resetter, "GET", "/api/admin/hotels/ORA/owner-reset"))).idPhotos).toBe(1);
+    const res = await clear(resetter, "ORA");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect((await body(res)).idPhotos).toEqual({ deleted: 1, notDeleted: 0 });
+    expect(deletes.map((d) => d.fileId)).toEqual(["ora-file-2"]);
+    expect([...drive]).toEqual(["orb-file-1"]);
+    expect(await listed()).toEqual([]);
+  });
+});
+
+describe("the server's script, reset-property.ts (D27-379)", () => {
+  /* The script, run as the server runs it, on ORB. It reads the photo
+     store's settings from api/.env when run as the API's user; without
+     them it refuses, before anything is written. */
+  const script = (env: NodeJS.ProcessEnv) => new Promise<{ code: number; out: string }>((done) => {
+    const file = fileURLToPath(new URL("../../../scripts/reset-property.ts", import.meta.url));
+    execFile(process.execPath, ["--experimental-strip-types", "--no-warnings", file, "ORB", "--fresh-start", "--yes"],
+      { env, timeout: 60_000 }, (error, stdout, stderr) =>
+        done({ code: error ? Number(error.code ?? 1) : 0, out: stdout + stderr }));
+  });
+  const withoutStore = () => {
+    const env = { ...process.env };
+    delete env["ID_PHOTO_N8N_URL"];
+    delete env["ID_PHOTO_N8N_SECRET"];
+    return env;
+  };
+  const orbBookings = async () =>
+    Number((await sql("select count(*) from reservations where hotel_id = $1", [orb])).rows[0].count);
+
+  it("refuses without the photo store, and changes nothing", async () => {
+    const run = await script(withoutStore());
+    expect(run.code, run.out).toBe(1);
+    expect(run.out).toMatch(/and 1 ID photos in Google Drive/);
+    expect(run.out).toMatch(/cannot reach the ID photo store[\s\S]*Nothing was changed\./);
+    expect(await orbBookings()).toBe(1);
+    expect(deletes).toEqual([]);
+    expect(drive.has("orb-file-1")).toBe(true);
+  });
+
+  it("with it, deletes the ID photos after the clear, and prints counts only", async () => {
+    const run = await script({ ...process.env });
+    expect(run.code, run.out).toBe(0);
+    expect(run.out).toMatch(/1 ID photos deleted from Google Drive/);
+    expect(run.out, "no Drive id printed").not.toMatch(/file-/);
+    expect(await orbBookings()).toBe(0);
+    expect(deletes.map((d) => [d.fileId, d.hotel])).toEqual([["orb-file-1", "ORB"]]);
+    expect(drive.has("orb-file-1")).toBe(false);
+    expect(await listed()).toEqual([]);
   });
 });
