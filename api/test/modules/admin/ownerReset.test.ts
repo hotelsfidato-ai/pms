@@ -35,6 +35,7 @@ import { join } from "node:path";
 
 const { app } = await import("../../../src/server.ts");
 const { closePool } = await import("../../../src/db.ts");
+const { retryListed } = await import("../../../src/modules/admin/ownerReset.ts");
 
 const SUPER =
   process.env["SUPER_DATABASE_URL"] ??
@@ -430,6 +431,24 @@ describe("the clear", () => {
     expect((await body(res)).idPhotos).toEqual({ deleted: 1, notDeleted: 0 });
     expect(deletes.map((d) => d.fileId)).toEqual(["ora-file-2"]);
     expect([...drive]).toEqual(["orb-file-1"]);
+    expect(await listed()).toEqual([]);
+  });
+
+  it("one Drive would not delete is asked again every hour until Drive does (D27-380)", async () => {
+    await sql("insert into owner_reset.id_photos_in_drive (drive_file_id, hotel_id, hotel_code) values ('ora-retry-1', $1, 'ORA')",
+      [ora]);
+    drive.add("ora-retry-1");
+    refuse = new Set(["ora-retry-1"]);
+    expect(await retryListed()).toEqual({ deleted: 0, notDeleted: 1 });
+    expect(await listed(), "still listed while Drive refuses").toEqual(["ora-retry-1"]);
+    delete process.env["ID_PHOTO_N8N_URL"];
+    deletes = [];
+    expect(await retryListed(), "no photo store: it asks nothing").toEqual({ deleted: 0, notDeleted: 0 });
+    expect(deletes).toEqual([]);
+    process.env["ID_PHOTO_N8N_URL"] = `http://127.0.0.1:${(store.address() as AddressInfo).port}/pms-id-photos`;
+    refuse = new Set();
+    expect(await retryListed()).toEqual({ deleted: 1, notDeleted: 0 });
+    expect(drive.has("ora-retry-1")).toBe(false);
     expect(await listed()).toEqual([]);
   });
 });

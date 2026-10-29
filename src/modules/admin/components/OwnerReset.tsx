@@ -38,7 +38,7 @@ const count = (n: number, one: string, many: string) => `${number(n)} ${n === 1 
 const photos = ({ deleted, notDeleted }: OwnerResetDone["idPhotos"]) =>
   (deleted ? ` ${count(deleted, "ID photo", "ID photos")} deleted from Google Drive.` : "")
   + (notDeleted ? ` ${count(notDeleted, "ID photo", "ID photos")} could not be deleted from Google Drive `
-    + "now: written down, and tried again at this hotel's next clear." : "");
+    + "now: written down, and tried again every hour until Drive deletes them." : "");
 
 function WhatGoes({ c }: { c: OwnerResetCount }) {
   const named = NAMED.filter(([t]) => c.tables[t]).map(([t, one, many]) => count(c.tables[t]!, one, many));

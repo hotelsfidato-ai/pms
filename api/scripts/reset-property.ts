@@ -221,8 +221,8 @@ async function main() {
     say(`${drive.deleted} ID photos deleted from Google Drive`);
     if (drive.notDeleted) {
       console.error(`  ${drive.notDeleted} ID photos are STILL in Google Drive: Drive did not delete them.\n`
-        + "  They stay listed (owner_reset.id_photos_in_drive) and the next clear of\n"
-        + "  this hotel tries them again.");
+        + "  They stay listed (owner_reset.id_photos_in_drive) and the API asks Drive\n"
+        + "  again every hour until it deletes them (D27-380).");
       process.exitCode = 1;
     }
     console.log();

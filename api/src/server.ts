@@ -414,6 +414,9 @@ if (process.argv[1]?.endsWith("server.ts")) {
   /* Connection health's alert, every 5 minutes (D27-276). Emails nothing
      until HEALTH_ALERT_EMAIL and the sending settings are on the server. */
   connectionsHealth.jobs.start();
+  /* The full reset's ID photos Drive did not delete, asked again every hour
+     (D27-380). Asks nothing until a clear has left one on the list. */
+  admin.ownerResetJobs.start();
 
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
@@ -447,6 +450,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
     await crs.jobs.stop();
     await marketRates.jobs.stop();
     await connectionsHealth.jobs.stop();
+    await admin.ownerResetJobs.stop();
     await stopListening();
     await closePool();
     process.exit(0);

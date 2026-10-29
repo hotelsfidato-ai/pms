@@ -815,7 +815,7 @@ clear has committed, through the photo store the photos went in by
 photo. The answer says how many were deleted and how many were not; one
 Drive did not delete is written down in the database
 (`owner_reset.id_photos_in_drive`: the file's id and its hotel, nothing of the
-guest) and is tried again at the hotel's next clear. A hotel with ID photos
+guest) and the API asks Drive again every hour until it deletes it (D27-380). A hotel with ID photos
 on a server without the photo store's two settings is refused, the button and
 the script alike. The script reads them from `api/.env`, so it is run as the
 API's user (`sudo -u fidato`), as its own message says.

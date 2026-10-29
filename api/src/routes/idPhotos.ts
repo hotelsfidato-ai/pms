@@ -219,8 +219,8 @@ export const photoStoreSet = (): boolean => store() !== null;
 /** THE OWNER'S FULL RESET, AFTER ITS CLEAR HAS COMMITTED (D27-379): the
     files the clear listed (owner_reset.id_photos_in_drive), each deleted as
     `remove` deletes one and struck off the list once Drive has. One Drive
-    would not delete stays listed, and the next clear of the hotel tries it
-    again. Called by the API (ownerReset.ts) and by reset-property.ts.
+    would not delete stays listed, and the API tries the list again every hour
+    (D27-380). Called by the API (ownerReset.ts) and by reset-property.ts.
     Counts only: no id is ever said. */
 export async function removeListed(
   db: { query(text: string, values: unknown[]): Promise<unknown> },

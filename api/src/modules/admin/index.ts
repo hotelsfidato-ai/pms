@@ -22,6 +22,8 @@ export { readPhoto } from "./gallery.ts";
 export { maySwitchModules as isOwnerOrAdmin } from "./grants.ts";
 /* D27-311: Set up this hotel - the bell asks which reminders are due. */
 export { setupReminders, STEP_TITLES } from "./setup.ts";
+/* D27-380: the full reset's Drive photos, tried again every hour. */
+export { jobs as ownerResetJobs } from "./ownerReset.ts";
 export type { StepId, StepState, SetupStep, Setup, SetupChoice } from "./setup.ts";
 export const mounts: readonly Mount[] = [
   ["/api/hotels", moduleSwitches],

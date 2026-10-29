@@ -209,3 +209,36 @@ ownerReset.post("/admin/hotels/:code/owner-reset", async (c) => {
   });
   return c.json(answer.body, answer.status);
 });
+
+/* ── Tried again every hour (D27-380) ──────────────────────────────
+   A photo Drive would not delete at a clear stays on the list; this asks
+   Drive again for the whole list every hour until Drive confirms each one.
+   Nothing to do, or no photo store set: it asks nothing. Started by
+   `server.ts` after the port is open, never under the tests. */
+export async function retryListed(): Promise<{ deleted: number; notDeleted: number }> {
+  if (!photoStoreSet()) return { deleted: 0, notDeleted: 0 };
+  const { rows } = await pool.query<{ hotelCode: string; driveFileId: string }>(
+    `select hotel_code as "hotelCode", drive_file_id as "driveFileId" from owner_reset.id_photos_in_drive`);
+  return rows.length ? removeListed(pool, rows) : { deleted: 0, notDeleted: 0 };
+}
+
+let timer: ReturnType<typeof setInterval> | null = null;
+let running: Promise<unknown> | null = null;
+
+export const jobs = {
+  start(): void {
+    if (timer) return;
+    timer = setInterval(() => {
+      if (running) return;
+      running = retryListed()
+        .catch((error) => console.error("[owner-reset] the hourly Drive retry failed",
+          error instanceof Error ? error.message : error))
+        .finally(() => { running = null; });
+    }, 60 * 60_000);
+  },
+  async stop(): Promise<void> {
+    if (timer) clearInterval(timer);
+    timer = null;
+    await running;
+  },
+};

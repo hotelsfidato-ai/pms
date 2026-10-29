@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-29 · A photo Drive would not delete is tried again every hour (D27-380; release 16)
+
+**Asked for:** the owner, D27-380: a photo Drive refused at a clear is retried automatically, not only at the hotel's
+next clear (which a live hotel never has).
+**Shipped:** `ownerReset.ts` `retryListed()` asks Drive again for the whole `owner_reset.id_photos_in_drive` list
+through `removeListed` (the same `remove`), striking each off once deleted; nothing without the photo store, nothing
+when the list is empty. `jobs` runs it every hour, started and stopped by `server.ts` like the other timers (never
+under the tests). The window's, the script's, the README's and A16.3's sentences say "every hour".
+**Proved:** `ownerReset.test.ts`: refused stays listed; no store asks nothing; then deleted and struck off.
+
 ## 2026-10-29 · The full reset deletes the cleared guests' ID photos in Google Drive (D27-379; release 15)
 
 **Asked for** (the owner, D27-379: a cleared hotel keeps no IDs; the backup keeps the records, the photos go for good): the dry run and the window say how many ID photos go; the clear collects exactly its own photo rows' Drive files and has Drive delete them only AFTER the commit, the way a removed photo's file is deleted; a Drive failure said by count and not forgotten; the script either deletes them too or refuses; the reset login no wider; counts only on any screen.

@@ -111,7 +111,7 @@ describe("Properties: clear this hotel and start today", () => {
     expect(await within(dialog).findByText(
       "Removed 21 records. The backup is fidato-20261028-101500.dump, copied off the server. "
       + "The business date is now 28 Oct 2026. 2 ID photos deleted from Google Drive. 1 ID photo could not be "
-      + "deleted from Google Drive now: written down, and tried again at this hotel's next clear.")).toBeTruthy();
+      + "deleted from Google Drive now: written down, and tried again every hour until Drive deletes them.")).toBeTruthy();
     expect(calls.filter((c) => c.method === "POST")).toEqual([
       { path: "/api/admin/hotels/AGR/owner-reset", method: "POST", body: { confirm: "AGR" } },
     ]);
