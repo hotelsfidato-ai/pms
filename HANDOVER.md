@@ -765,6 +765,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **29 October, 13:30: RELEASES 15 + 16 LIVE** - the owner deployed release 16 (it holds 15) at 07:58 GMT; checked
+> read-only: server code 312c52e2, `index-DlJbrWWh.js`, migrations 250-252 in (owner_reset, the reset login,
+> recipe_lines, the two mrp columns), every hotel's Kitchen store marked, the reset socket active, the backup tools
+> and cron files installed, no API errors since the restart. **Still the owner's:** Part B (bucket and links - backups
+> still on the server's disk only), C (archiving), D (the reset's settings), E (the restore tool's read-only look),
+> from `.local/launch-all-steps.md`.
+
 > **29 October, 14:30: RELEASES 15 AND 16 READY, the owner's to type, in that order.** r15 `759ce4fa`
 > (`index-bwfWMrZK.js`, `.local/release-15-steps.md`, Parts A-E); r16 `312c52e2` on top of it (`index-DlJbrWWh.js`,
 > `.local/release-16-steps.md`). Both had one full gate run green first time (r16: web 1,499, API 2,962, db 1,857,
