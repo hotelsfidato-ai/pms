@@ -48,6 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **29 October, evening: THE VIDEOS ARE BEING REMADE (C:\videos, branch `videos`).** The owner asked for the five
+> video tools (all installed and tested) and the same videos made again with what came after 14 October and new
+> motion: captions lit word by word (whisper), a NEW badge, rising titles. Pilot **A8-11 The menu** (release 16's
+> MRP, recipes) rendered to `C:\videos\out\pilot\`, **waiting for the owner's look** before the rest of A8 and the
+> other chapters. `C:\videos\RESUME.md` (29 October) has the state and what changed in A8.
+
 > **26 October: RELEASE 13 IS LIVE, with 12.1** (2e7a5b4a, migrations 237 and 238, website `index-o38e-K4q.js`): the
 > bar's store and counter and the FLR registers (D27-361), the installer from our server (D27-362), Other moves
 > (D27-364), and 12.1's KOT times, slip setting, requests to the GM and payment-mode change (D27-363). The notes below are older; § 3 is

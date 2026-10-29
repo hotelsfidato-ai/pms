@@ -50,6 +50,27 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · The video tools, and the videos remade with what came after 14 October: pilot A8-11 (C:\videos)
+
+**Asked for:** the owner: install Remotion, HyperFrames, FFmpeg, whisper.cpp and yt-dlp and test each; then make the
+same videos again with the new functionality and the latest motion graphics. On the pilot: commit the unsaved video
+work first, remake A8 with releases 14 and 16, render one task video to look at before the rest.
+
+**Shipped** (all in `C:\videos`, branch `videos`; nothing in the PMS code)
+- Tools: yt-dlp (winget, with Deno and a second FFmpeg after Gyan's on PATH), HyperFrames 0.8.216 (`npm -g`;
+  telemetry off with `HYPERFRAMES_NO_TELEMETRY=1`, `publish` never used), whisper.cpp b5454 + `ggml-base.en.bin` in
+  `tools\whisper\` (SHA-256 checked, gitignored). Remotion 4.0.534 and FFmpeg 8.1.1 were already here.
+- b94eeca3: the 13-14 Oct lanes' unsaved work committed as found (Watch it done, Film 1 and 2 data).
+- `tools\words.mjs`: whisper times every caption word; captions light word by word; a NEW badge on scenes the script
+  marks new; title words rise one by one. The voice spells MRP and NC.
+- A8-11 The menu re-scripted from today's A8.11: release 16's MRP (A8-49), recipes in Inventory (A9-48), import,
+  tax headings. `marks.mjs` run again for A8 and A9 from cp6's pictures.
+
+**Left open:** the owner's look at the pilot (`C:\videos\out\pilot\`), then the other A8 tasks (A8-06's script is
+wrong since D27-334) and the other chapters. `C:\videos\RESUME.md` has the list.
+
+---
+
 ## 2026-10-29 · Release 16 (READY at 312c52e2, the owner's to type, after release 15): the Restaurant tab with recipes, MRP for NC bills, the Drive photos retried hourly (D27-373, D27-374, D27-378, D27-380)
 
 **Shipped** (`release/r16` = cp6 at 312c52e2, on release 15 759ce4fa; migrations 251, 252 - renumbered from the
