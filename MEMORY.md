@@ -6561,6 +6561,19 @@ copy will see of theirs.**
 
 ---
 
+### 448 · MINE: two traps taking the reset window's picture (29 October)
+
+(1) **The local database had the reset's FIRST version.** I had run `db/migrate.sh` on `fidato` for the Connection
+health pictures; the Drive helper then edited migration 250 in place (unreleased, so allowed), and the dry run answered
+"has undefined ID photos" and refused. Re-running `migrate.sh` (re-runnable) put the new functions in. (2) **A server
+started through `bash -c "... exec npm run dev"` from launch.json outlived `preview_stop`**: the pane stopped the
+wrapper, and tsx's watcher and its node kept port 8787 with the reset settings in their environment. Found by
+checking the port; the tree (started 11:16:50-53) stopped by pid. **The rules:** after a migration file changes, run
+`migrate.sh` on the local database again before any screen is trusted; after stopping a wrapped server, check its port
+is free and stop what holds it.
+
+---
+
 ### 447 · HELPERS: three slips in the release 15 follow-ups (29 October)
 
 (1) The uploads helper's first `get` trusted curl's exit code with `--retry`: curl 8.14 exits 0 after a failed download
