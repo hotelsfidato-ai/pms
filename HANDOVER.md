@@ -765,6 +765,14 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **29 October, 13:00: RELEASE 15 READY, the owner's to type** - `release/r15` at **759ce4fa**, one full gate run
+> green (web 1,493, API 2,949, db 1,840, replay 250, PG16, restore 1 40/40, to minute), `index-bwfWMrZK.js`, steps
+> `.local/release-15-steps.md` (A the release; B bucket + links - live backups are still `uploaded=no`; C archiving;
+> D the reset's settings; E the restore tool's read-only look). **Release 14 is LIVE** (owner deployed 29 Oct 01:06;
+> checked read-only). **Release 16 is merged on cp6** (Restaurant tab 251, MRP 252, renumbered from 253/254) plus the
+> hourly Drive retry (D27-380, uncommitted until its tests run). Next: its tests, pictures A8-49, A11-28, A8-34, A9-48,
+> A9-49 (and Kitchen stock in the chef's menu), cut release/r16, one gate run, steps.
+
 > **29 October, 02:30: RELEASE 15 on cp6, not cut yet.** Merged: the owner's full reset (b47feac6, migration 250),
 > the one-hotel restore tool (946ebcf9), backups A1/A2/A3/A5/A6 + launch.sh installing the reset's backup socket
 > (fbfb78b0); the gates run `restore 1` and `to minute` and release.mjs requires both (e956c1fe). Decisions D27-375 to

@@ -50,6 +50,38 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-29 · Release 15 (READY at 759ce4fa, the owner's to type): backups off the server, restore to any minute, the one-hotel restore tool, the owner's full reset (D27-342, D27-373, D27-375 to D27-380)
+
+**Asked for:** the owner's "start all … complete all" (D27-373): the owner-only full reset, and all of plan A - A1 off-site
+backups (n8n's too), A2 disk and backup alerts, A3 restore to any minute, A4 the one-hotel restore tool, A5 a pilot
+release step only, A6 the server-dies runbook - then D27-375 to D27-380 as the helpers' questions were answered.
+
+**Shipped** (`release/r15` = cp6 at 759ce4fa, on release 14 bf74ce5a; migration 250)
+- The full reset: Admin → Properties, one account (RESET_OWNER_EMAIL), its own login `pms_owner_reset`, a backup
+  through `fidato-backup-now.socket` first (launch.sh installs it), refused while a guest is checked in or for a test
+  hotel; the cleared guests' ID photos deleted from Drive after the commit, counts only; the script obeys the same
+  functions (b47feac6, 8bb2d8f2). Found on the way: the script's booking-group clause failed on a group shared with
+  another hotel (MEMORY 442).
+- Backups: the journal every 5 minutes and a weekly base copy to the bucket, restore to a minute into `fidato_pitr`
+  (never over live); n8n's nightly copy (not its key); uploaded files nightly through their own `uploads/` link, kept
+  forever; Connection health's Backups row red on any of them, a Disk row; each copy reads its own backup log
+  (fbfb78b0, a7f8a6d2, 105fc01a).
+- `deploy/restore-hotel.sh`: one hotel's missing rows back from a backup, insert-only, all or nothing, append-only and
+  "never" rows listed not written, a guest's ID documents with the guest (946ebcf9, 9dd5b373).
+- `deploy/IF-THE-SERVER-DIES.md`; the release steps end with the AMRT check (A8); the gates run `restore 1` and
+  `to minute`, and release.mjs requires both (e956c1fe). Pictures A16-17, A17-49, B5-01.
+
+**Proved:** one complete gate run on 759ce4fa, 41 minutes: web 1,493/1,493, API 2,949/2,949, database 1,840/1,840,
+250 migrations re-runnable, PostgreSQL 16, restore one hotel 40/40, restore to any minute on 16.15; `release.mjs` once:
+`index-bwfWMrZK.js`. Release 14 confirmed live read-only first (bf74ce5a, migrations to 249, `index-D0bnQp9L.js`,
+printer 1.1.0).
+
+**Left open:** the owner types `.local/release-15-steps.md` - Part A the release; B the bucket and links (the live
+backups still stay on the server, `uploaded=no`); C archiving on; D the reset's three settings; E the restore tool's
+read-only look. The server-dies rehearsal on a spare server. Release 16 merged on cp6 behind it (MEMORY 446-448).
+
+---
+
 ## 2026-10-29 · Release 16: a dish's MRP, and NC bills valued at it in the stock only (D27-351, D27-373)
 
 **Asked for:** the owner, D27-351: an NC bill has "no value anywhere"; "the stock will show it at MRP, which the GM sets up". D27-373: "NC bills valued at MRP in the stock and Inventory reports, the MRP typed by the GM per dish in the Menu (empty is a dash; never in sales or tax)".
