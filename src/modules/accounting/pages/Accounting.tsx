@@ -151,7 +151,9 @@ export default function AccountingPage() {
               <p>
                 One Sales voucher a day, what was paid on bills, refunds, bills moved to a
                 company and each company receipt, for days the night audit has closed.
-                The ledgers must already be in Tally: the file creates none.
+                The ledgers must already be in Tally: the file creates none. A name that
+                does not match stops that voucher and Tally takes the rest, so read what
+                Tally reports. Put the name right, export the day again and import it again.
               </p>
               <p>
                 Not in the file: credit notes and cancelled VAT bills, which the day book

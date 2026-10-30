@@ -17,8 +17,9 @@ import { ledgerNames, type Ledger } from "./ledgers.ts";
    moved to a company. Each company receipt: a Receipt voucher.
 
    THE FILE CARRIES VOUCHERS ONLY, NEVER A LEDGER MASTER. A name that does not
-   match the hotel's Tally is refused there (LINEERROR "Ledger '...' does not
-   exist!", CREATED 0, seen on TallyPrime 7.2), and no ledger is created.
+   match the hotel's Tally stops that one voucher there, and no ledger is
+   created: LINEERROR "Ledger '...' does not exist!", EXCEPTIONS 1, the rest of
+   the file imported (TallyPrime 7.2, 31 October). ERRORS stays 0 all the while.
 
    IT REFUSES, IN A SENTENCE, RATHER THAN BALANCE A DAY BY ITSELF. Tally answers
    a voucher that does not balance with EXCEPTIONS 1 and no reason at all, so the
@@ -27,9 +28,10 @@ import { ledgerNames, type Ledger } from "./ledgers.ts";
    A DAY THE NIGHT AUDIT HAS NOT CLOSED IS REFUSED. Tonight's room is an estimate
    at the booking's rate until it is posted, and a voucher is a booked entry.
 
-   A VOUCHER'S REMOTEID IS STABLE, so a corrected day exported again replaces its
-   vouchers (ALTERED 1, seen on TallyPrime 7.2). Tally numbers a voucher itself
-   and ignores VOUCHERNUMBER, so the reference is in the narration too.
+   A VOUCHER'S REMOTEID IS STABLE, so a corrected day exported again replaces
+   its vouchers (ALTERED, TallyPrime 7.2). A voucher the corrected day no longer
+   has stays in Tally: the file only says what the day holds. Tally numbers a
+   voucher itself and ignores VOUCHERNUMBER, so the reference is in the narration.
    ══════════════════════════════════════════════════════════════════ */
 
 export type TallyVersion = "prime" | "erp9";
@@ -143,12 +145,6 @@ export async function tallyVouchers(
 
     const received = today.filter((p) => !p.refund && p.method !== "city_ledger");
     const refunded = today.filter((p) => p.refund);
-    const net = received.reduce((t, p) => t + paise(p.amount), 0) + refunded.reduce((t, p) => t + paise(p.amount), 0);
-    if (net !== paise(d.receipt)) {
-      throw new TallyRefused(
-        `${day(d.date)} cannot be exported: the day book's receipts are ${rupees(d.receipt)} and its payments `
-        + `by way of paying come to ${rupees(net / 100)}, a difference of ${rupees(Math.abs(net / 100 - d.receipt))}.`);
-    }
     const total = (lines: typeof today) => round2(lines.reduce((t, p) => t + Math.abs(p.amount), 0));
 
     if (received.length) {
