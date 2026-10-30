@@ -1263,7 +1263,7 @@ begin
     res := res || jsonb_build_object('n', 'nor reads the list of ID photos still in Drive', 'ok', v = '42501', 'd', v);
     dry := owner_reset.counts('ORS');
     reset role;
-    res := res || jsonb_build_object('n', 'it counts', 'ok', (dry -> 'tables' ->> 'reservations') = '3', 'd', dry::text);
+    res := res || jsonb_build_object('n', 'it counts', 'ok', (dry -> 'tables' ->> 'reservations') = '4', 'd', dry::text);
     res := res || jsonb_build_object('n', 'and counts the ID photos Drive still holds: not one already deleted, not one that never reached it, not the other hotel''s',
       'ok', (dry ->> 'idPhotos')::int = 2, 'd', dry ->> 'idPhotos');
 
@@ -1277,7 +1277,7 @@ begin
     reset role;
     res := res || jsonb_build_object('n', 'and the clear refuses, saying who, with nothing gone and every guard on',
       'ok', v like '23514: A guest is still checked in at Owner Reset Real: ORS In House.%'
-            and (select count(*) from reservations where hotel_id = h) = 3
+            and (select count(*) from reservations where hotel_id = h) = 4
             and not exists (select 1 from owner_reset.id_photos_in_drive where hotel_id = h)
             and (select count(*) from owner_reset.guards(true) g join pg_trigger tr on tr.tgname = g.trigger_name
                   where tr.tgenabled <> 'O') = 0,
