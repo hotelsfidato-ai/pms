@@ -169,12 +169,14 @@ const quiet = (book: DayBook) =>
   && book.total.receipt === 0 && (book.total.companyReceipt ?? 0) === 0;
 
 const COLUMNS: Column<DayBookRow>[] = [
-  /* One line: fourteen columns since D24-24, and a date broken over three
+  /* One line: fifteen columns since ACC-3, and a date broken over three
      lines reads as three rows. The table scrolls inside its card instead. */
   { key: "date", header: "Date", cell: (d) => <span className="whitespace-nowrap">{dateShort(d.date)}</span> },
   { key: "room", header: "Room revenue", numeric: true, cell: (d) => cash(d.room) },
   { key: "roomTax", header: "Room tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.roomTax) },
-  { key: "extra", header: "Extra charges", numeric: true, cell: (d) => cash(d.extra) },
+  /* Food on a bill, apart from the other extras (ACC-3, D27-382). */
+  { key: "food", header: "Food charged to a room", numeric: true, cell: (d) => cash(d.food) },
+  { key: "otherExtra", header: "Other extras", numeric: true, cell: (d) => cash(d.otherExtra) },
   { key: "extraTax", header: "Extra tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.extraTax) },
   /* What the outlets took, as the file has it (D24-24). */
   { key: "pos", header: "Restaurant", numeric: true, hideBelow: "lg", cell: (d) => cash(d.pos) },
@@ -244,6 +246,16 @@ function DayBookTable({ book, loading }: { book: DayBook | null; loading: boolea
           This counts what was charged and received each day. The Lodging tax
           report counts the bills that were issued, so a stay still in house
           appears here and not there.
+        </p>
+      )}
+
+      {/* ACC-3, the owner's D27-382. Said where the two columns are read. */}
+      {book && book.days.length > 0 && (
+        <p className="text-sm text-grey-600 mt-2">
+          Food charged to a room is food on a bill: charged at the desk, or a
+          restaurant bill charged to a room or a function. Other extras are
+          laundry, the spa, drinks that are not alcohol, late check-out and the
+          rest. What the restaurant took itself is under Restaurant.
         </p>
       )}
 

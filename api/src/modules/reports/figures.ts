@@ -431,6 +431,68 @@ export async function posSales(
   }));
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   EVERYTHING CHARGED THAT IS NEITHER A ROOM NOR MONEY, BY KIND
+
+   Lifted out of the Manager report (ACC-3, the owner's D27-382), so its
+   Extra Charges and the accountant's day book read one query.
+
+   `bucket` is the Manager report's line: "pos" for a restaurant's posting
+   and anything under VAT, "discount", "tax_line", the three the desk names
+   by their words, else the category. `category` and `vat` are the posting's
+   own, for a reader that splits another way: the day book's Food takes a
+   restaurant bill charged to a room too.
+   ══════════════════════════════════════════════════════════════════ */
+export interface ExtraLine {
+  date: string;
+  bucket: string;
+  category: string;
+  /** Under VAT: alcohol (D21-91). */
+  vat: boolean;
+  amount: number;
+  tax: number;
+}
+
+export async function dailyExtras(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<ExtraLine[]> {
+  const { rows } = await client.query<{
+    date: string; bucket: string; category: string; vat: boolean; amount: string; tax: string;
+  }>(
+    `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
+            /* VAT only ever comes from the till (D21-91); a VAT line moved to
+               another folio stays with the POS posting it was, and out of
+               the CGST/SGST split the Manager report makes. A restaurant bill
+               corrected on Closed days stays with it too (D25-10): its
+               correction keeps the origin. */
+            case when fp.source_type = 'pos' or fp.tax_scheme = 'vat'
+                   or exists (select 1 from closed_day_corrections c
+                               where fp.source_type = 'correction'
+                                 and c.id = fp.source_id and c.origin = 'pos') then 'pos'
+                 when fp.category = 'discount'                      then 'discount'
+                 when fp.category = 'tax'                           then 'tax_line'
+                 when fp.description = 'Early check-in'             then 'early'
+                 when fp.description = 'Late check-out'             then 'late'
+                 when fp.description like 'Retention%no-show'       then 'no_show'
+                 else fp.category end                               as bucket,
+            fp.category,
+            fp.tax_scheme = 'vat'                                   as vat,
+            sum(fp.amount)::text                                    as amount,
+            sum(fp.tax_amount)::text                                as tax
+       from folio_postings fp
+      where fp.hotel_id = $1
+        and fp.category not in ('room', 'payment', 'refund')
+        and ${LIVE}
+        and fp.business_date between $2::date and $3::date
+      group by 1, 2, 3, 4`,
+    [hotelId, from, to],
+  );
+  return rows.map((r) => ({
+    date: r.date, bucket: r.bucket, category: r.category, vat: r.vat,
+    amount: Number(r.amount), tax: Number(r.tax),
+  }));
+}
+
 export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
   const add = (k: Exclude<keyof DayFigures, "date" | "roomTax">) =>
     round2(days.reduce((t, d) => t + d[k], 0));

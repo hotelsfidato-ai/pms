@@ -19,7 +19,9 @@
    ══════════════════════════════════════════════════════════════════ */
 
 interface Figures {
-  room: number; roomTax: number; extra: number; extraTax: number;
+  room: number; roomTax: number;
+  /** Food on a bill, and the other extras (ACC-3): the day book's `extra`, split. */
+  food: number; otherExtra: number; extraTax: number;
   pos: number; posTax: number;
   discount: number; alcohol: number; vat: number; sales: number;
   tax: number; receipt: number;
@@ -31,7 +33,7 @@ interface Figures {
    or UPI, which was inside Sales and GST and in no column of its own (the
    owner's D24-24, ACC-10). */
 const HEADERS = [
-  "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
+  "Date", "Room revenue", "Room tax", "Food charged to a room", "Other extras", "Extra tax",
   "Restaurant", "Restaurant tax",
   "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts",
   "Received from companies", "Night audit",
@@ -40,7 +42,7 @@ const HEADERS = [
 /** A day's row, and the total's, written once so the last line of the
     file is made the same way as every line above it. */
 const figures = (r: Figures) =>
-  [r.room, r.roomTax, r.extra, r.extraTax, r.pos, r.posTax, r.discount,
+  [r.room, r.roomTax, r.food, r.otherExtra, r.extraTax, r.pos, r.posTax, r.discount,
    r.alcohol, r.vat, r.sales, r.tax, r.receipt, r.companyReceipt];
 
 /**

@@ -448,7 +448,7 @@ describe("the export and the Manager report cannot disagree", () => {
     const { rows: [{ day }] } = await sql(
       "select to_char(app.business_date(id), 'YYYY-MM-DD') as day from hotels where code = '5EL'");
     const read = async () => (await book(`/5EL/accounting/day-book?from=${day}&to=${day}`)).body as
-      { days: { pos: number }[]; total: { sales: number } };
+      { days: { pos: number; food: number }[]; total: { sales: number } };
     const post = (path: string, body: unknown) => app.request(`/api/hotels/5EL${path}`, {
       method: "POST", body: JSON.stringify(body),
       headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
@@ -472,6 +472,81 @@ describe("the export and the Manager report cannot disagree", () => {
     const after = await read();
     expect(after.days[0]!.pos, "a room's bill is not an outlet sale").toBe(before.days[0]!.pos);
     expect(after.total.sales - before.total.sales, "counted once, on the room's bill").toBeCloseTo(net, 2);
+    /* ACC-3: and it is food on a bill, in the day book's own Food column. */
+    expect(after.days[0]!.food - before.days[0]!.food, "food charged to a room").toBeCloseTo(net, 2);
+  });
+});
+
+/* ── ACC-3, the owner's D27-382: food has its own line, which Tally needs ──
+   The Manager report's split by kind, through the reports door. The day's
+   totals do not move by a paisa: the two new columns are two queries' worth
+   of work against the one number they replace, so the sum is a real check. */
+describe("food has its own line (ACC-3)", () => {
+  const paise = (n: number) => Math.round(n * 100);
+
+  it("on the calibrated month, food + the other extras is the old Extra charges, every day and in total", async () => {
+    const b = await theBook();
+    const figures = await withUser(ownerId, (client) => dailyFigures(client, hotelId, from, to));
+    const old = (f: { extra: number; alcohol: number }) => paise(f.extra) - paise(f.alcohol);
+
+    b.days.forEach((d, i) => {
+      expect(paise(d.food) + paise(d.otherExtra), d.date).toBe(old(figures[i]!));
+      expect(paise(d.extra), d.date).toBe(old(figures[i]!));
+      expect(paise(d.room) + paise(d.food) + paise(d.otherExtra) + paise(d.pos) + paise(d.alcohol)
+        - paise(d.discount), `${d.date} sales`).toBe(paise(d.sales));
+    });
+    expect(paise(b.total.food) + paise(b.total.otherExtra)).toBe(old(sumDays(figures)));
+    expect(b.days.reduce((t, d) => t + paise(d.food), 0), "the days add up").toBe(paise(b.total.food));
+    expect(b.days.reduce((t, d) => t + paise(d.otherExtra), 0)).toBe(paise(b.total.otherExtra));
+  });
+
+  /* One of each kind on one bill, today, each reversed afterwards (the ledger
+     is append-only; a reversed line and its reversal both leave every figure). */
+  it("puts each kind where it belongs, and the Manager report's Food agrees", async () => {
+    const day = businessDate;
+    const { rows: [{ folio }] } = await sql(
+      "select id::text as folio from folios where hotel_id = $1 and status = 'open' limit 1", [hotelId]);
+    const post = async (category: string, amount: number, scheme: string, description: string) =>
+      (await sql(
+        `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                     amount, tax_rate, tax_amount, tax_scheme, posted_by)
+         values ($1, $2, $3::date, $4, $5, $6, 0, 0, $7, $8) returning id`,
+        [hotelId, folio, day, category, description, amount, scheme, ownerId])).rows[0]!.id as string;
+
+    const read = async () => {
+      const r = (await book(`/5EL/accounting/day-book?from=${day}&to=${day}`)).body as DayBook;
+      const manager = await withUser(ownerId, (client) =>
+        buildReport(client, hotelId, "manager", { asOn: day }));
+      return { ...r.days[0]!, managerFood: reportCell(manager, "extra-charges", "Food", "today") };
+    };
+
+    const before = await read();
+    const made = [
+      await post("food", 300, "gst", "ACC-3 desk food"),
+      await post("laundry", 120, "gst", "ACC-3 laundry"),
+      await post("food", 200, "vat", "ACC-3 a drink under VAT"),
+      await post("discount", -50, "gst", "ACC-3 a discount"),
+    ];
+    try {
+      const after = await read();
+      expect(paise(after.food) - paise(before.food), "the desk's food, not the drink under VAT").toBe(30000);
+      expect(paise(after.otherExtra) - paise(before.otherExtra), "the laundry, not the discount").toBe(12000);
+      expect(paise(after.managerFood) - paise(before.managerFood), "the Manager report's Food").toBe(30000);
+      expect(paise(after.alcohol) - paise(before.alcohol)).toBe(20000);
+      expect(paise(after.discount) - paise(before.discount)).toBe(5000);
+    } finally {
+      for (const id of made) {
+        await sql(
+          `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                       amount, tax_rate, tax_amount, reverses_id, posted_by)
+           select hotel_id, folio_id, business_date, category, 'Reversal - ACC-3 test',
+                  -amount, tax_rate, -tax_amount, id, $2
+             from folio_postings where id = $1`, [id, ownerId]);
+      }
+    }
+    const back = await read();
+    expect(paise(back.food), "measured, not assumed").toBe(paise(before.food));
+    expect(paise(back.otherExtra)).toBe(paise(before.otherExtra));
   });
 });
 

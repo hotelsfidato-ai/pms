@@ -54,8 +54,12 @@ export {
      is invisible to it. Any service totalling SALES needs both, or it
      understates the day. See the note on `posSales` itself. */
   posSales,
+  /* The Manager report's extras by kind, opened for the day book (ACC-3,
+     the owner's D27-382): food has its own line for Tally. */
+  dailyExtras,
 } from "./figures.ts";
-export type { DayFigures, Property, StayNight, PosDay } from "./figures.ts";
+export { round2 } from "./document.ts";
+export type { DayFigures, Property, StayNight, PosDay, ExtraLine } from "./figures.ts";
 export type {
   ReportDoc, ReportKey, ReportParams, ReportSection, ReportRow, ReportColumn,
   ReportFact, ReportChart, CellKind, Cell,

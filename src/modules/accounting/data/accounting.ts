@@ -79,6 +79,9 @@ export interface DayBookRow {
   room: number;
   roomTax: number;
   extra: number;
+  /** Food on a bill, and the rest of `extra` (ACC-3). */
+  food: number;
+  otherExtra: number;
   extraTax: number;
   /** What the outlets took in cash, by card or UPI, and its GST - never a
       bill charged to a room, which is in `extra` (ACC-11). Its own columns

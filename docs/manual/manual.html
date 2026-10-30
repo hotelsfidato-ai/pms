@@ -7747,7 +7747,8 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
-  <p>The day book has one row a day: room revenue and its tax, extra charges and their tax, the restaurant and its tax, discount, alcohol and its VAT, sales, GST, receipts, what companies paid, and whether the night audit has run.</p>
+  <p>The day book has one row a day: room revenue and its tax, food charged to a room, the other extras, the tax on those two, the restaurant and its tax, discount, alcohol and its VAT, sales, GST, receipts, what companies paid, and whether the night audit has run.</p>
+  <p><b>Food charged to a room</b> is food on a bill: charged at the desk, or a restaurant bill charged to a room or a function. <b>Other extras</b> are laundry, the spa, drinks that are not alcohol, late check-out and the rest. What the restaurant took itself, in cash, by card or UPI, is under <b>Restaurant</b>. Together the two columns are the old Extra charges figure, to the paisa.</p>
 
   <figure class="shot" id="fig-A11-18">
     <img src="img/A11-18.png" alt="The day book: the yellow warning that the night audit has not run for 9 of these days, the NIGHT AUDIT column reading Not run, RECEIVED FROM COMPANIES, the note and the total tiles">
@@ -7773,7 +7774,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. The Tally files wait for the ledger names in the hotel's own books, because a name made up here would be created inside the hotel's Tally on import.</p>
+    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. The Tally files wait for the ledger names in the hotel's own books, because a name made up here would be created inside the hotel's Tally on import.</p>
   </div>
 
   <!-- A11.9 -->
@@ -12332,10 +12333,10 @@ figure.shot.phone img { max-width: 72mm; }
         <ul>
           <li><b>Three formats offered</b>, Tally Prime XML, Tally ERP 9 XML and a day-book CSV, so whoever exports picks what their accountant wants (<span class="d">D18-16</span>); a real Excel file beside the CSV (<span class="d">D22-37</span>).</li>
           <li><b>Tally ledger names come from your accountant</b> (<span class="d">D21-46</span>): a name invented here would be created inside their Tally on import.</li>
-          <li>Alcohol in its own VAT columns (<span class="d">D21-91</span>); Restaurant and Restaurant tax columns (<span class="d">D24-24</span>); company payments as receipts, kept apart from sales, against the recommendation (<span class="d">D27-242</span>). The accountant may export (<span class="d">D27-122</span>).</li>
+          <li>Alcohol in its own VAT columns (<span class="d">D21-91</span>); Restaurant and Restaurant tax columns (<span class="d">D24-24</span>); food charged to a room apart from the other extras (<span class="d">D27-382</span>); company payments as receipts, kept apart from sales, against the recommendation (<span class="d">D27-242</span>). The accountant may export (<span class="d">D27-122</span>).</li>
         </ul></td></tr>
-      <tr><th>Left out</th><td>Posting back into Tally, payroll and the bank. Food is not yet split from other extra charges.</td></tr>
-      <tr><th>Open</th><td>ACC-4: the Tally files produce no file until the ledger names arrive. ACC-3: food and the other extras are one figure.</td></tr>
+      <tr><th>Left out</th><td>Posting back into Tally, payroll and the bank.</td></tr>
+      <tr><th>Open</th><td>ACC-4: the Tally files produce no file until the ledger names arrive.</td></tr>
     </tbody>
   </table>
 

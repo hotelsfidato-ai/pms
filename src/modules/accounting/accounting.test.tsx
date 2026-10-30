@@ -47,15 +47,15 @@ const BOOK: DayBook = {
   from: "2026-08-24",
   to: "2026-08-25",
   days: [
-    { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, extraTax: 125.03,
+    { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, food: 2000.25, otherExtra: 500.25, extraTax: 125.03,
       pos: 0, posTax: 0, discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000, companyReceipt: 0,
       closed: true },
-    { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, extraTax: 20.01,
+    { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, food: 400.25, otherExtra: 0, extraTax: 20.01,
       pos: 640, posTax: 32, discount: 0, alcohol: 0, vat: 0, sales: 9040.25, tax: 1012.01, receipt: 5000, companyReceipt: 0,
       closed: false },
   ],
   total: {
-    room: 20000, roomTax: 2400, extra: 2900.75, extraTax: 145.04, pos: 640, posTax: 32,
+    room: 20000, roomTax: 2400, extra: 2900.75, food: 2400.5, otherExtra: 500.25, extraTax: 145.04, pos: 640, posTax: 32,
     discount: 1000, alcohol: 1200, vat: 120, sales: 23740.75, tax: 2577.04, receipt: 14000, companyReceipt: 0,
   },
   openDays: ["2026-08-25"],
@@ -96,6 +96,17 @@ describe("the day book, as the accountant opens it", () => {
       const summed = days.reduce((t, r) => t + Math.round((r[col] as number) * 100), 0);
       expect(Math.round((last[col] as number) * 100), `column ${headers[col]}`).toBe(summed);
     }
+  });
+
+  /* ACC-3: the one "Extra charges" column is two now, in both files. */
+  it("splits the extras into food charged to a room and the other extras", () => {
+    const { headers, rows } = dayBookSheet(BOOK);
+    const at = (h: string) => headers.indexOf(h);
+    expect(headers, "the old one number is gone").not.toContain("Extra charges");
+    expect(headers.slice(at("Room tax"), at("Extra tax") + 1))
+      .toEqual(["Room tax", "Food charged to a room", "Other extras", "Extra tax"]);
+    const day = rows.find((r) => r[0] === "2026-08-24")!;
+    expect([day[at("Food charged to a room")], day[at("Other extras")]]).toEqual([2000.25, 500.25]);
   });
 
   it("carries a day the night audit has not run, and says so", () => {
@@ -236,6 +247,13 @@ describe("the export screen", () => {
     expect(await screen.findByText(/bills that were issued/i)).toBeTruthy();
   });
 
+  /* ACC-3, the owner's D27-382: food has its own column, and the screen says
+     what each of the two holds. */
+  it("says what food charged to a room is, and what the other extras are", async () => {
+    open("FOD1");
+    expect(await screen.findByText(/Food charged to a room is food on a bill/i)).toBeTruthy();
+  });
+
   it("says when a range holds nothing, rather than handing over a file of nil", async () => {
     /* ACC-8. `dailyFigures` returns a row for every day of the range
        whether or not anything happened, so the table is NEVER empty and
@@ -244,11 +262,11 @@ describe("the export screen", () => {
     control.book = {
       ...BOOK,
       days: BOOK.days.map((d) => ({
-        ...d, room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
+        ...d, room: 0, roomTax: 0, extra: 0, food: 0, otherExtra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       })),
       total: {
-        room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
+        room: 0, roomTax: 0, extra: 0, food: 0, otherExtra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       },
     } satisfies DayBook;

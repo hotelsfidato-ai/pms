@@ -11,6 +11,23 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-30 · Food is its own line (ACC-3, the owner's D27-382) - release 17
+
+**Asked for:** the master, with the owner's D27-382: the Manager report's split
+by kind through the reports door, and separate day book columns for food
+charged to a room and the other extras, without moving a day's totals.
+**Shipped:** `dailyExtras()` lifted out of `builders/manager.ts` into
+`figures.ts` and exported from the reports door, with `round2` (the copy in
+`dayBook.ts` is gone, ACC-5). The day book has `food` and `otherExtra`; the
+screen, the CSV and the Excel file show them in place of Extra charges, and the
+screen says what each holds.
+**Proved:** `dayBook.test.ts` with three other files, 73 passed; web
+`accounting.test.tsx` 18 passed. Both guards broken and seen to fail on an
+assertion, restored from a saved copy, counts confirmed (DEFECTS, ACC-3).
+**Left open:** the Tally files, the next two entries' work.
+
+---
+
 ## 2026-10-02 · What companies paid, as receipts apart from sales (the owner's D27-239, Q4) - the cash lane's
 
 **Asked for:** the master, with the owner's answer: company and booking-site

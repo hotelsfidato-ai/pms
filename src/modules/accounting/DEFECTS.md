@@ -14,6 +14,32 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### ACC-3 · Food is not its own line; the extras are one number — FIXED 30 October
+
+**Found** 19 September, reading the brief against the reports door. The split
+by kind was a query inside `builders/manager.ts` and not exported, so food
+charged to a bill sat inside one "Extra charges" number, which Tally needs
+apart.
+
+**Fixed** — the owner's D27-382. The Manager report's query is lifted into
+`dailyExtras()` in the reports' `figures.ts`, exported through the door, and
+the Manager report reads it from there, so there is one query. The day book's
+`extra` is now shown as two columns, Food charged to a room and Other extras,
+in the screen, the CSV and the Excel file. Food takes a restaurant bill charged
+to a room or a function as well as the desk's food; the Manager report keeps
+those apart as "POS to PMS Posting", so the two Food figures differ by exactly
+that, on purpose. The same commit closes the `round2` half of ACC-5.
+
+**Proved** — `dayBook.test.ts`, "food has its own line": on the calibrated
+month food + other extras is the old figure every day and in total, and one of
+each kind lands where it belongs, with the Manager report's Food moving by the
+same amount. With `!l.vat` taken out it failed "expected 50000 to be 30000";
+with the discount check taken out, "expected 7000 to be 12000".
+
+**The rule** — when one number becomes two, build each from the source and
+compare the sum with the old number. Deriving the second by subtraction makes
+the check agree with itself.
+
 ### ACC-10 · The file had no Restaurant column, though the server sends one — FIXED 24 September
 
 **Found** — 23 September, copying the CSV's columns for the .xlsx (D22-37).
@@ -192,34 +218,6 @@ person exporting should not learn it from their accountant.
 
 ## Open — not fixed
 
-### ACC-3 · Food is not its own line; the extras are one number
-
-**Found** 19 September, reading the brief against the reports door before
-writing anything. The brief asks for "room revenue, food, and the extra
-charges as separate lines, because that is how they already appear on the
-Manager report". The door exports `dailyFigures`, whose `extra` is every
-non-room, non-money posting added together. The split by kind is a query
-**inside** `builders/manager.ts` and is not exported.
-
-**What was done:** nothing here, deliberately. Widening another service's
-files is not this lane's to do, and reading the figures back out of 31 built
-Manager reports (one per day, each re-scanning from 1 April, matched by the
-words they print) is slower and more fragile than asking. **The request is in
-`MODULE.md` under Requests, to the master: `dailyExtras()` lifted into
-`figures.ts`, as R1 was for revenue management.**
-
-**The owner's answer, 19 September:** ship one "Extra charges" line now and
-wire the split in when the door opens. The screen and the file both say
-"Extra charges", so nothing claims to be a food figure that is not one.
-
-**Narrower, 25 September, and still open.** Two things have their own columns
-since: what the outlets took in cash, by card or UPI ("Restaurant" and
-"Restaurant tax", ACC-10, D24-24) and alcohol with its VAT (D21-91). What is
-still one number is everything else charged to a bill - food charged to a
-room, laundry, the spa, late check-out (`extra` in `dayBook.ts`) - because
-the reports door (`api/src/modules/reports/index.ts`) still does not export
-the Manager report's split by kind.
-
 ### ACC-4 · The two Tally XML formats produce no file
 
 **Found** 19 September, by asking rather than by a test. A Tally voucher names
@@ -243,8 +241,8 @@ for both, 25 September).
 **Found** 19 September, while writing them.
 
 - `round2` — one line, copied from `api/src/modules/reports/document.ts`,
-  which the reports door does not export. **Two definitions of how money
-  rounds** is exactly the kind of thing this project hates.
+  which the reports door did not export. **Closed 30 October:** the door
+  exports it and the copy is gone (ACC-3's commit).
 - `roleAt` — the **third** copy of "what is this caller's role at this
   property" (`equipment/grants.ts` and `housekeeping/repairRoles.ts` hold the
   other two). A service may not import another's insides, so a copy was the
@@ -254,9 +252,7 @@ for both, 25 September).
 raised in `MODULE.md` under Requests. Hoisting them is the master's — one line
 in the reports door, and `api/src/auth.ts` for the role.
 
-**Still both copies, 25 September:** `round2` at `dayBook.ts:35` (the reports
-door exports `col`, `row` and `total` from `document.ts`, not `round2`),
-`roleAt` at `routes.ts:40`. And the role question has more homes than the three named:
+**Still a copy:** `roleAt` at `routes.ts:40`. And the role question has more homes than the three named:
 `api/src/roleGate.ts` (the core's, 22 September) and
 `api/src/routes/approvals.ts` ask it inline too. None of them is exported for
 a service to call.

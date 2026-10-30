@@ -21,8 +21,8 @@ db/tests/modules/accounting.sql  does not exist - this service owns no table
 **THE EXPORT AND THE REPORTS CAN NEVER DISAGREE.**
 
 Every figure in the file is the figure the reports already print, read through
-the reports service's front door - `dailyFigures`, `sumDays`, `propertyFor`
-and `heading` from `api/src/modules/reports/index.ts`. **There is no query
+the reports service's front door - `dailyFigures`, `dailyExtras`, `sumDays`,
+`propertyFor` and `heading` from `api/src/modules/reports/index.ts`. **There is no query
 over `folio_postings` in this service and there must never be one.** A second
 definition of "sales" is how the Dashboard and the Manager report came to
 disagree about occupancy in August, and an accountant holding two different
@@ -64,7 +64,9 @@ half-open.
 | Column | Where it comes from |
 |---|---|
 | Room revenue, Room tax | `dailyFigures().room` / `.roomTax` |
-| Extra charges, Extra tax | `.extra` / `.extraTax` - **one line, see Requests** |
+| Food charged to a room | Food on a bill, from the reports door's `dailyExtras` (ACC-3, D27-382): the desk's food charges and a restaurant bill charged to a room or a function. Not alcohol |
+| Other extras | The rest of `.extra`: laundry, the spa, drinks that are not alcohol, late check-out and so on. **Food + Other extras = `.extra`, to the paisa**: `dayBook.test.ts` holds it on the calibrated month |
+| Extra tax | `.extraTax` |
 | Discount | `.discount`, positive: the discount given |
 | Sales | room + extras less the discount |
 | Tax | room tax + extra tax |
@@ -127,24 +129,6 @@ the API suite, which runs in UTC. The day book is in the browser only because
 Things this service needs from files it may not edit. Each is a line, not an
 edit made here.
 
-- **19 Sep, to the MASTER - the extras, split by kind.** The brief asks for
-  room revenue, **food** and the other extras as separate lines, "because
-  that is how they already appear on the Manager report". The reports door
-  exports `dailyFigures`, whose `extra` is every non-room, non-money posting
-  in one number; the split into Food / Beverage / Laundry / Spa / Minibar /
-  Telephone / Late check-out / Early check-in / No-show retention /
-  Miscellaneous is a query **inside** `managerReport` and is not exported.
-  **Asked for: `dailyExtras(client, hotelId, from, to)` lifted out of
-  `builders/manager.ts` into `figures.ts` and exported from
-  `api/src/modules/reports/index.ts`** - exactly as R1 was opened for revenue
-  management on 18 September, and for the same reason: one definition of every
-  figure has to be reachable, or the second service writes its own.
-  *The owner's answer, 19 September: ship one "Extra charges" line now and
-  wire the split in when the door opens.* It is a few lines here.
-- **19 Sep, to the MASTER - `round2`.** `api/src/modules/reports/document.ts`
-  has it and the door does not export it, so `dayBook.ts` holds a one-line
-  copy. Two definitions of how money rounds is the kind of thing this project
-  hates; exporting it is one line in the door.
 - **19 Sep, to the MASTER - `roleAt`.** `api/src/modules/accounting/routes.ts`
   now holds the **third** copy of the "what is this caller's role at this
   property" query (`equipment/grants.ts` and `housekeeping/repairRoles.ts`
