@@ -6561,6 +6561,32 @@ copy will see of theirs.**
 
 ---
 
+### 450 · A PC restart in the middle of a helper's work (30-31 October)
+
+The PC restarted on 30 Oct at 19:11 and stopped both release 17 helpers, Postgres and TallyPrime; no disk dropout in the
+event log. Nothing was lost, but only because the copies are on disk. One near miss: the Tally helper had broken the
+ledger form's PUT role check for a fail-first proof and was waiting seven minutes in the database queue when the
+restart came; the break survived in the file, the route had no role check, and it was found only by counting the
+checks before the commit. **The rules:** apply a break inside the queue, right before its run; after any restart,
+look at every file a break touched before trusting the copy; commit a safe point before a long wait. Postgres and
+TallyPrime do not come back by themselves.
+
+---
+
+### 449 · HELPERS: what release 17 taught (31 October)
+
+(1) A background run's "exit code 0" was `tail`'s; 7 tests had failed. **Read the result line, never a pipe's exit.**
+(2) "An issued invoice keeps what it printed" was written from reading code; the test showed it was too broad (the
+Source line follows a renamed company). **A sentence in the manual is tested, not inferred.** (3) Two helpers overwrote
+each other's files in the shared scratchpad: **unique names.** (4) A check that "nothing reached Tally's Day Book" read
+an empty answer, because Day Book reads SVCURRENTDATE; and **Tally's `ERRORS 0` proves nothing: a refused voucher
+reports it too. Read `CREATED` and `EXCEPTIONS`.** One misspelt ledger in a file lets the other vouchers in, so a day
+can be part-way into the books. (5) My own: `node shoot.mjs ... | tail` under `timeout` printed nothing when the web
+server froze (two Vites, a video recording running beside it), and I learned only from the files' dates. **Send a long
+tool's output to a log file, and check the result it claims.**
+
+---
+
 ### 448 · MINE: two traps taking the reset window's picture (29 October)
 
 (1) **The local database had the reset's FIRST version.** I had run `db/migrate.sh` on `fidato` for the Connection
