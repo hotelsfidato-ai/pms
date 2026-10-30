@@ -236,7 +236,7 @@ export const SHOTS = [
       { n: 1, at: "text:From", nth: 0, side: "top" },
       { n: 2, at: "text:To", nth: 0, side: "top" },
       { n: 3, at: "text:Day book (CSV)", side: "right" },
-      { n: 4, at: "text:Waiting on the ledger names in your books. Tell us", side: "bottom" },
+      { n: 4, at: "text:Type these ledger names first", nth: 0, side: "bottom" },
       { n: 5, at: "text:Export", nth: 0, side: "left" },
     ],
   },
@@ -267,6 +267,18 @@ export const SHOTS = [
       { n: 2, at: "label:Room rent", side: "right" },
       { n: 3, at: "label:CGST", side: "right" },
       { n: 4, at: "text:Save ledger names", side: "right" },
+    ],
+  },
+
+  {
+    id: "A11-30", title: "Tally Prime chosen, and what the file holds", as: "Accountant",
+    path: "/reports/accounting",
+    steps: [{ waitFor: "text:Tally Prime (XML)", ms: 20000 }, { click: "text:Tally Prime (XML)" },
+            { waitFor: "text:Not in the file", ms: 5000 }],
+    marks: [
+      { n: 1, at: "text:Tally Prime (XML)", side: "right" },
+      { n: 2, at: "text:Not in the file", side: "top" },
+      { n: 3, at: "text:Export", nth: 0, side: "left" },
     ],
   },
 

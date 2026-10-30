@@ -14,6 +14,46 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### ACC-4 · The two Tally XML formats produce no file — FIXED 31 October
+
+**Found** 19 September, by asking rather than by a test: a Tally voucher names
+the ledger it posts to, and those names are the hotel's.
+
+**Fixed** — the owner's D27-382: a form per hotel (migration 254, `ledgers.ts`)
+and `tally.ts`. The Tally Prime file went into a real TallyPrime 7.2 and its Day
+Book matched the day book to the paisa (`MODULE.md`, "What a real TallyPrime
+did"). The Tally ERP 9 file has its shape tested only.
+
+**The rule** — a file another program reads is proved by that program. Tally's
+documentation did not say what a refused voucher does to the rest of a file;
+the first real attempt did.
+
+### ACC-13 · The form could not ask for a ledger the hotel had stopped using — FIXED 31 October
+
+**Found** 31 October, by `tally.test.ts`. The list asked for alcohol only while
+the hotel's switch was on, and the allowance only while it was set. A hotel that
+sold alcohol and then switched it off could never export those days: the file
+needed a name the form would not take.
+
+**Fixed** — the list also asks for what the hotel has used (`ledgerNames`).
+
+**The rule** — a form that follows today's settings must still cover yesterday's
+data, because the export reads yesterday's data.
+
+### ACC-14 · MINE: a break was left in the code by a restart — FIXED 31 October
+
+**Found** 31 October, by counting the role checks before committing, after the
+PC restarted on 30 October. Proving the `PUT` route's role check, I had applied
+the break and then waited in the database queue. The restart came about seven
+minutes in, and the script never reached its restore: the route had no role check.
+
+**Fixed** — restored from the saved copy, compared first, and proved to differ by
+that one line. The break script now takes its queue turn FIRST, so a file is
+broken only while its test runs, and restores on any stop it can trap.
+
+**The rule** — after any restart, check every file a break touched before the
+first commit. A power cut cannot be trapped.
+
 ### ACC-3 · Food is not its own line; the extras are one number — FIXED 30 October
 
 **Found** 19 September, reading the brief against the reports door. The split
@@ -218,23 +258,15 @@ person exporting should not learn it from their accountant.
 
 ## Open — not fixed
 
-### ACC-4 · The two Tally XML formats produce no file
+### ACC-12 · A voucher a corrected day no longer has stays in Tally
 
-**Found** 19 September, by asking rather than by a test. A Tally voucher names
-the ledger it posts to, and `MODULE.md` has listed "the ledger names in your
-books" as the owner's to give since 16 September. Inventing them would have
-them *created* inside the hotel's Tally on import.
+**Found** 31 October, on the real TallyPrime: a day's bill to a company was
+reversed after the day was imported, and the day exported again. Its other
+vouchers were replaced, but the file no longer held the Journal voucher, so it
+stayed, and What companies owe read ₹1,000 too high.
 
-**What was done:** the owner's answer, 19 September — ship the day book CSV,
-offer all three formats as D18-16 requires, and have the two XMLs say exactly
-what they are waiting for, beside each one. `accounting.test.tsx` holds both
-of them to saying it, and holds the Export button to refusing a format it
-cannot write.
-
-**Waiting on:** what the owner's Tally calls room rent, food, other services,
-CGST, SGST and cash receipts - and, since D21-91, alcohol sales and VAT where a
-property serves alcohol (the screen's sentence in `data/accounting.ts` asks
-for both, 25 September).
+**What was done:** the screen and the manual say so. The file says what the day
+holds; it does not delete from somebody's books. **With the owner to decide.**
 
 ### ACC-5 · Two small copies of shared code, because there is no door for them
 

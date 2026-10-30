@@ -220,7 +220,7 @@ describe("who may", () => {
       }
     } finally {
       await sql("delete from staff_hotels where staff_id = any($1::uuid[])", [made]);
-      await sql("update staff set is_active = false where id = any($1::uuid[])", [made]);
+      await sql("delete from staff where id = any($1::uuid[])", [made]);
     }
   });
 

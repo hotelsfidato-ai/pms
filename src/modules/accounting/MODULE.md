@@ -141,21 +141,75 @@ accountant asks for.
 |---|---|
 | **Day book (CSV)** | **Built.** `src/lib/csv.ts` writes it in the browser - BOM, CRLF, quoting and the leading `=` a spreadsheet would execute are all already solved there. |
 | **Day book (Excel)** | **Built** (D22-37, "both the CSV and a real .xlsx"; its own choice in the list, the owner, 24 September). Made on the server, `GET /:code/accounting/day-book.xlsx` (exceljs). Both files are laid out by ONE function, `dayBookSheet` in `api/src/modules/accounting/sheet.ts`, which the screen imports as it imports `api/src/permissions.ts` - so the two cannot have different columns or figures. `dayBook.test.ts` reads the workbook back and compares it cell for cell with the CSV's rows. |
-| **Tally Prime (XML)** | Offered, produces no file. **Waiting on the owner.** |
-| **Tally ERP 9 (XML)** | Offered, produces no file. **Waiting on the owner.** |
+| **Tally Prime (XML)** | **Built, and imported into a real TallyPrime 7.2** (below). Off until every ledger name is typed. |
+| **Tally ERP 9 (XML)** | **Built; its shape is tested, nothing more.** Only TallyPrime is installed here. |
 
-**Why the two XMLs are not built** - the owner's answer, 19 September. A Tally
-voucher has to name the ledger it posts to, and **the ledger names in the
-owner's own books are the owner's to give**. A name invented here would be
-*created* inside their Tally on import, and their accountant would spend an
-evening merging ledgers this service made up. The screen says exactly that,
-beside each one, rather than greying out a control with no reason next to it.
+---
 
-**When the names arrive**, the XML is built **on the server**, as its own
-route beside the day book - not in the browser. Escaping (a property called
-`Fidato & Co` must not break the file) and the property's own date belong in
-the API suite, which runs in UTC. The day book is in the browser only because
-`src/lib/csv.ts` already exists and is already trusted.
+## The Tally files (ACC-4, D18-16, D27-382)
+
+`GET /:code/accounting/tally-prime.xml` and `tally-erp9.xml`, built on the
+server in `tally.ts`, refused the same way as the day book (`exported` in
+`routes.ts`), plus: a blank ledger name, a day not closed, a day that cannot
+balance, a payment with no way of paying on record. Each refusal is a 409 with a
+sentence, and the screen shows it.
+
+**One voucher a day, not one per bill.** The day book counts the ledger by day
+and the bills are another basis (ACC-6), so only a day's voucher is the day
+book's own figures. A voucher per bill would need a ledger per guest. Each
+company receipt is its own voucher: it has its own party and reference.
+
+| Case | Voucher |
+|---|---|
+| The day's sales, GST, VAT, discount | One **Sales** voucher. Credit: Room rent, Food, Other services, Restaurant sales, Alcohol sales, CGST, SGST, VAT. Debit: Discount given |
+| Charges on bills | Sales voucher, debit What guests owe |
+| What the outlets took | Sales voucher, debit Cash, Card, UPI, by tender |
+| A rounded bill | Sales voucher, Round off |
+| The owner's allowance, its free part (D27-366) | Sales voucher, debit Owner's allowance |
+| Paid on bills | One **Receipt** voucher a day: debit each way of paying, credit What guests owe |
+| A refund | One **Payment** voucher a day: debit What guests owe, credit the way it went back |
+| A bill to a company | One **Journal** voucher a day: debit What companies owe, credit What guests owe |
+| A company's payment | A **Receipt** voucher of its own: debit the way of paying, credit What companies owe |
+| A reversal, a struck line, an NC bill, a voided bill | None: the day book does not count them. A paid bill is voided only on its own business day, so that cannot change a closed day |
+| A credit note, a cancelled VAT bill | None: neither touches the ledger the day book counts. **Listed for the owner** |
+| Supplier dues, cash expenses, cash banked | None: not in the day book. **Listed for the owner** |
+
+No IGST: this system never issues it. CGST and SGST are the day's GST halved as
+the Manager report halves it, so they can differ from the bills' own CGST and
+SGST by a paisa. VAT is never split (D21-91).
+
+**The checks in `tally.ts` are real.** The Guests line comes from the day's sales
+less the outlets', and the tenders from the outlets' own records, so a day where
+a bill has no tender, or the extras do not add up, does not balance and is
+refused. Tally itself answers a voucher that does not balance with `EXCEPTIONS 1`
+and no reason at all, which is why the sentence has to be made here.
+
+**What a real TallyPrime did** (7.2, Educational Mode, company `FidatoPractice`,
+31 October, over its XML port, demo data):
+
+- A voucher naming a ledger that does not exist: `LINEERROR Ledger '...' does not
+  exist!`, `CREATED 0`, `EXCEPTIONS 1`, **`ERRORS 0`**. No ledger was created. So
+  `ERRORS 0` proves nothing: read `CREATED` and `EXCEPTIONS`.
+- **One wrong name in a file of five: `CREATED 4`, `EXCEPTIONS 1`.** Tally takes
+  the rest, so the day is part-way in. Put right and sent again: `ALTERED 5`,
+  nothing doubled. The refused voucher is held, outside the books, until then.
+- The real export, one day, five vouchers: `CREATED 5`, no exceptions, Tally's Day
+  Book debit and credit 14,157.33, every figure equal to the day book's.
+- A corrected day sent again: `ALTERED 4`, replaced, not doubled. The `REMOTEID`
+  survived a restart of Tally. A voucher the day no longer has stays (ACC-12).
+- Tally ignores `VOUCHERNUMBER` under its automatic numbering, so the reference is
+  in the narration too.
+- Educational Mode takes the 1st, 2nd and 31st only, and answers any other date
+  with "Voucher date is missing". No product code knows this.
+
+**Not proved:** Tally ERP 9 at all (Prime did accept that shape, which says
+nothing about ERP 9); the file through Alt+O rather than the XML port, and
+whether its overwrite setting then replaces a voucher; a licensed copy; Tally's
+GST reports. **The first real proof is the Accountant importing one day into a
+copy of the company in Tally.**
+
+`tally-ledgers` and the two files are all `own` in `roleGate.ts`: `MAY_EXPORT`
+is the only check, so a test holds each.
 
 ---
 
@@ -187,7 +241,7 @@ exports its mount and nothing else.
 ## Not in the first version
 
 Purchase and supplier bills (finance's, and waiting on the owner), a chart of
-accounts, posting back into Tally, payroll, anything with a bank in it.
+accounts, reading anything back from Tally, payroll, anything with a bank in it.
 
 Whether "Excel" had to mean a real `.xlsx`: **the owner's D22-37, 22
 September - both**, as two choices in the Format list (24 September). The

@@ -515,7 +515,7 @@
       <li>From: this day is included</li>
       <li>To: this day is included too</li>
       <li>Day book (CSV): one row a day</li>
-      <li>Tally: waiting on the ledger names in your books</li>
+      <li>Tally: says which ledger names are still blank</li>
       <li>Export</li>
     </ol>
   </figure>
@@ -539,7 +539,7 @@
     <h4>Watch out</h4>
     <ul>
       <li><b>A day not closed is still exported, and says so</b> (<span class="ui">Not run</span>). Tell the accountant before sending a month that is not closed.</li>
-      <li><b>Tally Prime (XML)</b> and <b>Tally ERP 9 (XML)</b> make no file yet: <span class="msg">“Waiting on the ledger names in your books.”</span> <span class="ui">Export</span> stays grey while one of them is chosen.</li>
+      <li><b>Tally Prime (XML)</b> and <b>Tally ERP 9 (XML)</b> stay off until every ledger name is typed. Each says which are missing: <span class="msg">“Type these ledger names first: Room rent, CGST.”</span> <span class="ui">Export</span> stays grey while one of them is chosen.</li>
       <li>A range where nothing happened says <span class="msg">“Nothing was charged or received in this range. The file will have a row for each day, all of them nil.”</span></li>
       <li>This and the Lodging tax report will differ in a month with a stay still in house. Both are right.</li>
     </ul>
@@ -547,7 +547,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. The Tally files wait for the ledger names in the hotel's own books, because a name made up here would be created inside the hotel's Tally on import.</p>
+    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. Each hotel's ledger names are typed by its Accountant and none is ever made up: <span class="d">D27-382</span>.</p>
   </div>
 
   <h3 id="a11-8-ledgers">To type the Tally ledger names</h3>
@@ -579,6 +579,68 @@
       <li><b>No name is suggested, and none is ever made up here.</b> A box left blank stays blank. Clearing a box and saving takes its name away.</li>
       <li>The words beside each box, such as Room rent, say what the ledger is for. They are not ledger names and never go into a file.</li>
     </ul>
+  </div>
+
+  <h3 id="a11-8-tally">To make a Tally file</h3>
+  <ol class="steps">
+    <li>Type every ledger name first (above). Each name must already be a ledger in the hotel's Tally: the file creates none.</li>
+    <li>Choose <span class="ui">From</span> and <span class="ui">To</span>. Every day in the range must be closed by the night audit.</li>
+    <li>Under <span class="ui">Format</span>, choose <span class="ui">Tally Prime (XML)</span> or <span class="ui">Tally ERP 9 (XML)</span>, and tap <span class="ui">Export</span>.</li>
+    <li>In TallyPrime, open the company, press Alt+O (Import), choose <span class="ui">Transactions</span> and pick the file. In Tally.ERP 9: Gateway of Tally, <span class="ui">Import Data</span>, <span class="ui">Vouchers</span>. The file names no company, so it goes into the company open in Tally.</li>
+    <li><b>Read what Tally reports.</b> Every voucher should be created, with no exceptions.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A11-30">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A11-30 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/reports/accounting</code></dd>
+        <dt>Sign in as</dt><dd>Accountant</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>Every ledger name typed; choose Tally Prime (XML)</dd>
+        <dt>Arrows</dt><dd>1 → Tally Prime (XML); 2 → the sentence saying what is not in the file; 3 → Export</dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A11-30.</b> Tally Prime chosen, and what the file holds.</figcaption>
+  </figure>
+
+  <p>There is one Sales voucher a day, not one per bill. The day book counts each day's charges, and a bill is counted differently (see the Lodging tax report), so only a day's voucher holds the same figures. A voucher per bill would also need a ledger for every guest.</p>
+
+  <table>
+    <thead><tr><th>In the day book</th><th>In Tally</th></tr></thead>
+    <tbody>
+      <tr><td>Room revenue, food charged to a room, other extras, restaurant, alcohol, GST, VAT, discount</td><td>The day's <b>Sales</b> voucher, each on its own ledger. GST is split evenly into CGST and SGST; VAT is never split</td></tr>
+      <tr><td>What the restaurant took in cash, by card or UPI</td><td>The same Sales voucher, on the Cash, Card and UPI ledgers. A rounded bill's difference goes on Round off</td></tr>
+      <tr><td>Charges on bills</td><td>The same Sales voucher, on What guests owe</td></tr>
+      <tr><td>Money paid on bills</td><td>The day's <b>Receipt</b> voucher, by way of paying</td></tr>
+      <tr><td>A refund</td><td>The day's <b>Payment</b> voucher</td></tr>
+      <tr><td>A bill moved to a company</td><td>The day's <b>Journal</b> voucher, from What guests owe to What companies owe</td></tr>
+      <tr><td>A company's payment</td><td>A <b>Receipt</b> voucher of its own, with the company and the reference in its narration</td></tr>
+      <tr><td>The owner's allowance, its free part</td><td>The Sales voucher, on Owner's allowance: it is a sale, with its GST</td></tr>
+      <tr><td>A reversed charge, a struck line</td><td>In no voucher: the day book does not count them</td></tr>
+      <tr><td>An NC bill, a voided bill</td><td>In no voucher: they have no value</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>Not in the file, and not in the day book:</b> credit notes and cancelled VAT bills; supplier bills; cash expenses; cash banked. A day's voucher does not list each bill.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A range holding a day not closed is refused</b>, naming the day. The day book files still carry it; a Tally file does not, because tonight's room is only an estimate until it is posted.</li>
+      <li><b>A day that cannot balance is refused</b>, naming the day and the difference, for example a restaurant bill settled with no payment recorded. No line is added to make it balance.</li>
+      <li><b>A ledger name that does not match stops that one voucher, and Tally takes the rest of the file.</b> Tally says <span class="msg">“Ledger 'Round Of' does not exist!”</span>. The day is then only part-way in. Put the name right under Tally ledger names, export the day again and import it again.</li>
+      <li><b>If a closed day is corrected, export it and import it again.</b> Its vouchers are replaced, not doubled. A voucher the corrected day no longer has stays in Tally until it is deleted there: if the day's only bill to a company was reversed, its Journal voucher stays, and What companies owe reads too high. In TallyPrime, check that replacing vouchers is switched on under Alt+O, Configuration.</li>
+      <li>Tally gives each voucher its own number. The day and the kind are in the narration, for example <span class="msg">5EL day book 2026-08-02: sales</span>.</li>
+      <li>Tally's free Educational Mode takes vouchers dated only the 1st, 2nd and 31st, and says <span class="msg">“Voucher date is missing”</span> for any other day.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>What has been proved, and what has not</h4>
+    <p><b>Proved</b> on 31 October 2026, on TallyPrime 7.2 in Educational Mode, in a practice company, with demo figures and the file sent to Tally's XML port on the same computer. Five vouchers for one day: all created, no exceptions, every voucher balanced in Tally, and Tally's own Day Book matched the day book to the paisa on room, food, other extras, restaurant, alcohol, GST, VAT, discount, receipts and company receipts. Ledger names holding <b>&amp;</b> and an apostrophe went in exactly as typed. Reversed and struck lines stayed out. A corrected day imported again replaced its vouchers. A misspelt ledger was refused and no ledger was created.</p>
+    <p><b>Not proved:</b> <b>Tally ERP 9</b> is not installed here, so only that file's shape has been tested. Importing the file through <b>Alt+O</b> has not been tried, nor a licensed copy of Tally, nor Tally's GST reports on these vouchers.</p>
+    <p><b>The first real proof is the Accountant importing one day into a copy of the company in Tally.</b> Do that before the hotel's real books.</p>
   </div>
 
   <!-- A11.9 -->
