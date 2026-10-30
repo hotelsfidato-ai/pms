@@ -55,8 +55,8 @@ async function inTransaction<T>(work: (c: pg.PoolClient) => Promise<T>): Promise
 /** A fixture day, closed, every ledger named. */
 const everything = (c: pg.PoolClient) => inFull(c).then(() => tallyVouchers(c, property, day, day));
 async function inFull(c: pg.PoolClient) {
-  await nameAll(c);
   await everyCase(c, { hotelId, day, staff: ownerId, tag: `TLY-${process.pid}` });
+  await nameAll(c);
   await closeDay(c, hotelId, day, ownerId);
 }
 

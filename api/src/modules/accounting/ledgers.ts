@@ -16,8 +16,9 @@ import { COMPANY_PAYMENT_METHODS, PAYMENT_KINDS } from "../finance/index.ts";
    Which ledgers a hotel needs follows how it is set up: alcohol only where
    the hotel serves it (D21-91), the restaurant's only where it has one, the
    owner's allowance only where it is set, and each way of paying the hotel
-   uses. No IGST: a hotel's supply is always intra-state, so this system never
-   issues it (finance/invoices.ts).
+   uses. What it has used and since switched off is asked for too: its days
+   still have to be exported. No IGST: a hotel's supply is always intra-state,
+   so this system never issues it (finance/invoices.ts).
    ══════════════════════════════════════════════════════════════════ */
 
 export interface Ledger {
@@ -66,9 +67,12 @@ export async function ledgerNames(client: Client, hotelId: string): Promise<Ledg
   const { rows: [h] } = await client.query<{
     alcohol: boolean; restaurant: boolean; allowance: boolean; ways: string[];
   }>(
-    `select app.module_enabled($1, 'alcohol') as alcohol,
+    `select app.module_enabled($1, 'alcohol')
+              or exists (select 1 from folio_postings where hotel_id = $1 and tax_scheme = 'vat')
+              or exists (select 1 from pos_order_lines where hotel_id = $1 and tax_scheme = 'vat') as alcohol,
             app.module_enabled($1, 'pos')     as restaurant,
-            (select owner_allowance_monthly is not null from hotels where id = $1) as allowance,
+            (select owner_allowance_monthly is not null from hotels where id = $1)
+              or exists (select 1 from pos_order_tenders where hotel_id = $1 and method = 'allowance') as allowance,
             /* The ways it offers, and any it has taken and since switched off. */
             array(select kind from payment_methods where hotel_id = $1 and is_active
                   union

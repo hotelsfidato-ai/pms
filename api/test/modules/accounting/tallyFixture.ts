@@ -9,7 +9,8 @@ import type { PoolClient } from "pg";
      on the bills    a room 2,000 + 240 GST; food 450.50 + 22.53; laundry 300 + 54;
                      a drink under VAT 1,000 + 100; a discount of 200, less 24 GST
      reversed        food 999 + 49.95, posted and taken back: in nothing
-     paid            cash 1,500, card 500; 1,000 moved to a company; 250 refunded
+     paid            cash 1,500, card 500; 1,000 moved to a company; the rest of
+                     the bill and 250 over by transfer, and that 250 refunded
      restaurant      two dishes in cash with a struck third, round off -0.34; a
                      drink by UPI; a bill part on the owner's allowance, part card
      no value        an NC bill and a voided bill
@@ -92,12 +93,23 @@ export async function everyCase(client: PoolClient, f: Fixture): Promise<void> {
      values ($1, $2, $3::date, 'food', 'Reversal', -999, 5, -49.95, $4, $5)`,
     [f.hotelId, folio, f.day, wrong, f.staff]);
 
-  for (const [method, amount] of [["cash", 1500], ["card", 500], ["city_ledger", 1000]] as const) {
+  const pay = async (method: string, amount: number) => {
     const id = await post(client, f, folio, "payment", `${f.tag} ${method}`, -amount, 0, 0);
     await client.query(
       "insert into payments (hotel_id, posting_id, method, amount) values ($1, $2, $3, $4)",
       [f.hotelId, id, method, amount]);
-  }
+  };
+  await pay("cash", 1500);
+  await pay("card", 500);
+  await pay("city_ledger", 1000);
+  /* A refund needs a bill in credit (219): the rest of this bill is paid by
+     transfer, and 250 over, so the 250 can go back. */
+  const { rows: [owing] } = await client.query<{ owed: string }>(
+    `select coalesce(sum(fp.amount + fp.tax_amount), 0)::text as owed
+       from folio_postings fp
+      where fp.folio_id = $1 and fp.reverses_id is null
+        and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`, [folio]);
+  await pay("bank_transfer", Number(owing!.owed) + 250);
   const refund = await post(client, f, folio, "refund", `${f.tag} Refunded`, 250, 0, 0);
   await client.query(
     `insert into refunds (hotel_id, posting_id, method, method_label, amount, reason, refunded_by)
@@ -122,9 +134,14 @@ export async function everyCase(client: PoolClient, f: Fixture): Promise<void> {
     `update pos_orders set status = 'no_charge', nc_by = $2, nc_at = now(), nc_reason = 'Fixture' where id = $1`,
     [nc, f.staff]);
   const voided = await bill(client, f, outlet, item, "VOID", [{ qty: 1, price: 600, rate: 5 }]);
+  await settle(client, f, voided, "cash", 0, [["cash", 630]]);
+  /* A bill is voided on its own business day, and this day is in the past: the
+     rule's trigger is stepped past for this one line, on the test's connection. */
+  await client.query("set session_replication_role = replica");
   await client.query(
     `update pos_orders set status = 'void', voided_by = $2, voided_at = now(), void_reason = 'Fixture' where id = $1`,
     [voided, f.staff]);
+  await client.query("set session_replication_role = origin");
 
   await client.query(
     `insert into company_payments (hotel_id, company_id, amount, received_on, method, reference, recorded_by)

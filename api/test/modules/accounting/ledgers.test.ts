@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import pg from "pg";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import { ROLES } from "../../../src/permissions.ts";
+import { ledgerNames } from "../../../src/modules/accounting/ledgers.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE LEDGER NAMES IN A HOTEL'S TALLY (the owner's D27-382)
@@ -39,7 +41,7 @@ const call = (method: string, staff: string, body?: unknown) =>
   });
 
 const read = async () => (await (await call("GET", ownerId)).json()) as Answer;
-const keys = (a: Answer) => a.ledgers.map((l) => l.key);
+const keys = (a: Pick<Answer, "ledgers">) => a.ledgers.map((l) => l.key);
 const nameOf = (a: Answer, key: string) => a.ledgers.find((l) => l.key === key)?.name;
 
 beforeAll(async () => {
@@ -76,54 +78,74 @@ describe("no name is ever invented", () => {
 });
 
 describe("the list follows how the hotel is set up", () => {
-  const module = (on: boolean) => sql(
-    `insert into hotel_modules (hotel_id, module, is_enabled) values ($1, 'alcohol', $2)
-     on conflict (hotel_id, module) do update set is_enabled = excluded.is_enabled`, [hotelId, on]);
+  /* A new hotel in one rolled-back transaction: nothing another test file left
+     behind can stand in for what is being asked here. */
+  const onNewHotel = async (work: (c: pg.PoolClient, hotel: string) => Promise<void>) => {
+    const pool = new pg.Pool({ connectionString: SUPER });
+    const c = await pool.connect();
+    try {
+      await c.query("begin");
+      await c.query("select set_config('app.user_id', $1, true)", [ownerId]);
+      const hotel = (await c.query<{ id: string }>(
+        "select app.provision_property_unchecked('LDG', 'Ledger Test', 'Nowhere')::text as id")).rows[0]!.id;
+      await work(c, hotel);
+    } finally {
+      await c.query("rollback");
+      c.release();
+      await pool.end();
+    }
+  };
+  const list = async (c: pg.PoolClient, hotel: string) => keys(await ledgerNames(c, hotel));
 
   it("asks for alcohol and VAT only where the hotel serves alcohol (D21-91)", async () => {
-    const { rows } = await sql(
-      "select is_enabled from hotel_modules where hotel_id = $1 and module = 'alcohol'", [hotelId]);
-    try {
-      await module(false);
-      const off = keys(await read());
-      expect(off).not.toContain("alcohol");
-      expect(off).not.toContain("vat");
-      await module(true);
-      const on = keys(await read());
-      expect(on).toContain("alcohol");
-      expect(on).toContain("vat");
-    } finally {
-      if (rows[0]) await module(rows[0].is_enabled as boolean);
-      else await sql("delete from hotel_modules where hotel_id = $1 and module = 'alcohol'", [hotelId]);
-    }
+    await onNewHotel(async (c, hotel) => {
+      const alcohol = (on: boolean) => c.query(
+        `insert into hotel_modules (hotel_id, module, is_enabled) values ($1, 'alcohol', $2)
+         on conflict (hotel_id, module) do update set is_enabled = excluded.is_enabled`, [hotel, on]);
+      expect(await list(c, hotel)).not.toContain("alcohol");
+      expect(await list(c, hotel)).not.toContain("vat");
+      await alcohol(true);
+      expect(await list(c, hotel)).toContain("alcohol");
+      expect(await list(c, hotel)).toContain("vat");
+      await alcohol(false);
+      expect(await list(c, hotel)).not.toContain("alcohol");
+    });
   });
 
   it("asks for the owner's allowance only where it is set", async () => {
-    const { rows } = await sql("select owner_allowance_monthly from hotels where id = $1", [hotelId]);
-    try {
-      await sql("update hotels set owner_allowance_monthly = null where id = $1", [hotelId]);
-      expect(keys(await read())).not.toContain("allowance");
-      await sql("update hotels set owner_allowance_monthly = 5000 where id = $1", [hotelId]);
-      expect(keys(await read())).toContain("allowance");
-    } finally {
-      await sql("update hotels set owner_allowance_monthly = $2 where id = $1",
-        [hotelId, rows[0]!.owner_allowance_monthly]);
-    }
+    await onNewHotel(async (c, hotel) => {
+      expect(await list(c, hotel)).not.toContain("allowance");
+      await c.query("update hotels set owner_allowance_monthly = 5000 where id = $1", [hotel]);
+      expect(await list(c, hotel)).toContain("allowance");
+    });
   });
 
   it("asks for each other way of paying the hotel uses, and not one it does not", async () => {
-    const kind = "wallet";
-    expect(keys(await read())).not.toContain(kind);
-    const { rows: [made] } = await sql(
-      `insert into payment_methods (hotel_id, label, kind) values ($1, 'ACC test wallet', $2) returning id`,
-      [hotelId, kind]);
-    try {
-      const a = await read();
-      expect(keys(a)).toContain(kind);
+    await onNewHotel(async (c, hotel) => {
+      expect(await list(c, hotel)).not.toContain("wallet");
+      await c.query("insert into payment_methods (hotel_id, label, kind) values ($1, 'A wallet', 'wallet')", [hotel]);
+      const a = await ledgerNames(c, hotel);
+      expect(keys(a)).toContain("wallet");
       expect(a.missing).toContain("Wallet");
-    } finally {
-      await sql("delete from payment_methods where id = $1", [made!.id]);
-    }
+    });
+  });
+
+  /* Sold, and since switched off: those days still have to be exported, so the
+     form must still ask. Without this a hotel could never export them. */
+  it("still asks for what the hotel has used and since switched off", async () => {
+    await onNewHotel(async (c, hotel) => {
+      const { rows: [o] } = await c.query<{ id: string }>(
+        `with outlet as (
+           insert into pos_outlets (hotel_id, code, name, staff_id, api_key_hash)
+           values ($1, 'REST', 'Restaurant', $2, repeat('a', 64)) returning id)
+         insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by, status)
+         select $1, id, 'LDG-1', '2026-08-02', $2, 'open' from outlet returning id::text`, [hotel, ownerId]);
+      await c.query(
+        `insert into pos_order_lines (hotel_id, order_id, name, qty, unit_price, tax_rate, tax_scheme, added_by)
+         values ($1, $2, 'A drink', 1, 100, 10, 'vat', $3)`, [hotel, o!.id, ownerId]);
+      expect(await list(c, hotel)).toContain("alcohol");
+      expect(await list(c, hotel)).toContain("vat");
+    });
   });
 });
 

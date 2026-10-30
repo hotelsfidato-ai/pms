@@ -194,11 +194,12 @@ export async function tallyVouchers(
     : vouchers;
 }
 
-/** The hotel's name for a ledger. Reached with no name only by what the form
-    does not list, such as VAT in a range after alcohol was switched off. */
+/** The hotel's name for a ledger. `ledgerNames` lists what the hotel has ever
+    used and `missing` stops the export first, so a line with no ledger here is
+    a fault: refused, so that it is never written as "undefined" in a voucher. */
 const named = (ledgers: readonly Ledger[]) => (key: string): string => {
   const typed = ledgers.find((l) => l.key === key)?.name;
-  if (!typed) throw new TallyRefused(`This range needs a ledger the form does not list for this hotel: ${key}.`);
+  if (!typed) throw new TallyRefused(`This range needs a ledger that has no name: ${key}.`);
   return typed;
 };
 
