@@ -263,7 +263,7 @@ export async function checkOut(
          would have to recognise a late departure by reading the
          sentence, and the sentence is not an interface. */
       const body = error.body as
-        { reason?: string; needs?: "late-reason" | "early-reason" } | undefined;
+        { reason?: string; needs?: "late-reason" | "early-reason" | "next-destination" } | undefined;
       return body?.needs
         ? { ok: false, reason: body.reason ?? error.message, needs: body.needs }
         : refuse(body?.reason ?? error.message);

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { getFolio, useStayDue } from "@/modules/finance";
 import { queryKeys, type Stay } from "@/data/repositories";
-import { setGuestVip, EditGuestFlow } from "@/modules/guests";
+import { setGuestVip, EditGuestFlow, StayCompanions } from "@/modules/guests";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
@@ -230,6 +230,8 @@ function StayBody({
           <TabsContent value="stay">
             <div className="flex flex-col gap-6">
               <StayFacts stay={stay} />
+              {/* D27-382: every adult in the room, and who is still to record. */}
+              <StayCompanions hotelId={hotelId} stayId={stay.id} today={businessDate} />
               {/* D27-168: the CRS number, salesperson, company and any change
                   made in the CRS since; nothing for a booking the CRS did not sell. */}
               <CrsFacts code={hotelId} reservationId={stay.id} />

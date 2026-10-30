@@ -76,7 +76,8 @@ export function FolioPanel({
   };
   /* Form III: where a foreign guest goes next, asked at check-out while
      they are at the desk (D27-25). The server refuses without it. */
-  const foreign = (stay.nationality ?? "IN").toUpperCase() !== "IN";
+  const [foreignCompanion, setForeignCompanion] = useState(false);
+  const foreign = foreignCompanion || (stay.nationality ?? "IN").toUpperCase() !== "IN";
   const [nextDestination, setNextDestination] = useState("");
   /* A WRITE THAT CHANGES ONLY THE BILL ASKS AGAIN ONLY WHAT SHOWS IT (the
      owner's D27-316 (2)). It was `invalidateQueries()`: every read on screen
@@ -285,6 +286,9 @@ export function FolioPanel({
               setLateOut(true);
               return;
             }
+            /* A foreigner in the room under an Indian lead (D27-382): only the
+               server knows, so its refusal opens the box. */
+            if (res.needs === "next-destination") setForeignCompanion(true);
             toast.error("Could not check out", res.reason);
           }}
         />

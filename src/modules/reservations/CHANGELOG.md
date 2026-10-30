@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · A walk-in's other adults (D27-382)
+
+**Shipped.** `flows/BookedCard.tsx`: the guests service's `StayCompanions` on the card, once Check in now has checked the guest in; the stay does not exist before that, so it is not on the form. Takes `today` from the page. The whole entry is the guests changelog's.
+
+---
+
 ## 2026-10-28 · The guest's company: the owner's follow-ups (D27-372)
 
 **Asked for:** a returning guest's last company offered on New booking for the

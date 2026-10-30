@@ -6,7 +6,8 @@ import { folioFor } from "../../folio.ts";
 import { roomNightsDue, postRoomNight, leavingEarly } from "../night-audit/index.ts";
 import { editFolioCharge, stayFacts } from "../finance/index.ts";
 import {
-  formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
+  formIIIRefusal, identityProblem, isForeign, maskedId, saveCompanionsDeparture,
+  saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
 import { earnAtCheckOut } from "../loyalty/index.ts";
 import { countProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
@@ -61,7 +62,7 @@ type Outcome<T = unknown> =
      day, at which point the way through silently disappears. Most
      refusals have no `needs`: "the room is occupied" is not a form to
      fill in. */
-  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" | "leaving-early" };
+  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" | "leaving-early" | "next-destination" };
 
 
 /** Rupees, grouped, in a sentence somebody reads. The Indian grouping
@@ -111,7 +112,7 @@ const WAIVE_REFUSED =
   + "it charge, or ask a manager to waive it.";
 
 const refuse = (
-  reason: string, needs?: "late-reason" | "early-reason" | "leaving-early",
+  reason: string, needs?: "late-reason" | "early-reason" | "leaving-early" | "next-destination",
 ): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
 /** Is somebody still IN this room - app.in_house (129), the one rule - other
@@ -308,12 +309,10 @@ operations.get("/:code/stays/:id/express-check-in", async (c) => {
    system's card in Fidato's design, printed from a button. Its number is
    given at check-in (230); a stay checked in before then has none. Aadhaar
    is printed as its last four only, until the lawyer answers (D25-37); any
-   other ID whole, as the clerk compares it with the card in their hand.
-   Above the signature, the hotel's house policies, the voucher's own. */
-const ID_MASK: Record<string, (n: string) => string> = {
-  aadhaar: (n) => `XXXX XXXX ${n.slice(-4)}`,
-};
-
+   other ID whole, as the clerk compares it with the card in their hand
+   (maskedId, guests). Above the signature, the hotel's house policies, the
+   voucher's own. Every other adult in the room is listed, the same way
+   (D27-382). */
 operations.get("/:code/stays/:id/registration-card", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
@@ -335,7 +334,7 @@ operations.get("/:code/stays/:id/registration-card", async (c) => {
          left join guest_documents d on d.guest_id = g.id
          left join companies co on co.id = r.company_id
          left join booking_sources bs on bs.id = r.booking_source_id
-         left join form_iii_stays f3 on f3.reservation_id = r.id
+         left join form_iii_stays f3 on f3.reservation_id = r.id and f3.guest_id is null
         where r.hotel_id = $1 and r.id = $2`,
       [hotelId, stayId],
     );
@@ -343,7 +342,15 @@ operations.get("/:code/stays/:id/registration-card", async (c) => {
     const stay = r ? await stayFacts(client, { reservationId: stayId }) : null;
     if (!r || !stay) return { missing: true as const };
     const s = (k: string) => (r[k] as string | null) ?? null;
-    const idNumber = s("id_number");
+    const { rows: others } = await client.query<{
+      name: string; nationality: string; id_type: string | null; id_number: string | null;
+    }>(
+      `select g.full_name as name, g.nationality, d.id_type, d.id_number
+         from stay_companions c
+         join guests g on g.id = c.guest_id
+         left join guest_documents d on d.guest_id = c.guest_id
+        where c.reservation_id = $1
+        order by c.added_at, g.full_name`, [stayId]);
     const agent = s("company_kind") === "travel_agent"
       ? { name: s("company"), email: s("company_email"), phone: s("company_phone"), voucher: s("ota_reference") }
       : s("source_kind") === "ota"
@@ -363,8 +370,12 @@ operations.get("/:code/stays/:id/registration-card", async (c) => {
         title: s("title"), name: s("full_name")!, email: s("email"), phone: s("phone"), nationality: s("nationality"),
         address: { line: s("address_line"), city: s("city"), state: s("state"), pincode: s("pincode"), country: s("country") },
         idType: s("id_type"),
-        idNumber: idNumber && (ID_MASK[s("id_type") ?? ""]?.(idNumber) ?? idNumber),
+        idNumber: maskedId(s("id_type"), s("id_number")),
       },
+      companions: others.map((o) => ({
+        name: o.name, nationality: o.nationality, idType: o.id_type,
+        idNumber: maskedId(o.id_type, o.id_number),
+      })),
       company: s("company_kind") === "corporate"
         ? { name: s("company"), email: s("company_email"), phone: s("company_phone") } : null,
       agent,
@@ -909,8 +920,12 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
 
     const stayId = c.req.param("id");
 
-    const { rows } = await client.query<{ status: string; nationality: string }>(
-      `select r.status, g.nationality
+    const { rows } = await client.query<{
+      status: string; nationality: string; foreign_companion: boolean;
+    }>(
+      `select r.status, g.nationality,
+              exists (select 1 from stay_companions c join guests cg on cg.id = c.guest_id
+                       where c.reservation_id = r.id and cg.nationality <> 'IN') as foreign_companion
          from reservations r join guests g on g.id = r.guest_id
         where r.hotel_id = $1 and r.id = $2 for update of r`,
       [hotelId, stayId],
@@ -924,12 +939,14 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
        Rule 17(1): at departure the foreigner gives the address they are
        going to, and Form III's departure carries it. Asked here, while
        they are still at the desk (the owner, 27 September) - and above
-       the late charge, the first write (MEMORY 243). */
+       the late charge, the first write (MEMORY 243). Their foreign
+       companions leave with them, under an Indian lead too (D27-382). */
     const nextDestination = body.nextDestination?.trim();
-    if (isForeign(stay.nationality) && !nextDestination) {
+    if ((isForeign(stay.nationality) || stay.foreign_companion) && !nextDestination) {
       return refuse(
         "Form III asks where a foreign guest is going next. Enter the next "
         + "destination to check them out.",
+        "next-destination",
       );
     }
 
@@ -1146,6 +1163,9 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
     await cancelStaleKeys(client, hotelId, stayId);
     if (isForeign(stay.nationality)) {
       await saveVisit(client, hotelId, stayId, { nextDestination: nextDestination! });
+    }
+    if (stay.foreign_companion) {
+      await saveCompanionsDeparture(client, hotelId, stayId, nextDestination!);
     }
     await client.query(
       "update folios set status = 'closed', closed_at = now() where hotel_id = $1 and reservation_id = $2",

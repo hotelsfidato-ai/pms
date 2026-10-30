@@ -14,9 +14,10 @@ import { formIIIMissing, particularsPayload } from "@/modules/guests";
    Immigration and Foreigners Rules 2025, Rule 17, and the owner's
    answers of 27 September: the law's own fields before check-in, a
    citizen of Nepal or Bhutan asked no visa; the register runs the
-   departure's clock too, takes a number per person, and warns that
-   each foreigner in the room owes their own form. The server's half
-   is api/test/modules/guests/formIII.test.ts.
+   departure's clock too, takes a number per person, gives each foreigner
+   a row of their own (D27-382) and warns of an adult not recorded. The
+   server's half is api/test/modules/guests/formIII.test.ts and
+   companions.test.ts.
    ══════════════════════════════════════════════════════════════════ */
 
 describe("what Form III needs before check-in", () => {
@@ -54,8 +55,8 @@ describe("what Form III needs before check-in", () => {
 /* ── The register ─────────────────────────────────────────────────── */
 
 const ROW = {
-  reservationId: "r1", guest: "Ana Lima", nationality: "BR", passport: "P1",
-  room: "204", adults: 2, children: 0, arrived: "2026-09-25", checkOut: "2026-09-27",
+  reservationId: "r1", guestId: "g1", companion: false, guest: "Ana Lima", nationality: "BR", passport: "P1",
+  room: "204", adults: 2, recorded: 1, children: 0, arrived: "2026-09-25", checkOut: "2026-09-27",
   status: "checked_out", arrivedAt: "2026-09-25 14:05", departedAt: "2026-09-27 10:40",
   dueBy: "26 Sep 2026, 14:05", departureDueBy: "28 Sep 2026, 10:40",
   overdue: false, departureOverdue: false, arrivalNumbers: ["A-1"], departureNumbers: [],
@@ -65,12 +66,14 @@ const ROW = {
 let posted: { path: string; body: unknown } | null = null;
 let put: { path: string; body: unknown } | null = null;
 let rows: unknown[] = [ROW];
+let unrecorded: unknown[] = [];
 
 beforeEach(() => {
   startSignedIn();
   posted = null;
   put = null;
   rows = [ROW];
+  unrecorded = [];
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     if (init?.method === "POST") {
       posted = { path, body: JSON.parse(String(init.body)) };
@@ -80,7 +83,7 @@ beforeEach(() => {
       put = { path, body: JSON.parse(String(init.body)) };
       return { ok: true } as never;
     }
-    return { note: "This system does not file.", premises: null, due: 1, overdue: 0, rows } as never;
+    return { note: "This system does not file.", premises: null, due: 1, overdue: 0, unrecorded, rows } as never;
   });
 });
 
@@ -117,10 +120,50 @@ describe("the Form III register", () => {
     }));
   });
 
-  it("warns that each foreigner in the room needs their own Form III", async () => {
-    renderRegister();
-    expect((await screen.findAllByText("Each foreigner in the room needs their own Form III."))
-      .length).toBeGreaterThan(0);
+  /* GUE-6 (D27-382): every foreigner their own row, and a warning for who is
+     still to record, on a row or above the list. */
+  describe("every adult in the room", () => {
+    const BO = { ...ROW, guestId: "g2", companion: true, guest: "Bo Lima", passport: null,
+                 arrivalNumbers: [], departureNumbers: [], recorded: 2 };
+
+    it("warns of an adult not recorded, and only then", async () => {
+      rows = [ROW, { ...ROW, reservationId: "r2", guest: "Cy Lima", adults: 1 }];
+      renderRegister();
+      await screen.findAllByText("Ana Lima");
+      /* The list is drawn twice: one stay short, once in each. */
+      expect(document.querySelectorAll("[data-form-iii-unrecorded]")).toHaveLength(2);
+      expect(document.querySelector("[data-form-iii-unrecorded]")?.textContent).toBe("2 adults, 1 recorded");
+    });
+
+    it("says which rooms in house have nobody's row to carry the warning", async () => {
+      unrecorded = [{ room: "101", adults: 2, recorded: 1 }];
+      renderRegister();
+      await screen.findAllByText("Ana Lima");
+      expect(document.querySelector("[data-form-iii-in-house]")?.textContent)
+        .toContain("room 101 (2 adults, 1 recorded)");
+    });
+
+    it("records a companion's number against them, and the lead's as it always was", async () => {
+      rows = [ROW, BO];
+      renderRegister();
+      await screen.findAllByText("Bo Lima");
+      const boRow = screen.getAllByText("Bo Lima").map((n) => n.closest("tr")).find(Boolean)!;
+      fireEvent.click(within(boRow).getAllByRole("button", { name: "Record number" })[0]!);
+      fireEvent.change(within(boRow).getByLabelText("FRRO arrival number"), { target: { value: "A-77" } });
+      fireEvent.click(within(boRow).getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(posted).toEqual({
+        path: `/api/hotels/${HOTEL}/form-c/r1`,
+        body: { reference: "A-77", kind: "arrival", guestId: "g2" },
+      }));
+    });
+
+    it("completes a companion's own details", async () => {
+      rows = [BO];
+      renderRegister();
+      fireEvent.click((await screen.findAllByRole("button", { name: "Complete details" }))[0]!);
+      fireEvent.click(await screen.findByRole("button", { name: "Save" }));
+      await waitFor(() => expect((put?.body as { guestId?: string })?.guestId).toBe("g2"));
+    });
   });
 
   /* GUE-5 (D27-382): a passport skipped at check-in, recorded here. */

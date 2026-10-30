@@ -5,6 +5,7 @@ import { Check, FileText, Link2, Send } from "lucide-react";
 import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
 import { getGuestMessages, SendCheckInLink } from "@/modules/guest-messaging";
+import { StayCompanions } from "@/modules/guests";
 import { confirmWaiting, makeGuestLink, sendVoucher, viewVoucher } from "@/modules/reservations/data/booking";
 import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
 
@@ -35,8 +36,8 @@ export interface Booked {
   advance?: { amount: number } | { failed: string };
 }
 
-export function BookedCard({ hotelId, booked, onAnother }: {
-  hotelId: string; booked: Booked; onAnother: () => void;
+export function BookedCard({ hotelId, booked, today, onAnother }: {
+  hotelId: string; booked: Booked; today: string; onAnother: () => void;
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -103,6 +104,11 @@ export function BookedCard({ hotelId, booked, onAnother }: {
               ? <p className="text-grey-600">Advance of {moneyPrecise(booked.advance.amount)} taken, held as the guest's credit.</p>
               : <p className="text-warning-dark">Advance not taken: {booked.advance.failed} Take it on the bill.</p>)}
           </div>
+        )}
+
+        {/* A walk-in just checked in: the other adults (D27-382), as at the desk. */}
+        {booked.checkedIn && "room" in booked.checkedIn && (
+          <StayCompanions hotelId={hotelId} stayId={lead} today={today} />
         )}
 
         {waiting ? (

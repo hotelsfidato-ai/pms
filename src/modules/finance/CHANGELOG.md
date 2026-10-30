@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · Next destination for a foreign companion (D27-382)
+
+**Shipped.** `flows/FolioPanel.tsx`: the server's `needs: "next-destination"` opens the box on an Indian guest's bill, for a foreign adult recorded on the stay. Only the server knows, so the refusal is the way through. The whole entry is the guests changelog's. **Proved:** `nextDestination.test.tsx`, "opens the box when the server says a foreigner is in the room".
+
+---
+
 ## 2026-10-28 · The tax invoice in the guest's company's name (the owner's D27-371)
 
 **Shipped.** `invoices.ts`: the stay's invoice route makes a guest's bill out

@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### GUE-6 · A companion in the room is never on the register
+Nothing.
+
+---
+
+## Fixed
+
+### GUE-6 · A companion in the room is never on the register - FIXED 30 October (D27-382)
 
 **Found** - 27 September (D27-25). A booking knows its lead guest only; Rule
 17 counts every foreigner. The owner chose a warning on the register and a
@@ -22,12 +28,25 @@ portal number per person, not each companion's own details - so their
 particulars are typed on the portal from their passports and are not kept
 here.
 
-**Why not fixed** - the owner's answer, 27 September. Recording companions
-is a bigger change across bookings and check-in.
+**What was done** - the owner's D27-382: every adult is recorded, entered at
+check-in or later, and check-in is never blocked. A companion IS a guest:
+`guests`, `guest_documents`, their own `form_iii_stays` row (`guest_id` set; null
+is the lead), tied to the stay by `stay_companions` (migration "every adult in a
+room"). `app.form_iii_people` gives each foreigner a row with their own numbers;
+`app.stay_recorded` counts the lead and each companion with a number on record.
+Routes in `companions.ts`, on their own call: `POST /check-in` knows nothing of
+them, so none can stop it. `StayCompanions` on the check-in window, the stay
+panel and a walk-in's card. The full reset's `owner_reset.orphans` would have
+taken every companion in the group (no booking of their own, so "no stay
+elsewhere"): it now asks. `companions.test.ts`, `companions.test.tsx`,
+`db/tests/modules/guests.sql`, `db/tests/modules/admin.sql`,
+`db/tests/restore-hotel.sh`.
+
+**The rule** - before a person can exist with no booking, every query that
+reads "has a booking" as "is real" is a bug waiting: the document policies and
+the reset's orphans both read it so, and neither had a test that could see it.
 
 ---
-
-## Fixed
 
 ### GUE-5 · A passport skipped at check-in has nowhere to be recorded later - FIXED 30 October (D27-382)
 

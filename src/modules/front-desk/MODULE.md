@@ -51,7 +51,7 @@ Seven addresses, four page files. The menu gate is `dashboard` for Rooms and
   Calendar from a deep link (`/h/:code/stay?res=<booking id>`; every link to
   a booking points there, which is why `/stay` stayed Rooms — `routes.tsx`)
   and from every stay list through `components/StayTable.tsx`. It holds check
-  in (`CheckInFlow`: ONE page under one Check in since D27-163, laid out like New booking since D27-236 - the room, ID, early arrival and offers on the left, the stay's dates, party, meal plan and rate on the right, each fact with its Change; an Indian guest whose ID THIS stay's online check-in confirmed is shown it, not asked again, D27-242), the actions menu (`StayActions`: amend, move or
+  in (`CheckInFlow`: ONE page under one Check in since D27-163, laid out like New booking since D27-236 - the room, ID, early arrival and offers on the left, the stay's dates, party, meal plan and rate on the right, each fact with its Change; an Indian guest whose ID THIS stay's online check-in confirmed is shown it, not asked again, D27-242), every adult in the room (guests' `StayCompanions`, on the check-in window and the Stay tab, each saved on its own call so that nobody missing can stop a check-in, D27-382), the actions menu (`StayActions`: amend, move or
   unassign, exchange, inclusions, void), the marks (`StayMarks`), the
   group's rooms (reservations' `GroupRoomsList`) and the Bill (finance's
   `FolioPanel`, which calls back into this service for check-out and

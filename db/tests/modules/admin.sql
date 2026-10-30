@@ -1124,7 +1124,7 @@ do $$
 declare
   res jsonb := '[]';
   owner uuid; h uuid; other uuid; t uuid; t_code text; rt uuid; rt_o uuid; r101 uuid;
-  g1 uuid; g2 uuid; g3 uuid; outlet uuid; kitchen uuid; cat uuid; item uuid; loc uuid; si uuid;
+  g1 uuid; g2 uuid; g3 uuid; c1 uuid; c2 uuid; c3 uuid; outlet uuid; kitchen uuid; cat uuid; item uuid; loc uuid; si uuid;
   stay uuid; stay2 uuid; inhouse uuid; fol uuid; fol2 uuid; pid bigint; ord uuid; line bigint;
   fy text; bd date; dry jsonb; done jsonb; v text; n bigint; s record;
   rg_here uuid; rg_bill uuid; rg_led uuid;
@@ -1151,6 +1151,15 @@ begin
     insert into guests (full_name, phone) values ('ORS Only Here', '9833300001') returning id into g1;
     insert into guests (full_name, phone) values ('ORS Both Places', '9833300002') returning id into g2;
     insert into guest_documents (guest_id, id_type, id_number) values (g2, 'passport', 'Y7654321');
+    -- A companion on a stay here, and one on a stay at the other hotel, whose
+    -- record has no booking of its own anywhere (D27-382).
+    insert into guests (full_name, nationality) values ('ORS Companion Here', 'GB') returning id into c1;
+    insert into guests (full_name, nationality) values ('ORS Companion There', 'GB') returning id into c2;
+    insert into guest_documents (guest_id, id_type, id_number)
+    values (c1, 'passport', 'C1111111'), (c2, 'passport', 'C2222222');
+    -- And somebody who stayed here and is a companion at the other hotel.
+    insert into guests (full_name, nationality) values ('ORS Here And Companion', 'GB') returning id into c3;
+    insert into guest_documents (guest_id, id_type, id_number) values (c3, 'passport', 'C3333333');
 
     -- A few days of trade.
     bd := app.business_date(h);
@@ -1161,6 +1170,12 @@ begin
     values (h, app.next_reference(h), g2, rt, bd - 5, bd - 4, 3000, 'checked_out');
     insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
     values (other, app.next_reference(other), g2, rt_o, bd + 10, bd + 11, 3000, 'confirmed') returning id into stay2;
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, app.next_reference(h), c3, rt, bd - 3, bd - 2, 3000, 'checked_out');
+    insert into stay_companions (hotel_id, reservation_id, guest_id)
+    values (h, stay, c1), (other, stay2, c2), (other, stay2, c3);
+    insert into form_iii_stays (hotel_id, reservation_id, guest_id, arrived_from)
+    values (h, stay, c1, 'Delhi'), (other, stay2, c2, 'Delhi');
     -- Booking groups: one only here (goes); one with no bookings and its bill
     -- at the other hotel, and one the other hotel leads (both stay).
     insert into reservation_groups (name) values ('ORS here') returning id into rg_here;
@@ -1304,6 +1319,16 @@ begin
       'ok', not exists (select 1 from guests where id in (g1, g3))
             and exists (select 1 from guests where id = g2)
             and exists (select 1 from guest_documents where guest_id = g2));
+    res := res || jsonb_build_object('n', 'a companion on this hotel''s stay goes, papers and all; one on another hotel''s stay stays, though they have no booking of their own (D27-382)',
+      'ok', not exists (select 1 from guests where id = c1)
+            and not exists (select 1 from guest_documents where guest_id = c1)
+            and exists (select 1 from guests where id = c2)
+            and exists (select 1 from guest_documents where guest_id = c2)
+            and exists (select 1 from stay_companions where guest_id = c2)
+            and exists (select 1 from form_iii_stays where guest_id = c2));
+    res := res || jsonb_build_object('n', 'a guest of this hotel who is a companion at another keeps their record and their papers',
+      'ok', exists (select 1 from guests where id = c3)
+            and exists (select 1 from guest_documents where guest_id = c3));
     res := res || jsonb_build_object('n', 'a booking group goes only when nothing at another hotel holds it: not its bill there, not that hotel leading it',
       'ok', not exists (select 1 from reservation_groups where id = rg_here)
             and exists (select 1 from reservation_groups where id = rg_bill)

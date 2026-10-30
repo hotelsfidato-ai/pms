@@ -164,10 +164,17 @@ export async function saveIdentity(
   );
 }
 
+/** An ID number as it may be shown beyond the register: an Aadhaar is its
+    last four only until the lawyer answers (D25-37), any other whole, as the
+    clerk compares it with the card in their hand. */
+export const maskedId = (type: string | null, number: string | null): string | null =>
+  number && type === "aadhaar" ? `XXXX XXXX ${number.slice(-4)}` : number;
+
 /** The visit's particulars. Same rule: only what was typed is written, so
-    check-out's next destination leaves the arrival's answers alone. */
+    check-out's next destination leaves the arrival's answers alone.
+    `companion`: whose they are, when not the booking's lead guest (D27-382). */
 export async function saveVisit(
-  client: Client, hotelId: string, reservationId: string, v: Visit,
+  client: Client, hotelId: string, reservationId: string, v: Visit, companion?: string,
 ): Promise<void> {
   await client.query(
     `insert into form_iii_stays
@@ -175,10 +182,10 @@ export async function saveVisit(
         purpose_other, phone_in_india, arrived_in_india_on, arrival_port,
         employed_in_india, ref_address, ref_city, ref_state, ref_pincode,
         remarks, next_destination, mobile_in_india, phone_abroad,
-        mobile_abroad, updated_by)
+        mobile_abroad, updated_by, guest_id)
      values ($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11,$12,$13,$14,$15,$16,
-             $17,$18,$19, app.current_user_id())
-     on conflict (reservation_id) do update set
+             $17,$18,$19, app.current_user_id(), $20)
+     on conflict (reservation_id, guest_id) do update set
        arrived_from        = coalesce(excluded.arrived_from, form_iii_stays.arrived_from),
        previous_stay       = coalesce(excluded.previous_stay, form_iii_stays.previous_stay),
        purpose             = coalesce(excluded.purpose, form_iii_stays.purpose),
@@ -202,6 +209,23 @@ export async function saveVisit(
      text(v.arrivedInIndiaOn), text(v.arrivalPort), v.employedInIndia ?? null,
      text(v.refAddress), text(v.refCity), text(v.refState), text(v.refPincode),
      text(v.remarks), text(v.nextDestination), text(v.mobileInIndia),
-     text(v.phoneAbroad), text(v.mobileAbroad)],
+     text(v.phoneAbroad), text(v.mobileAbroad), companion ?? null],
+  );
+}
+
+/** The room's foreign companions leave with it (Rule 17(1)): the next
+    destination the desk was given, for whoever has none of their own. */
+export async function saveCompanionsDeparture(
+  client: Client, hotelId: string, reservationId: string, nextDestination: string,
+): Promise<void> {
+  await client.query(
+    `insert into form_iii_stays (hotel_id, reservation_id, guest_id, next_destination, updated_by)
+     select $1, $2, c.guest_id, $3, app.current_user_id()
+       from stay_companions c join guests g on g.id = c.guest_id
+      where c.reservation_id = $2 and g.nationality <> 'IN'
+     on conflict (reservation_id, guest_id) do update set
+       next_destination = coalesce(form_iii_stays.next_destination, excluded.next_destination),
+       updated_by       = excluded.updated_by`,
+    [hotelId, reservationId, nextDestination],
   );
 }

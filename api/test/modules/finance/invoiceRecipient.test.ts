@@ -69,10 +69,24 @@ describe("a company's tax invoice", () => {
 
     const res = await post(`/stays/${stay}/invoice`);
     expect(res.status, await res.clone().text()).toBe(200);
+    const { number } = (await res.json()) as { number: string };
     const [inv] = await sql<{ recipient_name: string; recipient_address: string | null }>(
-      "select recipient_name, recipient_address from invoices where number = $1",
-      [((await res.json()) as { number: string }).number]);
+      "select recipient_name, recipient_address from invoices where number = $1", [number]);
     expect(inv).toEqual({ recipient_name: "RECIPTEST Travels", recipient_address: "12 MG Road, Pune" });
+
+    /* D27-382: Edit on Companies and agents. A company is one record for the
+       group, and an issued invoice keeps what it printed. */
+    const headers = { "x-dev-staff-id": owner, "content-type": "application/json" };
+    const edit = await app.request(`/api/hotels/5EL/companies/${companyId}`, {
+      method: "PATCH", headers,
+      body: JSON.stringify({ name: "RECIPTEST Renamed", addressLine: "1 New Road" }),
+    });
+    expect(edit.status, await edit.clone().text()).toBe(200);
+    const printed = await (await app.request(
+      `/api/hotels/5EL/invoices/${encodeURIComponent(number)}`, { headers })).text();
+    expect(printed).toContain('"RECIPTEST Travels"');
+    expect(printed).toContain("12 MG Road, Pune");
+    expect(printed).not.toContain("RECIPTEST Renamed");
   });
 });
 

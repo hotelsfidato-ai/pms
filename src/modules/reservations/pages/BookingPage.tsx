@@ -654,7 +654,7 @@ export default function BookingPage() {
       <Page>
         <PageHeader title="New booking"
           description="One guest, one set of nights. Save it, give it a room, or check them in." />
-        <BookedCard hotelId={hotelId} booked={booked} onAnother={reset} />
+        <BookedCard hotelId={hotelId} booked={booked} today={today ?? ""} onAnother={reset} />
       </Page>
     );
   }

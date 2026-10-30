@@ -3,12 +3,13 @@ import { directory } from "./directory.ts";
 import { formC } from "./formC.ts";
 import { bookingSources } from "./bookingSources.ts";
 import { people } from "./people.ts";
+import { companions } from "./companions.ts";
 
 /* Form III (D27-25): the rule and the savers check-in, walk-in and
    check-out share with the register. */
 export {
-  formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit,
-  type Identity, type Visit,
+  formIIIRefusal, identityProblem, isForeign, maskedId, saveCompanionsDeparture,
+  saveIdentity, saveVisit, type Identity, type Visit,
 } from "./formIII.ts";
 
 /* The front door of the guests and companies service on the server — the only file
@@ -20,4 +21,6 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", bookingSources],
   /* One guest, one record - the Central CRM, phase 1 (people.ts). */
   ["/api/hotels", people],
+  /* Every adult in a room (D27-382). */
+  ["/api/hotels", companions],
 ];

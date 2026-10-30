@@ -124,6 +124,20 @@ export function RegistrationCardSheet({ card, test, hotelCode, label }: {
           </Box>
           <Box label="Nationality">{region(guest.nationality)}</Box>
         </Row>
+        {/* D27-382: every adult in the room. Their ID as the guest's above. */}
+        {card.companions.length > 0 && (
+          <div className="border-b border-grey-200 px-3 py-2" data-registration-companions>
+            <DocLabel>Other adults in the room</DocLabel>
+            <ul className="mt-0.5 text-sm font-semibold">
+              {card.companions.map((c, i) => (
+                <li key={i}>
+                  {c.name} · {region(c.nationality)} · {c.idType
+                    ? `${ID_WORDS[c.idType] ?? c.idType}${c.idNumber ? ` ${c.idNumber}` : ""}` : "-"}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <Row>
           <Box label="Arriving from">{card.arrivedFrom}</Box>
           <Box label="Next destination">{card.nextDestination}</Box>

@@ -11,7 +11,8 @@ import {
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival, expressCheckIn, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
-  BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, deskGuestId, type GuestId,
+  BookingSiteBlacklist, GuestIdFields, StayCompanions, guestIdState, guestIdPayload, noGuestId,
+  deskGuestId, type GuestId,
 } from "@/modules/guests";
 import { countProblem } from "../../../../api/src/validate.ts";
 import { AddIdPhotoAtDesk, WaitingDetailsLink } from "@/modules/online-checkin";
@@ -372,6 +373,13 @@ export function CheckInFlow({
               {/* D27-210: the desk adds the ID photo for a guest who sent none. */}
               <AddIdPhotoAtDesk stayId={stay.id} />
             </section>
+
+            {/* D27-382: the other adults. Each is saved on their own, so nobody
+                missing here can stop Check in. */}
+            <div className="pt-4 border-t border-grey-200" data-checkin-companions>
+              <StayCompanions hotelId={hotelId} stayId={stay.id} today={businessDate}
+                adults={partyWrong ? undefined : adults} />
+            </div>
 
             {/* ── ARRIVING EARLY ─────────────────────────────────
                 Shown only when the property says so, against the property's

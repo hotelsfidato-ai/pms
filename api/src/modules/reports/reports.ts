@@ -404,7 +404,7 @@ reports.get("/:code/reports/c-form", async (c) => {
 
     /* The record an inspection asks to see (Rule 17(2)): every foreign
        arrival in the period, in Form III's order. The guests service's
-       app.form_iii (147) is the one answer, so this and the register
+       app.form_iii_people is the one answer, so this and the register
        cannot disagree. Blanks stay null - a gap on a form that must be
        filed is somebody's job, and hiding it makes the report look
        complete when it is not. */
@@ -435,7 +435,7 @@ reports.get("/:code/reports/c-form", async (c) => {
               f.check_in::text as arrived, f.check_out::text as departed,
               array_to_string(f.arrival_numbers, ', ') as reference,
               array_to_string(f.departure_numbers, ', ') as "departureReference"
-         from app.form_iii($1) f
+         from app.form_iii_people($1) f
          join hotels h on h.id = $1
         where f.check_in between $2::date and $3::date
         order by f.check_in, f.guest_name`,
