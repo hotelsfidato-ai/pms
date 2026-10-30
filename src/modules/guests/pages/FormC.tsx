@@ -5,20 +5,23 @@ import { ShieldAlert, Globe2, Check, Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useCurrentHotel } from "@/lib/session";
 import { useGroupSettings } from "@/modules/admin";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, EmptyState,
-  Button, Input, Dialog, DialogContent, DocPage, DocMasthead, DocLabel, type Column,
+  Button, Field, Input, NativeSelect, fieldProps, Dialog, DialogContent, DocPage, DocMasthead,
+  DocLabel, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
   getFormC, recordFormC, completeFormIII, type FormCRow, type FormCRegister,
 } from "@/modules/guests/data/formC";
 import {
-  ForeignGuestFields, particularsPayload, PURPOSES, type Particulars,
+  ForeignGuestFields, particularsPayload, PURPOSES, ID_TYPES, type Particulars,
 } from "@/modules/guests/components/ForeignGuestFields";
+import { idNumberProblem } from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FORM III (Form C until the 2025 Act, D27-25)
@@ -268,8 +271,26 @@ function CompleteDetails({
   hotelId, row, onClose, onSaved,
 }: { hotelId: string; row: FormCRow; onClose: () => void; onSaved: () => void }) {
   const [value, setValue] = useState<Particulars>(() => particularsOf(row));
+  /* GUE-5 (D27-382): the document skipped at check-in, recorded here. Sent
+     only when changed: a number on file is not asked of today's rules because
+     a clerk filled in another box. */
+  const hadType = typeof row["idType"] === "string" ? row["idType"] : "";
+  const hadNumber = row.passport ?? "";
+  const [idType, setIdType] = useState(hadType);
+  const [idNumber, setIdNumber] = useState(hadNumber);
+  const idsOff = useCurrentHotel()?.deskRules?.idTypesOff ?? [];
+  const changed = idType !== hadType || idNumber.trim() !== hadNumber;
+  const wrong = !changed || !idType ? null
+    : !idNumber.trim() ? "Type the document's number." : idNumberProblem(idType, idNumber);
   const save = useMutation({
-    mutationFn: () => completeFormIII(hotelId, row.reservationId, particularsPayload(value)),
+    mutationFn: () => {
+      const typed = particularsPayload(value);
+      return completeFormIII(hotelId, row.reservationId, {
+        ...typed,
+        identity: changed && idType
+          ? { ...typed.identity, idType, idNumber: idNumber.trim() } : typed.identity,
+      });
+    },
     onSuccess: onSaved,
   });
   return (
@@ -279,7 +300,7 @@ function CompleteDetails({
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" disabled={save.isPending} onClick={() => save.mutate()}>
+            <Button variant="primary" disabled={save.isPending || wrong !== null} onClick={() => save.mutate()}>
               Save
             </Button>
           </>
@@ -289,8 +310,27 @@ function CompleteDetails({
             {describeError(save.error).message ?? "Nothing was saved."}
           </p>
         )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <Field label="Document">
+            {(f) => (
+              <NativeSelect {...fieldProps(f)} value={idType} onChange={(e) => setIdType(e.target.value)}>
+                <option value="">Not recorded</option>
+                {ID_TYPES.filter(([v]) => v === idType || !idsOff.includes(v))
+                  .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </NativeSelect>
+            )}
+          </Field>
+          <Field label="Number">
+            {(f) => (
+              <Input {...fieldProps(f)} value={idNumber} disabled={!idType}
+                placeholder={idType === "passport" ? "P1234567" : "Document number"}
+                onChange={(e) => setIdNumber(e.target.value)} />
+            )}
+          </Field>
+          {wrong && <p className="sm:col-span-2 text-sm text-brand-red-700" data-id-wrong>{wrong}</p>}
+        </div>
         <ForeignGuestFields value={value} onChange={setValue}
-          nationality={row.nationality} idCaptured={Boolean(row.passport)}
+          nationality={row.nationality} idCaptured={Boolean(idType && idNumber.trim())}
           withNextDestination={row.status === "checked_out"} />
       </DialogContent>
     </Dialog>

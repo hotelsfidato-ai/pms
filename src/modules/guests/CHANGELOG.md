@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · GUE-5: a passport skipped at check-in, recorded on Complete details (the owner's D27-382)
+
+**Asked for:** the document's type and number on the register's Complete details, with check-in's validation; the register stops saying "not on record" once typed.
+
+**Shipped:** `pages/FormC.tsx` `CompleteDetails`: `Document` (the hotel's ID types, as check-in) and `Number`, starting on what the row holds. Sent only when changed, so a number on file is not asked of today's rules because a clerk filled in another box; `idNumberProblem` under the fields and Save greyed, in check-in's words. The server was unchanged: `PUT .../details` already refused a type with no number and ran `identityProblem`. The boxes Form III asks with a document now follow the document typed, not the one on the row. Manual A3.5. `DEFECTS.md`: GUE-5 to Fixed.
+
+**Proved:** `formIII.test.tsx` "Complete details: the document" 3/3 (takes them and sends them; a wrong Aadhaar stops Save in the same words; sends no document it did not change). API `formIII.test.ts` "records a document skipped at check-in, by check-in's own rules". Numbers in the release's gate run.
+
+---
+
 ## 2026-10-30 · Edit on Companies and agents (the owner's D27-382)
 
 **Asked for:** Edit was only inside a company's Contracts page; an Edit button on every company on the list, the existing window, for the owner, an Admin and the GM only.

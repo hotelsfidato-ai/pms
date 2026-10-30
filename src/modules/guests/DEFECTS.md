@@ -14,20 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### GUE-5 · A passport skipped at check-in has nowhere to be recorded later
-
-**Found** - 27 September, building Form III (D27-25). Check-in lets the ID be
-skipped for a reason ("scanner offline"), and nothing afterwards records the
-document number: "Complete details" on the Form III register records every
-other field, not the document's type and number. The register shows "not on
-record" for as long as it lasts.
-
-**Why not fixed** - outside what the owner asked on 27 September; the
-server's `PUT .../details` already takes a type and number, so it is the
-screen's two fields. The owner's to decide.
-
----
-
 ### GUE-6 · A companion in the room is never on the register
 
 **Found** - 27 September (D27-25). A booking knows its lead guest only; Rule
@@ -42,6 +28,26 @@ is a bigger change across bookings and check-in.
 ---
 
 ## Fixed
+
+### GUE-5 · A passport skipped at check-in has nowhere to be recorded later - FIXED 30 October (D27-382)
+
+**Found** - 27 September, building Form III (D27-25). Check-in lets the ID be
+skipped for a reason ("scanner offline"), and nothing afterwards records the
+document number: "Complete details" on the Form III register records every
+other field, not the document's type and number. The register shows "not on
+record" for as long as it lasts.
+
+**What was done** - the owner's answer, D27-382: `Document` and `Number` on
+Complete details (`pages/FormC.tsx`), sent only when changed, so a number on
+file is not asked of today's rules because a clerk filled in another box. The
+same check as check-in, on the screen (`idNumberProblem`) and on the server
+(`identityProblem`, `PUT .../details`, which already took them). The row then
+shows the number. `formIII.test.tsx`, `api/test/modules/guests/formIII.test.ts`.
+
+**The rule** - a field the server takes and no screen sends is half a feature:
+a defect log's "it is just the two fields" is the fix, waiting.
+
+---
 
 ### GUE-7 · No screen could correct a guest, and the ID rules let nonsense through - FIXED 28 September (QA GU-1..GU-4, GP-1)
 

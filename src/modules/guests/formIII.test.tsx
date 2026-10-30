@@ -63,17 +63,24 @@ const ROW = {
 };
 
 let posted: { path: string; body: unknown } | null = null;
+let put: { path: string; body: unknown } | null = null;
+let rows: unknown[] = [ROW];
 
 beforeEach(() => {
   startSignedIn();
   posted = null;
+  put = null;
+  rows = [ROW];
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     if (init?.method === "POST") {
       posted = { path, body: JSON.parse(String(init.body)) };
       return { ok: true } as never;
     }
-    return { note: "This system does not file.", premises: null, due: 1, overdue: 0,
-             rows: [ROW] } as never;
+    if (init?.method === "PUT") {
+      put = { path, body: JSON.parse(String(init.body)) };
+      return { ok: true } as never;
+    }
+    return { note: "This system does not file.", premises: null, due: 1, overdue: 0, rows } as never;
   });
 });
 
@@ -114,6 +121,41 @@ describe("the Form III register", () => {
     renderRegister();
     expect((await screen.findAllByText("Each foreigner in the room needs their own Form III."))
       .length).toBeGreaterThan(0);
+  });
+
+  /* GUE-5 (D27-382): a passport skipped at check-in, recorded here. */
+  describe("Complete details: the document", () => {
+    const openDetails = async (row: Record<string, unknown>) => {
+      rows = [row];
+      renderRegister();
+      fireEvent.click((await screen.findAllByRole("button", { name: "Complete details" }))[0]!);
+      return screen.findByLabelText("Document") as Promise<HTMLSelectElement>;
+    };
+
+    it("takes the type and number, and sends them", async () => {
+      const type = await openDetails({ ...ROW, passport: null, idType: null });
+      fireEvent.change(type, { target: { value: "passport" } });
+      fireEvent.change(screen.getByLabelText("Number"), { target: { value: "P1234567" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(put?.path).toBe(`/api/hotels/${HOTEL}/form-c/r1/details`));
+      expect((put!.body as { identity: unknown }).identity)
+        .toMatchObject({ idType: "passport", idNumber: "P1234567" });
+    });
+
+    it("asks what check-in asks: a wrong number stops Save, in the same words", async () => {
+      const type = await openDetails({ ...ROW, passport: null, idType: null });
+      fireEvent.change(type, { target: { value: "aadhaar" } });
+      fireEvent.change(screen.getByLabelText("Number"), { target: { value: "1234" } });
+      expect(document.querySelector("[data-id-wrong]")?.textContent).toMatch(/Aadhaar/);
+      expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("sends no document it did not change", async () => {
+      await openDetails({ ...ROW, passport: "P1", idType: "passport" });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(put).not.toBeNull());
+      expect((put!.body as { identity: Record<string, unknown> }).identity["idNumber"]).toBeUndefined();
+    });
   });
 
   it("prints a card in Form III's order with both signature lines", async () => {
