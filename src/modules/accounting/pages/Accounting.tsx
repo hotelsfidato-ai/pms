@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Download, TriangleAlert, ReceiptText, Landmark, Wallet } from "lucide-react";
 import { useUi } from "@/lib/ui";
@@ -12,7 +12,8 @@ import {
 import { ApiError } from "@/lib/api";
 import {
   FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx,
-  type DayBook, type DayBookRow, type ExportFormat,
+  getTallyLedgers, saveTallyLedgers,
+  type DayBook, type DayBookRow, type ExportFormat, type TallyLedgers,
 } from "@/modules/accounting/data/accounting";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -54,6 +55,12 @@ export default function AccountingPage() {
     queryKey: ["accounting-day-book", hotelId, from, to],
     queryFn: () => getDayBook(hotelId, from, to),
     enabled: Boolean(hotelId) && ordered,
+  });
+
+  const ledgers = useQuery({
+    queryKey: ["accounting-tally-ledgers", hotelId],
+    queryFn: () => getTallyLedgers(hotelId),
+    enabled: Boolean(hotelId),
   });
 
   const book = query.data ?? null;
@@ -137,6 +144,13 @@ export default function AccountingPage() {
         </CardBody>
       </Card>
 
+      {ledgers.isError ? (
+        <ReadFailed error={readError(ledgers)} what="the ledger names" onRetry={() => void ledgers.refetch()} />
+      ) : ledgers.data ? (
+        /* Keyed by hotel: what was typed for one hotel is never offered as another's. */
+        <LedgerNames key={hotelId} hotelId={hotelId} answer={ledgers.data} />
+      ) : null}
+
       {query.isError ? (
         <ReadFailed
           error={readError(query)}
@@ -155,6 +169,54 @@ export default function AccountingPage() {
         <DayBookTable book={book} loading={query.isLoading} />
       )}
     </Page>
+  );
+}
+
+/* ── The ledger names in the hotel's Tally (D27-382) ───────────────── */
+
+/** One name per ledger, exactly as in the hotel's Tally. No name is ever
+    suggested: a blank stays blank, and the labels are this system's words for
+    what a ledger is for, never a name. */
+function LedgerNames({ hotelId, answer }: { hotelId: string; answer: TallyLedgers }) {
+  const queryClient = useQueryClient();
+  const [typed, setTyped] = useState<Record<string, string>>({});
+  const value = (key: string, name: string | null) => typed[key] ?? name ?? "";
+
+  const save = useMutation({
+    mutationFn: () => saveTallyLedgers(hotelId, Object.fromEntries(
+      answer.ledgers.map((l) => [l.key, value(l.key, l.name)]))),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["accounting-tally-ledgers", hotelId], next);
+      setTyped({});
+      toast.success("Ledger names saved");
+    },
+    onError: (error: unknown) => toast.error(
+      "The ledger names were not saved",
+      error instanceof ApiError ? error.message : String(error)),
+  });
+
+  return (
+    <Card className="mb-5">
+      <CardHeader
+        title="Tally ledger names"
+        description="Type each name exactly as it is in this hotel's Tally. No name is suggested, and none is made here."
+      />
+      <CardBody className="grid gap-4 sm:grid-cols-2">
+        {answer.ledgers.map((l) => (
+          <Field key={l.key} label={l.label} hint={l.what}>
+            {(p) => (
+              <Input {...fieldProps(p)} value={value(l.key, l.name)} maxLength={200}
+                onChange={(e) => setTyped((t) => ({ ...t, [l.key]: e.target.value }))} />
+            )}
+          </Field>
+        ))}
+        <div className="sm:col-span-2">
+          <Button variant="primary" disabled={save.isPending} onClick={() => save.mutate()}>
+            Save ledger names
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

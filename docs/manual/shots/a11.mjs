@@ -258,6 +258,18 @@ export const SHOTS = [
     ],
   },
 
+  {
+    id: "A11-29", title: "The Tally ledger names of one hotel", as: "Accountant",
+    path: "/reports/accounting",
+    steps: [{ waitFor: "text:Tally ledger names", ms: 20000 }, { scroll: "text:Tally ledger names" }],
+    marks: [
+      { n: 1, at: "text:Tally ledger names", side: "top" },
+      { n: 2, at: "label:Room rent", side: "right" },
+      { n: 3, at: "label:CGST", side: "right" },
+      { n: 4, at: "text:Save ledger names", side: "right" },
+    ],
+  },
+
   /* ── The Store and equipment ──────────────────────────────────────── */
   {
     id: "A11-19", title: "The Store's Reports menu", as: "Inventory Manager",

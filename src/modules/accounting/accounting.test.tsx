@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import App from "@/App";
 import { go, startSignedIn, signedIn, AGRA_HOTEL, withDemoHotel } from "@/test/app";
 import { useUi } from "@/lib/ui";
 import { mayReach, navigationFor } from "@/components/app/navigation";
-import { dayBookSheet, FORMATS, type DayBook } from "@/modules/accounting/data/accounting";
+import { dayBookSheet, FORMATS, type DayBook, type TallyLedgers } from "@/modules/accounting/data/accounting";
 import * as apiModule from "@/lib/api";
 import * as csvModule from "@/lib/csv";
 
@@ -28,12 +28,24 @@ import * as csvModule from "@/lib/csv";
 
 const ALL_ON = { pos: true, banquet: true, reception_pos: true };
 
-const control = vi.hoisted(() => ({ book: null as unknown }));
+const control = vi.hoisted(() => ({
+  book: null as unknown,
+  ledgers: null as unknown,
+  saved: [] as unknown[],
+}));
 
 vi.mock("@/modules/accounting/data/accounting", async (importOriginal) => {
   const actual = await importOriginal<
     typeof import("@/modules/accounting/data/accounting")>();
-  return { ...actual, getDayBook: vi.fn(async () => control.book) };
+  return {
+    ...actual,
+    getDayBook: vi.fn(async () => control.book),
+    getTallyLedgers: vi.fn(async () => control.ledgers),
+    saveTallyLedgers: vi.fn(async (_hotel: string, names: Record<string, string>) => {
+      control.saved.push(names);
+      return control.ledgers;
+    }),
+  };
 });
 
 /** Two days of the demo month: one the audit has closed, one it has not. */
@@ -61,6 +73,16 @@ const BOOK: DayBook = {
   openDays: ["2026-08-25"],
 };
 
+/** The form as the server answers it: nothing typed yet. */
+const BLANK_LEDGERS: TallyLedgers = {
+  ledgers: [
+    { key: "room", label: "Room rent", what: "Room charges, night by night", name: null },
+    { key: "cgst", label: "CGST", what: "Half the GST", name: null },
+    { key: "cash", label: "Cash", what: "Money received this way", name: null },
+  ],
+  missing: ["Room rent", "CGST", "Cash"],
+};
+
 /** The general manager at the demo property - one of the three the
     brief names. `startSignedIn` seeds a receptionist at Agra. */
 const asGm = () => {
@@ -77,6 +99,8 @@ const asGm = () => {
 beforeEach(() => {
   startSignedIn(); withDemoHotel();
   control.book = BOOK;
+  control.ledgers = BLANK_LEDGERS;
+  control.saved = [];
 });
 
 /* ── The file ──────────────────────────────────────────────────────── */
@@ -231,6 +255,21 @@ describe("the export screen", () => {
       xlsx.mockRestore();
       csv.mockRestore();
     }
+  });
+
+  /* D27-382: one name per ledger, typed by the Accountant. No name is offered:
+     a blank stays blank, and what is typed goes to the server as typed. */
+  it("offers every ledger blank, and sends what was typed", async () => {
+    open("LED1");
+    const room = await screen.findByLabelText(/^Room rent/) as HTMLInputElement;
+    const cash = await screen.findByLabelText(/^Cash/) as HTMLInputElement;
+    expect(room.value, "no name is ever suggested").toBe("");
+    expect(cash.value).toBe("");
+
+    fireEvent.change(room, { target: { value: "ROOM Rent & Stay" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Save ledger names/ }));
+    await waitFor(() => expect(control.saved).toHaveLength(1));
+    expect(control.saved[0]).toEqual({ room: "ROOM Rent & Stay", cgst: "", cash: "" });
   });
 
   it("names the days the night audit has not closed", async () => {

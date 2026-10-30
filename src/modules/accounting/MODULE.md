@@ -4,14 +4,15 @@
 file. Built 19 September 2026 (D18-16, `docs/BUILD-PLAN-2026-09-18.md` § 7).
 Until that day this folder held a Coming soon page and nothing else.
 
-**It is not a ledger.** No chart of accounts, no ledger names mapped per hotel,
-no posting back into Tally, no payroll, nothing with a bank in it. It reads,
-adds up what it read, and hands it over.
+**It is not a ledger.** No chart of accounts, no posting back into Tally, no
+payroll, nothing with a bank in it. It reads, adds up what it read, and hands
+it over. The one thing it holds is the name of each ledger in the hotel's own
+Tally, typed by the Accountant (below).
 
 ```
 src/modules/accounting/          the screen, its menu entry and its address
-api/src/modules/accounting/      the day book, and the one route that answers it
-db/tests/modules/accounting.sql  does not exist - this service owns no table
+api/src/modules/accounting/      the day book, the ledger names, and their routes
+db/tests/modules/accounting.sql  the ledger names' database half
 ```
 
 ---
@@ -97,6 +98,40 @@ record through the reports door, never a literal (root MEMORY 256).
 
 ---
 
+## The ledger names (D27-382)
+
+The owner: *"a small page per hotel where the Accountant types each ledger name
+exactly as in their Tally; the export stays off until all are filled; no name
+is ever invented."* A card on the Accounting export screen, with
+`GET` and `PUT /:code/accounting/tally-ledgers` (`ledgers.ts`).
+
+**No default name, ever.** A ledger nobody has named has no row in
+`tally_ledger_names` and reads as null. The labels on the form are this
+system's words for what a ledger is for and never reach a voucher. A name is
+trimmed at the two ends and otherwise kept as typed. Sending a blank removes it.
+
+**Who:** read and changed by whoever may export: the Accountant, the GM, the
+owner and an Admin (`MAY_EXPORT`). `roleGate.ts` says `own` for both routes, so
+the route's own check is the only one: `ledgers.test.ts` walks every other role.
+
+**A setup record:** the full reset leaves it and a test hotel takes a copy
+(`app.test_hotel_classes()`), with row security forced and every change in the
+audit trail. `db/tests/modules/accounting.sql` holds all of that.
+
+**Which ledgers a hotel is asked for** follows how it is set up (`ledgerNames`):
+
+| Ledger | Asked for |
+|---|---|
+| Room rent, Food charged to a room, Other services | always |
+| CGST, SGST | always; no IGST, a hotel's supply is always intra-state (`finance/invoices.ts`) |
+| Discount given, What guests owe, What companies owe | always |
+| Restaurant sales, Round off | where the `pos` module is on |
+| Alcohol sales, VAT on alcohol | where the hotel serves alcohol, the `alcohol` module (D21-91) |
+| Owner's allowance | where the allowance is set |
+| Each way of paying | what the hotel offers or has taken, cash, card and UPI where it has a restaurant, and how a company pays (bank transfer, cheque, UPI, card) |
+
+---
+
 ## The three formats (D18-16)
 
 All three are offered on the screen; whoever exports picks what their
@@ -152,9 +187,7 @@ exports its mount and nothing else.
 ## Not in the first version
 
 Purchase and supplier bills (finance's, and waiting on the owner), a chart of
-accounts, ledger names mapped per hotel, posting back into Tally, payroll,
-anything with a bank in it. **And a migration** - this service owns no table
-and needs no number.
+accounts, posting back into Tally, payroll, anything with a bank in it.
 
 Whether "Excel" had to mean a real `.xlsx`: **the owner's D22-37, 22
 September - both**, as two choices in the Format list (24 September). The

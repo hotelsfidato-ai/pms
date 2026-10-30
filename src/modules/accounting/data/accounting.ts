@@ -148,6 +148,29 @@ export async function getDayBook(
   }
 }
 
+/* ── The ledger names in the hotel's Tally (D27-382) ───────────────── */
+
+export interface TallyLedger {
+  key: string;
+  label: string;
+  what: string;
+  /** As typed, or null: no name is ever invented here. */
+  name: string | null;
+}
+
+export interface TallyLedgers {
+  ledgers: TallyLedger[];
+  /** The labels still blank. */
+  missing: string[];
+}
+
+export const getTallyLedgers = (hotelId: string): Promise<TallyLedgers> =>
+  api<TallyLedgers>(`/api/hotels/${hotelId}/accounting/tally-ledgers`);
+
+export const saveTallyLedgers = (hotelId: string, names: Record<string, string>): Promise<TallyLedgers> =>
+  api<TallyLedgers>(`/api/hotels/${hotelId}/accounting/tally-ledgers`,
+    { method: "PUT", body: JSON.stringify({ names }) });
+
 /* ── The file ──────────────────────────────────────────────────────── */
 
 /** Hand the day book to the browser as a file somebody can find again. */

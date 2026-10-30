@@ -3,6 +3,7 @@ import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { propertyFor, isoDateParam } from "../reports/index.ts";
 import { dayBook, dayBookXlsx, NoRoomRate } from "./dayBook.ts";
+import { ledgerNames, namesProblem, saveLedgerNames } from "./ledgers.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    GET /:code/accounting/day-book?from=&to=
@@ -74,6 +75,37 @@ function daysBetween(from: string, to: string): number {
 
 export const accounting = new Hono<{ Variables: { subject: string } }>();
 
+const NOT_YOURS = "The accounting export is the owner's, an administrator's, the general manager's and the accountant's.";
+
+/* The ledger names in the hotel's Tally (D27-382): read and changed by whoever
+   may export. A refusal returned in here commits nothing, because it is asked
+   before anything is written. */
+accounting.get("/:code/accounting/tally-ledgers", async (c) => {
+  const answer = await withSession(c.get("subject"), async (client) => {
+    const property = await propertyFor(client, c.req.param("code"));
+    if (!property) return { status: 404 as const, body: { error: "No such property." } };
+    const role = await roleAt(client, property.id);
+    if (!role || !MAY_EXPORT.includes(role)) return { status: 403 as const, body: { error: NOT_YOURS } };
+    return { status: 200 as const, body: await ledgerNames(client, property.id) };
+  });
+  return c.json(answer.body, answer.status);
+});
+
+accounting.put("/:code/accounting/tally-ledgers", async (c) => {
+  const input = await c.req.json().catch(() => null) as { names?: Record<string, string> } | null;
+  const answer = await withSession(c.get("subject"), async (client) => {
+    const property = await propertyFor(client, c.req.param("code"));
+    if (!property) return { status: 404 as const, body: { error: "No such property." } };
+    const role = await roleAt(client, property.id);
+    if (!role || !MAY_EXPORT.includes(role)) return { status: 403 as const, body: { error: NOT_YOURS } };
+    const problem = namesProblem(input, (await ledgerNames(client, property.id)).ledgers);
+    if (problem) return { status: 400 as const, body: { error: problem } };
+    await saveLedgerNames(client, property.id, input!.names!);
+    return { status: 200 as const, body: await ledgerNames(client, property.id) };
+  });
+  return c.json(answer.body, answer.status);
+});
+
 /* `day-book` answers the object; `day-book.xlsx` the same object as a real
    .xlsx (D22-37) - the one path, so the refusals above it are the same. */
 accounting.get("/:code/accounting/:file{day-book(?:\\.xlsx)?}", async (c) => {
@@ -95,7 +127,7 @@ accounting.get("/:code/accounting/:file{day-book(?:\\.xlsx)?}", async (c) => {
     if (!role || !MAY_EXPORT.includes(role)) {
       return {
         status: 403 as const,
-        body: { error: "The accounting export is the owner's, an administrator's, the general manager's and the accountant's." },
+        body: { error: NOT_YOURS },
       };
     }
 

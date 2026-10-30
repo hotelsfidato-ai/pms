@@ -72,6 +72,8 @@ export { stayFacts } from "./invoices.ts";
 export type { InvoiceRecipient, InvoiceFacts } from "./invoices.ts";
 export { folioBalance } from "./folios.ts";
 /* D27-242 (Q4): what companies paid, for the accountant's day book. */
-export { companyReceipts, type CompanyReceipt } from "./companyPayments.ts";
+export { companyReceipts, COMPANY_PAYMENT_METHODS, type CompanyReceipt } from "./companyPayments.ts";
+/* D27-382: the ledger a way of paying posts to, on the accountant's form. */
+export { PAYMENT_KINDS } from "./paymentMethods.ts";
 /* D27-275 (5): a booking billed to a company over its credit limit (reservations). */
 export { overCreditLimit, type OverLimit } from "./creditLimit.ts";

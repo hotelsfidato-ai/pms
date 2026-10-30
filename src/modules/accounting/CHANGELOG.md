@@ -11,6 +11,25 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-30 · The ledger names, one form per hotel (the owner's D27-382) - release 17
+
+**Asked for:** the master, with the owner's words: a small page per hotel where
+the Accountant types each ledger name exactly as in their Tally, and no name is
+ever invented.
+**Shipped:** migration 254 `tally_ledger_names` (setup, forced row security,
+audited, `app.test_hotel_classes()` from 251 with it added); `ledgers.ts` works
+out the list per hotel; `GET` and `PUT /:code/accounting/tally-ledgers`, whoever
+may export, both `own` in the role gate; a card on the Accounting export screen.
+**Proved:** `ledgers.test.ts` 11 passed; `db/tests/run.sh` 1,871 passed, 14 of
+them new; web `accounting.test.tsx` 19 passed. Five guards broken one at a time
+and seen to fail on an assertion, each restored from a saved copy and confirmed
+by count; the PUT route's role check and the database's two are the next
+entry's.
+**Left open:** the master reconciles 254's class list with 253 at merge, and
+`migrationNumbers.test.ts` is red on this branch alone, for the gap at 253.
+
+---
+
 ## 2026-10-30 · Food is its own line (ACC-3, the owner's D27-382) - release 17
 
 **Asked for:** the master, with the owner's D27-382: the Manager report's split
