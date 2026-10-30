@@ -60,6 +60,15 @@ async function saveDetails(
   }
 }
 
+/* This visit's answers on form_iii_stays `v`, not the phones: a companion's
+   and the lead's are read alike (D27-386). */
+const VISIT_ANSWERS = `
+  v.arrived_from as "arrivedFrom", v.previous_stay as "previousStay", v.purpose,
+  v.purpose_other as "purposeOther", v.arrived_in_india_on::text as "arrivedInIndiaOn",
+  v.arrival_port as "arrivalPort", v.ref_address as "refAddress", v.ref_city as "refCity",
+  v.ref_state as "refState", v.ref_pincode as "refPincode", v.remarks,
+  case v.employed_in_india when true then 'yes' when false then 'no' end as "employedInIndia"`;
+
 /* What the stay panel and the check-in window show. Their answers come with
    them, under the names the shared fields use, for Edit. */
 const PERSON = `
@@ -75,12 +84,7 @@ const PERSON = `
   d.visa_issue_country as "visaIssueCountry", d.visa_expiry::text as "visaExpiry",
   d.address_line as "addressLine", d.city, d.country,
   v.phone_in_india as "phoneInIndia", v.mobile_in_india as "mobileInIndia",
-  v.phone_abroad as "phoneAbroad", v.mobile_abroad as "mobileAbroad",
-  v.arrived_from as "arrivedFrom", v.previous_stay as "previousStay", v.purpose,
-  v.purpose_other as "purposeOther", v.arrived_in_india_on::text as "arrivedInIndiaOn",
-  v.arrival_port as "arrivalPort", v.ref_address as "refAddress", v.ref_city as "refCity",
-  v.ref_state as "refState", v.ref_pincode as "refPincode", v.remarks,
-  case v.employed_in_india when true then 'yes' when false then 'no' end as "employedInIndia"`;
+  v.phone_abroad as "phoneAbroad", v.mobile_abroad as "mobileAbroad", ${VISIT_ANSWERS}`;
 
 companions.get("/:code/stays/:id/companions", async (c) => {
   const stayId = c.req.param("id");
@@ -99,8 +103,12 @@ companions.get("/:code/stays/:id/companions", async (c) => {
          left join form_iii_stays v on v.reservation_id = c.reservation_id and v.guest_id = c.guest_id
         where c.reservation_id = $1
         order by c.added_at, g.full_name`, [stayId]);
+    /* The lead's own row has no guest_id: "Same as the guest" (D27-386). */
+    const { rows: lead } = await client.query<Record<string, string | null>>(
+      `select ${VISIT_ANSWERS} from form_iii_stays v where v.reservation_id = $1 and v.guest_id is null`, [stayId]);
     return {
       ...head[0],
+      leadVisit: lead[0] ?? null,
       open: !GONE.includes(stay.status),
       companions: rows.map((r) => ({
         ...r, idNumber: maskedId(r["idType"] as string | null, r["idNumber"] as string | null),

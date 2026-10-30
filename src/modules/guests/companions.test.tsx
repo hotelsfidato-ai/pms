@@ -101,6 +101,27 @@ describe("adults in the room", () => {
     expect(save().disabled).toBe(true);
   });
 
+  it("copies the lead's visit answers to a foreigner, and only those (D27-386)", async () => {
+    people = { ...PEOPLE, leadVisit: { arrivedFrom: "Delhi", purpose: "Tourism", remarks: null } } as typeof PEOPLE;
+    block();
+    fireEvent.click(await screen.findByRole("button", { name: "Add an adult" }));
+    type(/^Full name/, "Bo Lima");
+    expect(screen.queryByRole("button", { name: "Same as the guest" }), "not for an Indian adult").toBeNull();
+    type(/^Nationality/, "GB");
+    fireEvent.click(screen.getByRole("button", { name: "Same as the guest" }));
+    expect((screen.getByLabelText(/^Arrived from/) as HTMLInputElement).value).toBe("Delhi");
+    fireEvent.click(save());
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]!.body).toMatchObject({ visit: { arrivedFrom: "Delhi", purpose: "Tourism" } });
+  });
+
+  it("offers no copy when the lead has answered nothing yet", async () => {
+    block();
+    fireEvent.click(await screen.findByRole("button", { name: "Add an adult" }));
+    type(/^Nationality/, "GB");
+    expect(screen.queryByRole("button", { name: "Same as the guest" })).toBeNull();
+  });
+
   it("opens Form III's boxes for a foreigner, none of them holding up Save", async () => {
     block();
     fireEvent.click(await screen.findByRole("button", { name: "Add an adult" }));

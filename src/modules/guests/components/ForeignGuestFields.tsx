@@ -79,6 +79,14 @@ const IDENTITY_KEYS = PERSON.map(([k]) => k).filter((k) => !CONTACTS.includes(k)
 
 /** Every answer, as typed. `employedInIndia` is "yes", "no" or "". */
 export type Particulars = Record<string, string>;
+
+/** "Same as the guest" (D27-386): the lead's visit answers over a companion's,
+    and only what the lead has. Their phones and document stay their own. */
+export function sameVisit(to: Particulars, lead: Record<string, string | null | undefined>): Particulars {
+  const next = { ...to };
+  for (const [k] of VISIT) { const v = lead[k]; if (v) next[k] = v; }
+  return next;
+}
 export const NO_PARTICULARS: Particulars = {};
 
 /** What the law's Form III needs - the server's rule, mirrored so the

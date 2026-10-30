@@ -22,6 +22,8 @@ export interface StayPeople {
   recorded: number;
   lead: string;
   leadNationality: string;
+  /** The lead's saved visit answers, for "Same as the guest". */
+  leadVisit: Record<string, string | null> | null;
   /** False for a booking that did not go ahead: nobody can be added. */
   open: boolean;
   companions: Companion[];

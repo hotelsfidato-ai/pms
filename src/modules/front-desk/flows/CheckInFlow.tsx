@@ -378,7 +378,7 @@ export function CheckInFlow({
                 missing here can stop Check in. */}
             <div className="pt-4 border-t border-grey-200" data-checkin-companions>
               <StayCompanions hotelId={hotelId} stayId={stay.id} today={businessDate}
-                adults={partyWrong ? undefined : adults} />
+                adults={partyWrong ? undefined : adults} leadAnswers={guestId.particulars} />
             </div>
 
             {/* ── ARRIVING EARLY ─────────────────────────────────

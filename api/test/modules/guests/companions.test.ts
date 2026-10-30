@@ -294,6 +294,16 @@ describe("a foreigner in the room", () => {
     await release(a.stay);
   });
 
+  it("gives the lead's saved visit answers for Same as the guest, and none before they are saved", async () => {
+    const a = await arrival("GB", 2);
+    expect((await json<{ leadVisit: unknown }>(`/stays/${a.stay}/companions`)).leadVisit).toBeNull();
+    await checkIn(a, "GB");
+    const { leadVisit } = await json<{ leadVisit: Record<string, unknown> }>(`/stays/${a.stay}/companions`);
+    expect(leadVisit).toMatchObject({ arrivedFrom: VISIT.arrivedFrom, purpose: VISIT.purpose });
+    expect(leadVisit, "their phones are their own").not.toHaveProperty("phoneInIndia");
+    await release(a.stay);
+  });
+
   it("beside a foreign lead: two rows, the warning on both, and the lead's own numbers", async () => {
     const a = await arrival("GB", 3);
     await checkIn(a, "GB");

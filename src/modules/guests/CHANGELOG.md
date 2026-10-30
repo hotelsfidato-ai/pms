@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-31 · Same as the guest (the owner's D27-386)
+
+**Shipped:** on Add an adult and Edit, for a foreigner, **Same as the guest** copies the lead's visit answers: on the check-in window the ones just typed, on the stay the saved ones (`leadVisit` on `GET /stays/:id/companions`). Never the phones or the document; only boxes the lead has answered; shown only when there is something to copy.
+**Proved:** `companions.test.tsx` and `companions.test.ts`: the copy, the payload, nothing for an Indian adult, nothing before the lead has answered, the phones left out.
+
+---
+
 ## 2026-10-30 · GUE-6: every adult in a room is recorded (the owner's D27-382)
 
 **Asked for:** name, nationality, ID type and number for every adult; a foreigner also the full Form III details and a row of their own on the register; entered at check-in or later; check-in never blocked; a missing person a warning. Replaces D27-25's warning and a portal number per person for the recording part.

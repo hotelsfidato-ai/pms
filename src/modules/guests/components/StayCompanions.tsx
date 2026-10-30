@@ -6,7 +6,7 @@ import { useCurrentHotel, useRole } from "@/lib/session";
 import {
   addCompanion, getCompanions, removeCompanion, saveCompanion, type Companion,
 } from "@/modules/guests/data/companions";
-import { ID_TYPES, particularsPayload } from "./ForeignGuestFields";
+import { ID_TYPES, particularsPayload, sameVisit, type Particulars } from "./ForeignGuestFields";
 import { GuestIdFields, deskGuestId, guestIdState, noGuestId, type GuestId } from "./GuestIdFields";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -26,13 +26,15 @@ const idWord = new Map<string, string>(ID_TYPES);
 export const peopleWords = (adults: number, recorded: number) =>
   `${adults} adult${adults === 1 ? "" : "s"}, ${recorded} recorded`;
 
-export function StayCompanions({ hotelId, stayId, today, adults }: {
+export function StayCompanions({ hotelId, stayId, today, adults, leadAnswers }: {
   hotelId: string;
   stayId: string;
   /** The hotel's business date: a birth date cannot be after it. */
   today: string;
   /** The party as the check-in window has it, before it is saved. */
   adults?: number;
+  /** The lead's answers as the check-in window has them, before they are saved. */
+  leadAnswers?: Particulars;
 }) {
   const may = can(useRole(), "edit", "customer");
   const qc = useQueryClient();
@@ -108,6 +110,7 @@ export function StayCompanions({ hotelId, stayId, today, adults }: {
       {editing && (
         <CompanionDialog hotelId={hotelId} stayId={stayId} today={today}
           person={editing === "new" ? null : editing} nationality={leadNationality}
+          leadVisit={leadAnswers ?? q.data.leadVisit ?? {}}
           onClose={() => setEditing(null)} />
       )}
     </section>
@@ -116,10 +119,10 @@ export function StayCompanions({ hotelId, stayId, today, adults }: {
 
 const NOT_ANSWERS = new Set(["guestId", "name", "nationality", "idType", "idNumber", "filed"]);
 
-function CompanionDialog({ hotelId, stayId, today, person, nationality, onClose }: {
+function CompanionDialog({ hotelId, stayId, today, person, nationality, leadVisit, onClose }: {
   hotelId: string; stayId: string; today: string; person: Companion | null;
   /** The lead guest's: where a party usually comes from, and it can be changed. */
-  nationality: string; onClose: () => void;
+  nationality: string; leadVisit: Record<string, string | null | undefined>; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const rules = useCurrentHotel()?.deskRules;
@@ -176,6 +179,13 @@ function CompanionDialog({ hotelId, stayId, today, person, nationality, onClose 
             </p>
           )}
           <GuestIdFields value={id} onChange={setId} today={today} companion />
+          {/* D27-386: a family's visit is one visit; the boxes stay theirs to change. */}
+          {s.foreign && Object.keys(sameVisit({}, leadVisit)).length > 0 && (
+            <Button variant="secondary" size="sm"
+              onClick={() => setId({ ...id, particulars: sameVisit(id.particulars, leadVisit) })}>
+              Same as the guest
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
