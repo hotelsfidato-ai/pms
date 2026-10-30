@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import App from "@/App";
 import { go, startSignedIn, signedIn, AGRA_HOTEL, withDemoHotel } from "@/test/app";
 import { useUi } from "@/lib/ui";
 import { mayReach, navigationFor } from "@/components/app/navigation";
-import { dayBookSheet, FORMATS, type DayBook } from "@/modules/accounting/data/accounting";
+import { dayBookSheet, FORMATS, type DayBook, type TallyLedgers } from "@/modules/accounting/data/accounting";
 import * as apiModule from "@/lib/api";
 import * as csvModule from "@/lib/csv";
 
@@ -16,9 +16,10 @@ import * as csvModule from "@/lib/csv";
 
      the file's last line agrees with the lines above it
      a day the night audit has not run is in the file, and says so
-     all three formats are offered, and the two that cannot produce a
-       file say why rather than sitting greyed out
-     the button does not offer a file it cannot write
+     all three formats are offered, and a Tally format with a ledger name
+       blank says WHICH, rather than sitting greyed out
+     the button does not offer a file it cannot write, and offers the Tally
+       file once every name is typed
      the menu and the page agree about who may open it
 
    The figures themselves are the server's and are proved there
@@ -28,12 +29,24 @@ import * as csvModule from "@/lib/csv";
 
 const ALL_ON = { pos: true, banquet: true, reception_pos: true };
 
-const control = vi.hoisted(() => ({ book: null as unknown }));
+const control = vi.hoisted(() => ({
+  book: null as unknown,
+  ledgers: null as unknown,
+  saved: [] as unknown[],
+}));
 
 vi.mock("@/modules/accounting/data/accounting", async (importOriginal) => {
   const actual = await importOriginal<
     typeof import("@/modules/accounting/data/accounting")>();
-  return { ...actual, getDayBook: vi.fn(async () => control.book) };
+  return {
+    ...actual,
+    getDayBook: vi.fn(async () => control.book),
+    getTallyLedgers: vi.fn(async () => control.ledgers),
+    saveTallyLedgers: vi.fn(async (_hotel: string, names: Record<string, string>) => {
+      control.saved.push(names);
+      return control.ledgers;
+    }),
+  };
 });
 
 /** Two days of the demo month: one the audit has closed, one it has not. */
@@ -47,18 +60,28 @@ const BOOK: DayBook = {
   from: "2026-08-24",
   to: "2026-08-25",
   days: [
-    { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, extraTax: 125.03,
+    { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, food: 2000.25, otherExtra: 500.25, extraTax: 125.03,
       pos: 0, posTax: 0, discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000, companyReceipt: 0,
       closed: true },
-    { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, extraTax: 20.01,
+    { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, food: 400.25, otherExtra: 0, extraTax: 20.01,
       pos: 640, posTax: 32, discount: 0, alcohol: 0, vat: 0, sales: 9040.25, tax: 1012.01, receipt: 5000, companyReceipt: 0,
       closed: false },
   ],
   total: {
-    room: 20000, roomTax: 2400, extra: 2900.75, extraTax: 145.04, pos: 640, posTax: 32,
+    room: 20000, roomTax: 2400, extra: 2900.75, food: 2400.5, otherExtra: 500.25, extraTax: 145.04, pos: 640, posTax: 32,
     discount: 1000, alcohol: 1200, vat: 120, sales: 23740.75, tax: 2577.04, receipt: 14000, companyReceipt: 0,
   },
   openDays: ["2026-08-25"],
+};
+
+/** The form as the server answers it: nothing typed yet. */
+const BLANK_LEDGERS: TallyLedgers = {
+  ledgers: [
+    { key: "room", label: "Room rent", what: "Room charges, night by night", name: null },
+    { key: "cgst", label: "CGST", what: "Half the GST", name: null },
+    { key: "cash", label: "Cash", what: "Money received this way", name: null },
+  ],
+  missing: ["Room rent", "CGST", "Cash"],
 };
 
 /** The general manager at the demo property - one of the three the
@@ -77,6 +100,8 @@ const asGm = () => {
 beforeEach(() => {
   startSignedIn(); withDemoHotel();
   control.book = BOOK;
+  control.ledgers = BLANK_LEDGERS;
+  control.saved = [];
 });
 
 /* ── The file ──────────────────────────────────────────────────────── */
@@ -96,6 +121,17 @@ describe("the day book, as the accountant opens it", () => {
       const summed = days.reduce((t, r) => t + Math.round((r[col] as number) * 100), 0);
       expect(Math.round((last[col] as number) * 100), `column ${headers[col]}`).toBe(summed);
     }
+  });
+
+  /* ACC-3: the one "Extra charges" column is two now, in both files. */
+  it("splits the extras into food charged to a room and the other extras", () => {
+    const { headers, rows } = dayBookSheet(BOOK);
+    const at = (h: string) => headers.indexOf(h);
+    expect(headers, "the old one number is gone").not.toContain("Extra charges");
+    expect(headers.slice(at("Room tax"), at("Extra tax") + 1))
+      .toEqual(["Room tax", "Food charged to a room", "Other extras", "Extra tax"]);
+    const day = rows.find((r) => r[0] === "2026-08-24")!;
+    expect([day[at("Food charged to a room")], day[at("Other extras")]]).toEqual([2000.25, 500.25]);
   });
 
   it("carries a day the night audit has not run, and says so", () => {
@@ -173,30 +209,66 @@ describe("the export screen", () => {
     }
   });
 
-  it("says why the two Tally formats produce nothing yet", async () => {
+  it("names the ledgers still blank, beside both Tally formats", async () => {
     open("FMT2");
-    /* Not a greyed-out control with no explanation beside it: the
-       reason is the owner's own - the ledger names in their books.
-       BOTH of them say it, which is why this counts rather than
-       finding one. A format that went quiet would pass a findByText. */
-    const said = await screen.findAllByText(/ledger names in your books/i);
-    expect(said).toHaveLength(FORMATS.filter((f) => f.blocked).length);
+    /* BOTH of them say it, which is why this counts rather than finding
+       one. A format that went quiet would pass a findByText. */
+    const said = await screen.findAllByText("Type these ledger names first: Room rent, CGST, Cash.");
     expect(said).toHaveLength(2);
   });
 
-  it("will not offer a file it cannot write", async () => {
+  it("will not offer a Tally file while a ledger name is blank", async () => {
     open("FMT3");
     /* Wait for the day book to arrive first. The button exists from the
        first paint and is correctly disabled until there is something to
        export - asserting on it before the read lands tests the loading
        state, not this one. */
     await screen.findByRole("table");
-    const button = await screen.findByRole("button", { name: /export/i });
+    await screen.findAllByText(/Type these ledger names first/);
+    const button = await screen.findByRole("button", { name: /^export/i });
     expect((button as HTMLButtonElement).disabled).toBe(false);
 
     fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
-    const after = await screen.findByRole("button", { name: /export/i });
+    const after = await screen.findByRole("button", { name: /^export/i });
     expect((after as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  /* D27-382: every name typed, and the two Tally files are on: each its own
+     file, from the server, and the blocking sentence gone. */
+  it("hands over the Tally file chosen once every name is typed", async () => {
+    control.ledgers = {
+      ledgers: BLANK_LEDGERS.ledgers.map((l) => ({ ...l, name: `${l.label} A/c` })),
+      missing: [],
+    };
+    const file = vi.spyOn(apiModule, "downloadFile").mockResolvedValue("x.xml");
+    try {
+      open("TLY1");
+      await screen.findByRole("table");
+      await screen.findByDisplayValue("Room rent A/c");
+      expect(screen.queryByText(/Type these ledger names first/)).toBeNull();
+
+      fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
+      expect(file).toHaveBeenLastCalledWith(
+        "/api/hotels/5EL/accounting/tally-prime.xml?from=2026-08-24&to=2026-08-25");
+
+      fireEvent.click(await screen.findByRole("radio", { name: /Tally ERP 9/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
+      expect(file).toHaveBeenLastCalledWith(
+        "/api/hotels/5EL/accounting/tally-erp9.xml?from=2026-08-24&to=2026-08-25");
+    } finally {
+      file.mockRestore();
+    }
+  });
+
+  it("says what the Tally file holds, and what it leaves out", async () => {
+    open("TLY2");
+    await screen.findByRole("table");
+    expect(screen.queryByText(/Not in the file/)).toBeNull();
+    fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
+    expect(await screen.findByText(/Not in the file: credit notes and cancelled VAT bills/)).toBeTruthy();
+    expect(await screen.findByText(/the file creates none/)).toBeTruthy();
+    expect(await screen.findByText(/its vouchers are replaced/)).toBeTruthy();
   });
 
   /* D22-37, the owner: "both the CSV and a real .xlsx" - Excel is a choice
@@ -207,12 +279,12 @@ describe("the export screen", () => {
     try {
       open("XLS1");
       await screen.findByRole("table");
-      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
       expect(csv).toHaveBeenCalledTimes(1);
       expect(xlsx).not.toHaveBeenCalled();
 
       fireEvent.click(await screen.findByRole("radio", { name: /Day book \(Excel\)/ }));
-      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
       expect(xlsx).toHaveBeenCalledWith(
         "/api/hotels/5EL/accounting/day-book.xlsx?from=2026-08-24&to=2026-08-25");
       expect(csv).toHaveBeenCalledTimes(1);
@@ -220,6 +292,21 @@ describe("the export screen", () => {
       xlsx.mockRestore();
       csv.mockRestore();
     }
+  });
+
+  /* D27-382: one name per ledger, typed by the Accountant. No name is offered:
+     a blank stays blank, and what is typed goes to the server as typed. */
+  it("offers every ledger blank, and sends what was typed", async () => {
+    open("LED1");
+    const room = await screen.findByLabelText(/^Room rent/) as HTMLInputElement;
+    const cash = await screen.findByLabelText(/^Cash/) as HTMLInputElement;
+    expect(room.value, "no name is ever suggested").toBe("");
+    expect(cash.value).toBe("");
+
+    fireEvent.change(room, { target: { value: "ROOM Rent & Stay" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Save ledger names/ }));
+    await waitFor(() => expect(control.saved).toHaveLength(1));
+    expect(control.saved[0]).toEqual({ room: "ROOM Rent & Stay", cgst: "", cash: "" });
   });
 
   it("names the days the night audit has not closed", async () => {
@@ -236,6 +323,13 @@ describe("the export screen", () => {
     expect(await screen.findByText(/bills that were issued/i)).toBeTruthy();
   });
 
+  /* ACC-3, the owner's D27-382: food has its own column, and the screen says
+     what each of the two holds. */
+  it("says what food charged to a room is, and what the other extras are", async () => {
+    open("FOD1");
+    expect(await screen.findByText(/Food charged to a room is food on a bill/i)).toBeTruthy();
+  });
+
   it("says when a range holds nothing, rather than handing over a file of nil", async () => {
     /* ACC-8. `dailyFigures` returns a row for every day of the range
        whether or not anything happened, so the table is NEVER empty and
@@ -244,11 +338,11 @@ describe("the export screen", () => {
     control.book = {
       ...BOOK,
       days: BOOK.days.map((d) => ({
-        ...d, room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
+        ...d, room: 0, roomTax: 0, extra: 0, food: 0, otherExtra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       })),
       total: {
-        room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
+        room: 0, roomTax: 0, extra: 0, food: 0, otherExtra: 0, extraTax: 0, pos: 0, posTax: 0,
         discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       },
     } satisfies DayBook;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Download, TriangleAlert, ReceiptText, Landmark, Wallet } from "lucide-react";
 import { useUi } from "@/lib/ui";
@@ -11,8 +11,9 @@ import {
 } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import {
-  FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx,
-  type DayBook, type DayBookRow, type ExportFormat,
+  FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx, downloadTally,
+  getTallyLedgers, saveTallyLedgers, whyNot,
+  type DayBook, type DayBookRow, type ExportFormat, type TallyLedgers,
 } from "@/modules/accounting/data/accounting";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -56,9 +57,16 @@ export default function AccountingPage() {
     enabled: Boolean(hotelId) && ordered,
   });
 
+  const ledgers = useQuery({
+    queryKey: ["accounting-tally-ledgers", hotelId],
+    queryFn: () => getTallyLedgers(hotelId),
+    enabled: Boolean(hotelId),
+  });
+
   const book = query.data ?? null;
   const chosen = FORMATS.find((f) => f.key === format) ?? FORMATS[0]!;
-  const canExport = Boolean(book?.days.length) && chosen.blocked === null;
+  const canExport = Boolean(book?.days.length) && whyNot(chosen.key, ledgers.data) === null;
+  const tally = format.startsWith("tally");
 
   return (
     <Page>
@@ -71,9 +79,10 @@ export default function AccountingPage() {
             disabled={!canExport}
             onClick={() => {
               if (!book) return;
-              if (format !== "day-book-xlsx") return downloadDayBook(book);
-              downloadDayBookXlsx(book).catch((error: unknown) => toast.error(
-                "The Excel file was not made",
+              if (format === "day-book-csv") return downloadDayBook(book);
+              const made = tally ? downloadTally(book, format) : downloadDayBookXlsx(book);
+              made.catch((error: unknown) => toast.error(
+                tally ? "The Tally file was not made" : "The Excel file was not made",
                 error instanceof ApiError ? error.message : String(error)));
             }}
           >
@@ -104,9 +113,9 @@ export default function AccountingPage() {
           </Field>
 
           {/* All three formats are offered (D18-16): whoever exports
-              picks what their accountant asks for. Two of them say
-              plainly why they produce nothing yet, rather than being
-              greyed out with no reason beside them. */}
+              picks what their accountant asks for. A Tally format with a
+              ledger name still blank says which, rather than being greyed
+              out with no reason beside it (D27-382). */}
           <fieldset className="sm:col-span-2">
             <legend className="text-sm font-medium text-ink-900 mb-2">Format</legend>
             <div className="grid gap-2">
@@ -126,16 +135,46 @@ export default function AccountingPage() {
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-ink-900">{f.label}</span>
                     <span className="block text-sm text-grey-500 mt-0.5">{f.what}</span>
-                    {f.blocked && (
-                      <span className="block text-sm text-brand-yellow-800 mt-1">{f.blocked}</span>
+                    {whyNot(f.key, ledgers.data) && (
+                      <span className="block text-sm text-brand-yellow-800 mt-1">{whyNot(f.key, ledgers.data)}</span>
                     )}
                   </span>
                 </label>
               ))}
             </div>
           </fieldset>
+
+          {/* What a Tally file is and is not (ACC-4). Said before the press,
+              because a voucher in somebody's books is hard to take back. */}
+          {tally && (
+            <div className="sm:col-span-2 text-sm text-grey-600 grid gap-2">
+              <p>
+                One Sales voucher a day, what was paid on bills, refunds, bills moved to a
+                company and each company receipt, for days the night audit has closed.
+                The ledgers must already be in Tally: the file creates none. A name that
+                does not match stops that voucher and Tally takes the rest, so read what
+                Tally reports. Put the name right, export the day again and import it again.
+              </p>
+              <p>
+                Not in the file: credit notes and cancelled VAT bills, which the day book
+                does not count; NC bills, which have no value; supplier bills, cash
+                expenses and cash banked. A day's voucher does not list each bill.
+              </p>
+              <p>
+                If a closed day is corrected, export it again and its vouchers are replaced.
+                A voucher the corrected day no longer has stays in Tally until it is deleted there.
+              </p>
+            </div>
+          )}
         </CardBody>
       </Card>
+
+      {ledgers.isError ? (
+        <ReadFailed error={readError(ledgers)} what="the ledger names" onRetry={() => void ledgers.refetch()} />
+      ) : ledgers.data ? (
+        /* Keyed by hotel: what was typed for one hotel is never offered as another's. */
+        <LedgerNames key={hotelId} hotelId={hotelId} answer={ledgers.data} />
+      ) : null}
 
       {query.isError ? (
         <ReadFailed
@@ -158,6 +197,54 @@ export default function AccountingPage() {
   );
 }
 
+/* ── The ledger names in the hotel's Tally (D27-382) ───────────────── */
+
+/** One name per ledger, exactly as in the hotel's Tally. No name is ever
+    suggested: a blank stays blank, and the labels are this system's words for
+    what a ledger is for, never a name. */
+function LedgerNames({ hotelId, answer }: { hotelId: string; answer: TallyLedgers }) {
+  const queryClient = useQueryClient();
+  const [typed, setTyped] = useState<Record<string, string>>({});
+  const value = (key: string, name: string | null) => typed[key] ?? name ?? "";
+
+  const save = useMutation({
+    mutationFn: () => saveTallyLedgers(hotelId, Object.fromEntries(
+      answer.ledgers.map((l) => [l.key, value(l.key, l.name)]))),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["accounting-tally-ledgers", hotelId], next);
+      setTyped({});
+      toast.success("Ledger names saved");
+    },
+    onError: (error: unknown) => toast.error(
+      "The ledger names were not saved",
+      error instanceof ApiError ? error.message : String(error)),
+  });
+
+  return (
+    <Card className="mb-5">
+      <CardHeader
+        title="Tally ledger names"
+        description="Type each name exactly as it is in this hotel's Tally. No name is suggested, and none is made here."
+      />
+      <CardBody className="grid gap-4 sm:grid-cols-2">
+        {answer.ledgers.map((l) => (
+          <Field key={l.key} label={l.label} hint={l.what}>
+            {(p) => (
+              <Input {...fieldProps(p)} value={value(l.key, l.name)} maxLength={200}
+                onChange={(e) => setTyped((t) => ({ ...t, [l.key]: e.target.value }))} />
+            )}
+          </Field>
+        ))}
+        <div className="sm:col-span-2">
+          <Button variant="primary" disabled={save.isPending} onClick={() => save.mutate()}>
+            Save ledger names
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 /* ── The file, drawn ───────────────────────────────────────────────── */
 
 const cash = (v: number) => moneyPrecise(v);
@@ -169,12 +256,14 @@ const quiet = (book: DayBook) =>
   && book.total.receipt === 0 && (book.total.companyReceipt ?? 0) === 0;
 
 const COLUMNS: Column<DayBookRow>[] = [
-  /* One line: fourteen columns since D24-24, and a date broken over three
+  /* One line: fifteen columns since ACC-3, and a date broken over three
      lines reads as three rows. The table scrolls inside its card instead. */
   { key: "date", header: "Date", cell: (d) => <span className="whitespace-nowrap">{dateShort(d.date)}</span> },
   { key: "room", header: "Room revenue", numeric: true, cell: (d) => cash(d.room) },
   { key: "roomTax", header: "Room tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.roomTax) },
-  { key: "extra", header: "Extra charges", numeric: true, cell: (d) => cash(d.extra) },
+  /* Food on a bill, apart from the other extras (ACC-3, D27-382). */
+  { key: "food", header: "Food charged to a room", numeric: true, cell: (d) => cash(d.food) },
+  { key: "otherExtra", header: "Other extras", numeric: true, cell: (d) => cash(d.otherExtra) },
   { key: "extraTax", header: "Extra tax", numeric: true, hideBelow: "lg", cell: (d) => cash(d.extraTax) },
   /* What the outlets took, as the file has it (D24-24). */
   { key: "pos", header: "Restaurant", numeric: true, hideBelow: "lg", cell: (d) => cash(d.pos) },
@@ -244,6 +333,16 @@ function DayBookTable({ book, loading }: { book: DayBook | null; loading: boolea
           This counts what was charged and received each day. The Lodging tax
           report counts the bills that were issued, so a stay still in house
           appears here and not there.
+        </p>
+      )}
+
+      {/* ACC-3, the owner's D27-382. Said where the two columns are read. */}
+      {book && book.days.length > 0 && (
+        <p className="text-sm text-grey-600 mt-2">
+          Food charged to a room is food on a bill: charged at the desk, or a
+          restaurant bill charged to a room or a function. Other extras are
+          laundry, the spa, drinks that are not alcohol, late check-out and the
+          rest. What the restaurant took itself is under Restaurant.
         </p>
       )}
 

@@ -359,6 +359,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
+  /* The Accountant, the GM, the owner and an Admin (D27-382): who may export. */
+  [`PUT ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
   /* Send invoice (D27-252, D27-261): whoever may issue it may send it. */
@@ -926,6 +928,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/discounts`]: see("setting", "the money settings"),
   [`GET ${H}/commission`]: see("setting", "the money settings"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
+  [`GET ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
+  [`GET ${H}/accounting/:file{tally-(?:prime|erp9)\\.xml}`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
 
   /* ── Reports ── */
   /* The Dashboard's Due out tile: what departing guests still owe (D27-243). */

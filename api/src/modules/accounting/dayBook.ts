@@ -3,8 +3,8 @@ import type { Client } from "../../db.ts";
 import { dayBookSheet, companyReceiptsSheet } from "./sheet.ts";
 import { companyReceipts, type CompanyReceipt } from "../finance/index.ts";
 import {
-  dailyFigures, sumDays, heading, posSales,
-  type DayFigures, type PosDay, type Property,
+  dailyFigures, dailyExtras, sumDays, heading, posSales, round2,
+  type DayFigures, type ExtraLine, type PosDay, type Property,
 } from "../reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -30,21 +30,21 @@ import {
    move an Akkalkot sale into the previous day on the way past.
    ══════════════════════════════════════════════════════════════════ */
 
-/** Paise, not floating dust. The same one line as the reports service's
-    `round2` (api/src/modules/reports/document.ts), which its front door
-    does not export - asked of the master, and recorded in MODULE.md. */
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
 export interface DayBookRow {
   date: string;
   /** Room revenue, and the tax on it. */
   room: number;
   roomTax: number;
-  /** Everything charged that is neither a room nor money: food, the
-      restaurant's postings, laundry, the spa, late check-out and the
-      rest. ONE LINE IN THIS VERSION - the reports door does not yet
-      export the Manager report's split by kind (MODULE.md, Requests). */
+  /** Everything charged that is neither a room nor money, alcohol apart:
+      `food` + `otherExtra`, always (ACC-3). */
   extra: number;
+  /** FOOD ON A BILL (ACC-3, the owner's D27-382, which Tally needs): the
+      desk's food charges and a restaurant bill charged to a room or a
+      function. What the outlets took themselves is `pos`. */
+  food: number;
+  /** The rest of `extra`: drinks that are not alcohol, laundry, the spa,
+      the minibar, late check-out, a no-show's retention and so on. */
+  otherExtra: number;
   extraTax: number;
   /** Positive: the discount given away. */
   discount: number;
@@ -145,6 +145,12 @@ async function closedDays(
     hotel, `posSales` for the outlets. Neither is computed here. */
 type Outlets = Pick<PosDay, "net" | "tax" | "alcohol" | "vat">;
 
+/** Of the reports door's extras, what `extra` holds: a charge, not a
+    discount, not a tax line, not alcohol (its own column, D21-91). */
+const charged = (lines: readonly ExtraLine[], kind: (l: ExtraLine) => boolean) =>
+  round2(lines.filter((l) => !l.vat && l.category !== "discount" && l.category !== "tax" && kind(l))
+    .reduce((t, l) => t + l.amount, 0));
+
 /** A day's columns, and the total's, from the reports door's figures.
     Alcohol and its VAT are named inside `extra`/`extraTax` and the outlets'
     `net`/`tax` by the reports door; here they are only moved into their own
@@ -153,10 +159,13 @@ const columns = (
   f: Pick<DayFigures, "room" | "extra" | "extraTax" | "alcohol" | "vat" | "discount" | "receipt">
     & { roomTax: number },
   pos: Outlets,
+  extras: readonly ExtraLine[],
 ): Omit<DayBookTotal, "companyReceipt"> => ({
   room: f.room,
   roomTax: f.roomTax,
   extra: round2(f.extra - f.alcohol),
+  food: charged(extras, (l) => l.category === "food"),
+  otherExtra: charged(extras, (l) => l.category !== "food"),
   extraTax: round2(f.extraTax - f.vat),
   discount: f.discount,
   /* Its own column, because an accountant asked what the restaurant
@@ -197,13 +206,14 @@ export async function dayBook(
   const closed = await closedDays(client, property.id, from, to);
   const outlets = new Map(
     (await posSales(client, property.id, from, to)).map((p) => [p.date, p]));
+  const extras = await dailyExtras(client, property.id, from, to);
   const received = await companyReceipts(client, property.id, from, to);
   const receivedOn = (date: string) =>
     round2(received.filter((r) => r.date === date).reduce((t, r) => t + r.amount, 0));
 
   const days: DayBookRow[] = figures.map((f) => ({
     date: f.date,
-    ...columns(f, outlets.get(f.date) ?? NO_POS),
+    ...columns(f, outlets.get(f.date) ?? NO_POS, extras.filter((l) => l.date === f.date)),
     companyReceipt: receivedOn(f.date),
     closed: closed.has(f.date),
   }));
@@ -231,7 +241,7 @@ export async function dayBook(
     days,
     /* Every day is priced (above), so their total is too. */
     total: {
-      ...columns({ ...t, roomTax: t.roomTax! }, posTotal),
+      ...columns({ ...t, roomTax: t.roomTax! }, posTotal, extras),
       companyReceipt: round2(received.reduce((s, r) => s + r.amount, 0)),
     },
     openDays: days.filter((d) => !d.closed).map((d) => d.date),

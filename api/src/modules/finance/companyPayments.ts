@@ -40,7 +40,12 @@ const ACCOUNT = `coalesce(co.name, bs.name)`;
 
 /** One company receipt, as the accountant's day book lists it (D27-242). */
 export interface CompanyReceipt {
-  date: string; account: string; method: string; reference: string | null; amount: number;
+  /** Stable, so a Tally voucher made from it is the same one next time. */
+  id: string;
+  date: string; account: string;
+  /** In words, and the key a ledger is typed against (ACC-4). */
+  method: string; kind: string;
+  reference: string | null; amount: number;
 }
 
 /**
@@ -54,9 +59,9 @@ export async function companyReceipts(
   client: Client, hotelId: string, from: string, to: string,
 ): Promise<CompanyReceipt[]> {
   const { rows } = await client.query<{
-    date: string; account: string; method: string; reference: string | null; amount: string;
+    id: string; date: string; account: string; method: string; reference: string | null; amount: string;
   }>(
-    `select cp.received_on::text as date, ${ACCOUNT} as account, cp.method, cp.reference,
+    `select cp.id::text, cp.received_on::text as date, ${ACCOUNT} as account, cp.method, cp.reference,
             cp.amount::text
        from company_payments cp
        left join companies co on co.id = cp.company_id
@@ -67,7 +72,8 @@ export async function companyReceipts(
       order by cp.received_on, cp.recorded_at`,
     [hotelId, from, to]);
   return rows.map((r) => ({
-    date: r.date, account: r.account, method: COMPANY_PAYMENT_METHODS[r.method] ?? r.method,
+    id: r.id, date: r.date, account: r.account, kind: r.method,
+    method: COMPANY_PAYMENT_METHODS[r.method] ?? r.method,
     reference: r.reference, amount: Number(r.amount),
   }));
 }

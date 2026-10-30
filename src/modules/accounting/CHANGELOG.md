@@ -11,6 +11,86 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-31 · The two Tally files, proved on a real TallyPrime (ACC-4, the owner's D27-382) - release 17
+
+**Asked for:** the master: Tally Prime and Tally ERP 9 XML, sales and receipt
+vouchers from the day book's own figures, vouchers only, every voucher balanced
+or the day refused in a sentence, off until the form is complete. Then, with a
+real TallyPrime 7.2 on this PC: prove the import, not only the file's shape.
+**Shipped:** `tally.ts`: one Sales voucher a day, a Receipt voucher for what was
+paid on bills, a Payment voucher for refunds, a Journal voucher for bills moved
+to a company, and a Receipt voucher per company receipt. `GET
+/:code/accounting/tally-prime.xml` and `tally-erp9.xml`, sharing every refusal
+with the day book (`exported`). The reports door gains `dailyPayments` (lifted
+out of the Manager report) and the outlets' tenders and round off on `posSales`;
+finance's `companyReceipts` gains each receipt's id and kind. The screen names
+the blank ledgers beside both formats and says what a file holds and leaves out.
+**Found:** see `MODULE.md`, "What a real TallyPrime did", and DEFECTS ACC-12,
+ACC-13, ACC-14. A misspelt ledger stops one voucher and Tally takes the rest of
+the file; `ERRORS` stays 0 throughout, so `CREATED` and `EXCEPTIONS` are the
+figures to read; a voucher a corrected day no longer has stays in Tally. A receipts
+check that no data could reach was taken out rather than called a guard (ACC-8).
+**Proved in TallyPrime 7.2 (Educational Mode, `FidatoPractice`, XML port, demo
+data):** the real export: 5 vouchers, `CREATED 5`, `ERRORS 0`, `EXCEPTIONS 0`,
+Tally's Day Book debit and credit 14,157.33, ten figures equal to the day book's
+to the paisa. A corrected day: `ALTERED 4`, nothing doubled. Names with `&` and an
+apostrophe exact. The final code writes those files byte for byte, apart from a
+receipt's fresh id.
+**Proved here:** on this branch with cp6 merged: 14 API files, 331 passed, with
+`resetOrder` and `roleGate`; `db/tests/run.sh` all 1,892 assertions passed;
+`rerun.sh` all 254 migrations re-runnable; web 5 files, 30 passed; both type
+checks clean. 15 more guards broken one at a time, each failing on an assertion,
+each restored from a saved copy: a voucher that does not balance, a day not
+closed, a blank name, a payment with no way recorded, `&`, an apostrophe, the
+signs, vouchers only, what a hotel has used, the `PUT` and the file's role checks,
+forced row security, a name as typed, and on the screen the sentence and Export.
+**Not proved:** Tally ERP 9 (only its shape; Prime accepting that shape says
+nothing about ERP 9); the file through Alt+O; a licensed copy; Tally's GST
+reports. **The first real proof is the Accountant importing one day into a copy of
+the company in Tally.**
+**Left open:** ACC-12, and the questions in the master's report. In
+`FidatoPractice`, left in place: 16 test ledgers and 2 probe ledgers, and vouchers
+on 1 and 2 Jun, 31 Jul, 2 Aug, 31 May and 31 Aug. Its "(e) Data exceptions exist" is
+my six refused probes, held outside the books; it needs Tally's screen to clear.
+
+---
+
+## 2026-10-30 · The ledger names, one form per hotel (the owner's D27-382) - release 17
+
+**Asked for:** the master, with the owner's words: a small page per hotel where
+the Accountant types each ledger name exactly as in their Tally, and no name is
+ever invented.
+**Shipped:** migration 254 `tally_ledger_names` (setup, forced row security,
+audited, `app.test_hotel_classes()` from 251 with it added); `ledgers.ts` works
+out the list per hotel; `GET` and `PUT /:code/accounting/tally-ledgers`, whoever
+may export, both `own` in the role gate; a card on the Accounting export screen.
+**Proved:** `ledgers.test.ts` 11 passed; `db/tests/run.sh` 1,871 passed, 14 of
+them new; web `accounting.test.tsx` 19 passed. Five guards broken one at a time
+and seen to fail on an assertion, each restored from a saved copy and confirmed
+by count; the PUT route's role check and the database's two are the next
+entry's.
+**Left open:** nothing here: cp6 was merged on 31 October and 254's class list
+is 253's with this table added, 178 entries become 179 and none is lost.
+
+---
+
+## 2026-10-30 · Food is its own line (ACC-3, the owner's D27-382) - release 17
+
+**Asked for:** the master, with the owner's D27-382: the Manager report's split
+by kind through the reports door, and separate day book columns for food
+charged to a room and the other extras, without moving a day's totals.
+**Shipped:** `dailyExtras()` lifted out of `builders/manager.ts` into
+`figures.ts` and exported from the reports door, with `round2` (the copy in
+`dayBook.ts` is gone, ACC-5). The day book has `food` and `otherExtra`; the
+screen, the CSV and the Excel file show them in place of Extra charges, and the
+screen says what each holds.
+**Proved:** `dayBook.test.ts` with three other files, 73 passed; web
+`accounting.test.tsx` 18 passed. Both guards broken and seen to fail on an
+assertion, restored from a saved copy, counts confirmed (DEFECTS, ACC-3).
+**Left open:** the Tally files, the next two entries' work.
+
+---
+
 ## 2026-10-02 · What companies paid, as receipts apart from sales (the owner's D27-239, Q4) - the cash lane's
 
 **Asked for:** the master, with the owner's answer: company and booking-site
