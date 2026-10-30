@@ -78,13 +78,16 @@ export function guestIdPayload(id: GuestId) {
   };
 }
 
-export function GuestIdFields({ value, onChange, today, withDocument = true }: {
+export function GuestIdFields({ value, onChange, today, withDocument = true, companion = false }: {
   value: GuestId;
   onChange: (next: GuestId) => void;
   today: string;
   /** False for a booking that does not arrive today: its document is taken
       at check-in, so only the nationality is asked (and kept). */
   withDocument?: boolean;
+  /** Another adult in the room (D27-382): nothing here holds up the check-in,
+      so no reason for a missing ID is asked and an expired one is only said. */
+  companion?: boolean;
 }) {
   const idsOff = useCurrentHotel()?.deskRules?.idTypesOff ?? [];
 
@@ -131,7 +134,7 @@ export function GuestIdFields({ value, onChange, today, withDocument = true }: {
               )}
             </Field>
           </div>
-          {!s.captured && (
+          {!s.captured && !companion && (
             <Field label="Reason for skipping" required>
               {(f) => (
                 <Input {...fieldProps(f)} value={value.idSkipReason}
@@ -145,7 +148,7 @@ export function GuestIdFields({ value, onChange, today, withDocument = true }: {
           {s.foreign && (
             <ForeignGuestFields value={value.particulars}
               onChange={(particulars) => set({ particulars })}
-              nationality={value.nationality} idCaptured={s.captured} />
+              nationality={value.nationality} idCaptured={s.captured} nothingRequired={companion} />
           )}
           {s.formIII.length > 0 && (
             <p className="text-sm text-grey-600" data-form-iii-needs>
@@ -153,11 +156,13 @@ export function GuestIdFields({ value, onChange, today, withDocument = true }: {
             </p>
           )}
           {s.wrong && <p className="text-sm text-brand-red-700" data-id-wrong>{s.wrong}</p>}
-          {s.expired.length > 0 && (
+          {s.expired.length > 0 && (companion ? (
+            <p className="text-sm text-warning-dark">{s.expired.join(" ")} It is recorded as typed.</p>
+          ) : (
             <Switch checked={value.expiredOk} onCheckedChange={(expiredOk) => set({ expiredOk })}
               label="Check in anyway"
               description={`${s.expired.join(" ")} It is recorded as typed.`} />
-          )}
+          ))}
         </>
       )}
     </div>

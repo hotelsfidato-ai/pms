@@ -937,7 +937,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>The marks</td><td>The status, and the guest's marks such as VIP.</td></tr>
       <tr><td>The one main button</td><td><span class="ui">Check in</span> for a guest still to arrive (not on the Upcoming list); <span class="ui">Settle and check out</span> for a guest in the house (it opens the Bill tab).</td></tr>
       <tr><td><span class="ui">More options</span></td><td>The rarer acts: <span class="ui">Change dates or guests</span>, <span class="ui">View voucher</span>, <span class="ui">Move to another room</span>, <span class="ui">Exchange with another guest</span>, <span class="ui">What this booking includes</span>, <span class="ui">Change rate</span> (owner, Admin and GM), and at the end, in red, <span class="ui">Cancel this booking</span> and <span class="ui">Void this booking</span>. An option you cannot use says why, for example <span class="msg">“This stay is over.”</span> Chapter A2 covers each one.</td></tr>
-      <tr><td><span class="ui">Stay</span> tab</td><td><b>Stay</b>: Arrival, Departure, Nights, Room (or <span class="msg">“Deluxe · no room yet”</span>), Guests. <b>Rate</b>: Rate plan, Per night, Rack rate. <b>Booked through</b>: Source, Business source, Segment, Sold by.</td></tr>
+      <tr><td><span class="ui">Stay</span> tab</td><td><b>Stay</b>: Arrival, Departure, Nights, Room (or <span class="msg">“Deluxe · no room yet”</span>), Guests. <b>Rate</b>: Rate plan, Per night, Rack rate. <b>Booked through</b>: Source, Business source, Segment, Sold by. For whoever records IDs, <b>Adults in the room</b>: everybody on the stay, and how many are recorded (A3.3).</td></tr>
       <tr><td><span class="ui">Bill</span> tab</td><td>The guest's bill (chapter A4).</td></tr>
       <tr><td>The foot</td><td>Always in view: <span class="ui">Charged</span>, <span class="ui">Paid</span> and the <span class="ui">Balance</span>. The last one reads <span class="ui">Due</span> while tonight's room charge is still to be added, with that charge and its GST counted in; <span class="ui">In advance</span> when the guest has paid ahead; <span class="ui">Overpaid</span> after they leave with credit.</td></tr>
     </tbody>
@@ -1639,7 +1639,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Under <span class="ui">ID</span>, choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>. Check in now records them; Save booking keeps only the nationality.</li>
     <li>If the room is being given before the hotel's check-in time, type <span class="ui">Why the room is being given early</span>.</li>
     <li>Take an advance if the guest pays now.</li>
-    <li>Tap <span class="ui">Check in now</span>, the filled button.</li>
+    <li>Tap <span class="ui">Check in now</span>, the filled button. The card that follows has <span class="ui">Adults in the room</span>, to add the other adults (A3.3). They never hold up the check-in.</li>
   </ol>
 
   <figure class="shot" id="fig-A2-07">
@@ -2320,18 +2320,57 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
+  <h3>The other adults in the room</h3>
+  <p>Every adult in the room is recorded: their name, nationality, and ID type and number. A foreigner also has the full Form III details and a row of their own on the Form III screen (A3.5). Under the ID, <span class="ui">Adults in the room</span> names the guest on the booking and each adult added, with a pill: <span class="msg">“2 adults, 1 recorded”</span>, yellow while somebody is missing. A child is not asked for, though one can be added.</p>
+  <p>The same block is on the stay panel, on the <span class="ui">Stay</span> tab, for anybody who arrives later or whose ID comes later; and on the card New booking shows when a walk-in has been checked in. <b>It never stops a check-in:</b> <span class="ui">Check in</span> does not wait for it, and each person is saved on their own.</p>
+
+  <h3>To add an adult</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Add an adult</span>.</li>
+    <li>Type their <span class="ui">Full name</span>, as on the document. <span class="ui">Nationality</span> starts on the guest's: change it if theirs is different.</li>
+    <li>Choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>. The checks are those above. With no document to hand, leave it: no reason is asked, the name is saved, and the line says <span class="msg">“ID not recorded”</span>. They are counted as recorded once the number is typed.</li>
+    <li>For a foreigner the Form III boxes open. Fill in what you have: none is needed now. The rest can be done with <span class="ui">Edit</span>, or with <span class="ui">Complete details</span> on the Form III screen.</li>
+    <li>Click <span class="ui">Save</span>. It is on the stay at once, whether or not the check-in goes ahead.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-08a">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A3-T20 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code>, a booking for 2 adults, Check in</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>The plan is in <code>shots/a3.mjs</code>. One adult added with a passport, nothing else saved.</dd>
+        <dt>Arrows</dt><dd>1 → the pill “2 adults, 2 recorded” or “2 adults, 1 recorded”; 2 → Add an adult; 3 → the line of the adult added</dd>
+        <dt>File</dt><dd><code>img/A3-T20.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A3-07a.</b> Adults in the room, on the Check in window.</figcaption>
+    <ol class="callouts">
+      <li>The adults of the booking, and how many are recorded</li>
+      <li>Add an adult</li>
+      <li>One added: their nationality and ID; Edit and Remove</li>
+    </ol>
+  </figure>
+
+  <p><span class="ui">Edit</span> opens the same window with their details. It says what is on record, an Aadhaar as its last four digits, <span class="msg">“Fill in the document only to replace it.”</span> <span class="ui">Remove</span> asks <span class="msg">“Remove them and their ID?”</span>: <span class="ui">Keep</span> or <span class="ui">Remove</span>. Removed, their ID and their answers go with them. Once a Form III number is recorded for a person, the line says <span class="msg">“Form III filed: corrected on the register.”</span>: they stay on the stay (the record is kept for a year), and their details are corrected with <span class="ui">Complete details</span> (A3.5).</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
       <li>A nationality that is not a country, such as ZZ, is refused: <span class="msg">“"ZZ" is not a country code. Type the two letters, e.g. IN, GB or US.”</span></li>
       <li>"IN" typed in the box never replaces a foreign nationality already on the guest's record. A wrong nationality is corrected on the guest's record (A10.3).</li>
-      <li>One ID per stay: the guest the booking is under. The other adults' IDs are not asked.</li>
+      <li>Adults in the room is for the people who record IDs: the owner, an Admin, the GM, the Hotel Manager and Reception. Nobody else sees it, and a companion's ID is kept as the guest's is.</li>
+      <li>Each room of a group has its own adults, on its own stay.</li>
+      <li>A room move, a longer stay or a change of dates does not touch them. With fewer adults on the booking than people recorded, nobody is taken off and there is no warning.</li>
+      <li>A cancelled, voided or no-show booking keeps who was on it, and nobody can be added to it.</li>
+      <li>The ID photo is still one per stay: the guest the booking is under.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The ID and Form III's boxes are one set of fields shared by check-in and New booking, so they cannot ask different questions: <span class="d">D27-158</span>. The hotel's own starting nationality and ID: <span class="d">D27-243</span>; ID types the hotel does not take are left out: <span class="d">D27-260</span>. "IN" never overwrites a foreign guest's nationality: <span class="d">D27-197</span>. The desk adds the ID photo for a guest who sent none: <span class="d">D27-210</span>. One ID per stay: <span class="d">D27-212</span>.</p>
+    <p>The ID and Form III's boxes are one set of fields shared by check-in and New booking, so they cannot ask different questions: <span class="d">D27-158</span>. The hotel's own starting nationality and ID: <span class="d">D27-243</span>; ID types the hotel does not take are left out: <span class="d">D27-260</span>. "IN" never overwrites a foreign guest's nationality: <span class="d">D27-197</span>. The desk adds the ID photo for a guest who sent none: <span class="d">D27-210</span>. One ID photo per stay: <span class="d">D27-212</span>. Every adult in a room is recorded, entered at check-in or later, and check-in is never blocked; a missing person is a warning: <span class="d">D27-382</span>.</p>
   </div>
 
   <!-- A3.4 -->
@@ -2377,7 +2416,7 @@ figure.shot.phone img { max-width: 72mm; }
     <h4>Watch out</h4>
     <ul>
       <li>The server refuses by itself if a starred box is blank: <span class="msg">“Form III needs a foreign guest's visa or OCI number, visa type, phone in India, ….”</span></li>
-      <li>Each foreigner in the room needs their own Form III. The booking knows only its lead guest, so the Form III screen warns when a room holds more than one person (A3.5).</li>
+      <li>Each foreigner in the room needs their own Form III: add them under <span class="ui">Adults in the room</span> (A3.3), and they have their own row on the Form III screen, under an Indian guest too (A3.5).</li>
       <li>A test hotel's Form III card carries <span class="msg">“TEST · NOT VALID”</span>, so a practice guest's card is never filed.</li>
     </ul>
   </div>
@@ -2395,11 +2434,13 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>To record a filing</h3>
   <ol class="steps">
     <li>Read the badge beside the heading: <span class="msg">“1 due”</span> in yellow, or <span class="msg">“1 overdue”</span> in red. The line under the heading says <span class="msg">“Foreign guests reported to the FRRO: arrival and departure, each within 24 hours (Form III, earlier called Form C).”</span></li>
-    <li>Find the guest. A row shows the guest, their nationality, the room and how many are in it, and <span class="ui">Passport</span> (<span class="msg">“not on record”</span> in red where none is kept).</li>
+    <li>Find the guest. Every foreigner on a stay has a row of their own: the person, their nationality, the room and how many are in it, and <span class="ui">Passport</span> (<span class="msg">“not on record”</span> in red where none is kept). A stay with an adult still to record says so on the row, in yellow: <span class="msg">“2 adults, 1 recorded”</span>. It is a warning: nothing is refused.</li>
     <li>In the <span class="ui">Arrival</span> cell, read the time of check-in and <span class="ui">due</span> or <span class="ui">overdue</span> with the time it is due by. File it on the portal.</li>
-    <li>Click <span class="ui">Record number</span>, type the number the portal gives back in <span class="ui">Portal number</span>, and click <span class="ui">Save</span>. The number is required: <span class="ui">Save</span> stays grey until one is typed. The cell then reads <span class="ui">filed</span> with the number. For another person in the room, click <span class="ui">Add a number</span>.</li>
+    <li>Click <span class="ui">Record number</span>, type the number the portal gives back in <span class="ui">Portal number</span>, and click <span class="ui">Save</span>. The number is required: <span class="ui">Save</span> stays grey until one is typed. The cell then reads <span class="ui">filed</span> with the number. Each person's number goes on their own row; the badge counts each person still owed. <span class="ui">Add a number</span> is for a second number, or for somebody who was never added: the stay's earlier numbers stay on the guest's row.</li>
     <li>When the guest has checked out, the <span class="ui">Departure</span> cell works the same way. Before that it says <span class="msg">“In house”</span>.</li>
   </ol>
+
+  <p>An Indian guest has no row here, and an adult nobody has recorded may be a foreigner. So above the list, for the stays in house with somebody missing: <span class="msg">“Adults not recorded in house, each may be a foreigner: room 204 (2 adults, 1 recorded).”</span> Add them on the stay.</p>
 
   <figure class="shot" id="fig-A3-10">
     <img src="img/A3-T5.png" alt="The Form III screen: the 1 due badge, the note This system does not file with the FRRO, a row for A3 Test Smith with passport A1234567, the Portal number box with Save and Cancel, Complete details and the printer icon">
@@ -2415,7 +2456,7 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <ul>
-    <li><span class="ui">Complete details</span> opens the same boxes as check-in, with the guest's answers in them. After check-out it also asks <span class="ui">Next destination</span> (A5.8). Click <span class="ui">Save</span>.</li>
+    <li><span class="ui">Complete details</span> opens the same boxes as check-in, with the guest's answers in them, and the <span class="ui">Document</span> and its <span class="ui">Number</span>. A passport skipped at check-in is recorded here, with the same checks as A3.3, and the row then shows it in place of <span class="msg">“not on record”</span>. After check-out it also asks <span class="ui">Next destination</span> (A5.8). Click <span class="ui">Save</span>.</li>
     <li>The printer icon opens the <span class="ui">Form III</span> card: the premises, the foreigner, the arrival, the departure and the portal's other boxes, with two signature lines, one for arrival and one for departure. Click <span class="ui">Print</span>. A blank box prints as a dash, so the desk sees what is still to ask. The guest signs it on arrival and on departure; a guest who cannot write signs with a thumb impression. Keep the card.</li>
     <li>When nobody is owed: <span class="msg">“Every foreign national on record has been filed.”</span> With no foreign guest at all: <span class="msg">“No foreign nationals have stayed”</span>.</li>
   </ul>
@@ -2572,7 +2613,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ol class="steps">
     <li>Open the guest's stay panel: In house (A1.5), or the panel of a guest you have just checked in.</li>
     <li>Click <span class="ui">Print registration card</span>, in the row of buttons at the top. The card opens in a new tab.</li>
-    <li>Click <span class="ui">Print</span>. Give it to the guest to sign, and to initial the box at the foot if they want no offers.</li>
+    <li>Click <span class="ui">Print</span>. Give it to the guest to sign, and to initial the box at the foot if they want no offers. With other adults recorded on the stay (A3.3), the card lists them under <span class="ui">Other adults in the room</span>: name, nationality and ID, an Aadhaar as its last four digits.</li>
   </ol>
 
   <figure class="shot" id="fig-A3-17">
@@ -3626,7 +3667,9 @@ figure.shot.phone img { max-width: 72mm; }
 
   <ul>
     <li>If it is missed, the server refuses: <span class="msg">“Form III asks where a foreign guest is going next. Enter the next destination to check them out.”</span></li>
-    <li>Afterwards, on the Form III screen (A3.5), the <span class="ui">Departure</span> cell takes the number the portal gives back for the departure. <span class="ui">Complete details</span> can add or change the next destination after check-out.</li>
+    <li>A foreign adult recorded on the stay of an Indian guest (A3.3) is asked for too. The refusal comes when you press <span class="ui">Check out</span>, and the box opens: type where they go and check out again.</li>
+    <li>What you type goes on the guest's row and on every foreign adult's who has no next destination of their own.</li>
+    <li>Afterwards, on the Form III screen (A3.5), the <span class="ui">Departure</span> cell of each row takes the number the portal gives back for that person's departure. <span class="ui">Complete details</span> can add or change the next destination after check-out.</li>
   </ul>
 
   <div class="box why">
@@ -6670,7 +6713,7 @@ figure.shot.phone img { max-width: 72mm; }
     <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who sees it</th><th>What it is for</th></tr></thead>
     <tbody>
       <tr><td>Guests</td><td>Owner, Admin, General Manager, Hotel Manager, Reception, Accountant, Viewer</td><td>Everyone booked at this hotel, grouped by name, with their stays, nights, spend and what they owe (A10.2).</td></tr>
-      <tr><td>Companies and agents</td><td>The same people</td><td>Where the bookings came from - booking sites, direct, companies - and what each was worth. <span class="ui">Add company</span> (A10.4).</td></tr>
+      <tr><td>Companies and agents</td><td>The same people</td><td>Where the bookings came from - booking sites, direct, companies - and what each was worth. <span class="ui">Add company</span>, and <span class="ui">Edit</span> on each company (A10.4).</td></tr>
       <tr><td>Guest messages</td><td>The same people</td><td>What the system sent guests and whether it went, the bookings no message can reach, and messages guests wrote to the desk (A10.8).</td></tr>
       <tr><td>Reviews</td><td>The same people (only the owner, an Admin, the GM, the Hotel Manager and Reception may ask)</td><td>Ask a guest who has left for a review; the hotel's review link (A10.10).</td></tr>
       <tr><td>Guest 360</td><td>Owner, Admin, General Manager</td><td>One guest across every hotel of the group: every stay, what they were charged, what was sent to them, the blacklist, offers, loyalty (A10.5).</td></tr>
@@ -6793,6 +6836,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li>Through an agent: revenue from booking sites and agents, and its share of the whole</li>
       <li>Owed to the property: what every source still owes</li>
       <li>Each kind says what it is</li>
+      <li>Edit: on each company, for the owner, an Admin and the GM</li>
     </ol>
   </figure>
 
@@ -6801,10 +6845,10 @@ figure.shot.phone img { max-width: 72mm; }
     <tbody>
       <tr><td>Travel agents</td><td><span class="msg">“Booked through a channel, and charged a commission for it.”</span> Agoda, Booking.com, Expedia and go-MMT.</td></tr>
       <tr><td>Direct</td><td><span class="msg">“Straight to the property. No commission on any of it.”</span> Walk-in and Fidato Hotels.</td></tr>
-      <tr><td>Corporate accounts</td><td><span class="msg">“A firm booking for its own people, settled on the city ledger.”</span> Every other source is listed here too - a travel agent added with Add company among them.</td></tr>
+      <tr><td>Corporate accounts</td><td><span class="msg">“A firm booking for its own people, settled on the city ledger.”</span> Every other source is listed here too - a travel agent added with Add company among them, and a company with no booking at this hotel yet, with 0 bookings and a dash for its revenue.</td></tr>
     </tbody>
   </table>
-  <p>Each table: <b>Source</b>, <b>Bookings</b>, <b>Room nights</b>, <b>Revenue</b>, <b>Commission</b>, <b>Owed</b>. The heading line of each kind adds up its revenue and bookings. Under the tables: <span class="msg">“Commission is charged outside this system today and prints as a dash rather than a zero. It fills once a channel manager is connected.”</span></p>
+  <p>Each table: <b>Source</b>, <b>Bookings</b>, <b>Room nights</b>, <b>Revenue</b>, <b>Commission</b>, <b>Owed</b>, and <span class="ui">Edit</span> on a company for the owner, an Admin and the GM. The heading line of each kind adds up its revenue and bookings. Under the tables: <span class="msg">“Commission is charged outside this system today and prints as a dash rather than a zero. It fills once a channel manager is connected.”</span></p>
 
   <h3>To add a company</h3>
   <ol class="steps">
@@ -6829,6 +6873,15 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <p><b>Reception</b> gets a shorter window: Name, GSTIN, Billing address, City, State and PIN code, and the line <span class="msg">“Its name, GSTIN and address, for the tax invoice. Credit and contracts are set by the owner, an administrator or the GM.”</span></p>
+  <h3>To change a company</h3>
+  <p>For the owner, an Admin and the GM; nobody else sees the button. The same window opens from <span class="ui">Edit company</span> on a company's Contracts page (A15).</p>
+  <ol class="steps">
+    <li>Find the company in its table and tap <span class="ui">Edit</span> at the end of its row. A booking site or a source that is not a company, such as Walk-in, has no <span class="ui">Edit</span>: those are on <span class="ui">Booking sources</span>.</li>
+    <li>The window is headed <span class="ui">Edit company</span>, with the company's details in it. Change what is wrong.</li>
+    <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Company updated”</span>.</li>
+  </ol>
+  <p>A company is one record for the group, so the change is at every hotel at once, on every booking of that company. <b>A tax invoice already issued stays made out to the name, GSTIN and address it was issued to</b>, and a credit note against it repeats them; the next invoice takes the new details. Only the <b>Source</b> line in the stay's details follows the new name when an old invoice is opened or reprinted: it says where the booking came from, not who the invoice is made out to.</p>
+
   <p>What stops it: <span class="msg">“A company has a name.”</span>; <span class="msg">“A GSTIN is 15 characters: 2 digits, the 10-character PAN, then 3 more, e.g. 27AAPFU0939F1ZV.”</span>; <span class="msg">“That GSTIN is not right - a character is mistyped. Check it against the company's GST certificate.”</span>; <span class="msg">“A PIN code is 6 digits, e.g. 413216.”</span>; <span class="msg">“Credit days is a whole number from 1 to 365.”</span>; <span class="msg">“A credit limit is an amount above 0, in rupees.”</span></p>
 
   <div class="box watch">
@@ -6836,14 +6889,14 @@ figure.shot.phone img { max-width: 72mm; }
     <ul>
       <li>A company is one record for the whole group. The same name or GSTIN twice is refused: <span class="msg">“… is already on the list. Edit that company instead.”</span>, <span class="msg">“… already has GSTIN …. Edit that company instead.”</span></li>
       <li>Credit days and the limit are <span class="msg">“Shown, not enforced, until the company's payments are recorded. Blank is not set.”</span></li>
-      <li>The Hotel Manager, the Accountant and a Viewer see the list but not <span class="ui">Add company</span>.</li>
+      <li>The Hotel Manager, the Accountant and a Viewer see the list but not <span class="ui">Add company</span>. Reception adds a company but does not see <span class="ui">Edit</span>.</li>
       <li>This is not <span class="ui">Booking sources</span> under Property setup, which is the list a booking's source is picked from, with each one's commission.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The heading says what the menu says, “Companies and agents”, because it once said “Booking sources” - the name of a different screen: <span class="d">D17-22</span>. Add company here as well as on Contracts, with Reception limited to the name, GSTIN and address and never credit: <span class="d">D27-184</span>.</p>
+    <p>The heading says what the menu says, “Companies and agents”, because it once said “Booking sources” - the name of a different screen: <span class="d">D17-22</span>. Add company here as well as on Contracts, with Reception limited to the name, GSTIN and address and never credit: <span class="d">D27-184</span>. Edit on every company here, the existing window, and who may stays the owner, an Admin and the GM because a company is one record for the group: <span class="d">D27-382</span>.</p>
   </div>
 
   <!-- A10.5 -->
@@ -7696,7 +7749,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column, and <span class="ui">Type</span> says <b>B2B</b>. A dash under GSTIN is an unregistered recipient, and Type says <b>B2C</b>. A credit note has the type of the invoice it credits. The CSV carries the same Type column: <span class="d">D27-372</span>.</p>
 
   <h3>Form III register</h3>
-  <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>
+  <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date, each foreign adult in a room on a row of their own: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>
 
   <figure class="shot" id="fig-A11-16">
     <img src="img/A11-16.png" alt="Form III register: how many arrivals await an FRRO number, the yellow note that this system does not file, and the Portal numbers column">
@@ -12258,8 +12311,8 @@ figure.shot.phone img { max-width: 72mm; }
           <li>A returning guest is suggested by exact phone or email, and the clerk confirms (<span class="d">D21-20</span>; B6.27). A booking-site guest who is blacklisted warns the desk (<span class="d">D22-8</span>).</li>
           <li>A heading is its menu name (<span class="d">D17-22</span>). An administrator counts as a manager for booking sources (<span class="d">D27-275</span>).</li>
         </ul></td></tr>
-      <tr><th>Left out</th><td>The system records Form III filings; it does not file them on the portal. A companion's own details are not registered (one portal number per person, <span class="d">D27-75</span>). Adding and editing a company came with contracts (<span class="d">D27-184</span>; B6.16).</td></tr>
-      <tr><th>Open</th><td>GUE-5: an ID skipped at check-in has nowhere to be recorded later. GUE-6: a companion in the room is not on the register.</td></tr>
+      <tr><th>Left out</th><td>The system records Form III filings; it does not file them on the portal. Adding and editing a company came with contracts (<span class="d">D27-184</span>; B6.16); Edit is on Companies and agents too, for the owner, an admin and the GM (<span class="d">D27-382</span>).</td></tr>
+      <tr><th>Open</th><td>Nothing. Every adult in a room is recorded, and a foreigner has a row of their own on the register (<span class="d">D27-382</span>), which replaced one portal number per person with no details (<span class="d">D27-75</span>). An ID skipped at check-in is recorded on Complete details (<span class="d">D27-382</span>).</td></tr>
     </tbody>
   </table>
 
@@ -12280,7 +12333,7 @@ figure.shot.phone img { max-width: 72mm; }
           <li>One fixed card per room, against the recommendation of a card per stay; a reprinted card stops the old one at once (<span class="d">D21-7</span>, <span class="d">D21-16</span>).</li>
           <li>During the stay: one-tap requests, in-room dining, table booking, wake-up calls, messages with the desk (<span class="d">D27-221</span>, <span class="d">D27-224</span>, <span class="d">D27-225</span>, <span class="d">D27-241</span>).</li>
         </ul></td></tr>
-      <tr><th>Left out</th><td>Paying online and choosing a room. The other adults' IDs (one ID per stay, <span class="d">D27-212</span>). DigiLocker, until the partner keys and the lawyer's answers arrive (<span class="d">D27-235</span>). The WhatsApp template for the check-in code is waiting on Meta (<span class="d">D27-285</span>); until then the code goes by email.</td></tr>
+      <tr><th>Left out</th><td>Paying online and choosing a room. The other adults' IDs: the desk records them (<span class="d">D27-382</span>), the guest's own page does not, and the ID photo is one per stay (<span class="d">D27-212</span>). DigiLocker, until the partner keys and the lawyer's answers arrive (<span class="d">D27-235</span>). The WhatsApp template for the check-in code is waiting on Meta (<span class="d">D27-285</span>); until then the code goes by email.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
     </tbody>
   </table>

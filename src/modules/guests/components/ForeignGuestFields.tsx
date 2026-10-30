@@ -138,7 +138,7 @@ export function particularsPayload(p: Particulars) {
 }
 
 export function ForeignGuestFields({
-  value, onChange, nationality, idCaptured, withNextDestination = false,
+  value, onChange, nationality, idCaptured, withNextDestination = false, nothingRequired = false,
 }: {
   value: Particulars;
   onChange: (next: Particulars) => void;
@@ -146,8 +146,10 @@ export function ForeignGuestFields({
   idCaptured: boolean;
   /** "Complete details" after check-out edits where they went, too. */
   withNextDestination?: boolean;
+  /** A companion (D27-382): a check-in is never held for them. */
+  nothingRequired?: boolean;
 }) {
-  const required = new Set(requiredKeys(nationality, idCaptured));
+  const required = new Set(nothingRequired ? [] : requiredKeys(nationality, idCaptured));
 
   const field = ([key, label, kind]: Spec) => {
     if (key === "purposeOther" && value["purpose"] !== "others") return null;
@@ -177,8 +179,10 @@ export function ForeignGuestFields({
     <div className="space-y-4 border-l-2 border-brand-yellow pl-3.5" data-form-iii>
       <p className="text-2xs text-grey-600">
         Form III goes to the FRRO portal within 24 hours of arrival, and the
-        departure within 24 hours of leaving. Starred fields are needed now;
-        the rest can be completed later from the Form III register.
+        departure within 24 hours of leaving.{" "}
+        {nothingRequired
+          ? "Fill in what you have; the rest can be completed later from the Form III register."
+          : "Starred fields are needed now; the rest can be completed later from the Form III register."}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{PERSON.map(field)}</div>
       <p className="text-sm font-medium text-ink-900">This visit</p>

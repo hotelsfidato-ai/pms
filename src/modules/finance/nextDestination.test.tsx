@@ -79,4 +79,30 @@ describe("checking out a foreign guest", () => {
     fireEvent.click(confirm);
     await waitFor(() => expect(args).toEqual(["5EL", "stay-1", undefined, "Jaipur"]));
   });
+
+  /* D27-382: a foreign companion under an Indian lead. Only the server knows,
+     so its refusal is the way through, not a dead end. */
+  it("opens the box when the server says a foreigner is in the room", async () => {
+    vi.spyOn(frontDesk, "checkOut").mockResolvedValue({
+      ok: false, reason: "Form III asks where a foreign guest is going next.", needs: "next-destination",
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <FolioPanel hotelId="5EL" stay={{ ...STAY, nationality: "IN" }} businessDate="2026-09-27" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const out = () => document.querySelector("[data-checkout]") as HTMLButtonElement;
+    await waitFor(() => expect(out()?.disabled).toBe(false));
+    expect(screen.queryByLabelText(/Next destination/)).toBeNull();
+    fireEvent.click(out());
+    fireEvent.click(await waitFor(() => {
+      const b = document.querySelector("[data-checkout-confirm]") as HTMLButtonElement | null;
+      expect(b).toBeTruthy();
+      return b!;
+    }));
+    expect(await screen.findByLabelText(/Next destination/)).toBeTruthy();
+  });
 });

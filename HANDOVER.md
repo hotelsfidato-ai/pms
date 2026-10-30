@@ -771,6 +771,20 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **31 October: THE PLAN (D27-381 to D27-385).** Live: release 16 (312c52e2). **Now:** release 17 on two helper copies,
+> agent-a92a51ef49d9206b1 (company Edit, GUE-5 committed; GUE-6 going; migration 253) and agent-a9196d9e65e607d1a (ACC-3
+> committed; ledger names, Tally XML going; migration 254). TallyPrime 7.2 in Educational Mode on this PC, practice company
+> FidatoPractice, port 9000: open it after a restart. **Then, in order:** merge, reconcile test_hotel_classes and
+> owner_reset.steps, screens, pictures, gates, release 17 steps. **Safety (D27-384):** load test (local), staging server,
+> two-step sign-in, standby database; these need the owner's server and cost answers first. The live box is
+> VM.Standard.A1.Flex 2 OCPU 12 GB, the whole Always Free A1 allowance, so only two E2.1.Micro (1 GB) remain free, and
+> Oracle may reclaim an idle Always Free instance: the owner checks whether the account is Pay As You Go. **Features
+> (D27-383):** exports; accounts and GST; group and onboarding; restaurant and guest care (`.local/hms-audit.html`).
+> **Asked, undecided:** UPI QR, payment links, payroll (Frappe HR trial), the Shimla and Amrapali lock, Part D. **The
+> owner's:** Parts B, C, D, E of `.local/launch-all-steps.md`; A0 n8n paste to confirm (one email with 5 PDFs?). Mobile
+> push is off in the app ("disabled in /config") even after the owner's change and a restart: ask in the chat.
+> SHI and AMR are never reset (D27-381). Nothing is built for selling (D27-384).
+
 > **29 October, 13:30: RELEASES 15 + 16 LIVE** - the owner deployed release 16 (it holds 15) at 07:58 GMT; checked
 > read-only: server code 312c52e2, `index-DlJbrWWh.js`, migrations 250-252 in (owner_reset, the reset login,
 > recipe_lines, the two mrp columns), every hotel's Kitchen store marked, the reset socket active, the backup tools

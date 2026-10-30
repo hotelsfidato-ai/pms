@@ -30,3 +30,7 @@ export { EditGuestFlow } from "./components/EditGuestFlow";
 export {
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, deskGuestId, type GuestId,
 } from "./components/GuestIdFields";
+
+/* D27-382: every adult in the room, for the check-in window, the stay panel
+   and a walk-in's card. */
+export { StayCompanions } from "./components/StayCompanions";

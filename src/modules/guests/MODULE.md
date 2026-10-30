@@ -35,6 +35,13 @@ Since D27-163 the ID itself is asked once, in `GuestIdFields` (nationality,
 document, or a reason for skipping it, Form III and round D's checks): New
 booking's one page and front desk's one-page check-in both draw it.
 
+**Every adult in a room is recorded (D27-382).** A companion is a guest record
+tied to the stay, with their own ID and, for a foreigner, their own Form III
+answers and register row. `StayCompanions` (this service's, through the door)
+is on the check-in window, the stay panel and New booking's card after a walk-in
+is checked in; each person is saved on their own call, so nobody missing can
+hold up a check-in. "2 adults, 1 recorded" warns on the block and the register.
+
 ## Screens
 
 Who works from each is `workingMenus` in `nav.ts` (the owner's menu of
@@ -78,7 +85,7 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 | POST | `/:code/guests/:id/vip` | set or clear the VIP mark — it travels with the guest, not the booking (043) |
 | GET | `/:code/guests/:id/record` | one guest's record for Edit guest: title, name, phone, email, nationality, address (GU-1; customer:edit, READ_RULES) |
 | PATCH | `/:code/guests/:id` | correct it: absent unchanged, blank clears (never name or nationality); refuses an impossible phone, email, country, title (GU-1) |
-| GET | `/:code/companies` | each account bookings came through — bookings, room nights, revenue, open balance — grouped by name |
+| GET | `/:code/companies` | each account bookings came through — bookings, room nights, revenue, open balance — grouped by name. The screen ties a row to its record by name (`listCompanyRecords`, the contracts door), for Edit (D27-382), and adds the companies with no booking here |
 
 **`api/src/modules/guests/bookingSources.ts`** (was `api/src/routes/bookingSources.ts`)
 
@@ -93,22 +100,33 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/form-c` | every foreign stay with all of Form III, both 24-hour clocks and the numbers filed (`app.form_iii`, 147) |
-| POST | `/:code/form-c/:reservationId` | record a filing's portal number, `kind` arrival or departure (a departure only after check-out); one per person |
-| PUT | `/:code/form-c/:reservationId/details` | "Complete details": the portal's other boxes, filled in or corrected later; only what is typed is written |
+| GET | `/:code/form-c` | every foreigner on a stay, each their own row with all of Form III, both 24-hour clocks and their numbers (`app.form_iii_people`, D27-382); `unrecorded`: the stays in house with an adult not recorded and no row to carry the warning |
+| POST | `/:code/form-c/:reservationId` | record a filing's portal number, `kind` arrival or departure (a departure only after check-out); `guestId` for a companion, else the lead |
+| PUT | `/:code/form-c/:reservationId/details` | "Complete details": the document's type and number (GUE-5) and the portal's other boxes, filled in or corrected later; `guestId` for a companion; only what is typed is written |
+
+**`api/src/modules/guests/companions.ts`** (D27-382; `customer` edit, the Form III roles, D25-38)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/stays/:id/companions` | adults, recorded, the lead's name and each companion with their answers; an Aadhaar masked (`maskedId`) |
+| POST | `/:code/stays/:id/companions` | a new guest record tied to the stay: name, nationality, ID and, for a foreigner, this visit's answers. The desk's own rules; refused for a stay cancelled, voided or a no-show |
+| PUT | `/:code/stays/:id/companions/:guestId` | correct them, unless their Form III is filed |
+| DELETE | `/:code/stays/:id/companions/:guestId` | `app.remove_companion`: the link, their answers and their ID go; refused once filed; their `guests` row stays, as every guest's does |
 
 `formIII.ts` holds the rule (`formIIIRefusal`: the law's fields for a foreign
-guest; none of the visa for Nepal or Bhutan or an ID skipped) and the savers
-(`saveIdentity`, `saveVisit`), exported through `index.ts` for front desk's
-check-in, walk-in and check-out.
+guest; none of the visa for Nepal or Bhutan or an ID skipped), the savers
+(`saveIdentity`, `saveVisit`, `saveCompanionsDeparture`) and `maskedId` (an
+Aadhaar's last four, the registration card's rule too), exported through
+`index.ts` for front desk's check-in, walk-in and check-out.
 
-9 endpoints. The old `directory.ts`'s other endpoints went to inventory
+13 endpoints. The old `directory.ts`'s other endpoints went to inventory
 (`roomTypesAndPlans.ts`: room types, rate plans) and administration
 (`adminLists.ts`: staff, audit log, settings). Server tests:
 `api/test/modules/guests/bookingSources.test.ts`; Form III's in
 `api/test/modules/guests/formIII.test.ts` and finance's
 `api/test/modules/finance/invoices.test.ts` ("Form C"); the
-documents recorded at check-in in `api/test/identity.test.ts`.
+documents recorded at check-in in `api/test/identity.test.ts`; the other adults
+in `api/test/modules/guests/companions.test.ts`.
 
 ## Data
 
@@ -119,6 +137,7 @@ documents recorded at check-in in `api/test/identity.test.ts`.
 | `directory.ts` | `listGuests`, `listCompanies`, `setGuestVip` |
 | `bookingSources.ts` | the list and its kinds (`SOURCE_KINDS`, `kindLabel`), add, amend, set a commission — null is not zero anywhere in it |
 | `formC.ts` | `getFormC` (the register), `recordFormC` (a filing happened, arrival or departure), `completeFormIII` |
+| `companions.ts` | `getCompanions`, `addCompanion`, `saveCompanion`, `removeCompanion` |
 
 ## Database
 
@@ -128,9 +147,10 @@ Tables this service owns, and the migrations that made or changed them:
 |---|---|---|
 | `guests` | one person, belonging to the group — no `hotel_id` | created `004_guests.sql`; `013_policies.sql` (passport and ID fields moved out to `guest_documents`), `015_edge_cases.sql` (a guest is never deleted), `043_indicators.sql` (`is_vip`) |
 | `companies` | corporate accounts, agents | created `004_guests.sql`; no endpoint writes to it (grep of `api/src`, 15 September) |
-| `guest_documents` | passport or ID number, expiry, visa, address | created `013_policies.sql` (read only at a property with a booking); `014_simulation_fixes.sql` (S2 — any active staff may record one), `026_identity_capture.sql` (who recorded it and when; a number must be present) |
-| `form_c_filings` | a Form III filing's portal number, arrival or departure, one per person | created `025_invoices_form_c.sql`; `147_form_iii.sql` (`kind`; unique per stay, kind and number) |
-| `form_iii_stays` | what Form III asks about one visit: arrived from, purpose, previous and next place, reference address in India | created `147_form_iii.sql` (`app.form_iii` reads it with `guest_documents` and the audit log's check-in and check-out instants) |
+| `guest_documents` | passport or ID number, expiry, visa, address | created `013_policies.sql` (read only at a property with a booking, or with the person on a stay, "every adult in a room"); `014_simulation_fixes.sql` (S2 — any active staff may record one), `026_identity_capture.sql` (who recorded it and when; a number must be present) |
+| `form_c_filings` | a Form III filing's portal number, arrival or departure, naming the person | created `025_invoices_form_c.sql`; `147_form_iii.sql` (`kind`; unique per stay, kind and number) |
+| `form_iii_stays` | what Form III asks about one visit, per person: arrived from, purpose, previous and next place, reference address in India. `guest_id` null is the lead guest, else the companion | created `147_form_iii.sql`; "every adult in a room" (`guest_id`). `app.form_iii_people` reads it with `guest_documents` and the audit log's check-in and check-out instants |
+| `stay_companions` | the other adults in a room: a stay and a guest record, nothing of the person copied | "every adult in a room" (D27-382): FORCE row security, the app inserts and reads only; `app.stay_recorded`, `app.remove_companion` |
 | `booking_sources`, `booking_source_rates` | the group's list of sources; one commission per source per property | created `082_booking_sources.sql` (kinds, `channel_code`, `app.booking_source_label`); `085_walk_in_channel.sql` (`app.walk_in_source`) |
 
 Others write into these directly in SQL: front desk inserts the walk-in's
@@ -157,6 +177,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/guests`,
 | `stayedWords` | crm (both pages), front desk (`flows/GuestMarks.tsx`) |
 | `phoneKey`, `emailKey`, `refusesOffers`, type `NoOffers` | nobody yet - for marketing's gate (`src/modules/crm/MODULE.md`, Requests) |
 | `BookingSiteBlacklist` | front desk (`pages/Arrivals.tsx`, `flows/CheckInFlow.tsx`) - CRM-3, a booking site's guest who matches a blacklisted guest, 22 September (D22-8) |
+| `StayCompanions` | front desk (`flows/CheckInFlow.tsx`, `flows/StayDrawer.tsx`), reservations (`flows/BookedCard.tsx`) - every adult in the room, D27-382 |
 
 **21 September - the Central CRM, phase 1.** One guest, one record: the
 returning-guest suggestion, joins, the blacklist, "no offers" and Guest 360.
@@ -177,9 +198,9 @@ wrong as a picker into anything that wants a company (MEMORY 83).
   `src/data/repositories/http.ts` (`fetchOr`), `BUSINESS_DATE`.
 - On the server: `GET /:code/guests` and `GET /:code/companies` read
   reservations and the folio ledger for stay history and revenue; Form III
-  reads reservations, room assignments, `guest_documents`, `form_iii_stays` and
-  the audit log's check-in and check-out instants through `app.form_iii`
-  (147).
+  reads reservations, room assignments, `stay_companions`, `guest_documents`,
+  `form_iii_stays` and the audit log's check-in and check-out instants through
+  `app.form_iii_people`.
 
 ## Rules that bind it
 

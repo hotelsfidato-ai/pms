@@ -45,6 +45,8 @@ export const SHOTS = [
       { n: 2, at: "text:Through an agent", side: "right" },
       { n: 3, at: "text:Owed to the property", side: "right" },
       { n: 4, at: "text:Booked through a channel, and charged a commission for it.", side: "right" },
+      /* D27-382: to be retaken, the first company on the list that has a record. */
+      { n: 5, at: "css:button[aria-label^='Edit ']", side: "left" },
     ],
   },
   {

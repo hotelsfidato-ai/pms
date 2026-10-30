@@ -45,7 +45,8 @@ api/test/modules/contracts/             the routes, the booking, the credit refu
 | (a company) | `/contracts/:companyId` | `pages/CompanyContracts.tsx` | the same |
 
 Dialogs: `components/CompanyDialog.tsx` (exported: guests' Companies and
-agents opens it too) and `components/ContractDialog.tsx`.
+agents opens it too, for Add and, since D27-382, for Edit on each company, with
+`listCompanyRecords` from the door) and `components/ContractDialog.tsx`.
 
 ## Routes (each has its roleGate line, pinned in roleGate.test.ts)
 

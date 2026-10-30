@@ -131,7 +131,7 @@ export default function Documents() {
     guest: { title: "Mr", name: GUEST, email: "guest@example.com", phone: "+91 90000 00000", nationality: "IN",
              address: { line: "1 Sample Road", city: "Pune", state: "Maharashtra", pincode: "411001", country: "IN" },
              idType: "aadhaar", idNumber: "XXXX XXXX 0000" },
-    company: null, agent: null, arrivedFrom: null, nextDestination: null,
+    companions: [], company: null, agent: null, arrivedFrom: null, nextDestination: null,
   };
   const order: Order = {
     id: "sample", orderNo: "SAMPLE", outlet: "REST", outletName: "Restaurant",

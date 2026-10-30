@@ -174,18 +174,57 @@
     </ol>
   </figure>
 
+  <h3>The other adults in the room</h3>
+  <p>Every adult in the room is recorded: their name, nationality, and ID type and number. A foreigner also has the full Form III details and a row of their own on the Form III screen (A3.5). Under the ID, <span class="ui">Adults in the room</span> names the guest on the booking and each adult added, with a pill: <span class="msg">“2 adults, 1 recorded”</span>, yellow while somebody is missing. A child is not asked for, though one can be added.</p>
+  <p>The same block is on the stay panel, on the <span class="ui">Stay</span> tab, for anybody who arrives later or whose ID comes later; and on the card New booking shows when a walk-in has been checked in. <b>It never stops a check-in:</b> <span class="ui">Check in</span> does not wait for it, and each person is saved on their own.</p>
+
+  <h3>To add an adult</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Add an adult</span>.</li>
+    <li>Type their <span class="ui">Full name</span>, as on the document. <span class="ui">Nationality</span> starts on the guest's: change it if theirs is different.</li>
+    <li>Choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>. The checks are those above. With no document to hand, leave it: no reason is asked, the name is saved, and the line says <span class="msg">“ID not recorded”</span>. They are counted as recorded once the number is typed.</li>
+    <li>For a foreigner the Form III boxes open. Fill in what you have: none is needed now. The rest can be done with <span class="ui">Edit</span>, or with <span class="ui">Complete details</span> on the Form III screen.</li>
+    <li>Click <span class="ui">Save</span>. It is on the stay at once, whether or not the check-in goes ahead.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-08a">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A3-T20 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code>, a booking for 2 adults, Check in</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>The plan is in <code>shots/a3.mjs</code>. One adult added with a passport, nothing else saved.</dd>
+        <dt>Arrows</dt><dd>1 → the pill “2 adults, 2 recorded” or “2 adults, 1 recorded”; 2 → Add an adult; 3 → the line of the adult added</dd>
+        <dt>File</dt><dd><code>img/A3-T20.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A3-07a.</b> Adults in the room, on the Check in window.</figcaption>
+    <ol class="callouts">
+      <li>The adults of the booking, and how many are recorded</li>
+      <li>Add an adult</li>
+      <li>One added: their nationality and ID; Edit and Remove</li>
+    </ol>
+  </figure>
+
+  <p><span class="ui">Edit</span> opens the same window with their details. It says what is on record, an Aadhaar as its last four digits, <span class="msg">“Fill in the document only to replace it.”</span> <span class="ui">Remove</span> asks <span class="msg">“Remove them and their ID?”</span>: <span class="ui">Keep</span> or <span class="ui">Remove</span>. Removed, their ID and their answers go with them. Once a Form III number is recorded for a person, the line says <span class="msg">“Form III filed: corrected on the register.”</span>: they stay on the stay (the record is kept for a year), and their details are corrected with <span class="ui">Complete details</span> (A3.5).</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
       <li>A nationality that is not a country, such as ZZ, is refused: <span class="msg">“"ZZ" is not a country code. Type the two letters, e.g. IN, GB or US.”</span></li>
       <li>"IN" typed in the box never replaces a foreign nationality already on the guest's record. A wrong nationality is corrected on the guest's record (A10.3).</li>
-      <li>One ID per stay: the guest the booking is under. The other adults' IDs are not asked.</li>
+      <li>Adults in the room is for the people who record IDs: the owner, an Admin, the GM, the Hotel Manager and Reception. Nobody else sees it, and a companion's ID is kept as the guest's is.</li>
+      <li>Each room of a group has its own adults, on its own stay.</li>
+      <li>A room move, a longer stay or a change of dates does not touch them. With fewer adults on the booking than people recorded, nobody is taken off and there is no warning.</li>
+      <li>A cancelled, voided or no-show booking keeps who was on it, and nobody can be added to it.</li>
+      <li>The ID photo is still one per stay: the guest the booking is under.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The ID and Form III's boxes are one set of fields shared by check-in and New booking, so they cannot ask different questions: <span class="d">D27-158</span>. The hotel's own starting nationality and ID: <span class="d">D27-243</span>; ID types the hotel does not take are left out: <span class="d">D27-260</span>. "IN" never overwrites a foreign guest's nationality: <span class="d">D27-197</span>. The desk adds the ID photo for a guest who sent none: <span class="d">D27-210</span>. One ID per stay: <span class="d">D27-212</span>.</p>
+    <p>The ID and Form III's boxes are one set of fields shared by check-in and New booking, so they cannot ask different questions: <span class="d">D27-158</span>. The hotel's own starting nationality and ID: <span class="d">D27-243</span>; ID types the hotel does not take are left out: <span class="d">D27-260</span>. "IN" never overwrites a foreign guest's nationality: <span class="d">D27-197</span>. The desk adds the ID photo for a guest who sent none: <span class="d">D27-210</span>. One ID photo per stay: <span class="d">D27-212</span>. Every adult in a room is recorded, entered at check-in or later, and check-in is never blocked; a missing person is a warning: <span class="d">D27-382</span>.</p>
   </div>
 
   <!-- A3.4 -->
@@ -231,7 +270,7 @@
     <h4>Watch out</h4>
     <ul>
       <li>The server refuses by itself if a starred box is blank: <span class="msg">“Form III needs a foreign guest's visa or OCI number, visa type, phone in India, ….”</span></li>
-      <li>Each foreigner in the room needs their own Form III. The booking knows only its lead guest, so the Form III screen warns when a room holds more than one person (A3.5).</li>
+      <li>Each foreigner in the room needs their own Form III: add them under <span class="ui">Adults in the room</span> (A3.3), and they have their own row on the Form III screen, under an Indian guest too (A3.5).</li>
       <li>A test hotel's Form III card carries <span class="msg">“TEST · NOT VALID”</span>, so a practice guest's card is never filed.</li>
     </ul>
   </div>
@@ -249,11 +288,13 @@
   <h3>To record a filing</h3>
   <ol class="steps">
     <li>Read the badge beside the heading: <span class="msg">“1 due”</span> in yellow, or <span class="msg">“1 overdue”</span> in red. The line under the heading says <span class="msg">“Foreign guests reported to the FRRO: arrival and departure, each within 24 hours (Form III, earlier called Form C).”</span></li>
-    <li>Find the guest. A row shows the guest, their nationality, the room and how many are in it, and <span class="ui">Passport</span> (<span class="msg">“not on record”</span> in red where none is kept).</li>
+    <li>Find the guest. Every foreigner on a stay has a row of their own: the person, their nationality, the room and how many are in it, and <span class="ui">Passport</span> (<span class="msg">“not on record”</span> in red where none is kept). A stay with an adult still to record says so on the row, in yellow: <span class="msg">“2 adults, 1 recorded”</span>. It is a warning: nothing is refused.</li>
     <li>In the <span class="ui">Arrival</span> cell, read the time of check-in and <span class="ui">due</span> or <span class="ui">overdue</span> with the time it is due by. File it on the portal.</li>
-    <li>Click <span class="ui">Record number</span>, type the number the portal gives back in <span class="ui">Portal number</span>, and click <span class="ui">Save</span>. The number is required: <span class="ui">Save</span> stays grey until one is typed. The cell then reads <span class="ui">filed</span> with the number. For another person in the room, click <span class="ui">Add a number</span>.</li>
+    <li>Click <span class="ui">Record number</span>, type the number the portal gives back in <span class="ui">Portal number</span>, and click <span class="ui">Save</span>. The number is required: <span class="ui">Save</span> stays grey until one is typed. The cell then reads <span class="ui">filed</span> with the number. Each person's number goes on their own row; the badge counts each person still owed. <span class="ui">Add a number</span> is for a second number, or for somebody who was never added: the stay's earlier numbers stay on the guest's row.</li>
     <li>When the guest has checked out, the <span class="ui">Departure</span> cell works the same way. Before that it says <span class="msg">“In house”</span>.</li>
   </ol>
+
+  <p>An Indian guest has no row here, and an adult nobody has recorded may be a foreigner. So above the list, for the stays in house with somebody missing: <span class="msg">“Adults not recorded in house, each may be a foreigner: room 204 (2 adults, 1 recorded).”</span> Add them on the stay.</p>
 
   <figure class="shot" id="fig-A3-10">
     <img src="img/A3-T5.png" alt="The Form III screen: the 1 due badge, the note This system does not file with the FRRO, a row for A3 Test Smith with passport A1234567, the Portal number box with Save and Cancel, Complete details and the printer icon">
@@ -269,7 +310,7 @@
   </figure>
 
   <ul>
-    <li><span class="ui">Complete details</span> opens the same boxes as check-in, with the guest's answers in them. After check-out it also asks <span class="ui">Next destination</span> (A5.8). Click <span class="ui">Save</span>.</li>
+    <li><span class="ui">Complete details</span> opens the same boxes as check-in, with the guest's answers in them, and the <span class="ui">Document</span> and its <span class="ui">Number</span>. A passport skipped at check-in is recorded here, with the same checks as A3.3, and the row then shows it in place of <span class="msg">“not on record”</span>. After check-out it also asks <span class="ui">Next destination</span> (A5.8). Click <span class="ui">Save</span>.</li>
     <li>The printer icon opens the <span class="ui">Form III</span> card: the premises, the foreigner, the arrival, the departure and the portal's other boxes, with two signature lines, one for arrival and one for departure. Click <span class="ui">Print</span>. A blank box prints as a dash, so the desk sees what is still to ask. The guest signs it on arrival and on departure; a guest who cannot write signs with a thumb impression. Keep the card.</li>
     <li>When nobody is owed: <span class="msg">“Every foreign national on record has been filed.”</span> With no foreign guest at all: <span class="msg">“No foreign nationals have stayed”</span>.</li>
   </ul>
@@ -426,7 +467,7 @@
   <ol class="steps">
     <li>Open the guest's stay panel: In house (A1.5), or the panel of a guest you have just checked in.</li>
     <li>Click <span class="ui">Print registration card</span>, in the row of buttons at the top. The card opens in a new tab.</li>
-    <li>Click <span class="ui">Print</span>. Give it to the guest to sign, and to initial the box at the foot if they want no offers.</li>
+    <li>Click <span class="ui">Print</span>. Give it to the guest to sign, and to initial the box at the foot if they want no offers. With other adults recorded on the stay (A3.3), the card lists them under <span class="ui">Other adults in the room</span>: name, nationality and ID, an Aadhaar as its last four digits.</li>
   </ol>
 
   <figure class="shot" id="fig-A3-17">

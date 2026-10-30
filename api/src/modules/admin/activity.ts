@@ -32,6 +32,7 @@ const KINDS: Record<string, string> = {
   reservations: "Booking", room_assignments: "Room given", folios: "Bill",
   rooms: "Room", room_types: "Room type", staff: "Person", staff_hotels: "Access",
   guests: "Guest", guest_documents: "Guest's ID", form_iii_stays: "Form III",
+  stay_companions: "Adult in the room",
   companies: "Company", invoices: "Invoice", invoice_series: "Invoice numbers",
   payments: "Payment", night_audit_runs: "Night audit", hotels: "Hotel settings",
   hotel_modules: "Module switch", reservation_groups: "Group booking",
@@ -44,7 +45,7 @@ const kindOf = (table: string) =>
 
 /* A guest's own records: every field "changed". */
 const GUEST_RECORDS = new Set([
-  "guests", "guest_documents", "form_iii_stays", "offer_opt_ins", "offer_opt_outs",
+  "guests", "guest_documents", "form_iii_stays", "stay_companions", "offer_opt_ins", "offer_opt_outs",
 ]);
 /* Elsewhere: a guest's (or anybody's) name on a booking, phone, email,
    address or ID - and a booking site's whole message, and the CRS's copy (seen). */

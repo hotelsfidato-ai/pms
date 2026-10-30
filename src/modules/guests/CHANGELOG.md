@@ -8,6 +8,51 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · GUE-6: every adult in a room is recorded (the owner's D27-382)
+
+**Asked for:** name, nationality, ID type and number for every adult; a foreigner also the full Form III details and a row of their own on the register; entered at check-in or later; check-in never blocked; a missing person a warning. Replaces D27-25's warning and a portal number per person for the recording part.
+
+**The model:** a companion IS a guest. `stay_companions` is the one thing the model lacked, a stay and a guest record; nothing of the person is copied into it, so `guests`, `guest_documents` and its row security, `form_c_filings` (each already names a guest), the Form III card and the restore tool work on a companion as on a lead. `form_iii_stays` is per person now: `guest_id` null is the lead (every row until now, and right after a join), not null a companion.
+
+**Shipped:**
+- Migration "every adult in a room": `stay_companions` (FORCE row security, audited, `keep_sides`; the app inserts and reads, never updates or deletes); `form_iii_stays.guest_id` and one row per person; the three `guest_documents` policies with "or a companion on a stay here"; `app.stay_recorded`; `app.remove_companion` (definer: the link, their answers and their ID, refused once filed); `app.form_iii_people` for 147's `app.form_iii`, dropped (a return type never changes, MEMORY 317); `app.test_hotel_classes()` with the table as trading; `owner_reset.steps()` and `owner_reset.orphans()`.
+- `companions.ts`: the four routes. `formC.ts`: the register reads the new function, `unrecorded`, and `guestId` on a filing and on Complete details (`personOnStay`). `formIII.ts`: `saveVisit(.., companion)`, `saveCompanionsDeparture`, `maskedId`. Every route has its roleGate rule: the Form III grants.
+- `components/StayCompanions.tsx`, `data/companions.ts`; `GuestIdFields` and `ForeignGuestFields` take `companion` / `nothingRequired`: no reason asked, no star, an expired document only said. `pages/FormC.tsx`: a row per person (`rowOf`), "2 adults, 1 recorded" on the row, and above the list the rooms in house with an adult nobody has recorded.
+
+**What happens at each (reported to the master):** a room move, an exchange, a longer stay: nothing to do, the link is to the stay. **Fewer adults than people:** nobody is taken off, no warning. **Check-out:** the next destination goes to the lead and to every foreign companion with none of their own; a foreign companion under an Indian lead makes the server ask (`needs: "next-destination"`), and the bill panel opens the box. **Cancel, void, no-show:** the people stay on the record, nobody can be added, nothing shows on the register. **After check-out:** a person can still be added, so the register can be put right. **A guest join:** the link stays on the record it was made with; a lead's filings stay the lead's, because a companion's numbers are found by their id and the lead's are the rest.
+
+**Found:** 250's `owner_reset.orphans` took any guest with no stay at ANOTHER hotel, so clearing one hotel would have taken every companion in the group, with their papers. Fixed, with a check on two hotels (`db/tests/modules/admin.sql`). The `guest_documents` policies also read "has a booking" as "may be read here"; a companion's ID would have been saved and then unreadable.
+
+**Proved:** API: 39 files the three jobs reach, 534 of 535, the one a check of this release's own (the company test's fixture GSTIN, then the Source line above), fixed and green alone, 2/2; `companions.test.ts` 15/15. Web `companions.test.tsx`, front desk's `companionsCheckIn.test.tsx` (the window over the window; Check in is not held; the call carries nothing of them), `formIII.test.tsx`, `nextDestination.test.tsx`, `registrationCard.test.tsx`; 53 web files reachable by the three jobs, 237 tests. `db/tests/run.sh` 1,878 assertions, `rerun.sh` (all 253 re-runnable), `restore-hotel.sh` 42/42 (a companion comes back with their stay: person, link, ID, answers). Each guard was taken out and seen failing, then restored from a saved copy, the break confirmed by a grep count.
+
+**Left open (the owner's):** a companion's ID photo (D27-212 stands: one per stay); the guest's own online check-in page asks for the lead only; a child is not asked for but can be added.
+
+---
+
+## 2026-10-30 · GUE-5: a passport skipped at check-in, recorded on Complete details (the owner's D27-382)
+
+**Asked for:** the document's type and number on the register's Complete details, with check-in's validation; the register stops saying "not on record" once typed.
+
+**Shipped:** `pages/FormC.tsx` `CompleteDetails`: `Document` (the hotel's ID types, as check-in) and `Number`, starting on what the row holds. Sent only when changed, so a number on file is not asked of today's rules because a clerk filled in another box; `idNumberProblem` under the fields and Save greyed, in check-in's words. The server was unchanged: `PUT .../details` already refused a type with no number and ran `identityProblem`. The boxes Form III asks with a document now follow the document typed, not the one on the row. Manual A3.5. `DEFECTS.md`: GUE-5 to Fixed.
+
+**Proved:** `formIII.test.tsx` "Complete details: the document" 3/3 (takes them and sends them; a wrong Aadhaar stops Save in the same words; sends no document it did not change). API `formIII.test.ts` "records a document skipped at check-in, by check-in's own rules". Numbers in the release's gate run.
+
+---
+
+## 2026-10-30 · Edit on Companies and agents (the owner's D27-382)
+
+**Asked for:** Edit was only inside a company's Contracts page; an Edit button on every company on the list, the existing window, for the owner, an Admin and the GM only.
+
+**Shipped:** `pages/Guests.tsx` `CompaniesPage`: an **Edit** column for whoever holds `company: edit` (`can`, the same matrix as the gate's `PATCH /companies/:id`), opening `CompanyDialog` on the whole record from `listCompanyRecords` (both through the contracts door). The list is by name from the bookings, so a row is tied to its record by name; a booking source with no company behind it has no Edit. **A company with no booking here was not on the list at all**, so "Edit that company instead" would have sent the clerk nowhere: such a company is added under Corporate accounts with 0 bookings and a dash for its revenue. No server change. Manual A10.4.
+
+**Checked:** an issued tax invoice stays made out to whom it was: `invoices.recipient_name`, `recipient_gstin` and `recipient_address` are written at issue (finance `invoices.ts`), the printed invoice reads those columns, a credit note copies them and `invoices_immutable` refuses a change. The next invoice reads the company's record. Said in A10.4. API `invoiceRecipient.test.ts` now edits the company after issuing and reads the recipient back with the old name, address and GSTIN. **Not all of it is frozen:** that test first caught the stay block's Source line (`app.stay_facts`, `app.booking_source_label`), read live, so opening or reprinting an old invoice shows a renamed company there. A10.4 says so; freezing it is the owner's question.
+
+**Proved:** `companiesEdit.test.tsx` 7/7. `mayEdit` forced true: "front_desk does not" and "hotel_manager does not" failed; the no-booking companies filtered out: "is on a company with no booking here" failed. Each restored from a saved copy, the break confirmed by a grep count first. The server's rule is `roleGate.test.ts`'s, unchanged.
+
+**Left open:** two `companies` rows of one name (the demo loaded twice) are one line on this list; Edit opens the first.
+
+---
+
 ## 2026-10-28 · Salutation and Full name; the last company; the switch (D27-372)
 
 **Shipped:** Edit guest says **Salutation** and **Full name** (was Title and

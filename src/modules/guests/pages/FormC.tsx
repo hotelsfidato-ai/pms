@@ -5,20 +5,24 @@ import { ShieldAlert, Globe2, Check, Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useCurrentHotel } from "@/lib/session";
 import { useGroupSettings } from "@/modules/admin";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, EmptyState,
-  Button, Input, Dialog, DialogContent, DocPage, DocMasthead, DocLabel, type Column,
+  Button, Field, Input, NativeSelect, fieldProps, Dialog, DialogContent, DocPage, DocMasthead,
+  DocLabel, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
   getFormC, recordFormC, completeFormIII, type FormCRow, type FormCRegister,
 } from "@/modules/guests/data/formC";
 import {
-  ForeignGuestFields, particularsPayload, PURPOSES, type Particulars,
+  ForeignGuestFields, particularsPayload, PURPOSES, ID_TYPES, type Particulars,
 } from "@/modules/guests/components/ForeignGuestFields";
+import { peopleWords } from "@/modules/guests/components/StayCompanions";
+import { idNumberProblem } from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FORM III (Form C until the 2025 Act, D27-25)
@@ -36,9 +40,10 @@ import {
 
    So it is a REGISTER: who owes a filing, by when - both clocks run
    from the actual check-in and check-out - and the portal's number as
-   evidence, one per person in the room (the booking knows only its
-   lead guest). The guest signs the printed card on arrival and on
-   departure (the owner, 27 September).
+   evidence. EVERY FOREIGNER ON A STAY HAS A ROW OF THEIR OWN (D27-382):
+   their details, their numbers, the stay's two clocks; a person not
+   recorded is a warning, never a refusal. Each signs the printed card on
+   arrival and on departure (the owner, 27 September).
    ══════════════════════════════════════════════════════════════════ */
 
 function useHotel(): string {
@@ -48,6 +53,9 @@ function useHotel(): string {
 }
 
 type Kind = "arrival" | "departure";
+
+/** A row is a person on a stay. */
+const rowOf = (r: FormCRow) => `${r.reservationId}|${r.guestId}`;
 
 /** A row's answers as the shared fields hold them (the address abroad
     comes back as home*, and is sent as the document's own address). */
@@ -71,8 +79,9 @@ export default function FormCPage() {
   });
 
   const record = useMutation({
-    mutationFn: (v: { id: string; kind: Kind; reference: string }) =>
-      recordFormC(hotelId, v.id, v.reference, v.kind),
+    mutationFn: (v: { r: FormCRow; kind: Kind; reference: string }) =>
+      recordFormC(hotelId, v.r.reservationId, v.reference, v.kind,
+        v.r.companion ? v.r.guestId : undefined),
     onSuccess: async () => {
       setFiling(null);
       setReference("");
@@ -86,21 +95,21 @@ export default function FormCPage() {
 
   /* The portal's number for one filing, typed where the button was. */
   const numberEntry = (r: FormCRow, kind: Kind) =>
-    filing?.id === r.reservationId && filing.kind === kind ? (
+    filing?.id === rowOf(r) && filing.kind === kind ? (
       <div className="flex items-center gap-1.5 mt-1">
         <Input value={reference} onChange={(e) => setReference(e.target.value)}
           placeholder="Portal number" className="w-36"
           aria-label={`FRRO ${kind} number`} />
         <Button variant="primary" size="sm"
           disabled={!reference.trim() || record.isPending}
-          onClick={() => record.mutate({ id: r.reservationId, kind, reference: reference.trim() })}>
+          onClick={() => record.mutate({ r, kind, reference: reference.trim() })}>
           Save
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setFiling(null)}>Cancel</Button>
       </div>
     ) : (
       <Button size="sm" variant="ghost" className="mt-1"
-        onClick={() => { setFiling({ id: r.reservationId, kind }); setReference(""); }}>
+        onClick={() => { setFiling({ id: rowOf(r), kind }); setReference(""); }}>
         {(kind === "arrival" ? r.arrivalNumbers : r.departureNumbers).length
           ? "Add a number" : "Record number"}
       </Button>
@@ -137,11 +146,10 @@ export default function FormCPage() {
           <p className="text-2xs text-grey-500 tabular">
             {r.nationality} · room {r.room} · {r.adults + r.children} in the room
           </p>
-          {/* The booking knows only its lead guest; the law counts every
-              foreigner (the owner, 27 September: warn). */}
-          {r.adults + r.children > 1 && (
-            <p className="text-2xs text-brand-yellow-800">
-              Each foreigner in the room needs their own Form III.
+          {/* Every adult is recorded (D27-382). A warning, never a refusal. */}
+          {r.recorded < r.adults && (
+            <p className="text-2xs text-brand-yellow-800" data-form-iii-unrecorded>
+              {peopleWords(r.adults, r.recorded)}
             </p>
           )}
         </div>
@@ -217,6 +225,16 @@ export default function FormCPage() {
         </div>
       </div>
 
+      {/* An adult nobody has recorded may be a foreigner, and has no row
+          here: said above the list (D27-382). */}
+      {(data?.unrecorded ?? []).length > 0 && (
+        <p className="text-sm text-brand-yellow-800 mb-5" data-form-iii-in-house>
+          Adults not recorded in house, each may be a foreigner:{" "}
+          {data!.unrecorded.map((u) => `room ${u.room} (${peopleWords(u.adults, u.recorded)})`).join(", ")}.
+          {" "}Add them on the stay.
+        </p>
+      )}
+
       {record.isError && (
         <Card className="mb-5 border-brand-red-100 bg-brand-red-50">
           <CardBody>
@@ -232,7 +250,7 @@ export default function FormCPage() {
         <DataTable<FormCRow>
           rows={data?.rows ?? []}
           columns={columns}
-          rowKey={(r) => r.reservationId}
+          rowKey={rowOf}
           loading={isLoading}
           error={error}
           onRetry={() => refetch()}
@@ -268,8 +286,27 @@ function CompleteDetails({
   hotelId, row, onClose, onSaved,
 }: { hotelId: string; row: FormCRow; onClose: () => void; onSaved: () => void }) {
   const [value, setValue] = useState<Particulars>(() => particularsOf(row));
+  /* GUE-5 (D27-382): the document skipped at check-in, recorded here. Sent
+     only when changed: a number on file is not asked of today's rules because
+     a clerk filled in another box. */
+  const hadType = typeof row["idType"] === "string" ? row["idType"] : "";
+  const hadNumber = row.passport ?? "";
+  const [idType, setIdType] = useState(hadType);
+  const [idNumber, setIdNumber] = useState(hadNumber);
+  const idsOff = useCurrentHotel()?.deskRules?.idTypesOff ?? [];
+  const changed = idType !== hadType || idNumber.trim() !== hadNumber;
+  const wrong = !changed || !idType ? null
+    : !idNumber.trim() ? "Type the document's number." : idNumberProblem(idType, idNumber);
   const save = useMutation({
-    mutationFn: () => completeFormIII(hotelId, row.reservationId, particularsPayload(value)),
+    mutationFn: () => {
+      const typed = particularsPayload(value);
+      return completeFormIII(hotelId, row.reservationId, {
+        ...typed,
+        identity: changed && idType
+          ? { ...typed.identity, idType, idNumber: idNumber.trim() } : typed.identity,
+        ...(row.companion ? { guestId: row.guestId } : {}),
+      });
+    },
     onSuccess: onSaved,
   });
   return (
@@ -279,7 +316,7 @@ function CompleteDetails({
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" disabled={save.isPending} onClick={() => save.mutate()}>
+            <Button variant="primary" disabled={save.isPending || wrong !== null} onClick={() => save.mutate()}>
               Save
             </Button>
           </>
@@ -289,8 +326,27 @@ function CompleteDetails({
             {describeError(save.error).message ?? "Nothing was saved."}
           </p>
         )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <Field label="Document">
+            {(f) => (
+              <NativeSelect {...fieldProps(f)} value={idType} onChange={(e) => setIdType(e.target.value)}>
+                <option value="">Not recorded</option>
+                {ID_TYPES.filter(([v]) => v === idType || !idsOff.includes(v))
+                  .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </NativeSelect>
+            )}
+          </Field>
+          <Field label="Number">
+            {(f) => (
+              <Input {...fieldProps(f)} value={idNumber} disabled={!idType}
+                placeholder={idType === "passport" ? "P1234567" : "Document number"}
+                onChange={(e) => setIdNumber(e.target.value)} />
+            )}
+          </Field>
+          {wrong && <p className="sm:col-span-2 text-sm text-brand-red-700" data-id-wrong>{wrong}</p>}
+        </div>
         <ForeignGuestFields value={value} onChange={setValue}
-          nationality={row.nationality} idCaptured={Boolean(row.passport)}
+          nationality={row.nationality} idCaptured={Boolean(idType && idNumber.trim())}
           withNextDestination={row.status === "checked_out"} />
       </DialogContent>
     </Dialog>

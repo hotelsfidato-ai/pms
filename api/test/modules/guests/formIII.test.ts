@@ -466,4 +466,32 @@ describe("a foreign guest's departure", () => {
     const res = await call(`/PUN/form-c/${a.stay}/details`, "PUT", { visit: VISIT });
     expect(res.status).toBe(409);
   });
+
+  /* GUE-5 (D27-382): the ID skipped for a reason at check-in had nowhere to
+     go, and the register said "not on record" for as long as it lasted. */
+  it("records a document skipped at check-in, by check-in's own rules", async () => {
+    const a = await arrival("GB");
+    const inn = await call(`/PUN/stays/${a.stay}/check-in`, "POST", {
+      roomNumber: a.room, ...CLOCK, identity: { nationality: "GB" }, visit: VISIT,
+      idSkipReason: "Scanner offline",
+    });
+    expect(inn.status, await inn.text()).toBe(200);
+    const row = async () => (await register()).find((r) => r.reservationId === a.stay);
+    expect((await row())?.["passport"]).toBeNull();
+
+    const aadhaar = await call(`/PUN/form-c/${a.stay}/details`, "PUT",
+      { identity: { idType: "aadhaar", idNumber: "1234" } });
+    expect(aadhaar.status).toBe(409);
+    const noNumber = await call(`/PUN/form-c/${a.stay}/details`, "PUT",
+      { identity: { idType: "passport" } });
+    expect(noNumber.status).toBe(409);
+    expect((await row())?.["passport"]).toBeNull();
+
+    const number = `P${PID}G5`;
+    const res = await call(`/PUN/form-c/${a.stay}/details`, "PUT",
+      { identity: { idType: "passport", idNumber: number } });
+    expect(res.status, await res.text()).toBe(200);
+    expect(await row()).toMatchObject({ passport: number, idType: "passport" });
+    await release(a.stay);
+  });
 });
