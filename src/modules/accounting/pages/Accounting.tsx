@@ -11,8 +11,8 @@ import {
 } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import {
-  FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx,
-  getTallyLedgers, saveTallyLedgers,
+  FORMATS, getDayBook, downloadDayBook, downloadDayBookXlsx, downloadTally,
+  getTallyLedgers, saveTallyLedgers, whyNot,
   type DayBook, type DayBookRow, type ExportFormat, type TallyLedgers,
 } from "@/modules/accounting/data/accounting";
 
@@ -65,7 +65,8 @@ export default function AccountingPage() {
 
   const book = query.data ?? null;
   const chosen = FORMATS.find((f) => f.key === format) ?? FORMATS[0]!;
-  const canExport = Boolean(book?.days.length) && chosen.blocked === null;
+  const canExport = Boolean(book?.days.length) && whyNot(chosen.key, ledgers.data) === null;
+  const tally = format.startsWith("tally");
 
   return (
     <Page>
@@ -78,9 +79,10 @@ export default function AccountingPage() {
             disabled={!canExport}
             onClick={() => {
               if (!book) return;
-              if (format !== "day-book-xlsx") return downloadDayBook(book);
-              downloadDayBookXlsx(book).catch((error: unknown) => toast.error(
-                "The Excel file was not made",
+              if (format === "day-book-csv") return downloadDayBook(book);
+              const made = tally ? downloadTally(book, format) : downloadDayBookXlsx(book);
+              made.catch((error: unknown) => toast.error(
+                tally ? "The Tally file was not made" : "The Excel file was not made",
                 error instanceof ApiError ? error.message : String(error)));
             }}
           >
@@ -111,9 +113,9 @@ export default function AccountingPage() {
           </Field>
 
           {/* All three formats are offered (D18-16): whoever exports
-              picks what their accountant asks for. Two of them say
-              plainly why they produce nothing yet, rather than being
-              greyed out with no reason beside them. */}
+              picks what their accountant asks for. A Tally format with a
+              ledger name still blank says which, rather than being greyed
+              out with no reason beside it (D27-382). */}
           <fieldset className="sm:col-span-2">
             <legend className="text-sm font-medium text-ink-900 mb-2">Format</legend>
             <div className="grid gap-2">
@@ -133,14 +135,35 @@ export default function AccountingPage() {
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-ink-900">{f.label}</span>
                     <span className="block text-sm text-grey-500 mt-0.5">{f.what}</span>
-                    {f.blocked && (
-                      <span className="block text-sm text-brand-yellow-800 mt-1">{f.blocked}</span>
+                    {whyNot(f.key, ledgers.data) && (
+                      <span className="block text-sm text-brand-yellow-800 mt-1">{whyNot(f.key, ledgers.data)}</span>
                     )}
                   </span>
                 </label>
               ))}
             </div>
           </fieldset>
+
+          {/* What a Tally file is and is not (ACC-4). Said before the press,
+              because a voucher in somebody's books is hard to take back. */}
+          {tally && (
+            <div className="sm:col-span-2 text-sm text-grey-600 grid gap-2">
+              <p>
+                One Sales voucher a day, what was paid on bills, refunds, bills moved to a
+                company and each company receipt, for days the night audit has closed.
+                The ledgers must already be in Tally: the file creates none.
+              </p>
+              <p>
+                Not in the file: credit notes and cancelled VAT bills, which the day book
+                does not count; NC bills, which have no value; supplier bills, cash
+                expenses and cash banked. A day's voucher does not list each bill.
+              </p>
+              <p>
+                If a closed day is corrected, export it again and its vouchers are replaced.
+                A voucher the corrected day no longer has stays in Tally until it is deleted there.
+              </p>
+            </div>
+          )}
         </CardBody>
       </Card>
 

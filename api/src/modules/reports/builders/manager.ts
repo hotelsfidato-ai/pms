@@ -4,7 +4,7 @@ import {
   type ReportDoc, type ReportRow, type ReportSection, type Cell, type CellKind,
 } from "../document.ts";
 import {
-  dailyFigures, dailyExtras, sumDays, heading, firstTradingDay, LIVE,
+  dailyFigures, dailyExtras, dailyPayments, sumDays, heading, firstTradingDay, LIVE,
   type Property, type DayFigures,
 } from "../figures.ts";
 import { countedFrom } from "./statistics.ts";
@@ -151,24 +151,11 @@ export async function managerReport(
   /* NET OF REFUNDS (D27-315 B): a refund is money out by the way it went
      back, so each way's row is what the hotel kept - the Night audit
      report's receipts and the cashier report say the same. */
-  const { rows: paid } = await client.query<{ date: string; method: string; amount: string }>(
-    `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
-            coalesce(p.method, rf.method, 'unrecorded') as method,
-            (-sum(fp.amount))::text                  as amount
-       from folio_postings fp
-       left join payments p on p.posting_id = fp.id
-       left join refunds rf on rf.posting_id = fp.id
-      where fp.hotel_id = $1
-        and fp.category in ('payment', 'refund')
-        and ${LIVE}
-        and fp.business_date between $2::date and $3::date
-      group by 1, 2`,
-    [hotelId, w.ytd, asOn],
-  );
+  const paid = await dailyPayments(client, hotelId, w.ytd, asOn);
   const payBy = new Map<string, Map<string, number>>();
   for (const p of paid) {
     if (!payBy.has(p.method)) payBy.set(p.method, new Map());
-    bump(payBy.get(p.method)!, p.date, Number(p.amount));
+    bump(payBy.get(p.method)!, p.date, p.amount);
   }
   const method = (k: string) => threeOf(w, payBy.get(k) ?? new Map());
 

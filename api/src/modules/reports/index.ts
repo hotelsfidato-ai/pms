@@ -57,9 +57,11 @@ export {
   /* The Manager report's extras by kind, opened for the day book (ACC-3,
      the owner's D27-382): food has its own line for Tally. */
   dailyExtras,
+  /* Money on the bills by way of paying, opened for the Tally vouchers (ACC-4). */
+  dailyPayments,
 } from "./figures.ts";
 export { round2 } from "./document.ts";
-export type { DayFigures, Property, StayNight, PosDay, ExtraLine } from "./figures.ts";
+export type { DayFigures, Property, StayNight, PosDay, ExtraLine, PaymentLine } from "./figures.ts";
 export type {
   ReportDoc, ReportKey, ReportParams, ReportSection, ReportRow, ReportColumn,
   ReportFact, ReportChart, CellKind, Cell,

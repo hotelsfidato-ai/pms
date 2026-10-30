@@ -32,10 +32,6 @@ export interface ExportFormatChoice {
   label: string;
   /** What it is, in one line, for somebody who does not run Tally. */
   what: string;
-  /** Null when it can be exported today; otherwise the reason it
-      cannot, in the owner's own terms. Never a disabled control with
-      no explanation beside it. */
-  blocked: string | null;
 }
 
 export const FORMATS: readonly ExportFormatChoice[] = [
@@ -43,7 +39,6 @@ export const FORMATS: readonly ExportFormatChoice[] = [
     key: "day-book-csv",
     label: "Day book (CSV)",
     what: "One row a day: sales, the tax on them and what was received. Every accounting package opens it.",
-    blocked: null,
   },
   /* D22-37, the owner: "both the CSV and a real .xlsx" - a choice of its
      own, so Export hands over the one file chosen (24 September). */
@@ -51,28 +46,31 @@ export const FORMATS: readonly ExportFormatChoice[] = [
     key: "day-book-xlsx",
     label: "Day book (Excel)",
     what: "The same columns and figures as the CSV, as an Excel workbook.",
-    blocked: null,
   },
-  /* Offered, and honest about why they produce nothing yet. A Tally
-     voucher has to name the ledger it posts to, and the ledger names
-     in the hotel's own books are the owner's to give (MODULE.md). A
-     name invented here would be CREATED inside their Tally on import,
-     and somebody would spend an evening merging ledgers this screen
-     made up. The owner's answer, 19 September: ship the day book, wait
-     for the names. */
   {
     key: "tally-prime-xml",
     label: "Tally Prime (XML)",
-    what: "Sales and receipt vouchers, imported straight into Tally Prime.",
-    blocked: "Waiting on the ledger names in your books. Tell us what your Tally calls room rent, food, CGST, SGST and cash - and alcohol sales and VAT, if you serve alcohol - and this is switched on.",
+    what: "Sales, receipt, payment and journal vouchers for days the night audit has closed.",
   },
   {
     key: "tally-erp9-xml",
     label: "Tally ERP 9 (XML)",
     what: "The same vouchers in the older Tally's format.",
-    blocked: "Waiting on the ledger names in your books, as above.",
   },
 ];
+
+const TALLY: Partial<Record<ExportFormat, string>> = {
+  "tally-prime-xml": "tally-prime",
+  "tally-erp9-xml": "tally-erp9",
+};
+
+/** Why this format cannot be exported, naming WHICH ledgers, or null. The
+    server refuses the same way (tally.ts): this says so before the press. */
+export function whyNot(format: ExportFormat, ledgers: TallyLedgers | undefined): string | null {
+  if (!TALLY[format]) return null;
+  if (!ledgers) return "Reading the ledger names.";
+  return ledgers.missing.length ? `Type these ledger names first: ${ledgers.missing.join(", ")}.` : null;
+}
 
 export interface DayBookRow {
   date: string;
@@ -180,6 +178,13 @@ export function downloadDayBook(book: DayBook): void {
     reportFilename(book.property.name, "day book", `${book.from} to ${book.to}`),
     toCsv(headers, rows),
   );
+}
+
+/** A Tally file, made on the server. Throws the server's sentence if the range
+    cannot be made into one: a day not closed, or a day that cannot balance. */
+export async function downloadTally(book: DayBook, format: ExportFormat): Promise<void> {
+  const range = new URLSearchParams({ from: book.from, to: book.to });
+  await downloadFile(`/api/hotels/${book.property.code}/accounting/${TALLY[format]}.xml?${range}`);
 }
 
 /** The same day book as a real .xlsx, made on the server (the browser

@@ -367,6 +367,10 @@ export interface PosDay {
       VAT (D21-91). Inside them, as in DayFigures. */
   alcohol: number;
   vat: number;
+  /** What the bills were rounded by: net + tax + this = what was tendered. */
+  roundOff: number;
+  /** How those bills were paid, by way of paying. */
+  tenders: Record<string, number>;
 }
 
 export async function posSales(
@@ -374,9 +378,10 @@ export async function posSales(
 ): Promise<PosDay[]> {
   const { rows } = await client.query<{
     date: string; net: string; tax: string; alcohol: string; vat: string;
+    round_off: string; tenders: Record<string, number>;
   }>(
     `with settled as (
-       select o.id, o.business_date
+       select o.id, o.business_date, coalesce(o.round_off, 0) as round_off
          from pos_orders o
         where o.hotel_id = $1
           and o.status = 'settled'
@@ -410,15 +415,27 @@ export async function posSales(
          from settled s
          cross join lateral app.pos_order_by_tax(s.id) r
         group by 1
+     ),
+     paid as (
+       select date, jsonb_object_agg(method, amount) as tenders
+         from (select s.business_date as date, t.method, sum(t.amount) as amount
+                 from settled s
+                 join pos_order_tenders t on t.order_id = s.id
+                group by 1, 2) x
+        group by 1
      )
      select to_char(d.date, 'YYYY-MM-DD') as date,
             coalesce(l.gross, 0) - coalesce(r.discount, 0) as net,
             coalesce(r.tax, 0)                             as tax,
             coalesce(r.alcohol, 0)                         as alcohol,
-            coalesce(r.vat, 0)                             as vat
-       from (select distinct business_date as date from settled) d
+            coalesce(r.vat, 0)                             as vat,
+            d.round_off,
+            coalesce(p.tenders, '{}'::jsonb)               as tenders
+       from (select business_date as date, sum(round_off) as round_off
+               from settled group by 1) d
        left join lines l on l.date = d.date
        left join rated r on r.date = d.date
+       left join paid p on p.date = d.date
       order by 1`,
     [hotelId, from, to],
   );
@@ -428,7 +445,41 @@ export async function posSales(
     tax: Number(r.tax),
     alcohol: Number(r.alcohol),
     vat: Number(r.vat),
+    roundOff: Number(r.round_off),
+    tenders: r.tenders,
   }));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MONEY ON THE BILLS, BY WAY OF PAYING
+
+   Lifted out of the Manager report for the Tally export (ACC-4), so its
+   Payment section and a Receipt voucher read one query. `amount` is money in:
+   a refund is negative. "city_ledger" is a bill moved to a company, which is
+   not money received (D17-74); "unrecorded" is a payment with no way of paying
+   on record.
+   ══════════════════════════════════════════════════════════════════ */
+export interface PaymentLine { date: string; method: string; refund: boolean; amount: number }
+
+export async function dailyPayments(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<PaymentLine[]> {
+  const { rows } = await client.query<{ date: string; method: string; refund: boolean; amount: string }>(
+    `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
+            coalesce(p.method, rf.method, 'unrecorded') as method,
+            fp.category = 'refund'                      as refund,
+            (-sum(fp.amount))::text                     as amount
+       from folio_postings fp
+       left join payments p on p.posting_id = fp.id
+       left join refunds rf on rf.posting_id = fp.id
+      where fp.hotel_id = $1
+        and fp.category in ('payment', 'refund')
+        and ${LIVE}
+        and fp.business_date between $2::date and $3::date
+      group by 1, 2, 3`,
+    [hotelId, from, to],
+  );
+  return rows.map((r) => ({ date: r.date, method: r.method, refund: r.refund, amount: Number(r.amount) }));
 }
 
 /* ══════════════════════════════════════════════════════════════════

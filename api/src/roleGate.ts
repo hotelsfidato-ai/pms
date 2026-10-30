@@ -923,6 +923,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/commission`]: see("setting", "the money settings"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
   [`GET ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
+  [`GET ${H}/accounting/:file{tally-(?:prime|erp9)\\.xml}`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
 
   /* ── Reports ── */
   /* The Dashboard's Due out tile: what departing guests still owe (D27-243). */

@@ -16,9 +16,10 @@ import * as csvModule from "@/lib/csv";
 
      the file's last line agrees with the lines above it
      a day the night audit has not run is in the file, and says so
-     all three formats are offered, and the two that cannot produce a
-       file say why rather than sitting greyed out
-     the button does not offer a file it cannot write
+     all three formats are offered, and a Tally format with a ledger name
+       blank says WHICH, rather than sitting greyed out
+     the button does not offer a file it cannot write, and offers the Tally
+       file once every name is typed
      the menu and the page agree about who may open it
 
    The figures themselves are the server's and are proved there
@@ -208,30 +209,66 @@ describe("the export screen", () => {
     }
   });
 
-  it("says why the two Tally formats produce nothing yet", async () => {
+  it("names the ledgers still blank, beside both Tally formats", async () => {
     open("FMT2");
-    /* Not a greyed-out control with no explanation beside it: the
-       reason is the owner's own - the ledger names in their books.
-       BOTH of them say it, which is why this counts rather than
-       finding one. A format that went quiet would pass a findByText. */
-    const said = await screen.findAllByText(/ledger names in your books/i);
-    expect(said).toHaveLength(FORMATS.filter((f) => f.blocked).length);
+    /* BOTH of them say it, which is why this counts rather than finding
+       one. A format that went quiet would pass a findByText. */
+    const said = await screen.findAllByText("Type these ledger names first: Room rent, CGST, Cash.");
     expect(said).toHaveLength(2);
   });
 
-  it("will not offer a file it cannot write", async () => {
+  it("will not offer a Tally file while a ledger name is blank", async () => {
     open("FMT3");
     /* Wait for the day book to arrive first. The button exists from the
        first paint and is correctly disabled until there is something to
        export - asserting on it before the read lands tests the loading
        state, not this one. */
     await screen.findByRole("table");
-    const button = await screen.findByRole("button", { name: /export/i });
+    await screen.findAllByText(/Type these ledger names first/);
+    const button = await screen.findByRole("button", { name: /^export/i });
     expect((button as HTMLButtonElement).disabled).toBe(false);
 
     fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
-    const after = await screen.findByRole("button", { name: /export/i });
+    const after = await screen.findByRole("button", { name: /^export/i });
     expect((after as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  /* D27-382: every name typed, and the two Tally files are on: each its own
+     file, from the server, and the blocking sentence gone. */
+  it("hands over the Tally file chosen once every name is typed", async () => {
+    control.ledgers = {
+      ledgers: BLANK_LEDGERS.ledgers.map((l) => ({ ...l, name: `${l.label} A/c` })),
+      missing: [],
+    };
+    const file = vi.spyOn(apiModule, "downloadFile").mockResolvedValue("x.xml");
+    try {
+      open("TLY1");
+      await screen.findByRole("table");
+      await screen.findByDisplayValue("Room rent A/c");
+      expect(screen.queryByText(/Type these ledger names first/)).toBeNull();
+
+      fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
+      expect(file).toHaveBeenLastCalledWith(
+        "/api/hotels/5EL/accounting/tally-prime.xml?from=2026-08-24&to=2026-08-25");
+
+      fireEvent.click(await screen.findByRole("radio", { name: /Tally ERP 9/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
+      expect(file).toHaveBeenLastCalledWith(
+        "/api/hotels/5EL/accounting/tally-erp9.xml?from=2026-08-24&to=2026-08-25");
+    } finally {
+      file.mockRestore();
+    }
+  });
+
+  it("says what the Tally file holds, and what it leaves out", async () => {
+    open("TLY2");
+    await screen.findByRole("table");
+    expect(screen.queryByText(/Not in the file/)).toBeNull();
+    fireEvent.click(await screen.findByRole("radio", { name: /Tally Prime/i }));
+    expect(await screen.findByText(/Not in the file: credit notes and cancelled VAT bills/)).toBeTruthy();
+    expect(await screen.findByText(/the file creates none/)).toBeTruthy();
+    expect(await screen.findByText(/its vouchers are replaced/)).toBeTruthy();
   });
 
   /* D22-37, the owner: "both the CSV and a real .xlsx" - Excel is a choice
@@ -242,12 +279,12 @@ describe("the export screen", () => {
     try {
       open("XLS1");
       await screen.findByRole("table");
-      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
       expect(csv).toHaveBeenCalledTimes(1);
       expect(xlsx).not.toHaveBeenCalled();
 
       fireEvent.click(await screen.findByRole("radio", { name: /Day book \(Excel\)/ }));
-      fireEvent.click(await screen.findByRole("button", { name: /export/i }));
+      fireEvent.click(await screen.findByRole("button", { name: /^export/i }));
       expect(xlsx).toHaveBeenCalledWith(
         "/api/hotels/5EL/accounting/day-book.xlsx?from=2026-08-24&to=2026-08-25");
       expect(csv).toHaveBeenCalledTimes(1);
