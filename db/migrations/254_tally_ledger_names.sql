@@ -51,9 +51,7 @@ create trigger tally_ledger_names_audit after insert or update or delete on tall
   for each row execute function app.write_audit();
 
 
--- ── A test hotel's classes: 251's list, with tally_ledger_names as setup ─────
--- ⚠ Migration 253 (another helper's) may redefine this too; whichever merges
--- last must carry every entry.
+-- ── A test hotel's classes: 253's list, with tally_ledger_names as setup ─────
 create or replace function app.test_hotel_classes()
 returns table (table_name text, class text)
 language sql
@@ -85,6 +83,7 @@ as $$
   ('purchase_requesters', 'setup'), ('review_links', 'setup'),
   -- trading ----------------------------------------------------------------
   ('reservations', 'trading'), ('reservation_inclusions', 'trading'),
+  ('stay_companions', 'trading'),
   ('room_assignments', 'trading'), ('room_blocks', 'trading'),
   ('room_status_log', 'trading'), ('housekeeping_assignments', 'trading'),
   ('folios', 'trading'), ('folio_postings', 'trading'), ('payments', 'trading'), ('refunds', 'trading'),
