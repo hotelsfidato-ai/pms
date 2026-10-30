@@ -8,6 +8,20 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · Edit on Companies and agents (the owner's D27-382)
+
+**Asked for:** Edit was only inside a company's Contracts page; an Edit button on every company on the list, the existing window, for the owner, an Admin and the GM only.
+
+**Shipped:** `pages/Guests.tsx` `CompaniesPage`: an **Edit** column for whoever holds `company: edit` (`can`, the same matrix as the gate's `PATCH /companies/:id`), opening `CompanyDialog` on the whole record from `listCompanyRecords` (both through the contracts door). The list is by name from the bookings, so a row is tied to its record by name; a booking source with no company behind it has no Edit. **A company with no booking here was not on the list at all**, so "Edit that company instead" would have sent the clerk nowhere: such a company is added under Corporate accounts with 0 bookings and a dash for its revenue. No server change. Manual A10.4.
+
+**Checked:** an issued tax invoice keeps what it printed: `invoices.recipient_name`, `recipient_gstin` and `recipient_address` are written at issue (finance `invoices.ts`), the printed invoice reads those columns, a credit note copies them and `invoices_immutable` refuses a change. The next invoice reads the company's record. Said in A10.4.
+
+**Proved:** `companiesEdit.test.tsx` 7/7. `mayEdit` forced true: "front_desk does not" and "hotel_manager does not" failed; the no-booking companies filtered out: "is on a company with no booking here" failed. Each restored from a saved copy, the break confirmed by a grep count first. The server's rule is `roleGate.test.ts`'s, unchanged.
+
+**Left open:** two `companies` rows of one name (the demo loaded twice) are one line on this list; Edit opens the first.
+
+---
+
 ## 2026-10-28 · Salutation and Full name; the last company; the switch (D27-372)
 
 **Shipped:** Edit guest says **Salutation** and **Full name** (was Title and

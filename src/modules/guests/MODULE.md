@@ -78,7 +78,7 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 | POST | `/:code/guests/:id/vip` | set or clear the VIP mark — it travels with the guest, not the booking (043) |
 | GET | `/:code/guests/:id/record` | one guest's record for Edit guest: title, name, phone, email, nationality, address (GU-1; customer:edit, READ_RULES) |
 | PATCH | `/:code/guests/:id` | correct it: absent unchanged, blank clears (never name or nationality); refuses an impossible phone, email, country, title (GU-1) |
-| GET | `/:code/companies` | each account bookings came through — bookings, room nights, revenue, open balance — grouped by name |
+| GET | `/:code/companies` | each account bookings came through — bookings, room nights, revenue, open balance — grouped by name. The screen ties a row to its record by name (`listCompanyRecords`, the contracts door), for Edit (D27-382), and adds the companies with no booking here |
 
 **`api/src/modules/guests/bookingSources.ts`** (was `api/src/routes/bookingSources.ts`)
 
