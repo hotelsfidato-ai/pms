@@ -9,7 +9,7 @@ export interface OperationResult<T = void> {
       opens the right dialog from this rather than matching on the
       prose — which somebody will reword one day, at which point the
       way through silently disappears. */
-  needs?: "late-reason" | "early-reason" | "credit-limit";
+  needs?: "late-reason" | "early-reason" | "credit-limit" | "next-destination";
   data?: T;
 }
 

@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-30 · Every adult in the room (the owner's D27-382, GUE-6)
+
+**Shipped.** The guests service's `StayCompanions` on the check-in window (`flows/CheckInFlow.tsx`, under the ID, following the party as typed) and the stay panel (`flows/StayDrawer.tsx`, Stay tab). `POST /check-in` is unchanged: each person is saved on their own call, so nobody missing can stop it. `operations.ts`: the registration card lists the other adults with `maskedId` (`ID_MASK` moved to guests as that); its own `form_iii_stays` read is the lead's row (`guest_id is null`); check-out asks a next destination for a foreign companion under an Indian lead (`needs: "next-destination"`) and hands it on with `saveCompanionsDeparture`. `pages/RegistrationCard.tsx`: "Other adults in the room". The whole entry is the guests changelog's.
+
+**Proved.** `registrationCard.test.tsx`, `companionsCheckIn.test.tsx` ("is never held up, and the check-in's own call knows nothing of them"), API `companions.test.ts`.
+
+---
+
 ## 2026-10-28 · The guest's company on the stay panel (the owner's D27-371)
 
 **Shipped.** `api/.../stays.ts` reads the booking's guest company

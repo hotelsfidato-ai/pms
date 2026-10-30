@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { AlertTriangle, Building2, Handshake, Home, Plus, Users, Wallet } from "lucide-react";
@@ -8,7 +8,7 @@ import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, Input, Button, type Column, type Tone } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
-import { CompanyDialog } from "@/modules/contracts";
+import { CompanyDialog, listCompanyRecords, type CompanyRow } from "@/modules/contracts";
 import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
@@ -192,7 +192,11 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
   { key: "name", header: "Source", cell: (c) => <span className="font-medium">{c.name}</span> },
   { key: "bookings", header: "Bookings", numeric: true, cell: (c) => <span className="tabular">{c.bookings}</span> },
   { key: "nights", header: "Room nights", numeric: true, hideBelow: "sm", cell: (c) => <span className="tabular">{c.roomNights}</span> },
-  { key: "revenue", header: "Revenue", numeric: true, cell: (c) => <span className="tabular">{money(c.revenue)}</span> },
+  {
+    key: "revenue", header: "Revenue", numeric: true,
+    /* No booking yet: nothing has been earned, so a dash, not ₹0. */
+    cell: (c) => <span className="tabular">{c.bookings === 0 ? "-" : money(c.revenue)}</span>,
+  },
   {
     key: "commission", header: "Commission", numeric: true, hideBelow: "lg",
     cell: (c) => <span className="text-grey-500">{c.commissionPct === null ? "-" : `${c.commissionPct}%`}</span>,
@@ -210,14 +214,48 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
 export function CompaniesPage() {
   const hotelId = useHotel();
   /* Add company (QA GU-6; D27-184, C-13): the Contracts dialog, here too. */
-  const mayAdd = can(useRole(), "create", "company");
+  const role = useRole();
+  const mayAdd = can(role, "create", "company");
+  /* EDIT (D27-382): the owner, an Admin and the GM, as the server's rule on
+     PATCH /companies/:id; nobody else sees the button. */
+  const mayEdit = can(role, "edit", "company");
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<CompanyRow | null>(null);
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["companies", hotelId],
     queryFn: () => listCompanies(hotelId),
   });
+  const records = useQuery({
+    queryKey: ["company-records", hotelId],
+    queryFn: () => listCompanyRecords(hotelId),
+    enabled: !!hotelId,
+  });
 
-  const rows = data ?? [];
+  /* The list is by name, from the bookings (a booking source has no company
+     behind it, so no Edit); a company with no booking here yet is added under
+     Corporate accounts, or the one the duplicate refusal names could not be
+     found. */
+  const recordOf = new Map((records.data ?? []).map((r) => [r.name.trim().toLowerCase(), r]));
+  const booked = data ?? [];
+  const named = new Set(booked.map((r) => r.name.trim().toLowerCase()));
+  const rows: CompanyRecord[] = [
+    ...booked,
+    ...(records.data ?? []).filter((r) => !named.has(r.name.trim().toLowerCase())).map((r) => ({
+      id: r.id, name: r.name, kind: "Corporate" as const, bookings: 0, roomNights: 0,
+      revenue: 0, openBalance: 0, commissionPct: null,
+    })),
+  ];
+  const columns: Column<CompanyRecord>[] = mayEdit ? [...SOURCE_COLUMNS, {
+    key: "edit", header: "",
+    cell: (c) => {
+      const record = recordOf.get(c.name.trim().toLowerCase());
+      return record ? (
+        <Button size="sm" variant="secondary" aria-label={`Edit ${c.name}`} onClick={() => setEditing(record)}>
+          Edit
+        </Button>
+      ) : null;
+    },
+  }] : SOURCE_COLUMNS;
   const groups = KIND_ORDER
     .map((kind) => ({ kind, rows: rows.filter((r) => r.kind === kind) }))
     .filter((g) => g.rows.length > 0);
@@ -245,6 +283,10 @@ export function CompaniesPage() {
         )}
       />
       <CompanyDialog hotelId={hotelId} open={adding} onOpenChange={setAdding} />
+      {editing && (
+        <CompanyDialog hotelId={hotelId} company={editing} open
+          onOpenChange={(o) => { if (!o) setEditing(null); }} />
+      )}
 
       {/* THE SPLIT, before the detail. "How much of this did we pay
           commission on" is the first question, and reading it off six
@@ -278,7 +320,7 @@ export function CompaniesPage() {
         <Card>
           <DataTable<CompanyRecord>
             rows={rows}
-            columns={SOURCE_COLUMNS}
+            columns={columns}
             rowKey={(c) => c.id}
             loading={isLoading}
             error={error}
@@ -310,7 +352,7 @@ export function CompaniesPage() {
               <Card>
                 <DataTable<CompanyRecord>
                   rows={g.rows}
-                  columns={SOURCE_COLUMNS}
+                  columns={columns}
                   rowKey={(c) => c.id}
                 />
               </Card>

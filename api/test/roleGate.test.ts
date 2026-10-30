@@ -737,12 +737,19 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
       `GET ${H}/form-c`, `GET ${H}/online-checkin`,
       `GET ${H}/online-checkin/id-photos`, `GET ${H}/online-checkin/id-photos/:id`,
       `GET ${H}/online-checkin/messages`,
-      `GET ${H}/reports/c-form`, `GET ${H}/stays/:id/registration-card`,
+      `GET ${H}/reports/c-form`, `GET ${H}/stays/:id/companions`,
+      `GET ${H}/stays/:id/registration-card`,
     ]);
   });
 
   it("let in exactly the owner, an administrator, the GM, the hotel manager and reception", () => {
     for (const [, key] of READS) expect(whoMay(readRule(key)), key).toEqual(CHECK_IN_ROLES);
+    /* And a companion's ID, read or written, is a lead guest's (D27-382). */
+    expect(whoMay(readRule(`GET ${H}/stays/:id/companions`))).toEqual(CHECK_IN_ROLES);
+    for (const key of [`POST ${H}/stays/:id/companions`, `PUT ${H}/stays/:id/companions/:guestId`,
+      `DELETE ${H}/stays/:id/companions/:guestId`]) {
+      expect(whoMay(WRITE_RULES[key]!), key).toEqual(CHECK_IN_ROLES);
+    }
     expect(refusalFor(readRule(`GET ${H}/form-c`))).toBe(
       "Reading guests' passport and ID details is for the owner, an administrator, "
       + "the general manager, the hotel manager or reception. Ask one of them.");
@@ -756,6 +763,9 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
         expect(((await res.json()) as { reason: string }).reason, `${role} ${path}`)
           .toBe(refusalFor(readRule(key)));
       }
+      /* The gate answers before the route: no stay is needed. */
+      const companions = await send(as(role), "GET", "/stays/00000000-0000-0000-0000-000000000000/companions");
+      expect(companions.status, `${role} companions`).toBe(403);
     }
   });
 

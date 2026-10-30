@@ -381,6 +381,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/guests/:id`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
+  /* D27-382: the other adults in a room, by the people who record the lead's. */
+  [`POST ${H}/stays/:id/companions`]: FORM_C,
+  [`PUT ${H}/stays/:id/companions/:guestId`]: FORM_C,
+  [`DELETE ${H}/stays/:id/companions/:guestId`]: FORM_C,
   [`POST ${H}/booking-sources`]: own("guests/bookingSources.ts: the database, app.is_manager"),
   [`PATCH ${H}/booking-sources/:id`]: own("guests/bookingSources.ts: the database, app.is_manager"),
   [`PUT ${H}/booking-sources/:id/commission`]: COMMISSION,
@@ -867,6 +871,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/guests/:id/record`]: GUEST,
   [`GET ${H}/form-c`]: GUEST_ID,
   [`GET ${H}/reports/c-form`]: GUEST_ID,
+  /* D27-382: a companion's ID, as a lead guest's. */
+  [`GET ${H}/stays/:id/companions`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */
   [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`GET ${H}/online-checkin/messages`]: own("routes/guestDoor.ts: DESK_ROLES"),

@@ -1112,7 +1112,7 @@ guestLinks.post("/:code/online-checkin/submissions/:id/confirm", async (c) => {
                        mobile_in_india, phone_abroad, mobile_abroad,
                        employed_in_india::text, ref_address, ref_city, ref_state,
                        ref_pincode) is not null
-       on conflict (reservation_id) do update set
+       on conflict (reservation_id, guest_id) do update set
          arrived_from        = coalesce(excluded.arrived_from, form_iii_stays.arrived_from),
          previous_stay       = coalesce(excluded.previous_stay, form_iii_stays.previous_stay),
          purpose             = coalesce(excluded.purpose, form_iii_stays.purpose),

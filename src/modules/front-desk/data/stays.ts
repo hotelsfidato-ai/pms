@@ -205,6 +205,8 @@ export interface RegistrationCard {
   guest: { title: string | null; name: string; email: string | null; phone: string | null; nationality: string | null;
            address: { line: string | null; city: string | null; state: string | null; pincode: string | null; country: string | null };
            idType: string | null; idNumber: string | null };
+  /** The other adults in the room (D27-382), masked as the guest's ID is. */
+  companions: { name: string; nationality: string; idType: string | null; idNumber: string | null }[];
   company: { name: string | null; email: string | null; phone: string | null } | null;
   agent: { name: string | null; email: string | null; phone: string | null; voucher: string | null } | null;
   arrivedFrom: string | null;

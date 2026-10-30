@@ -26,6 +26,7 @@ const CARD: RegistrationCard = {
   guest: { title: "Mr", name: "A Test Guest", email: null, phone: "+91 98200 00000", nationality: "IN",
            address: { line: "12 Test Lane", city: "Pune", state: "Maharashtra", pincode: "411005", country: "IN" },
            idType: "aadhaar", idNumber: "XXXX XXXX 5674" },
+  companions: [],
   company: null,
   agent: { name: "go-MMT", email: null, phone: null, voucher: "NH7712" },
   arrivedFrom: null,
@@ -65,6 +66,20 @@ describe("the registration card", () => {
     /* Missing is a dash, never a guess. */
     expect(box("Billing company")).toBe("-");
     expect(box("Arriving from")).toBe("-");
+  });
+
+  /* D27-382: every adult in the room, their ID as the server masked it. */
+  it("lists the other adults, and says nothing when there are none", () => {
+    sheet({ ...CARD, companions: [
+      { name: "Second Guest", nationality: "IN", idType: "aadhaar", idNumber: "XXXX XXXX 1234" },
+      { name: "Third Guest", nationality: "GB", idType: null, idNumber: null },
+    ] });
+    const list = document.querySelector("[data-registration-companions]")!;
+    expect(list.textContent).toContain("Second Guest · India · Aadhaar XXXX XXXX 1234");
+    expect(list.textContent).toContain("Third Guest · United Kingdom · -");
+    cleanup();
+    sheet(CARD);
+    expect(document.querySelector("[data-registration-companions]")).toBeNull();
   });
 
   it("prints a dash for a stay checked in before the cards were numbered", () => {

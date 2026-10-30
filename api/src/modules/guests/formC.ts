@@ -39,7 +39,8 @@ formC.get("/:code/form-c", async (c) => {
        card prints them, and a server in another zone must not move a
        guest's arrival by five and a half hours. */
     const { rows } = await client.query<Row>(
-      `select f.reservation_id::text as "reservationId", f.guest_name as guest,
+      `select f.reservation_id::text as "reservationId", f.guest_id::text as "guestId",
+              f.companion, f.guest_name as guest,
               f.nationality, f.gender, f.date_of_birth::text as "dateOfBirth",
               f.id_type as "idType", f.passport,
               f.passport_issued_on::text as "passportIssuedOn",
@@ -63,7 +64,7 @@ formC.get("/:code/form-c", async (c) => {
               f.ref_address as "refAddress", f.ref_city as "refCity",
               f.ref_state as "refState", f.ref_pincode as "refPincode",
               f.next_destination as "nextDestination", f.room_number as room,
-              f.adults, f.children, f.check_in::text as arrived,
+              f.adults, f.recorded, f.children, f.check_in::text as arrived,
               f.check_out::text as "checkOut", f.status,
               to_char(f.arrived_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "arrivedAt",
               to_char(f.departed_at at time zone h.timezone, 'YYYY-MM-DD HH24:MI') as "departedAt",
@@ -72,13 +73,26 @@ formC.get("/:code/form-c", async (c) => {
               f.arrival_overdue as overdue, f.departure_overdue as "departureOverdue",
               f.arrival_numbers as "arrivalNumbers",
               f.departure_numbers as "departureNumbers"
-         from app.form_iii($1) f
+         from app.form_iii_people($1) f
          join hotels h on h.id = $1`,
       [hotelId],
     );
     const { rows: premises } = await client.query<Row>(
       `select name, address_line as address, city, state, phone
          from hotels where id = $1`, [hotelId]);
+    /* An adult nobody has recorded may be a foreigner (D27-382): the stays in
+       house with one, which have no row below to carry the warning. */
+    const { rows: unrecorded } = await client.query<Row>(
+      `select coalesce(app.stay_room(r.id), '-') as room, r.adults::int as adults,
+              app.stay_recorded(r.id) as recorded
+         from reservations r
+         join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and r.status = 'checked_in'
+          and r.adults > app.stay_recorded(r.id)
+          and g.nationality = 'IN'
+          and not exists (select 1 from stay_companions c join guests cg on cg.id = c.guest_id
+                           where c.reservation_id = r.id and cg.nationality <> 'IN')
+        order by 1`, [hotelId]);
 
     const owes = (r: Row) =>
       (r["arrivalNumbers"] as string[]).length === 0
@@ -93,6 +107,7 @@ formC.get("/:code/form-c", async (c) => {
       premises: premises[0] ?? null,
       due: rows.filter(owes).length,
       overdue: rows.filter((r) => r["overdue"] || r["departureOverdue"]).length,
+      unrecorded,
       rows: rows.map((r) => ({
         ...r,
         /* The arrival's, kept under the names the register has always
@@ -106,10 +121,29 @@ formC.get("/:code/form-c", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* Whose row it is: the booking's lead guest, or with `guestId` a companion on
+   the stay (D27-382). Null: nobody by that id on it. */
+async function personOnStay(
+  client: Client, hotelId: string, reservationId: string, guestId: string | undefined,
+) {
+  if (guestId && !/^[0-9a-f-]{36}$/i.test(guestId)) return null;
+  const { rows } = await client.query<{
+    guest_id: string; nationality: string; status: string; companion: boolean;
+  }>(
+    `select g.id::text as guest_id, g.nationality, r.status, g.id <> r.guest_id as companion
+       from reservations r
+       join guests g on g.id = r.guest_id
+                     or g.id in (select c.guest_id from stay_companions c where c.reservation_id = r.id)
+      where r.hotel_id = $1 and r.id = $2::uuid and g.id = coalesce($3::uuid, r.guest_id)`,
+    [hotelId, reservationId, guestId ?? null],
+  );
+  return rows[0] ?? null;
+}
+
 /* ── A filing happened ────────────────────────────────────────────── */
 
 formC.post("/:code/form-c/:reservationId", async (c) => {
-  type Body = { reference?: string; notes?: string; kind?: string };
+  type Body = { reference?: string; notes?: string; kind?: string; guestId?: string };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -136,14 +170,10 @@ formC.post("/:code/form-c/:reservationId", async (c) => {
       return refuse("A filing is for the arrival or the departure.");
     }
 
-    const { rows: res } = await client.query<{ guest_id: string; status: string }>(
-      `select guest_id::text, status from reservations
-        where hotel_id = $1 and id = $2::uuid`,
-      [hotelId, c.req.param("reservationId")],
-    );
-    if (!res[0]) return refuse("No such stay at this property.");
+    const person = await personOnStay(client, hotelId, c.req.param("reservationId"), body.guestId);
+    if (!person) return refuse("No such stay at this property.");
     /* 17(6): the departure is reported after it happens. */
-    if (kind === "departure" && res[0].status !== "checked_out") {
+    if (kind === "departure" && person.status !== "checked_out") {
       return refuse("The guest has not checked out. The departure is filed after they leave.");
     }
 
@@ -152,7 +182,7 @@ formC.post("/:code/form-c/:reservationId", async (c) => {
         `insert into form_c_filings
            (hotel_id, reservation_id, guest_id, reference, notes, filed_by, kind)
          values ($1, $2::uuid, $3::uuid, $4, $5, app.current_user_id(), $6)`,
-        [hotelId, c.req.param("reservationId"), res[0].guest_id,
+        [hotelId, c.req.param("reservationId"), person.guest_id,
          reference, body.notes ?? null, kind],
       );
     } catch (error) {
@@ -175,20 +205,14 @@ formC.post("/:code/form-c/:reservationId", async (c) => {
    27 September). Only what is typed is written. */
 
 formC.put("/:code/form-c/:reservationId/details", async (c) => {
-  type Body = { identity?: Identity; visit?: Visit };
+  type Body = { identity?: Identity; visit?: Visit; guestId?: string };
   const body = await c.req.json<Body>().catch(() => ({} as Body));
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows } = await client.query<{ guest_id: string; nationality: string }>(
-      `select r.guest_id::text, g.nationality
-         from reservations r join guests g on g.id = r.guest_id
-        where r.hotel_id = $1 and r.id = $2::uuid`,
-      [hotelId, c.req.param("reservationId")],
-    );
-    const stay = rows[0];
+    const stay = await personOnStay(client, hotelId, c.req.param("reservationId"), body.guestId);
     if (!stay) return refuse("No such stay at this property.");
     if (!isForeign(stay.nationality)) {
       return refuse("Form III is for a foreign guest; this guest is recorded as Indian.");
@@ -206,7 +230,8 @@ formC.put("/:code/form-c/:reservationId/details", async (c) => {
     if (wrong) return refuse(wrong);
 
     await saveIdentity(client, stay.guest_id, id);
-    await saveVisit(client, hotelId, c.req.param("reservationId"), body.visit ?? {});
+    await saveVisit(client, hotelId, c.req.param("reservationId"), body.visit ?? {},
+      stay.companion ? stay.guest_id : undefined);
     return { ok: true };
   });
 

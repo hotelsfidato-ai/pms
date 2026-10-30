@@ -13,6 +13,7 @@
 #   shows them; changes nothing on a look, or without the code typed again;
 #   lists the ID photo coming back, to be opened in the PMS (it is in Drive);
 #   brings back the booking, the bill, the guest and the guest's ID documents,
+#   and the other adult in the room with their ID and their answers (D27-382),
 #   parents first, as they were - and no ID document of a guest still in live;
 #   leaves the bill lines (append-only) and the invoice series (kept
 #   apart) to the owner; never overwrites a row changed since; leaves every
@@ -86,6 +87,9 @@ EOF
 # The guest's ID documents (D27-376): what their ID says (guest_documents) and
 # their ID photo's row (the photo itself is in Google Drive, D27-209). And a
 # guest with no 5EL booking, who stays in live and loses their ID document alone.
+# And the other adult in the room (D27-382): a guest record with no booking of
+# its own, who has to come back with the stay.
+COMP=c6c6c6c6-0000-4000-8000-000000000001
 STAFF=$(q "$LIVE" -c "select id from staff order by id limit 1")
 OTHER=$(q "$LIVE" -c "select g.id from guests g where g.test_hotel_id is null
                         and not exists (select 1 from reservations r where r.guest_id = g.id and r.hotel_id = '$H5')
@@ -99,10 +103,22 @@ insert into guest_id_photos (hotel_id, hotel_code, reservation_id, guest_id, upl
                              notice_version, status, stored_at, drive_file_id, cipher_sha256, cipher_bytes)
 values ('$H5', '5EL', '$RES', '$GUEST', '$STAFF', '{front,back}', '2026-09-30', 'stored', now(),
         'restore-test-drive-file', repeat('a', 64), 1234);
+insert into guests (id, full_name, nationality) values ('$COMP', 'Restore Companion', 'GB');
+insert into stay_companions (hotel_id, reservation_id, guest_id) values ('$H5', '$RES', '$COMP');
+insert into guest_documents (guest_id, id_type, id_number, captured_at)
+values ('$COMP', 'passport', 'X7654321', now());
+insert into form_iii_stays (hotel_id, reservation_id, guest_id, arrived_from)
+values ('$H5', '$RES', '$COMP', 'Delhi');
 SQL
 docs() { q "$LIVE" -c "select count(*) || ' ' || coalesce(md5(string_agg(t, '' order by t)), '') from (
   select md5(x::text) t from guest_documents x where guest_id = '$GUEST' union all
   select md5(x::text) from guest_id_photos x where guest_id = '$GUEST') s"; }
+# The companion, whole: the person, the link, their ID, their answers.
+companion() { q "$LIVE" -c "select count(*) || ' ' || coalesce(md5(string_agg(t, '' order by t)), '') from (
+  select md5(x::text) t from guests x where id = '$COMP' union all
+  select md5(x::text) from stay_companions x where guest_id = '$COMP' union all
+  select md5(x::text) from guest_documents x where guest_id = '$COMP' union all
+  select md5(x::text) from form_iii_stays x where guest_id = '$COMP') s"; }
 RESREF=$(q "$LIVE" -c "select reference from reservations where id = '$RES'")
 GNAME=$(q "$LIVE" -c "select full_name from guests where id = '$GUEST'")
 
@@ -117,11 +133,13 @@ OTHERS="
     select md5(x::text) from rooms x where hotel_id <> '$H5' union all
     select md5(x::text) from audit_log x where hotel_id <> '$H5' union all
     select md5(x::text) from invoice_series x where hotel_id <> '$H5' union all
-    select md5(x::text) from guest_documents x where guest_id not in ('$GUEST', '$OTHER') union all
-    select md5(x::text) from guests x where id <> '$GUEST') s"
+    select md5(x::text) from guest_documents x where guest_id not in ('$GUEST', '$OTHER', '$COMP') union all
+    select md5(x::text) from guests x where id not in ('$GUEST', '$COMP')) s"
 WAS_RES=$(row reservations "$RES") WAS_FOLIO=$(row folios "$FOLIO") WAS_GUEST=$(row guests "$GUEST")
 WAS_DOCS=$(docs)
+WAS_COMP=$(companion)
 case "$WAS_DOCS" in "2 "?*) ;; *) red "  x the guest's ID documents did not all go in ($WAS_DOCS)"; exit 1 ;; esac
+case "$WAS_COMP" in "4 "?*) ;; *) red "  x the companion did not all go in ($WAS_COMP)"; exit 1 ;; esac
 WAS_OTHERS=$(q "$LIVE" -c "$OTHERS")
 POSTINGS=$(q "$LIVE" -c "select count(*) from folio_postings where folio_id = '$FOLIO'")
 
@@ -143,8 +161,11 @@ delete from folios where id = '$FOLIO';
 delete from room_assignments where reservation_id = '$RES';
 delete from guest_id_photos where reservation_id = '$RES';
 delete from guest_documents where guest_id = '$GUEST';
+delete from form_iii_stays where reservation_id = '$RES';
+delete from stay_companions where reservation_id = '$RES';
+delete from guest_documents where guest_id = '$COMP';
 delete from reservations where id = '$RES';
-delete from guests where id = '$GUEST';
+delete from guests where id in ('$GUEST', '$COMP');
 delete from guest_documents where guest_id = '$OTHER';
 delete from invoice_series where hotel_id = '$H5';
 alter table folio_postings enable trigger user;
@@ -169,7 +190,8 @@ run "$LIVE" 5EL "$FILE" </dev/null
 ok "a look exits 0" [ "$RC" = 0 ]
 ok "it shows the booking missing" has "$OUT" "reservations \| trading \| [0-9]+ \| 1 \|"
 ok "...its bill" has "$OUT" "folios \| trading \| [0-9]+ \| 1 \|"
-ok "...and its guest, as a shared row the booking needs" has "$OUT" "guests \| shared \| \| 1 \|"
+ok "...and its guest and its other adult, shared rows it needs" has "$OUT" "guests \| shared \| \| 2 \|"
+ok "...the link from the stay to the other adult" has "$OUT" "stay_companions \| trading \| [0-9]+ \| 1 \|"
 ok "it shows the room changed since" has "$OUT" "rooms \| setup \| [0-9]+ \| 0 \| [1-9]"
 ok "the bill's lines stay missing: append-only" has "$OUT" "folio_postings \| $POSTINGS \| append-only"
 ok "the payment stays missing: it needs a bill line" \
@@ -179,7 +201,7 @@ STEPS=$(printf '%s' "$OUT" | tr -s ' ' | grep -E '^ [0-9]+ \| (guests|reservatio
 ok "the guest comes back before the booking, the booking before its bill ($STEPS)" \
   [ "$STEPS" = "guests reservations folios " ]
 ok "it shows what the guest's ID says (guest_documents) missing, coming back with the guest" \
-  has "$OUT" "guest_documents \| shared \| \| 1 \|"
+  has "$OUT" "guest_documents \| shared \| \| 2 \|"
 ok "...after the guest (step $(step guest_documents), the guest's $(step guests))" \
   [ "$(step guest_documents)" -gt "$(step guests)" ] 2>/dev/null
 ok "...the ID photo's row" has "$OUT" "guest_id_photos \| trading \| [0-9]+ \| 1 \|"
@@ -218,6 +240,8 @@ ok "the bill is back, as it was" [ "$(row folios "$FOLIO")" = "$WAS_FOLIO" ]
 ok "the guest is back, as they were" [ "$(row guests "$GUEST")" = "$WAS_GUEST" ]
 ok "the guest's ID documents are back, as they were: what their ID says, and the photo's row" \
   [ "$(docs)" = "$WAS_DOCS" ]
+ok "the other adult is back with the stay, as they were: the person, the link, their ID, their answers" \
+  [ "$(companion)" = "$WAS_COMP" ]
 ok "a guest with no 5EL booking, still in live, does not get their lost ID document back from 5EL" \
   [ -z "$(q "$LIVE" -c "select 1 from guest_documents where guest_id = '$OTHER'")" ]
 ok "the bill's lines are not written (append-only)" \

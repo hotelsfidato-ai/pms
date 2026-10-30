@@ -155,6 +155,22 @@ export const SHOTS = [
     ],
   },
 
+  /* ── A3.3 The other adults in the room (D27-382), to be taken ──── */
+  {
+    id: "A3-T20", title: "Check-in: Adults in the room, one added", as: "Reception",
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("A3 Test Desai"),
+      { waitFor: "css:[data-stay-companions]", ms: 60000 }, { click: "text:Add an adult" },
+      { wait: 500 }, SET("Full name", "A3 Test Companion"), SET("Document", "Passport"),
+      { wait: 300 }, SET("Number", "A7654321"), { click: "css:[role=dialog]:last-of-type button[data-variant=primary]" },
+      { wait: 1000 }, { eval: "document.querySelector('[data-stay-companions]').scrollIntoView({ block: 'center' })" },
+      { wait: 500 }],
+    marks: [
+      { n: 1, at: "css:[data-stay-companions] h3", side: "right" },
+      { n: 2, at: "text:Add an adult", side: "left" },
+      { n: 3, at: "text:A3 Test Companion", side: "right" },
+    ],
+  },
+
   /* ── A3.4 A foreign guest ───────────────────────────────────────── */
   {
     id: "A3-T4", title: "Check-in: a foreign guest, Form III's boxes partly filled", as: "Reception",

@@ -29,7 +29,7 @@ function mount(code: string) {
   });
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter><BookedCard hotelId={code} booked={booked} onAnother={() => {}} /></MemoryRouter>
+      <MemoryRouter><BookedCard hotelId={code} booked={booked} today="2026-08-25" onAnother={() => {}} /></MemoryRouter>
     </QueryClientProvider>,
   );
   return spy;

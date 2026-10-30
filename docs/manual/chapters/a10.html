@@ -13,7 +13,7 @@
     <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who sees it</th><th>What it is for</th></tr></thead>
     <tbody>
       <tr><td>Guests</td><td>Owner, Admin, General Manager, Hotel Manager, Reception, Accountant, Viewer</td><td>Everyone booked at this hotel, grouped by name, with their stays, nights, spend and what they owe (A10.2).</td></tr>
-      <tr><td>Companies and agents</td><td>The same people</td><td>Where the bookings came from - booking sites, direct, companies - and what each was worth. <span class="ui">Add company</span> (A10.4).</td></tr>
+      <tr><td>Companies and agents</td><td>The same people</td><td>Where the bookings came from - booking sites, direct, companies - and what each was worth. <span class="ui">Add company</span>, and <span class="ui">Edit</span> on each company (A10.4).</td></tr>
       <tr><td>Guest messages</td><td>The same people</td><td>What the system sent guests and whether it went, the bookings no message can reach, and messages guests wrote to the desk (A10.8).</td></tr>
       <tr><td>Reviews</td><td>The same people (only the owner, an Admin, the GM, the Hotel Manager and Reception may ask)</td><td>Ask a guest who has left for a review; the hotel's review link (A10.10).</td></tr>
       <tr><td>Guest 360</td><td>Owner, Admin, General Manager</td><td>One guest across every hotel of the group: every stay, what they were charged, what was sent to them, the blacklist, offers, loyalty (A10.5).</td></tr>
@@ -136,6 +136,7 @@
       <li>Through an agent: revenue from booking sites and agents, and its share of the whole</li>
       <li>Owed to the property: what every source still owes</li>
       <li>Each kind says what it is</li>
+      <li>Edit: on each company, for the owner, an Admin and the GM</li>
     </ol>
   </figure>
 
@@ -144,10 +145,10 @@
     <tbody>
       <tr><td>Travel agents</td><td><span class="msg">“Booked through a channel, and charged a commission for it.”</span> Agoda, Booking.com, Expedia and go-MMT.</td></tr>
       <tr><td>Direct</td><td><span class="msg">“Straight to the property. No commission on any of it.”</span> Walk-in and Fidato Hotels.</td></tr>
-      <tr><td>Corporate accounts</td><td><span class="msg">“A firm booking for its own people, settled on the city ledger.”</span> Every other source is listed here too - a travel agent added with Add company among them.</td></tr>
+      <tr><td>Corporate accounts</td><td><span class="msg">“A firm booking for its own people, settled on the city ledger.”</span> Every other source is listed here too - a travel agent added with Add company among them, and a company with no booking at this hotel yet, with 0 bookings and a dash for its revenue.</td></tr>
     </tbody>
   </table>
-  <p>Each table: <b>Source</b>, <b>Bookings</b>, <b>Room nights</b>, <b>Revenue</b>, <b>Commission</b>, <b>Owed</b>. The heading line of each kind adds up its revenue and bookings. Under the tables: <span class="msg">“Commission is charged outside this system today and prints as a dash rather than a zero. It fills once a channel manager is connected.”</span></p>
+  <p>Each table: <b>Source</b>, <b>Bookings</b>, <b>Room nights</b>, <b>Revenue</b>, <b>Commission</b>, <b>Owed</b>, and <span class="ui">Edit</span> on a company for the owner, an Admin and the GM. The heading line of each kind adds up its revenue and bookings. Under the tables: <span class="msg">“Commission is charged outside this system today and prints as a dash rather than a zero. It fills once a channel manager is connected.”</span></p>
 
   <h3>To add a company</h3>
   <ol class="steps">
@@ -172,6 +173,15 @@
   </figure>
 
   <p><b>Reception</b> gets a shorter window: Name, GSTIN, Billing address, City, State and PIN code, and the line <span class="msg">“Its name, GSTIN and address, for the tax invoice. Credit and contracts are set by the owner, an administrator or the GM.”</span></p>
+  <h3>To change a company</h3>
+  <p>For the owner, an Admin and the GM; nobody else sees the button. The same window opens from <span class="ui">Edit company</span> on a company's Contracts page (A15).</p>
+  <ol class="steps">
+    <li>Find the company in its table and tap <span class="ui">Edit</span> at the end of its row. A booking site or a source that is not a company, such as Walk-in, has no <span class="ui">Edit</span>: those are on <span class="ui">Booking sources</span>.</li>
+    <li>The window is headed <span class="ui">Edit company</span>, with the company's details in it. Change what is wrong.</li>
+    <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Company updated”</span>.</li>
+  </ol>
+  <p>A company is one record for the group, so the change is at every hotel at once, on every booking of that company. <b>A tax invoice already issued stays made out to the name, GSTIN and address it was issued to</b>, and a credit note against it repeats them; the next invoice takes the new details. Only the <b>Source</b> line in the stay's details follows the new name when an old invoice is opened or reprinted: it says where the booking came from, not who the invoice is made out to.</p>
+
   <p>What stops it: <span class="msg">“A company has a name.”</span>; <span class="msg">“A GSTIN is 15 characters: 2 digits, the 10-character PAN, then 3 more, e.g. 27AAPFU0939F1ZV.”</span>; <span class="msg">“That GSTIN is not right - a character is mistyped. Check it against the company's GST certificate.”</span>; <span class="msg">“A PIN code is 6 digits, e.g. 413216.”</span>; <span class="msg">“Credit days is a whole number from 1 to 365.”</span>; <span class="msg">“A credit limit is an amount above 0, in rupees.”</span></p>
 
   <div class="box watch">
@@ -179,14 +189,14 @@
     <ul>
       <li>A company is one record for the whole group. The same name or GSTIN twice is refused: <span class="msg">“… is already on the list. Edit that company instead.”</span>, <span class="msg">“… already has GSTIN …. Edit that company instead.”</span></li>
       <li>Credit days and the limit are <span class="msg">“Shown, not enforced, until the company's payments are recorded. Blank is not set.”</span></li>
-      <li>The Hotel Manager, the Accountant and a Viewer see the list but not <span class="ui">Add company</span>.</li>
+      <li>The Hotel Manager, the Accountant and a Viewer see the list but not <span class="ui">Add company</span>. Reception adds a company but does not see <span class="ui">Edit</span>.</li>
       <li>This is not <span class="ui">Booking sources</span> under Property setup, which is the list a booking's source is picked from, with each one's commission.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The heading says what the menu says, “Companies and agents”, because it once said “Booking sources” - the name of a different screen: <span class="d">D17-22</span>. Add company here as well as on Contracts, with Reception limited to the name, GSTIN and address and never credit: <span class="d">D27-184</span>.</p>
+    <p>The heading says what the menu says, “Companies and agents”, because it once said “Booking sources” - the name of a different screen: <span class="d">D17-22</span>. Add company here as well as on Contracts, with Reception limited to the name, GSTIN and address and never credit: <span class="d">D27-184</span>. Edit on every company here, the existing window, and who may stays the owner, an Admin and the GM because a company is one record for the group: <span class="d">D27-382</span>.</p>
   </div>
 
   <!-- A10.5 -->
