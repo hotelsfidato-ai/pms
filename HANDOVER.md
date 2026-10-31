@@ -56,10 +56,11 @@ seam); a test enforces it.
 
 > **31 October: THE VIDEOS ARE BEING REMADE, A8 IS DONE (C:\videos, branch `videos`, 95e8d6d1).** The owner asked for
 > the five video tools (installed and tested) and the same videos made again with what came after 14 October and new
-> motion: captions lit word by word (whisper), a NEW badge, rising titles. **All of A8 is in `C:\videos\out\a8\`:** 21
-> task videos, 12 before, and the chapter, 26:31, **waiting for the owner's look**. Not yet copied to
-> `D:\fidato\final videos\A8 Restaurant`; the other chapters have not been started. `C:\videos\RESUME.md` (31 October)
-> has the state and how to record the next one. Two small things found, not fixed: A8.12's table in the book still says
+> motion: captions lit word by word (whisper), a NEW badge, rising titles. **All of A8 is in
+> `D:\fidato\final videos\A8 Restaurant`, on the owner's "Yes, copy it":** 21 task videos, 12 before, and the chapter,
+> 26:31. The 13 old finals are in `.local\old-finals\A8 Restaurant 12 October`. The other chapters have not been
+> started. `C:\videos\RESUME.md` (31 October) has the state and how to record the next one.
+> Two small things found, not fixed: A8.12's table in the book still says
 > INTERIM BILL, and the Kitchen screen says "1 dishes working".
 
 > **26 October: RELEASE 13 IS LIVE, with 12.1** (2e7a5b4a, migrations 237 and 238, website `index-o38e-K4q.js`): the

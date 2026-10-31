@@ -78,8 +78,12 @@ mark the new parts, then render.
 - For A8-10 and A8-11, 159 old demo tickets hidden and put back: checksum of every line's status equal before and after.
   Backup `.local/backups/fidato-before-a8-kitchen-31oct.dump`.
 
-**Left open:** the owner's look at A8; then copying it to `D:\fidato\final videos\A8 Restaurant` (old finals untouched)
-and the other chapters. `C:\videos\RESUME.md` (31 October) has how to record the next one.
+**Copied the same day, on the owner's "Yes, copy it":** all 22 files are in `D:\fidato\final videos\A8 Restaurant`, each
+compared byte for byte with `C:\videos\out\a8`. The 13 old finals of 12 October are in
+`.local\old-finals\A8 Restaurant 12 October`.
+
+**Left open:** the other chapters, each on the owner's yes. `C:\videos\RESUME.md` (31 October) has how to record the
+next one.
 
 **Commits:** `95e8d6d1` (C:\videos)
 
