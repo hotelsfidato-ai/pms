@@ -50,6 +50,42 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-31 · Release 17 (READY at 8a24e4b8, the owner's to type): every adult in a room, the Tally export, Edit on companies (D27-382, D27-386)
+
+**Asked for:** the owner: start the guest register, the Tally export and an Edit on companies; install Tally and make
+the connection; then, after the PC's restart stopped the helpers, "restart release 17 and complete all the pending
+work", and "tell me when release 17 is ready".
+
+**Shipped** (`release/r17`, migrations 253 and 254, website `index-dkQlZjQS.js`)
+- GUE-6: Adults in the room on the Check in window, the stay panel and the walk-in's card; each adult a guest record
+  on `stay_companions`; a foreigner's own Form III row (`app.form_iii_people` replaces `app.form_iii`); check-in is
+  never blocked; Same as the guest copies the lead's visit answers, never phones or the document.
+- GUE-5: the Document and its Number on the register's Complete details.
+- ACC-3 and ACC-4: food its own day book line; `tally_ledger_names`, one form per hotel, no name invented; Tally Prime
+  and ERP 9 XML from closed days, the export off until every name is typed.
+- Edit on every company on Companies and agents, for the owner, an Admin and the GM.
+- Manual: A3, A10, A11 and pictures A3-T20, A10-04, A11-17, A11-18, A11-29, A11-30.
+- Steps: `.local/release-17-steps.md`. Nothing pushed, deployed or sent.
+
+**Found**
+- Helpers caught `owner_reset.orphans` sweeping companions across the group, fixed before merge.
+- The PC restarted on 30 October with two helpers running: nothing lost, MEMORY 450. Vite freezing and silent
+  picture failures: MEMORY 449.
+
+**Proved**
+- One full gate run on the clean copy, green first time, 71 minutes: web 1,532, API 3,016, db 1,892, replay 254, PG16,
+  restore 1 42 of 42, to minute. `release.mjs` passed once.
+- TallyPrime 7.2 Educational Mode on this PC: 5 vouchers created, Day Book equal to the PMS to the paisa; a missing
+  ledger refused, nothing created for that voucher; a corrected day altered, not doubled.
+- ERP 9 shape-tested only: not imported into a real ERP 9.
+
+**Left open**
+- The owner's: A1 to A8 of the steps, then the read-only check. The Accountant's first import into a COPY of the
+  company is the first real proof of the voucher shape; the CA's view on it is asked in D27-386.
+- Next (D27-384, D27-385): the local load test, asked in the chat first.
+
+**Commits:** `92d5365a … 8a24e4b8`
+
 ## 2026-10-29 · The video tools, and the videos remade with what came after 14 October: pilot A8-11 (C:\videos)
 
 **Asked for:** the owner: install Remotion, HyperFrames, FFmpeg, whisper.cpp and yt-dlp and test each; then make the

@@ -48,6 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **31 October: RELEASE 17 READY, the owner's to type.** `release/r17` = **8a24e4b8**, on release 16 (312c52e2, live).
+> Migrations 253 (every adult in a room) and 254 (Tally ledger names), website `index-dkQlZjQS.js`, steps
+> `.local/release-17-steps.md`. One full gate run green first time on the clean copy `.claude/worktrees/release-r17`
+> (web 1,532, API 3,016, db 1,892, replay 254, PG16, restore 1 42 of 42, to minute). Keep that copy until the website
+> is published from it. Tally Prime is proved on TallyPrime 7.2 Educational Mode; ERP 9 is shape-tested only.
+
 > **29 October, evening: THE VIDEOS ARE BEING REMADE (C:\videos, branch `videos`).** The owner asked for the five
 > video tools (all installed and tested) and the same videos made again with what came after 14 October and new
 > motion: captions lit word by word (whisper), a NEW badge, rising titles. Pilot **A8-11 The menu** (release 16's
@@ -770,6 +776,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **31 October, later: RELEASE 17 IS BUILT AND WAITING FOR THE OWNER (8a24e4b8, see § 2).** The plan below stands, with
+> its "Now" finished: both helpers merged, their copies gone. **Next:** after the owner's A1 to A8, check read-only
+> (site, API, server code, migrations 253 and 254, no API errors), then recycle the release copy. **Then, with the
+> owner's yes in the chat:** the local load test, the first safety item (D27-384); it costs nothing. Staging, standby
+> and two-step sign-in wait on the owner's server and cost answers. Waiting on them too: the Accountant's first import
+> into a COPY of the company, read by `CREATED` and `EXCEPTIONS`.
 
 > **31 October: THE PLAN (D27-381 to D27-385).** Live: release 16 (312c52e2). **Now:** release 17 on two helper copies,
 > agent-a92a51ef49d9206b1 (company Edit, GUE-5 committed; GUE-6 going; migration 253) and agent-a9196d9e65e607d1a (ACC-3
