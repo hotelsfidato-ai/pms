@@ -54,11 +54,13 @@ seam); a test enforces it.
 > (web 1,532, API 3,016, db 1,892, replay 254, PG16, restore 1 42 of 42, to minute). Keep that copy until the website
 > is published from it. Tally Prime is proved on TallyPrime 7.2 Educational Mode; ERP 9 is shape-tested only.
 
-> **29 October, evening: THE VIDEOS ARE BEING REMADE (C:\videos, branch `videos`).** The owner asked for the five
-> video tools (all installed and tested) and the same videos made again with what came after 14 October and new
-> motion: captions lit word by word (whisper), a NEW badge, rising titles. Pilot **A8-11 The menu** (release 16's
-> MRP, recipes) rendered to `C:\videos\out\pilot\`, **waiting for the owner's look** before the rest of A8 and the
-> other chapters. `C:\videos\RESUME.md` (29 October) has the state and what changed in A8.
+> **31 October: THE VIDEOS ARE BEING REMADE, A8 IS DONE (C:\videos, branch `videos`, 95e8d6d1).** The owner asked for
+> the five video tools (installed and tested) and the same videos made again with what came after 14 October and new
+> motion: captions lit word by word (whisper), a NEW badge, rising titles. **All of A8 is in `C:\videos\out\a8\`:** 21
+> task videos, 12 before, and the chapter, 26:31, **waiting for the owner's look**. Not yet copied to
+> `D:\fidato\final videos\A8 Restaurant`; the other chapters have not been started. `C:\videos\RESUME.md` (31 October)
+> has the state and how to record the next one. Two small things found, not fixed: A8.12's table in the book still says
+> INTERIM BILL, and the Kitchen screen says "1 dishes working".
 
 > **26 October: RELEASE 13 IS LIVE, with 12.1** (2e7a5b4a, migrations 237 and 238, website `index-o38e-K4q.js`): the
 > bar's store and counter and the FLR registers (D27-361), the installer from our server (D27-362), Other moves

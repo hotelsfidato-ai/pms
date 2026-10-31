@@ -50,6 +50,41 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-31 · All of A8 remade: 21 videos with the releases up to 16 (C:\videos)
+
+**Asked for:** the owner, on the pilot A8-11: "Yes, do all of A8": check each task against today's book and pictures,
+mark the new parts, then render.
+
+**Shipped** (all in `C:\videos`, branch `videos`; nothing in the PMS code)
+- `out\a8\`: 21 task videos, 12 before, and the chapter, 26:31. Nine new short ones: a parcel, moving or joining
+  tables, an earlier day's bill and Bill history, voiding or changing a paid bill, NC, sent to the GM, the owner's
+  allowance, Fidato Printer, the KOT's design. A8-06 reads BILL, not Interim (D27-334).
+- All 15 Watch it done clips retaken; 236 lines timed word by word; the voice spells VAT.
+- `tools\record.mjs` fails a blank page now.
+
+**Found** (MEMORY 453, 454)
+- The API stopped mid-recording; 8 shots failed and a white A8-10 passed as done. Recorded again on my own servers.
+- The demo's Beverages had no KOT kind since 22 October, so the chai printed on the Kitchen slip and no Bar slip. Set
+  to Bar on the local demo, as the book's picture shows. Kept. Nothing changed on the server.
+- The book's A8.12 table still says INTERIM BILL (`docs/manual/chapters/a8.html:872`), against A8.6 and D27-334. Not fixed.
+- The Kitchen screen says "1 dishes working" (`src/modules/pos/pages/Kitchen.tsx:223`); the new A8-05 shows it. Not fixed.
+
+**Proved**
+- `audiocheck`: all 22 files have sound, speech in 56-66%, peaks 0.70-0.73. `words`: 236 of 236 lines timed. `tsc`
+  and `eslint src` clean. Arrows: 0 problems.
+- Looked at frames from the rendered MP4s: one scene from every task; the Watch it done of A8-02, 03, 04, 05, 06, 07;
+  the two slips, BILL, the Kitchen and Bar filters, the paid bill. All 15 clips' frames scanned, none blank. **Nobody
+  has watched all 21 from end to end.**
+- For A8-10 and A8-11, 159 old demo tickets hidden and put back: checksum of every line's status equal before and after.
+  Backup `.local/backups/fidato-before-a8-kitchen-31oct.dump`.
+
+**Left open:** the owner's look at A8; then copying it to `D:\fidato\final videos\A8 Restaurant` (old finals untouched)
+and the other chapters. `C:\videos\RESUME.md` (31 October) has how to record the next one.
+
+**Commits:** `95e8d6d1` (C:\videos)
+
+---
+
 ## 2026-10-31 · Release 17 (READY at 8a24e4b8, the owner's to type): every adult in a room, the Tally export, Edit on companies (D27-382, D27-386)
 
 **Asked for:** the owner: start the guest register, the Tally export and an Edit on companies; install Tally and make

@@ -6561,6 +6561,26 @@ copy will see of theirs.**
 
 ---
 
+### 454 · The demo drifted from the book: the chai printed on the Kitchen slip (31 October)
+
+The A8 recording stopped at BAR KOT. The demo's Beverages section had had no KOT kind since 22 October, so the chai
+went on the Kitchen slip and the Bar printed nothing, while the book's picture of 12 October shows the two slips. The
+code was right and so was the book. I set Beverages to Bar on the local demo, as a manager would; a demo reload loses
+it. That order was already stamped Kitchen, so it had to be settled and the whole run taken again. **The rule:** when a
+shot cannot find what the book shows, look at the demo's settings before the code, and take the book as the reference.
+
+---
+
+### 453 · MINE: a recording leaned on another chat's server, and "done" was written before the log was read (31 October)
+
+The 15 A8 clips ran through MAIN's API, because MAIN held 8787. It stopped partway (452 is the same morning from the
+other side). Eight shots failed, and A8-10 reported `●` on a white page, because the waits for its arrows swallow a
+failure. My wrapper's exit code was 0, and I ticked the step before reading the log; the log showed the failures in
+the same breath. **The rules:** a long recording starts its own api, web and printers. A wrapper's exit code proves
+nothing: read the log, then look at the last frames. `record.mjs` now fails a blank page.
+
+---
+
 ### 452 · MINE: the same Vite trap, one day after I wrote it down (31 October)
 
 To open one screen I started `web` in the main folder with the video chat's Vite running there on 5174. They share
