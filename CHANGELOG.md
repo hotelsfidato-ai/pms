@@ -50,6 +50,44 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-31 · The load test (D27-384): the limit is the hotels' past, not their users
+
+**Asked for:** the owner: "yes start the load test", the first safety item, local and free.
+
+**Done:** `scripts/load-test.mjs`. Release 17's code (8a24e4b8) on PostgreSQL 16.15 with the live box's settings, API and
+database held to two cores of this PC, on databases of its own, no key of any kind. The traffic is the live server's
+own week (88,418 requests, 25-31 October, read from nginx as counts); "1 ×" is its busiest minute, 153 requests. Hotels
+are 150 copies of 5EL made by `app.copy_hotel_setup`. Removed afterwards; only `.local/load-test/` stays (results).
+
+**Found:**
+- **Live is healthy.** Busiest minute 2.5 requests a second, no server error in 7 days, 19 of 126,102 requests over
+  2.5 s in 14 days, and busy hours no slower than quiet ones.
+- **Every live request waits about 280 ms for Google.** `verifyIdToken(token, true)` in `api/src/auth.ts` asks Google on
+  each request. Timed from the box: about 280 ms, one in five at 2.45 s; a local answer 1 ms. A 280 ms stand-in on this
+  PC gives one request 323-333 ms; live's mean is 320-340 ms on nearly every route, whatever the route does.
+- **The ramp** (half / 95% of answers). With the stand-in, as live: 1 × 340 / 495 ms, 5 × 341 / 539, 10 × 387 / 948,
+  15 × 2.3 s / 13.5 s, gone. Without it: 1 × 31 / 123, 5 × 33 / 81, 10 × 52 / 262, 15 × 82 / 723, 20 × 540 / 2,787,
+  30 × 15 s / 39 s. CPU 40-47 ms a request without, about 53 with. Cost does not rise with the number of hotels.
+- **History is what lowers the ceiling.** Three years copied in: 6,000 stays at 5EL (18 rooms; a 30-room hotel in about
+  22 months), 110,000 bills at LT001. The tills do not move. The ceiling falls from about 15 × to about 2 ×, one hotel
+  taking all the traffic. Fastest seen, before and after: the notification bell 0.12 s to 0.8-1 s, on every open
+  screen every 30 s, because it sums the balance of every booking ever; All bookings 4.5 s to 64 s and 3.7 MB; the
+  Manager report 2.4 s to 5-7 s at best and 22 s typical; Statistics 0.35 s to 0.7 s. Under load the bell took 3.3 s.
+- **Every booking ever** is still read by Housekeeping (every 30-60 s), Assign room, Walk-ins, Folios, All bookings
+  and the Ctrl K search. 41 of 294 reads a week on live, and few bookings to read yet.
+- 120 devices opening together: 1,200 requests, all answered in 37 s, none refused.
+- Planning each query once (named statements) made it worse, 90-99 ms of CPU a request. Not to be tried again without
+  a new reason.
+
+**Not proved:** the live box itself (a live core measured about 1.6 × a core here, and nginx, n8n and its disk are not
+in the test), so its ceiling is an estimate of 10 × to 15 ×, about 25-40 requests a second; a staging server would
+measure it. The Night audit under history stopped at its own refusals, rightly, so it is unmeasured; live's is 0.38 s.
+The PC was in use, so clock times are from runs with the two cores first, and the CPU figures are the firmer ones.
+
+**No product code changed, so no gate run.** Live reads were read-only. Questions to the owner: D27-387.
+
+---
+
 ## 2026-10-31 · All of A8 remade: 21 videos with the releases up to 16 (C:\videos)
 
 **Asked for:** the owner, on the pilot A8-11: "Yes, do all of A8": check each task against today's book and pictures,

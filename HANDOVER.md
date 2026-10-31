@@ -48,6 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **31 October: THE LOAD TEST IS DONE (D27-384), see CHANGELOG.** Live is healthy and far from its limit today. Every
+> live request waits about 280 ms for Google (`verifyIdToken(token, true)`). The estimated ceiling is 10 × to 15 × the
+> group's busiest minute, about 25-40 requests a second, and **history is what lowers it**: with three years in a hotel
+> it fell to about 2 ×, mostly through the notification bell, which sums every booking ever on every open screen every
+> 30 s. The tills do not slow down with history. `scripts/load-test.mjs`, results in `.local/load-test/`.
+
 > **31 October: RELEASE 17 READY, the owner's to type.** `release/r17` = **8a24e4b8**, on release 16 (312c52e2, live).
 > Migrations 253 (every adult in a room) and 254 (Tally ledger names), website `index-dkQlZjQS.js`, steps
 > `.local/release-17-steps.md`. One full gate run green first time on the clean copy `.claude/worktrees/release-r17`
@@ -779,6 +785,12 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **31 October, evening: THE LOAD TEST IS DONE. Waiting on the owner's yes (D27-387):** a free speed release from what it
+> found, before the approved features: the bell in one pass (same alerts); Housekeeping, Assign room, Walk-ins and
+> Folios reading only what they need; why the Manager report slows; the Google check once a minute per person (their
+> call: it is a security trade); All bookings limited by date (their call: it changes the screen). None of it is built.
+> Staging, two-step sign-in and the standby still wait on the owner's server and cost answers.
 
 > **31 October, later: RELEASE 17 IS BUILT AND WAITING FOR THE OWNER (8a24e4b8, see § 2).** The plan below stands, with
 > its "Now" finished: both helpers merged, their copies gone. **Next:** after the owner's A1 to A8, check read-only

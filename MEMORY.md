@@ -6561,6 +6561,38 @@ copy will see of theirs.**
 
 ---
 
+### 457 · FOUND: this system's limit is the hotels' past, not its users (31 October)
+
+The load test expected a ceiling on people and found one on history. The tills stay flat at 110,000 bills, but the
+notification bell sums the balance of every booking ever, on every open screen every 30 s, and six screens read every
+booking ever. Live cannot show it: 82 bookings. D27-165, D27-313 and D27-316 each fixed one read of this shape after
+it hurt; nothing went looking for the rest. **The rule:** a test of size needs a hotel with years in it, not more
+hotels. Cost per request did not rise at all from 6 hotels to 150. Any read on a timer must be bounded by date.
+
+---
+
+### 456 · MINE: my first ramp said the system dies at 10 ×, and it was this PC (31 October)
+
+The first run collapsed at 25 requests a second with 12-second waits, and four causes were mine or the PC's, not the
+system's: a game and two other chats on the same cores; a disk flush that took 16.7 s; every Windows connection
+starting slowly, where the live timings show no such cost; and all traffic on one kitchen row. I told the owner
+"12.8 s" while saying I did not trust it, which was right, and the live server's own table already said no such freeze
+exists. **The rules for a load test here:** read live's own numbers first (nginx, `telemetry_requests`), then the test
+has something to be wrong against. Trust CPU per request over the clock while the PC is in use. Stand the pool up
+before timing, and give the two cores to the test. A heartbeat on the database tells a frozen database from a queue.
+
+---
+
+### 455 · MINE: three shell habits that nearly mixed up the test databases (31 October)
+
+`a | tail -3 && b` ran `b` after `a` failed, because `&&` read tail's exit code: six hotels went into the wrong test
+database. A patch script failed on a line ending and the next command ran the old file without noticing, which is how
+that build aimed at the wrong database at all. And `down` matched its own command line and killed itself before it
+deleted anything. All local, nothing lost. **The rules:** never put `&&` after a pipe that carries a result; check a
+patch landed before relying on it; a process search must exclude itself (`$PID`). 446-447 are the same family.
+
+---
+
 ### 454 · The demo drifted from the book: the chai printed on the Kitchen slip (31 October)
 
 The A8 recording stopped at BAR KOT. The demo's Beverages section had had no KOT kind since 22 October, so the chai
