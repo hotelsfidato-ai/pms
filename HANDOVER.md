@@ -64,10 +64,12 @@ seam); a test enforces it.
 > the five video tools (installed and tested) and the same videos made again with what came after 14 October and new
 > motion: captions lit word by word (whisper), a NEW badge, rising titles. **All of A8 is in
 > `D:\fidato\final videos\A8 Restaurant`, on the owner's "Yes, copy it":** 21 task videos, 12 before, and the chapter,
-> 26:31. The 13 old finals are in `.local\old-finals\A8 Restaurant 12 October`. The other chapters have not been
-> started. `C:\videos\RESUME.md` (31 October) has the state and how to record the next one.
-> Two small things found, not fixed: A8.12's table in the book still says
-> INTERIM BILL, and the Kitchen screen says "1 dishes working".
+> 26:31. The 13 old finals are in `.local\old-finals\A8 Restaurant 12 October`. **All of A9 is in `C:\videos\out\a9\`:**
+> 18 task videos, 10 before, and the chapter, 26:27, **waiting for the owner's look**, not yet copied to
+> `D:\fidato\final videos\A9 Stores and purchasing`. The other chapters have not been started.
+> `C:\videos\RESUME.md` (31 October) has the state and how to record the next one. Small things found, not fixed: A8.12's
+> table in the book still says INTERIM BILL; the Kitchen screen says "1 dishes working"; the book's A9.1 leaves Inventory
+> out of the Inventory Manager's menu; some A9 pictures are behind the screens (CHANGELOG, 31 October).
 
 > **26 October: RELEASE 13 IS LIVE, with 12.1** (2e7a5b4a, migrations 237 and 238, website `index-o38e-K4q.js`): the
 > bar's store and counter and the FLR registers (D27-361), the installer from our server (D27-362), Other moves

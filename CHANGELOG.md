@@ -50,6 +50,45 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-31 · All of A9 remade: 18 videos with the bar, Supplier dues and recipes (C:\videos)
+
+**Asked for:** the owner: "Remake A9": the same way as A8, each task checked against today's book and pictures.
+
+**Shipped** (all in `C:\videos`, branch `videos`; nothing in the PMS code)
+- `out\a9\`: 18 task videos, 10 before, and the chapter, 26:27, 266 MB. 225 scenes, 142 before. Eight new short ones
+  under A9.11: the bar's bills, Supplier dues, Bar stock and its set up, the counter asks the store, the bar's sheet and
+  counts, the excise registers, recipes, the kitchen's sheet. New scenes in A9-01, 05, 07, 09 and 10, marked NEW.
+- All 14 Watch it done clips retaken; 269 lines timed word by word; the voice spells T P, M L, F L R, TDS and TCS.
+- `src\timeline.ts`: captions keep every word, and a render stops if one is lost.
+
+**Found** (MEMORY 458, 459)
+- First recording: 7 clips failed, one on a cold sign-in page and six on the wrong item, and A9-12 "passed" on the wrong
+  item. The Store sorts by category and does not filter on `is_active`, and the three Bar drinks now come first. For the
+  retake their category was changed and put back.
+- **Three captions lost their first words** at "T.P." ("P. number and total."). Found by looking at the frames. Fixed,
+  A9-09b and 09g rendered again. No other line of the 2,249 in all chapters was affected, so A8's finals are right.
+- Not fixed, for the owner: the book's A9.1 (`docs/manual/chapters/a9.html:22`) leaves Inventory out of the Inventory
+  Manager's menu; picture A9-41 shows two Bar stock tabs, today four; A9-40 does not show the On credit tick; A9-46's
+  Supplier dues columns run together at 1280 wide; 31 pictures of 14 October show the menu without Inventory; the
+  Kitchen store's count sheet in clip A9-17 lists bar drinks with Full and ml boxes.
+
+**Proved**
+- `audiocheck`: all 19 files have sound, speech in 54-67%, peaks 0.70-0.73. `words`: 269 of 269 lines. `tsc` and
+  `eslint src` clean. `marks`: 49 A9 pictures; one arrow misread (A9-33's 5), so that scene has no focus.
+- Looked at frames from the rendered MP4s: four from inside every Watch it done, one scene from every video, all 83 new
+  scenes, the chapter card, and the three fixed captions in their videos and in the chapter. Smallest of 257 frames
+  42 KB, none blank. **Nobody has watched all 18 from end to end.**
+- The Bar items' category changed for the recording and put back: md5 of `stock_items` equal before and after.
+  Backup `.local/backups/fidato-before-a9-recording-31oct.dump`.
+
+**Left open:** copying A9 to `D:\fidato\final videos\A9 Stores and purchasing`, on the owner's yes; the old finals are
+still there. `marks.mjs a11` was run for one picture, so A11's arrows need checking when it is remade. The book's A9.14
+has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9 again.
+
+**Commits:** `25a553e1` (C:\videos)
+
+---
+
 ## 2026-10-31 · The load test (D27-384): the limit is the hotels' past, not their users
 
 **Asked for:** the owner: "yes start the load test", the first safety item, local and free.

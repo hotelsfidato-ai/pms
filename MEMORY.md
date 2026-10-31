@@ -6561,6 +6561,29 @@ copy will see of theirs.**
 
 ---
 
+### 459 · MINE: the captions lost words at "T.P.", and only looking at the frames found it (31 October)
+
+`captionPages` ended a sentence at any stop and then wanted a space after it. At "T.P." the match failed and everything
+before that dot was thrown away, so "The bill shows under Bills as printed: who it is from, its number, date, T.P. number
+and total." appeared as "P. number and total." The voice was whole, so the sound check, the word timing, `tsc` and
+`eslint` all passed. The fault dates from the first build; three of the 2,249 lines in all chapters have such a word,
+all three in A9. A contact sheet showed it, and I nearly read past it as a bad page break. **The rule:** read the
+captions on the contact sheets, not only the arrows, and when a caption reads oddly find out why before calling it
+cosmetic. `captionPages` now throws if a word is lost, so a render stops.
+
+---
+
+### 458 · MINE: a clip passed on the wrong item, and I changed data for a filter I had not read (31 October)
+
+A9's shots pick buttons by position and take rice, LPG and tea cup to be the first three items. The three Bar drinks now
+sort first, so six clips failed and A9-12 passed on a drink. For the retake I set the drinks' `is_active` to false,
+assuming the Store filtered on it. It does not: `api/src/modules/stores/stores.ts:477` sorts by category and never looks
+at it. One read would have told me, and a retake was wasted. Changing their category for the run and putting it back
+worked, with the md5 of `stock_items` equal before and after. **The rules:** read the query before changing data to
+steer a screen. A `●` from `record.mjs` says the shot ran, not that it is right (453): look at the last frames.
+
+---
+
 ### 457 · FOUND: this system's limit is the hotels' past, not its users (31 October)
 
 The load test expected a ceiling on people and found one on history. The tills stay flat at 110,000 bills, but the
