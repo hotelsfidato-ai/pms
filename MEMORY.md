@@ -6561,6 +6561,28 @@ copy will see of theirs.**
 
 ---
 
+### 452 · MINE: the same Vite trap, one day after I wrote it down (31 October)
+
+To open one screen I started `web` in the main folder with the video chat's Vite running there on 5174. They share
+`.local/vite-cache` (MEMORY 449): mine sat blank for ten minutes, 5174 stopped answering too, and a four-minute monitor
+expired silently because its failure line came after its deadline. **The rules:** before `preview_start` of `web`,
+list the running Vites; if one runs from that folder, use a release or helper copy with its own cache, with
+`.env.example` copied to `.env.local` for the test sign-in, and remove both the file and the launch entry afterwards.
+A monitor's failure line must fall inside its `timeout_ms`.
+
+---
+
+### 451 · MINE: the release steps said I had opened the new screens, and one I had not (31 October)
+
+Same as the guest came last, from the owner's D27-386. It had its tests, then the gates, then the release. I wrote
+"I opened the new screens" in the steps and committed the record before checking; the session log showed no browser
+call had ever touched that button. Found before the steps were sent; the owner was told "nearly" when they asked.
+Opened then, and it works: hidden for an Indian adult, the visit answers copied, phones and visa left blank, saved,
+removed. **The rule:** a late addition to a release joins the list of screens to open; before writing "opened", go
+through the release's new buttons one by one against what was actually opened.
+
+---
+
 ### 450 · A PC restart in the middle of a helper's work (30-31 October)
 
 The PC restarted on 30 Oct at 19:11 and stopped both release 17 helpers, Postgres and TallyPrime; no disk dropout in the

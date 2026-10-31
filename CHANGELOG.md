@@ -78,6 +78,9 @@ work", and "tell me when release 17 is ready".
 - TallyPrime 7.2 Educational Mode on this PC: 5 vouchers created, Day Book equal to the PMS to the paisa; a missing
   ledger refused, nothing created for that voucher; a corrected day altered, not doubled.
 - ERP 9 shape-tested only: not imported into a real ERP 9.
+- Same as the guest opened on the local demo from the release copy, as Reception: hidden for an Indian adult, shown for
+  a foreigner, four visit answers copied and saved on `form_iii_stays`, phone and visa left blank, Remove asks first.
+  Found late: MEMORY 451. The local demo keeps the name "Test Companion R17" (a guest is never deleted).
 
 **Left open**
 - The owner's: A1 to A8 of the steps, then the read-only check. The Accountant's first import into a COPY of the
