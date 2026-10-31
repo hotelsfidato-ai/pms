@@ -157,17 +157,16 @@ export const SHOTS = [
 
   /* ── A3.3 The other adults in the room (D27-382), to be taken ──── */
   {
+    /* A3 Test Companion is on Arjun Nair's booking in the demo, with no ID yet. */
     id: "A3-T20", title: "Check-in: Adults in the room, one added", as: "Reception",
-    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("A3 Test Desai"),
-      { waitFor: "css:[data-stay-companions]", ms: 60000 }, { click: "text:Add an adult" },
-      { wait: 500 }, SET("Full name", "A3 Test Companion"), SET("Document", "Passport"),
-      { wait: 300 }, SET("Number", "A7654321"), { click: "css:[role=dialog]:last-of-type button[data-variant=primary]" },
-      { wait: 1000 }, { eval: "document.querySelector('[data-stay-companions]').scrollIntoView({ block: 'center' })" },
-      { wait: 500 }],
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("Arjun Nair"),
+      { waitFor: "text:A3 Test Companion", ms: 60000 }, { wait: 1000 },
+      { eval: "[...document.querySelectorAll('[data-stay-companions]')].pop().scrollIntoView({ block: 'center' })" },
+      { wait: 700 }],
     marks: [
-      { n: 1, at: "css:[data-stay-companions] h3", side: "right" },
-      { n: 2, at: "text:Add an adult", side: "left" },
-      { n: 3, at: "text:A3 Test Companion", side: "right" },
+      { n: 1, at: "text:2 adults, 1 recorded", nth: 1, side: "top" },
+      { n: 2, at: "text:Add an adult", nth: 1, side: "top" },
+      { n: 3, at: "text:A3 Test Companion", nth: 1, side: "bottom" },
     ],
   },
 

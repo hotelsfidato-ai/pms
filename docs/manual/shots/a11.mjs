@@ -261,20 +261,21 @@ export const SHOTS = [
   {
     id: "A11-29", title: "The Tally ledger names of one hotel", as: "Accountant",
     path: "/reports/accounting",
-    steps: [{ waitFor: "text:Tally ledger names", ms: 20000 }, { scroll: "text:Tally ledger names" }],
+    /* The demo has five names saved and the rest blank (through the local API). */
+    steps: [{ waitFor: "text:Tally ledger names", ms: 60000 }, { wait: 800 }, { scroll: "text:Tally ledger names" }, { wait: 500 }],
     marks: [
-      { n: 1, at: "text:Tally ledger names", side: "top" },
-      { n: 2, at: "label:Room rent", side: "right" },
-      { n: 3, at: "label:CGST", side: "right" },
-      { n: 4, at: "text:Save ledger names", side: "right" },
+      { n: 1, at: "text:Tally ledger names", nth: 0, side: "right" },
+      { n: 2, at: "css:input[maxlength='200']", nth: 0, side: "bottom" },
+      { n: 3, at: "css:input[maxlength='200']", nth: 5, side: "bottom" },
     ],
   },
 
   {
-    id: "A11-30", title: "Tally Prime chosen, and what the file holds", as: "Accountant",
+    /* Every ledger name saved (through the local API), so Export is on. */
+    id: "A11-30", title: "Tally Prime chosen, and what the file holds", as: "Accountant", size: "wall",
     path: "/reports/accounting",
-    steps: [{ waitFor: "text:Tally Prime (XML)", ms: 20000 }, { click: "text:Tally Prime (XML)" },
-            { waitFor: "text:Not in the file", ms: 5000 }],
+    steps: [{ waitFor: "text:Tally Prime (XML)", ms: 60000 }, { click: "text:Tally Prime (XML)" },
+            { waitFor: "text:Not in the file", ms: 5000 }, { wait: 5000 }, { scroll: "text:Accounting export" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:Tally Prime (XML)", side: "right" },
       { n: 2, at: "text:Not in the file", side: "top" },
