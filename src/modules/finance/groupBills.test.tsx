@@ -21,7 +21,7 @@ describe("the Folios page", () => {
       (path.endsWith("/hotels/5EL/folios")
         ? [{ stayId: null, groupId: "grp-1", group: "Wedding party", roomCharges: 6000,
              extraCharges: 0, tax: 300, discount: 0, payments: 0, balance: 6300, status: "open" }]
-        : path.endsWith("/hotels/5EL/stays") ? []
+        : path.endsWith("/hotels/5EL/stays?owing=1") ? []
         : new Promise(() => {})) as never);
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

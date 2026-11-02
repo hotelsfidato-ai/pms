@@ -5,7 +5,7 @@ import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
-import { listStays } from "@/modules/front-desk/data/stays";
+import { fetchStaysWhere } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -29,7 +29,7 @@ export default function WalkInsPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.stays(hotelId, "walk-ins"),
     queryFn: async () => {
-      const all = await listStays(hotelId, { source: ["Walk-in"] });
+      const all = await fetchStaysWhere(hotelId, "source=Walk-in");
       return all.sort((a, b) => b.arrival.localeCompare(a.arrival));
     },
   });

@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · Assign room and Walk-ins stop reading every booking (D27-387, the load test)
+
+**Shipped.** `flows/AssignRoomFlow.tsx` reads who is checked in and every booking still to arrive (`fetchStays(hotel, today, "9999-12-31")`). `pages/WalkIns.tsx` reads the walk-ins only (`fetchStaysWhere(hotel, "source=Walk-in")`). The API's `GET /stays` takes `source=` and `owing=1`.
+
+**Proved.** `api/test/modules/front-desk/staysAskedBy.test.ts`: `owing=1` is exactly the stays on GET /folios, `source=Walk-in` exactly the walk-ins of the whole list; it fails with the balance rule broken.
+
+**Left open.** Walk-ins still lists every walk-in on record, because that is what the screen is: a hotel whose bookings are nearly all walk-ins gains little.
+
+---
+
 ## 2026-10-30 · Every adult in the room (the owner's D27-382, GUE-6)
 
 **Shipped.** The guests service's `StayCompanions` on the check-in window (`flows/CheckInFlow.tsx`, under the ID, following the party as typed) and the stay panel (`flows/StayDrawer.tsx`, Stay tab). `POST /check-in` is unchanged: each person is saved on their own call, so nobody missing can stop it. `operations.ts`: the registration card lists the other adults with `maskedId` (`ID_MASK` moved to guests as that); its own `form_iii_stays` read is the lead's row (`guest_id is null`); check-out asks a next destination for a foreign companion under an Indian lead (`needs: "next-destination"`) and hands it on with `saveCompanionsDeparture`. `pages/RegistrationCard.tsx`: "Other adults in the room". The whole entry is the guests changelog's.

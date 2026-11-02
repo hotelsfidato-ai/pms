@@ -1,4 +1,4 @@
-import { listStays, getHouseNow } from "@/modules/front-desk";
+import { fetchStays, getHouseNow } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
@@ -24,15 +24,13 @@ export interface HousekeepingRoom {
 
 export async function listHousekeeping(
   hotelId: string,
-  /* Kept in the signature: every seam function is asked "as at when",
-     and a board that silently ignored the date would be the odd one
-     out. Occupancy now comes from stay STATUS rather than from
-     comparing dates — see below — so nothing here reads it yet. It
-     will when the business date stops being a constant (CP11). */
-  _businessDate: string,
+  businessDate: string,
 ): Promise<HousekeepingRoom[]> {
   if (!hotelId) return [];
-  const live = (await listStays(hotelId)).filter((s) => s.status !== "cancelled");
+  /* The desk's read (D27-313), not every booking ever: this runs every 30-60
+     seconds on every open board, and it only names who is in a room, which is
+     always a checked-in stay (D27-387, the load test). */
+  const live = await fetchStays(hotelId, businessDate);
 
   /* Rooms from the API, stays from the store — a hybrid, because CP9
      is half-done. It is the ROOM that has moved, and reading it from

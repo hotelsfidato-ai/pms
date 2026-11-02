@@ -294,7 +294,12 @@ async function hotelIdFor(client: Client, code: string) {
    checked in now, and the bookings still to arrive that already hold a room
    (a tile's Arriving and Reserved, whatever the dates on screen). What Rooms,
    the Calendar's fortnight and the Dashboard draw - not every booking ever
-   made, which they each read once or twice. */
+   made, which they each read once or twice.
+
+   TWO MORE BOUNDED READS (D27-387, the load test). `owing=1`: the stays whose
+   bill carries a balance, what the Folios page lists. A guest who has left can
+   still owe, so no date will do; the balance is the one GET /folios sums.
+   `source=`: the bookings of one source, what Walk-ins lists. */
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 stays.get("/:code/stays", async (c) => {
@@ -303,6 +308,8 @@ stays.get("/:code/stays", async (c) => {
   const from = c.req.query("from");
   const to = c.req.query("to") ?? from;
   const board = c.req.query("board") === "1";
+  const owing = c.req.query("owing") === "1";
+  const source = c.req.query("source");
   if (from !== undefined && !(DAY.test(from) && DAY.test(to!))) {
     return c.json({ error: "from and to are days, YYYY-MM-DD." }, 400);
   }
@@ -313,7 +320,15 @@ stays.get("/:code/stays", async (c) => {
     const businessDate = asOn ?? (await businessDateFor(client, hotelId));
 
     const [only, params] =
-      from === undefined ? ["", [hotelId]]
+      owing ? [`and r.id in (
+                  select f.reservation_id
+                    from folio_postings fp join folios f on f.id = fp.folio_id
+                   where f.hotel_id = $1 and fp.reverses_id is null
+                     and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)
+                   group by f.reservation_id
+                  having sum(fp.amount + fp.tax_amount) <> 0)`, [hotelId]]
+      : source !== undefined ? [`and app.booking_source_label(bs.name, co.name, r.source) = $2`, [hotelId, source]]
+      : from === undefined ? ["", [hotelId]]
       /* Holding a room is asked of the booking's own assignments, not of the
          room join: a condition on the join is tried on every booking ever
          made, under row security, and took ~2.7 s instead of ~0.1 s. */
