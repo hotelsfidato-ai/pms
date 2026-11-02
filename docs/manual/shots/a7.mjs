@@ -60,4 +60,23 @@ export const SHOTS = [
       { n: 4, at: "css:button[role=switch]", nth: 1, side: "left" },
     ],
   },
+  /* D27-390: the Admin section's card, read only - nothing is cancelled. Taken
+     with the latest audit undoable and something billed since, so the card
+     shows what it undoes and moves. */
+  {
+    id: "A7-05", title: "Admin, the property's page: Cancel a night audit", as: "Owner",
+    path: "/properties/5EL", size: "wall",
+    steps: [
+      { waitFor: "text:Cancel a night audit", ms: 15000 },
+      { scroll: "text:I have read what this undoes and moves." }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "css:select", nth: 0, side: "top" },
+      { n: 2, at: "css:select", nth: 1, side: "top" },
+      { n: 3, at: "text:This audit is undone:", side: "right" },
+      { n: 4, at: "text:2 room charges reversed", side: "right" },
+      { n: 5, at: "text:moved to", side: "right" },
+      { n: 6, at: "text:I have read what this undoes and moves.", side: "right" },
+    ],
+  },
 ];

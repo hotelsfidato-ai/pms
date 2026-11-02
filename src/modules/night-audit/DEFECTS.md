@@ -40,6 +40,16 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-13 · A second audit closed a day that had not begun — FIXED 2 November (D27-389)
+
+**Found** — live, Amrapali, 1 November: 1 November closed at 23:36, and at 23:37 the audit closed 2 November too. The hotel ran on 3 November's date all of 2 November until it was put back by hand (the master's step, 2 November). The confirm window of D27-117 was clicked through. The "opens at 16:00" lock (D27-338) asked only whether the hotel's clock had passed 16:00 - and at 23:37 it had, for any date.
+
+**Fixed** — a business date ahead of the hotel's own calendar is a blocker for everybody (`not-begun`); today's date closed under 16 hours after the last audit needs a reason from the owner, an Admin or the GM, and is refused for anyone else; the window shows the day, today's date and the last audit, with a tick box.
+
+**Proved** — `api/test/modules/night-audit/guardAndUndo.test.ts`; the web's `nightAudit.test.tsx` (Close off until ticked; the GM's reason sent).
+
+**The rule** — A guard on the time of day must also ask which day. "After 16:00" is true of tomorrow at 23:37.
+
 ### NA-12 · Closed days taxed a multi-night room line by its whole amount — FIXED 29 September (D27-162)
 
 **Found** — the folio lane, reading the correction for D27-157 (29 September): the correction asked `app.gst_rate_or_null('room', amount)` on the line's whole new figure. A walk-in's "Room 201 · 2 nights" corrected to ₹9,000 is ₹4,500 a night - 5% - and was taxed 18%. The walk-in (front-desk operations.ts) and the night audit ask the slab on the price a night.

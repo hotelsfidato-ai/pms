@@ -8,6 +8,27 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · Never a day that has not begun, 16 hours between audits, and cancelling an audit (the owner's D27-389, D27-390)
+
+**Asked for:** after Amrapali closed 1 November at 23:36 and 2 November at 23:37, the owner: a second confirmation before the audit runs; at least 16 hours between audits, a warning system - the owner (and an Admin, the same) give a reason and go on, the GM is warned and gives a reason; and an owner/Admin cancel in the Admin section, recorded as a mistake: "edit the date or cancel and redo the day", both ways in a setting, any date by default; bills made on the wrong day moved back, recorded.
+
+**Shipped**
+- Migration 255 (`255_night_audit_guard_and_undo.sql`): `night_audit_runs.early_reason`/`early_by`, status `cancelled`; `group_settings.night_audit_undo` (`any_date` default, `one_at_a_time`); `night_audit_undos` (read-only to pms_app, audited); `app.undoes_night_audits`; `app.audit_undo_allows` and the five guards that ask it; `app.undo_night_audits` (the dry run and the cancel); the test hotel's classes and the full reset's steps know the new table.
+- `nightAudit.ts`: a `not-begun` blocker (a business date ahead of the hotel's calendar, for everybody); `earlyAudit` and the run's 16 hours with `{ reason }`; the reason in Closed days; four routes for the cancel (dry run, cancel, setting, history). `checklist.ts`: `calendarDate`, `lastCompletedAt`, `early`, and Run refused with its sentence for anyone the 16 hours stop. `roomNight.ts`: `CHARGED` leaves out a cancelled audit's line and its reversal. `roleGate.ts`: `UNDO_DAY` (`role` view: the owner and an Admin).
+- The screen: the window before Run shows the day, today at the hotel and the last audit, a tick box, and (inside 16 hours) the note or the GM's warning and "Why now"; Closed days shows "Under 16 hours" and Why early; a Cancelled audits card. `components/CancelAudits.tsx`, exported by `index.ts`, on the Admin property page.
+- Manual A7.4 and A7.5 rewritten for the window and the cancel; Figure A7-05, the card.
+
+**Proved**
+- API: `guardAndUndo.test.ts` 11 - tomorrow refused for the owner; reception catches up two days in a row; reception refused today, the GM warned, the owner and an Admin asked a reason; the GM refused without one and the reason kept; reception and the GM refused the cancel, an Admin let in; the dry run's audits, charges, no-show and moves, nothing written; one-at-a-time refuses an older day; a standing tax invoice refuses; the cancel reverses both nights, books the no-show again and holds its room, moves the charge and the closed drawer, keeps the record and an audit line; the day run again charges the night again (3 lines, ₹2,000 standing); pms_app setting the flag cannot move a closed drawer. The whole folder 59 of 59.
+- Pune starts sixty days back in `nightAudit.test.ts` and `corrections.test.ts`: it is provisioned on today and those files close day after day, which the new rule refuses (14 failures first, then none).
+- The API folders that close days or read the guard (businessDate, roleGate, accounting, front-desk, admin, reports, guest-messaging's reports, channel-manager's availability): 775 of 775 in 57 files. Database: 1,892 assertions; all 255 migrations re-runnable. Web: night audit, admin, the manual, boundaries, primary action, migration numbers: 171 of 171. Types 0 and 0.
+- Fail-first, from saved copies: the `not-begun` blocker taken out and `CHARGED` without its undo lines - exactly two tests failed ("refuses tomorrow…", "charges the night again…"); both files restored, hashes equal.
+- On screen, on the local demo in this copy's own database (`fidato_na`, API 8812, web 5192): the window's three facts, Close off until ticked; 31 Oct and 1 Nov caught up with no reason; the owner asked "Why now", the GM shown the Warning, Close off until a reason, the day closed and "Under 16 hours" with the reason in Closed days; then "3 November has not begun at the hotel: it is 2 November there." on the card. The Admin card: dry run, cancel back to 2 Nov - the run cancelled with its reason, both room nights reversed, a charge dated 3 Nov moved to 2 Nov; 2 Nov closed again charged 2 rooms. Figure A7-05 taken there.
+
+**Left open** - for the owner: see the helper's report (bills moved to the chosen day whatever day they were made on; what a cancel does to emails and exports already sent).
+
+---
+
 ## 2026-10-16 · The night audit opens at its time; rooms in number order (the owner's D27-338)
 
 **Asked for:** "the night audit needs to be locked till 16:00, so till this time no one can do the night audit for that day" - a per-hotel time, 16:00 to begin; nobody before it; a day already behind always closes. And, checked first: Mathura's rooms (1A ... 11B) listed 10A, 10B, 11A, 11B, 1A ... - number order in the lists.

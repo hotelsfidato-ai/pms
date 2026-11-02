@@ -121,17 +121,25 @@
   <ol class="steps">
     <li>Read the checks (A7.2) and clear what stops it (A7.3).</li>
     <li>When the card shows no reason, tap <span class="ui">Run night audit</span>.</li>
-    <li>It asks first: <span class="msg">“Close Friday, 9 October 2026?”</span> with <span class="msg">“The property moves to Saturday, 10 October 2026. Tonight's room charges are posted to every guest in house and arrivals who did not come become no-shows. A closed day cannot be edited, only corrected afterwards.”</span></li>
+    <li>It asks first: <span class="msg">“Close Friday, 9 October 2026?”</span>, and shows three things to read: <span class="ui">Closing</span> (the day being closed), <span class="ui">Today at the hotel</span> (the date by the hotel's own clock) and <span class="ui">Last audit</span> (when the last one finished). Then <span class="msg">“The property moves to Saturday, 10 October 2026. Tonight's room charges are posted to every guest in house and arrivals who did not come become no-shows. A closed day cannot be edited, only corrected afterwards.”</span></li>
+    <li>Read them, and tick <span class="ui">I have checked the day being closed, today's date and the last audit.</span> Until it is ticked, the button stays grey.</li>
     <li>Tap <span class="ui">Close 9 Oct 2026</span> (the day being closed), or <span class="ui">Cancel</span>. While it works, the button reads <span class="ui">Closing the day…</span>.</li>
     <li>A green card says <span class="msg">“Friday, 9 October 2026 is closed. The property is now operating in Saturday, 10 October 2026.”</span>, with what it did: rooms posted and their revenue, rooms given free (<span class="msg">“complimentary, not charged”</span>), and no-shows.</li>
   </ol>
   <p>When the restaurant sold something that day, the card also shows its day: orders, covers, the total with its tax, and each way it was paid. Under it, the two drawers side by side, never added together: <span class="ui">Front desk</span> (its shifts) and <span class="ui">Till</span> (its outlets), each with what it opened on, what was counted, and how many differences were explained. These are read from what the till and the desk already wrote; the audit adds none of it to a bill.</p>
   <p>If the hotel has switched it on (Settings, Front desk rules, <span class="ui">The night audit sends every room with a guest staying on for its daily clean</span>), the audit also marks those rooms dirty for the new day. It starts off.</p>
 
+  <h3>A day that has not begun, and 16 hours between audits</h3>
+  <ul>
+    <li><b>A day closes only once it has begun.</b> If the hotel's business date is ahead of the hotel's own calendar, the card says, for example, <span class="msg">“3 November has not begun at the hotel: it is 2 November there. A day closes only once it has begun.”</span> and nobody can run it, the owner included.</li>
+    <li><b>Today's date, under 16 hours after the last audit:</b> the window adds <span class="msg">“The last audit finished at 23:36 on 1 Nov, 0.1 hours ago - less than 16. Say why this day closes so soon. The reason is kept with the audit.”</span> and a box, <span class="ui">Why now</span>. The owner and an Admin type the reason and go on. The GM sees it as a <b>Warning</b> and must type a reason too. Everybody else is stopped: the card says <span class="msg">“The last night audit finished at …, … hours ago. Another day closes only 16 hours after the last one - or sooner by the GM, the owner or an administrator, with a reason.”</span></li>
+    <li>Catching up on days already over is never held by the 16 hours: a hotel days behind closes them one after another.</li>
+  </ul>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li><b>A closed day cannot be opened again.</b> It can only be corrected, line by line (A7.5).</li>
+      <li><b>A closed day cannot be edited.</b> It can be corrected, line by line, or - by the owner or an Admin, for an audit run by mistake - cancelled (A7.5).</li>
       <li><b>Pressed twice, on two desks, or on a screen left open after the day was closed elsewhere?</b> The day closes once. The second press changes nothing and says, for example, <span class="msg">“9 Oct was already closed. Reload to see today.”</span> and <span class="msg">“Nothing was run again.”</span>, with the record that was made: who ran it, when, rooms posted, room revenue, no-shows.</li>
       <li><b>No connection, no audit.</b> It closes the day for the whole property and needs the server. Wait for the line.</li>
       <li>After the audit, other desks see the new business date the next time they open a screen (A1.1).</li>
@@ -140,12 +148,12 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The audit asks first, because a closed day cannot be edited: <span class="d">D27-117</span>. A second press changes nothing and shows the record that was made: <span class="d">D17-12</span>. The first night is charged at check-in, so the audit skips a night already charged: <span class="d">D27-204</span>. The daily clean at the audit, off unless the hotel says so: <span class="d">D27-260</span>. The audit is run by a person and never scheduled: the owner's rule.</p>
+    <p>The audit asks first, because a closed day cannot be edited: <span class="d">D27-117</span>. The three facts, the tick box, a day that has not begun and the 16 hours came after an audit closed the next day one minute after the first: <span class="d">D27-389</span>. A second press changes nothing and shows the record that was made: <span class="d">D17-12</span>. The first night is charged at check-in, so the audit skips a night already charged: <span class="d">D27-204</span>. The daily clean at the audit, off unless the hotel says so: <span class="d">D27-260</span>. The audit is run by a person and never scheduled: the owner's rule.</p>
   </div>
 
   <!-- A7.5 -->
   <h2 id="a7-5"><span class="n">A7.5</span>Closed days, and correcting one</h2>
-  <p>Under the Run card, <span class="ui">Closed days</span> lists every night audit run at this property, newest first: <span class="ui">Day</span>, <span class="ui">Ran by</span>, <span class="ui">Closed</span>, <span class="ui">Rooms posted</span>, <span class="ui">Room revenue</span> (the room charges the audit posted, before tax) and <span class="ui">No-shows</span>. A figure the record does not hold is a dash. Until the first audit, it says <span class="msg">“No day closed yet”</span> (Figure A7-02, arrow 4).</p>
+  <p>Under the Run card, <span class="ui">Closed days</span> lists every night audit run at this property, newest first: <span class="ui">Day</span>, <span class="ui">Ran by</span>, <span class="ui">Closed</span>, <span class="ui">Rooms posted</span>, <span class="ui">Room revenue</span> (the room charges the audit posted, before tax), <span class="ui">No-shows</span> and <span class="ui">Why early</span>. A figure the record does not hold is a dash. A day closed under 16 hours after the last is marked <span class="ui">Under 16 hours</span>, and <span class="ui">Why early</span> shows the reason and who gave it. Until the first audit, it says <span class="msg">“No day closed yet”</span> (Figure A7-02, arrow 4). Below it, <span class="ui">Cancelled audits</span> lists every cancel, with its reason (see below).</p>
 
   <h3>To correct a closed day (owner, Admin, GM)</h3>
   <ol class="steps">
@@ -162,9 +170,38 @@
     <li>A room charge's tax is worked out again, as the audit does; any other charge keeps the rate it was charged at.</li>
   </ul>
 
+  <h3>To cancel an audit run by mistake (owner, Admin)</h3>
+  <p>In the Admin section: <span class="ui">Properties</span>, the hotel, then the card <span class="ui">Cancel a night audit</span>. The hotel goes back to the day you choose: every audit from it on is undone, and what was billed since moves back to that day.</p>
+  <ol class="steps">
+    <li><span class="ui">How far back</span>: <span class="ui">To any earlier day</span> (to start) or <span class="ui">One audit at a time</span>. This is the group's setting, for every hotel.</li>
+    <li><span class="ui">Back to</span>: the closed day the hotel should be on again. With <span class="ui">One audit at a time</span>, only the latest.</li>
+    <li>Read what it does: the audits undone, with who closed them and when; how many room charges are reversed, and their total; the no-shows booked again; and what moves back, day by day.</li>
+    <li>Type <span class="ui">Why</span>. It is kept with the cancel, as a mistake.</li>
+    <li>Tick <span class="ui">I have read what this undoes and moves.</span>, then tap <span class="ui">Cancel 1 audit</span> (or the number shown).</li>
+    <li>The hotel is on that day again: <span class="msg">“5EL is on Monday, 2 November 2026 again”</span>. Run the night audit for it when the day is done.</li>
+  </ol>
+  <figure class="shot" id="fig-A7-05">
+    <img src="img/A7-05.png" alt="Admin, 5 Elements Akkalkot: the Cancel a night audit card, back to Monday 2 November 2026, one audit undone, two room charges reversed, one no-show booked again, one charge moved from 3 November to 2 November, the Why box and the tick box">
+    <figcaption><b>Figure A7-05.</b> Admin, the property's page: Cancel a night audit.</figcaption>
+    <ol class="callouts">
+      <li>How far back: any earlier day, or one audit at a time</li>
+      <li>The day the hotel goes back to</li>
+      <li>The audits undone</li>
+      <li>The room charges reversed, and the no-shows booked again</li>
+      <li>What moves back, from which day</li>
+      <li>Ticked only once it has been read</li>
+    </ol>
+  </figure>
+  <ul>
+    <li>Nothing is deleted. The audit stays on record as cancelled; its room charges stay on the bills, each with a reversal beside it on its own day. Run again, the day's audit charges the night again.</li>
+    <li>A no-show is booked again, and its room held again if nobody has taken it since. If somebody has, the message names the booking: give it another room.</li>
+    <li>Moved back to the chosen day: restaurant bills, charges and payments on room bills, the till's and the desk's drawers and their cash, stock movements and counts, deposits, laundry, and the bar's requests.</li>
+    <li>It is refused, and nothing changes, when: a GST tax invoice or a VAT bill stands on those days (<span class="msg">“… Issue a credit note first - and your CA should confirm it.”</span>); a room was charged on a later day by a check-in or a correction; a later day was corrected; or the till was ended twice in those days.</li>
+  </ul>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The history of closed days: <span class="d">D17-13</span>. A closed day is corrected with a reason, the old and new figures both kept: <span class="d">D22-18</span>. The owner, an Admin and the GM correct: <span class="d">D24-3</span>; this month and the month before: <span class="d">D24-5</span>. Every charge may be corrected, never money: <span class="d">D25-5</span>.</p>
+    <p>An audit run by mistake is cancelled by the owner or an Admin, from the Admin section, recorded as a mistake; back to any day by default, or one at a time by the group's setting; what was billed since moves back with it: <span class="d">D27-390</span>. The history of closed days: <span class="d">D17-13</span>. A closed day is corrected with a reason, the old and new figures both kept: <span class="d">D22-18</span>. The owner, an Admin and the GM correct: <span class="d">D24-3</span>; this month and the month before: <span class="d">D24-5</span>. Every charge may be corrected, never money: <span class="d">D25-5</span>.</p>
   </div>
 
   <!-- A7.6 -->

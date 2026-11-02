@@ -88,6 +88,15 @@ beforeAll(async () => {
     /* These close days; the opening time (D27-338) is opensAt.test.ts's. Open
        from midnight, or a run before 16:00 is refused (MEMORY 416). */
     await db.query("update hotels set night_audit_opens_at = '00:00' where id = $1", [puneId]);
+    /* A day that has not begun is never closed (D27-389), and Pune is
+       provisioned on today while this file closes day after day: it starts
+       sixty days back - days to catch up, never held by the 16 hours -
+       unless a file before this one already closed a day there. */
+    await db.query(
+      `update hotels set business_date = (now() at time zone timezone)::date - 60
+        where id = $1 and not exists (select 1 from night_audit_runs n
+                                        where n.hotel_id = hotels.id and n.status = 'completed')`,
+      [puneId]);
 
     const { rows } = await db.query<{ d: string }>(
       `select business_date::text as d from night_audit_runs

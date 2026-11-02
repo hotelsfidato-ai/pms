@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { businessDateFor } from "../../businessDate.ts";
-import { blockersFor, POSTS_TONIGHT } from "./nightAudit.ts";
+import { blockersFor, earlyAudit, earlyRefusal, POSTS_TONIGHT } from "./nightAudit.ts";
 
 /* Split out of api/src/routes/billing.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: night audit.
@@ -25,7 +25,7 @@ async function hotelIdFor(client: Client, code: string) {
 checklist.get("/:code/night-audit", async (c) => {
   const asOnParam = c.req.query("asOn");
 
-  const body = await withSession(c.get("subject"), async (client) => {
+  const body = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const bd = await businessDateFor(client, hotelId);
@@ -80,19 +80,26 @@ checklist.get("/:code/night-audit", async (c) => {
        POST /night-audit/run. Rule 6 works only if the disabled button
        and the server's refusal are the same answer. */
     const blockers = await blockersFor(client, hotelId, asOn);
+    /* The 16 hours (D27-389), as they stand for THIS person: not a blocker -
+       the owner, an Admin and the GM may go on with a reason - but for anyone
+       else the button is refused with its sentence, as the run would be. */
+    const early = await earlyAudit(client, hotelId, asOn, session);
+    const stopped = early?.may === "refused" ? earlyRefusal(early) : null;
     /* `blockers` joined on 17 September, when the unused
        GET /night-audit/can-run was removed (D17-42): this answer was already
        the one the screen and POST /run share, so it is the one kept. */
     const canRun = {
-      allowed: blockers.length === 0,
-      ...(blockers.length
-        ? { reason: blockers.map((b) => b.reason).join(" ") }
+      allowed: blockers.length === 0 && !stopped,
+      ...(blockers.length || stopped
+        ? { reason: [...blockers.map((b) => b.reason), ...(stopped ? [stopped] : [])].join(" ") }
         : {}),
       blockers,
     };
 
-    const { rows: last } = await client.query<{ d: string }>(
-      `select to_char(max(business_date), 'DD Mon YYYY') as d
+    const { rows: last } = await client.query<{ d: string; at: Date | null; today: string }>(
+      `select to_char(max(business_date), 'DD Mon YYYY') as d, max(completed_at) as at,
+              (select to_char((now() at time zone h.timezone)::date, 'YYYY-MM-DD')
+                 from hotels h where h.id = $1) as today
          from night_audit_runs
         where hotel_id = $1 and status = 'completed'`,
       [hotelId],
@@ -162,6 +169,11 @@ checklist.get("/:code/night-audit", async (c) => {
          close. */
       canRun,
       lastRun,
+      /* For the window before Run (D27-389): the hotel's own today, when the
+         last audit finished, and the 16 hours for this person, or null. */
+      calendarDate: last[0]?.today ?? null,
+      lastCompletedAt: last[0]?.at ? last[0].at.toISOString() : null,
+      early,
     };
   });
 
