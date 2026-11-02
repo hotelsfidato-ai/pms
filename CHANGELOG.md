@@ -89,14 +89,31 @@ has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9
 
 ---
 
-## 2026-11-02 · Normal guest or Company guest on New booking (D27-392), for release 19
+## 2026-11-03 · Release 18 rebuilt with D27-392, at a4527ea5
+
+**Asked for:** the owner, "add this to release 18 also". Nothing of 18 had gone out: GitHub's main and the server were
+still on 312c52e2, and the live site on `index-DlJbrWWh.js`.
+
+**Done:**
+- `release/r18` fast-forwarded to cp6.
+- Gate run 1 at 88ed7075 failed one server test of 3,044. Finance's `invoiceSac` invoiced the first bill its unordered
+  select met, not the bill its charges went to. It passed alone (MEMORY 463).
+- Fixed in a4527ea5: the test invoices the posting's own folio and asserts the invoice was issued.
+- Gate run 2 at a4527ea5, clean, all green in 68 minutes: web 1,539, API 3,044, db 1,892, replay 256, PG16, restore 1
+  42 of 42, to minute.
+- `release.mjs` ran once. Website `index-BEoAhrU0.js`, read from the copy's `dist/index.html`; it carries "Company guest".
+- Steps rewritten in `.local/release-18-steps.md`; the b9e3c374 steps are void.
+
+---
+
+## 2026-11-02 · Normal guest or Company guest on New booking (D27-392), now in release 18
 
 **Asked for:** the owner's screenshot from Shimla, where Business source offered only "None". A walk-in has no company,
 so they want a toggle between Normal guest and Company guest (GST registered), the GSTIN looked up on Companies and
 agents, and a new company added to it.
 
 **Found:** the list came only from the hotel's past bookings, and Shimla requires Business source, so no booking could
-be saved there (MEMORY 461). Until release 19 is live, the owner unticks Business source in Shimla's Front desk rules.
+be saved there (MEMORY 461). Until release 18 is live, the owner unticks Business source in Shimla's Front desk rules.
 
 **Built:** reservations only. The whole entry is in `src/modules/reservations/CHANGELOG.md`. The server adds the
 company to `companies` (no credit) for whoever may add one.

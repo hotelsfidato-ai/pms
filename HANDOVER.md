@@ -48,10 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-> **2 November, night:**
-> - Live is still release 16. Release 18 (b9e3c374, it carries 17) is ready and the owner's to type.
-> - D27-392 (Normal guest or Company guest on New booking) is on cp6, for release 19.
-> - Shimla can't save a booking until the owner unticks Business source in its Front desk rules, or 19 is live.
+> **3 November, early:**
+> - Live is still release 16.
+> - Release 18 is rebuilt at **a4527ea5** (website `index-BEoAhrU0.js`). It carries 17 and, on the owner's word ("add
+>   this to release 18 also"), D27-392. It is the owner's to type from `.local/release-18-steps.md`; the b9e3c374
+>   steps are void.
+> - Shimla can't save a booking until the owner unticks Business source in its Front desk rules, or 18 is live.
 
 > **31 October: THE LOAD TEST IS DONE (D27-384), see CHANGELOG.** Live is healthy and far from its limit today. Every
 > live request waits about 280 ms for Google (`verifyIdToken(token, true)`). The estimated ceiling is 10 × to 15 × the
@@ -793,9 +795,17 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **2 November, night: D27-392 BUILT ON cp6, FOR RELEASE 19 (not in 18).** Shimla could not save a booking: its Front
+> **3 November, early: RELEASE 18 REBUILT WITH D27-392, at a4527ea5, website `index-BEoAhrU0.js`.**
+> - The owner asked for D27-392 in 18, and nothing of 18 had gone out (GitHub and the server still on 312c52e2).
+> - `release/r18` fast-forwarded. The first full gate run failed one fragile test (finance's `invoiceSac`, MEMORY 463),
+>   fixed in a4527ea5. The second run is green: web 1,539, API 3,044, db 1,892, replay, PG16, restore 1, to minute.
+> - release.mjs ran once; the bundle was read from the copy's `dist/index.html`.
+> - Steps: `.local/release-18-steps.md`, with A8 checking the guest toggle.
+> - **Next:** after A1-A7, check read-only that the site loads `index-BEoAhrU0.js` and the server is at a4527ea5.
+>
+> **2 November, night: D27-392 BUILT ON cp6.** Shimla could not save a booking: its Front
 > desk rules require Business source, and that list only had names from past bookings (none since the fresh start;
-> MEMORY 461). **Until 19 is live, the owner unticks Business source** in Shimla's Front desk rules (told). **D27-392,
+> MEMORY 461). **Until 18 is live, the owner unticks Business source** in Shimla's Front desk rules (told). **D27-392,
 > the owner's three yeses:**
 > - New booking's Guest card has **Normal guest | Company guest (GST registered)**. A company guest needs a GSTIN and
 >   a name.
@@ -803,13 +813,13 @@ npx vitest run          197 passed, 13 files
 >   by whoever may add a company.
 > - Business source is asked of a company guest only, and starts on their company.
 >
-> Reservations' CHANGELOG has the proof. Release 18 is unchanged and still the owner's to deploy.
+> Reservations' CHANGELOG has the proof.
 
 > **2 November, evening: RELEASE 18 IS BUILT AND WAITING FOR THE OWNER (b9e3c374; it carries release 17).** Steps
 > `.local/release-18-steps.md`, A1-A8 plus N1-N3 (the n8n paste for "Corrected"). Keep `.claude/worktrees/release-r18`
 > until the website is published from it; `release-r17` can be recycled once 18 is live, since 17 was never deployed.
-> **Next:** after the owner's A1-A7, check read-only (site `index-CIFswQSG.js`, API, code b9e3c374, migrations 253-256,
-> no API errors). Then, with the owner's yes: the approved features (D27-383) or the safety items that wait on
+> **Next (rebuilt 3 Nov, see above):** after the owner's A1-A7, check read-only (site `index-BEoAhrU0.js`, API, code
+> a4527ea5, migrations 253-256, no API errors). Then, with the owner's yes: the approved features (D27-383) or the safety items that wait on
 > server and cost answers. Still asked: Mathura (HGLM) is on 15 October; is it trading?
 
 > **2 November, afternoon: RELEASE 18 MERGED ON cp6 EXCEPT TWO SMALL ADDS.** Speed (0ce1f897), the Night audit guard and
