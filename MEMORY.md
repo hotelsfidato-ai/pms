@@ -6561,6 +6561,17 @@ copy will see of theirs.**
 
 ---
 
+### 460 · FOUND: two Night audits 13 seconds apart closed a day that had not begun (1 November)
+
+At Amrapali the GM ran the audit at 23:36:52 and again at 23:37:05. The screen offered the next date at once, every
+check was green on a day with nothing in it, the confirm window was clicked through, and the server never asked
+whether the date being closed had arrived. The hotel sat on 3 November until the owner's step at 13:22 on 2 November,
+with nothing dated wrongly. Record: `docs/incidents/2026-11-01-amrapali-two-night-audits.md`. **The rule:** a guard
+that only refuses what is already closed misses what is not yet open. Ask the calendar, not just the record, and when
+a button acts on a date, check it against the hotel's own clock on the server.
+
+---
+
 ### 459 · MINE: the captions lost words at "T.P.", and only looking at the frames found it (31 October)
 
 `captionPages` ended a sentence at any stop and then wanted a space after it. At "T.P." the match failed and everything
