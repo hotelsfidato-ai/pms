@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · All bookings opens on the last 90 days (the owner's D27-387)
+
+**Asked for.** The owner's choice after the load test: "Last 90 days and all future", older bookings found by search or by choosing dates.
+
+**Shipped.** `pages/Reservations.tsx` reads `/stays?since=<business date - 90>`, a date box beside the search sets an earlier day, and a search of three letters or more asks `/stays?q=`, every booking ever. The badge says "shown", not "on file". The Ctrl K search still reads every booking, only once something is typed. Manual A2.1, figures A2-01 and A2-24, and the build.
+
+**Proved.** `allBookingsWindow.test.tsx`: the screen asks the window on opening, the whole book when searched, and the date chosen. The API's window and search: front-desk's `staysAskedBy.test.ts`. At 5EL with three years: opening 23.3 s to 0.1 s, a search 22.4 s to 0.35 s.
+
+---
+
 ## 2026-10-30 · A walk-in's other adults (D27-382)
 
 **Shipped.** `flows/BookedCard.tsx`: the guests service's `StayCompanions` on the card, once Check in now has checked the guest in; the stay does not exist before that, so it is not on the form. Takes `today` from the page. The whole entry is the guests changelog's.

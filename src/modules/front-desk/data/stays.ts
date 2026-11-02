@@ -50,6 +50,18 @@ export async function fetchStays(hotelId: string, from?: string, to = from, boar
   }
 }
 
+/** A bounded read by its own question (D27-387): `owing=1`, the stays whose
+    bill carries a balance; `source=`, the bookings of one source. */
+export async function fetchStaysWhere(hotelId: string, query: string): Promise<Stay[]> {
+  if (!hotelId) return [];
+  try {
+    return await api<Stay[]>(`/api/hotels/${hotelId}/stays?${query}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+}
+
 /** One room on the business date, by the one rule (D21-36, D21-37). */
 export interface HouseNowRoom {
   number: string;

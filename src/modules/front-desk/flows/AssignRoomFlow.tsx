@@ -7,7 +7,7 @@ import {
   Button, Dialog, DialogTrigger, DialogContent,
   StatusPill, toast,
 } from "@/components/ui";
-import { listStays } from "@/modules/front-desk/data/stays";
+import { fetchStays } from "@/modules/front-desk/data/stays";
 import { listAllRooms, blockedFor, BUSINESS_DATE, type Stay, type Room } from "@/data/repositories";
 import { assignRoom } from "@/modules/front-desk/data/operations";
 
@@ -41,8 +41,11 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
   const [busy, setBusy] = useState(false);
 
   const stays = useQuery({
-    queryKey: ["stays", hotelId],
-    queryFn: () => listStays(hotelId),
+    queryKey: ["stays", hotelId, "assign"],
+    /* Who is checked in, and every booking still to arrive: all this window
+       lists. No end date, as a booking far ahead can be given its room too
+       (D27-387, the load test). */
+    queryFn: () => fetchStays(hotelId, BUSINESS_DATE, "9999-12-31"),
     enabled: open,
   });
   const rooms = useQuery({

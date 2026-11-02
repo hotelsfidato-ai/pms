@@ -128,3 +128,42 @@ describe("a guest the group pays for (D27-226)", () => {
     expect((await bell(owner, h.day)).some((x) => x.id === `balance-${stay}`)).toBe(false);
   });
 });
+
+/* THE BELL IN ONE PASS (D27-387, the load test): a charge taken back counts for
+   nothing and neither does its reversal, so a stay paid beyond what is left is
+   a refund for that sum, whatever status the stay is in. */
+describe("a refund, summed in one pass (D27-387)", () => {
+  let stay = "";
+  afterAll(async () => {
+    await sql("alter table folio_postings disable trigger folio_postings_append_only");
+    await sql("delete from folio_postings where reservation_id = $1", [stay]);
+    await sql("alter table folio_postings enable trigger folio_postings_append_only");
+    await sql("delete from folios where reservation_id = $1", [stay]);
+    await sql("delete from reservations where id = $1", [stay]);
+  });
+
+  it("leaves a reversed charge and its reversal out of the balance", async () => {
+    const { rows: [h] } = await sql(
+      "select id::text, app.business_date(id)::text as day from hotels where code = '5EL'");
+    stay = (await sql(
+      `insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                 agreed_rate, status)
+       select $1, 'NTFTEST-REFUND', (select id from guests limit 1),
+              (select id from room_types where hotel_id = $1 limit 1),
+              $2::date - 2, $2::date - 1, 3000, 'checked_out'
+       returning id::text`, [h.id, h.day])).rows[0].id;
+    const bill = (await sql(
+      "insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text", [h.id, stay])).rows[0].id;
+    const line = (amount: number, reverses: string | null) => sql(
+      `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category,
+                                   description, amount, tax_rate, tax_amount, reverses_id)
+       values ($1, $2, $3, $4::date, 'misc', 'NTFTEST', $5, 0, 0, $6) returning id::text`,
+      [h.id, bill, stay, h.day, amount, reverses]);
+    const charge = (await line(1000, null)).rows[0].id;
+    await line(-1000, charge);
+    await line(-500, null);
+    const owner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
+    const refund = (await bell(owner, h.day)).find((x) => x.id === `refund-${stay}`);
+    expect(refund?.title).toContain("₹500 to refund");
+  });
+});

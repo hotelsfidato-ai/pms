@@ -4,6 +4,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { HOTEL as id } from "@/test/app";
 import { listArrivals, listInHouse, listDepartures } from "./data/stays";
 import { assignableRooms } from "./data/operations";
+import { listHousekeeping } from "@/modules/housekeeping/data/housekeeping";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DESK READS ONLY THE DESK'S ROWS (D27-313 (1), the owner)
@@ -47,6 +48,24 @@ describe("the desk's lists", () => {
     for (const r of occupied) {
       expect(inHouse.filter((s) => s.roomNumber === r.number).map((s) => `${s.guest} is in this room.`))
         .toContain(r.reason);
+    }
+  });
+
+  it("the housekeeping board, on its timer, reads the day's rows and still names who is in (D27-387)", async () => {
+    const asked: string[] = [];
+    const real = apiModule.api;
+    vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
+      asked.push(url);
+      return real(url, init);
+    }) as never);
+
+    const board = await listHousekeeping(id, BUSINESS_DATE);
+    expect(asked.filter((u) => u.split("?")[0]!.endsWith("/stays")))
+      .toEqual([`/api/hotels/${id}/stays?from=${BUSINESS_DATE}&to=${BUSINESS_DATE}`]);
+    const inHouse = await listInHouse(id);
+    expect(inHouse.length).toBeGreaterThan(0);
+    for (const s of inHouse) {
+      expect(board.find((r) => r.number === s.roomNumber)?.guest).toBeTruthy();
     }
   });
 });

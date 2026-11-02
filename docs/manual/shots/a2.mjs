@@ -64,10 +64,11 @@ export const SHOTS = [
     id: "A2-01", title: "All bookings", as: "Reception",
     path: "/h/5EL/reservations", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:FH-", ms: 20000 }],
     marks: [
-      { n: 1, at: "css:input[placeholder='Guest, reference or room']", side: "left" },
-      { n: 2, at: "text:Due in", nth: 0, side: "bottom" },
-      { n: 3, at: "text:Cancelled, void & no-show", side: "left" },
-      { n: 4, at: "css:tbody tr:first-child td:nth-child(9)", side: "left" },
+      { n: 1, at: "css:input[placeholder='Guest, reference or room']", side: "bottom" },
+      { n: 2, at: "css:input[aria-label='Bookings leaving from']", side: "left" },
+      { n: 3, at: "text:Due in", nth: 0, side: "bottom" },
+      { n: 4, at: "text:Cancelled, void & no-show", side: "left" },
+      { n: 5, at: "css:tbody tr:first-child td:nth-child(9)", side: "left" },
     ],
   },
 

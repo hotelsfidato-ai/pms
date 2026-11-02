@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · The board stops reading every booking (D27-387, the load test)
+
+**Shipped.** `data/housekeeping.ts` reads the desk's rows for the business date (`fetchStays(hotel, date)`), which hold everyone checked in. It ran every 30-60 seconds on every open board and only names who is in a room.
+
+**Proved.** `src/modules/front-desk/deskRead.test.ts`: the board asks for the day's rows and still names every guest in house.
+
+---
+
 ## 2026-10-03 · The housekeeping switches (the owner's D27-260 Q3)
 
 Branch `settings/frontdesk-3oct`. A room back from a block comes back dirty (as before) or, when the hotel says so, as it was before the block (`room_blocks.was_status`, 192); a room moved out of follows `hk_dirty_after_move` (192 rewrites 130's and 137's triggers); the night audit can send stay-over rooms for the daily clean (off). The block's note offers the hotel's ready reasons. Proved by front desk's `deskSettings.test.ts`.

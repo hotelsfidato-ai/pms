@@ -104,7 +104,11 @@ export const LIVE = `
  * count a night two ways.
  */
 export const NIGHTS = `
-     bd as (select app.business_date($1) as d),
+     /* MATERIALIZED (D27-387, the load test): asked once. Left to the planner
+        it was folded into booked_nights and asked for every night of the
+        window, 2,042 times and 1.7 s of the Manager report's 2.4 s at a hotel
+        with a year in it; it grows as the year fills. */
+     bd as materialized (select app.business_date($1) as d),
 
      /* Every live room posting that pays for a night inside the window. */
      room_posts as (
@@ -275,11 +279,11 @@ export async function dailyFigures(
                and nothing was held back either: a room the property had
                not opened yet was not out of service. */
             case when $4::date is not null and days.date < $4::date then 0
-                 else app.sellable_rooms($1, days.date) end as available,
+                 else sell.n end as available,
             case when $4::date is not null and days.date < $4::date then 0
                  else greatest(0, (select count(*) from rooms rm
                                     where rm.hotel_id = $1 and rm.is_active)
-                                  - app.sellable_rooms($1, days.date)) end as blocked,
+                                  - sell.n) end as blocked,
             coalesce(o.paying, 0)                    as paying,
             coalesce(o.complimentary, 0)             as complimentary,
             coalesce(u.n, 0)                         as day_use,
@@ -294,6 +298,10 @@ export async function dailyFigures(
             coalesce(other.discount, 0)::text        as discount,
             coalesce(other.receipt, 0)::text         as receipt
        from days
+       /* Once a day, for both figures (D27-387); not at all before the property traded. */
+       cross join lateral (
+         select case when $4::date is not null and days.date < $4::date then null
+                     else app.sellable_rooms($1, days.date) end as n) sell
        left join occupancy o on o.night  = days.date
        left join rent        on rent.night = days.date
        left join day_use u   on u.date   = days.date

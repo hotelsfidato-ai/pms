@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · The Folios page reads the stays with a balance (D27-387, the load test)
+
+**Shipped.** `data/folios.ts`: `listOpenFolios` reads `/stays?owing=1`, not every booking. By balance, not date, as a guest who has left can still owe. The Calendar still passes its own window.
+
+**Proved.** `api/test/modules/front-desk/staysAskedBy.test.ts`: the same stays as GET /folios lists.
+
+---
+
 ## 2026-10-30 · Next destination for a foreign companion (D27-382)
 
 **Shipped.** `flows/FolioPanel.tsx`: the server's `needs: "next-destination"` opens the box on an Indian guest's bill, for a foreign adult recorded on the stay. Only the server knows, so the refusal is the way through. The whole entry is the guests changelog's. **Proved:** `nextDestination.test.tsx`, "opens the box when the server says a foreigner is in the room".
