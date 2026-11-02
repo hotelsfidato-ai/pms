@@ -55,7 +55,12 @@ seam); a test enforces it.
 > - Migrations 253-256: their tables, column and functions are present.
 > - AMR on 3 Nov, SHI on 2 Nov, AMRT on 10 Oct.
 > - The `release-r17` and `release-r18` copies are recycled, junctions out first, and the main packages unchanged.
-> - **Still the owner's:** N1-N3 (the n8n paste for "Corrected") and A8 at AMRT.
+> - **N1-N3 done, checked:** the workflow was saved (PATCH 01:02:42 IST) and activated. n8n's database holds the
+>   Corrected wording.
+> - Amrapali's Night audit for 2 Nov ran on the new code at 00:53:34 IST, completed, with no early reason (25 hours
+>   since the last). Its report email went out through n8n at 00:58.
+> - **A8 not seen:** the owner said it was done, but there was no AMRT request at all after the restart (nginx), and
+>   no booking anywhere since 27 Oct. Asked the owner.
 >
 > **3 November, early (before the deploy):**
 > - Release 18 is rebuilt at **a4527ea5** (website `index-BEoAhrU0.js`). It carries 17 and, on the owner's word ("add
