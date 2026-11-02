@@ -11,6 +11,18 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-02 · The Manager report with a year in it (D27-387, the load test)
+
+**Found.** `figures.ts`'s NIGHTS left `bd` to the planner, which folded `app.business_date` into booked_nights and asked it once per night of the window: 2,042 times, 1.7 s of the report's 2.4 s at a hotel with a year of stays, growing as the financial year fills. `app.sellable_rooms` was asked twice a day for available and blocked.
+
+**Shipped.** `bd as materialized`, asked once; `sellable_rooms` once a day through a lateral, and not before the property traded, as before. Everything built on dailyFigures gains: Manager, the statistics reports, the Dashboard.
+
+**Proved.** Release 17 and this code side by side on one database with three years at 5EL and LT001: 72 reports (Manager, Daily, Monthly and Yearly statistics; 3 hotels; 6 dates) byte for byte the same, 0 differ. Manager at 5EL 3.6 s to 0.9 s; the 72 together 72.4 s to 45.4 s. The 78 report tests pass. No test guards the speed itself.
+
+**Left open.** At a hotel with a busy restaurant the report stays about 2 s: `app.pos_order_by_tax` is asked once per bill of the financial year (0.7 s at 21,000 bills) and the categories read 0.4 s. It resets each April. A version of that function over many bills at once would take a migration.
+
+---
+
 ## 2026-10-29 · Consumption: NC bills at MRP (D27-373)
 
 **Asked for** The owner: NC bills valued at MRP in the stock, never in sales or tax.
