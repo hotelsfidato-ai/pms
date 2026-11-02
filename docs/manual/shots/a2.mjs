@@ -88,8 +88,8 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "css:input[placeholder='Anil Sharma']", side: "top" },
       { n: 2, at: "text:Needed for online check-in and WhatsApp.", side: "right" },
-      /* D27-371: the guest's company, GSTIN and address, all optional. */
-      { n: 3, at: "css:[data-guest-gstin]", side: "right" },
+      /* D27-392: Normal guest or Company guest (A2-32 shows a company guest). */
+      { n: 3, at: "text:Normal guest", side: "top" },
       { n: 4, at: "text:Guest agreed to WhatsApp", side: "left" },
       { n: 5, at: "text:2 nights", side: "right" },
       { n: 6, at: "text:The booking", nth: 0, side: "left" },
@@ -122,11 +122,12 @@ export const SHOTS = [
   },
   {
     id: "A2-05", title: "Booking details, folded open", as: "Reception",
-    steps: [{ click: "text:Booking details" }, { wait: 400 }, { scroll: "text:Business source" }, { wait: 300 }],
+    /* D27-392: a normal guest's, so Business source is not asked. */
+    steps: [{ click: "text:Booking details" }, { wait: 400 }, { scroll: "text:Market segment" }, { wait: 300 }],
     marks: [
       { n: 1, at: "text:Waiting for the hotel", side: "right" },
       { n: 2, at: "text:Expected check-in", side: "left" },
-      { n: 3, at: "text:Business source", nth: 0, side: "left" },
+      { n: 3, at: "text:Market segment", nth: 0, side: "left" },
       { n: 4, at: "text:Sales person", nth: 0, side: "left" },
       { n: 5, at: "text:Discount", side: "left" },
     ],
@@ -415,6 +416,24 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:The CRS login is not in the server's settings yet", side: "bottom" },
       { n: 2, at: "text:No CRS booking has arrived yet", side: "bottom" },
+    ],
+  },
+
+  /* ── D27-392: a company guest (never saved: saving adds the company) ── */
+  {
+    id: "A2-32", title: "A company guest", as: "Reception",
+    path: "/h/5EL/book",
+    steps: [
+      { waitFor: "text:Save booking", ms: 15000 },
+      { click: "text:Company guest (GST registered)" }, { wait: 300 },
+      SET("GSTIN", "27AAPFU0939F1ZV"), SET("Company name", "A2 Test Traders"),
+      { wait: 800 }, TOP,
+    ],
+    marks: [
+      { n: 1, at: "text:Company guest (GST registered)", side: "right" },
+      { n: 2, at: "css:[data-guest-gstin]", side: "left" },
+      { n: 3, at: "text:Company address", nth: 0, side: "right" },
+      { n: 4, at: "css:[data-company-on-list]", side: "bottom" },
     ],
   },
 ];

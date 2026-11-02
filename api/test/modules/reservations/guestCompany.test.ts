@@ -23,11 +23,15 @@ const TAG = "D27371";
 /** GSTN's own example; and the same with the 15th character wrong. */
 const GOOD = "27AAPFU0939F1ZV";
 const BAD_CHECK = "27AAPFU0939F1ZW";
+/** A second good one, for the company nobody may add (D27-392). */
+const OTHER = "07AAACF1234K1ZW";
 const CHECK_SENTENCE =
   "That GSTIN is not right - a character is mistyped. Check it against the company's GST certificate.";
 
 let owner = "";
 let housekeeper = "";
+let manager = "";
+let requiredWas: string[] = [];
 let typeId = "";
 let source = "";
 let companyId = "";
@@ -93,6 +97,16 @@ beforeAll(async () => {
      on conflict (email) do update set is_active = true returning id::text`))[0]!.id;
   await sql("insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'housekeeping') on conflict do nothing",
     [housekeeper, hotel]);
+  /* D27-392: a hotel manager books, and may not add a company. */
+  manager = (await sql<{ id: string }>(
+    `insert into staff (email, full_name, firebase_uid) values ('d27392-hm@fidato.in', '${TAG} HM', 'test-uid-d27392-hm')
+     on conflict (email) do update set is_active = true returning id::text`))[0]!.id;
+  await sql("insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'hotel_manager') on conflict do nothing",
+    [manager, hotel]);
+  requiredWas = (await sql<{ f: string[] }>(
+    "select required_booking_fields as f from hotels where id = $1", [hotel]))[0]!.f;
+  /* A run before this one added Acme; this run must add it itself. */
+  await sql("delete from companies where upper(gstin) = any($1)", [[GOOD, OTHER]]);
 });
 
 afterAll(async () => {
@@ -110,6 +124,7 @@ afterAll(async () => {
   try {
     await sql("delete from guests where full_name like $1", [`${TAG} %`]);
   } finally { await sql("alter table guests enable trigger guests_no_delete"); }
+  await sql("delete from companies where upper(gstin) = any($1)", [[GOOD, OTHER]]);
   await closePool();
 });
 
@@ -126,8 +141,39 @@ describe("New booking's guest company", () => {
     }));
     expect(res.status, await res.clone().text()).toBe(200);
     expect(await companyOf("With company")).toEqual([{ n: "Acme Traders", g: GOOD, a: "4 Park Street, Pune" }]);
-    /* No company is added to the companies list (the owner's choice). */
-    expect(await sql("select 1 from companies where name = 'Acme Traders'")).toHaveLength(0);
+    /* D27-392: not on Companies and agents, so it is added - once, without credit. */
+    expect(await sql("select gstin, address_line, credit_allowed from companies where name = 'Acme Traders'"))
+      .toEqual([{ gstin: GOOD, address_line: "4 Park Street, Pune", credit_allowed: false }]);
+    const again = await call(owner, "POST", "/bookings", booking("With company again", {
+      checkIn: "2029-06-12", checkOut: "2029-06-13", guestCompany: { name: "ACME traders", gstin: GOOD },
+    }));
+    expect(again.status, await again.clone().text()).toBe(200);
+    expect(await sql("select 1 from companies where upper(gstin) = $1", [GOOD])).toHaveLength(1);
+  });
+
+  it("D27-392: adds nothing for someone who may not add a company, and keeps it on the booking", async () => {
+    const res = await call(manager, "POST", "/bookings", booking("Manager company", {
+      checkIn: "2029-06-14", checkOut: "2029-06-15", guestCompany: { name: `${TAG} Manager Co`, gstin: OTHER },
+    }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await companyOf("Manager company")).toEqual([{ n: `${TAG} Manager Co`, g: OTHER, a: null }]);
+    expect(await sql("select 1 from companies where upper(gstin) = $1", [OTHER])).toHaveLength(0);
+  });
+
+  it("D27-392: a required Business source is asked of a company guest only", async () => {
+    await sql("update hotels set required_booking_fields = '{businessSource}' where code = '5EL'");
+    try {
+      const normal = await call(owner, "POST", "/bookings", booking("Normal guest", { checkIn: "2029-06-16", checkOut: "2029-06-17" }));
+      expect(normal.status, await normal.clone().text()).toBe(200);
+      const company = await call(owner, "POST", "/bookings", booking("Company guest", {
+        checkIn: "2029-06-18", checkOut: "2029-06-19", guestCompany: { name: "Acme Traders", gstin: GOOD },
+      }));
+      expect(company.status).toBe(409);
+      expect(((await company.json()) as { reason: string }).reason)
+        .toBe("The business source is needed for a booking at this hotel.");
+    } finally {
+      await sql("update hotels set required_booking_fields = $1 where code = '5EL'", [requiredWas]);
+    }
   });
 
   it("refuses a wrong GSTIN - a bad shape, and a good shape with a bad check digit - writing nothing", async () => {

@@ -48,6 +48,11 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **2 November, night:**
+> - Live is still release 16. Release 18 (b9e3c374, it carries 17) is ready and the owner's to type.
+> - D27-392 (Normal guest or Company guest on New booking) is on cp6, for release 19.
+> - Shimla can't save a booking until the owner unticks Business source in its Front desk rules, or 19 is live.
+
 > **31 October: THE LOAD TEST IS DONE (D27-384), see CHANGELOG.** Live is healthy and far from its limit today. Every
 > live request waits about 280 ms for Google (`verifyIdToken(token, true)`). The estimated ceiling is 10 × to 15 × the
 > group's busiest minute, about 25-40 requests a second, and **history is what lowers it**: with three years in a hotel
@@ -787,6 +792,18 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **2 November, night: D27-392 BUILT ON cp6, FOR RELEASE 19 (not in 18).** Shimla could not save a booking: its Front
+> desk rules require Business source, and that list only had names from past bookings (none since the fresh start;
+> MEMORY 461). **Until 19 is live, the owner unticks Business source** in Shimla's Front desk rules (told). **D27-392,
+> the owner's three yeses:**
+> - New booking's Guest card has **Normal guest | Company guest (GST registered)**. A company guest needs a GSTIN and
+>   a name.
+> - A GSTIN on Companies and agents is "Found" and fills in. A new one is added to the list on save, without credit,
+>   by whoever may add a company.
+> - Business source is asked of a company guest only, and starts on their company.
+>
+> Reservations' CHANGELOG has the proof. Release 18 is unchanged and still the owner's to deploy.
 
 > **2 November, evening: RELEASE 18 IS BUILT AND WAITING FOR THE OWNER (b9e3c374; it carries release 17).** Steps
 > `.local/release-18-steps.md`, A1-A8 plus N1-N3 (the n8n paste for "Corrected"). Keep `.claude/worktrees/release-r18`

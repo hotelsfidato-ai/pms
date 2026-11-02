@@ -6561,6 +6561,26 @@ copy will see of theirs.**
 
 ---
 
+### 462 · MINE: a phone-width check measured the desktop layout (2 November)
+
+After `resize_window` to 375 px, New booking's Guest card measured 402 px wide, past the screen, and I nearly
+blamed the new toggle. A reload at 375 px measured 339: the page had kept the layout from 1280. **The rule:** after
+resizing the pane, reload before measuring anything, then measure.
+
+---
+
+### 461 · FOUND: Shimla could not save a booking: Business source required, and nothing to pick (2 November)
+
+The owner's screenshot: Business source offered only "None". Its list was built from the names on that hotel's own
+past bookings, never from Companies and agents, and Shimla had none since its fresh start. Shimla's Front desk rules
+had **Business source** ticked under "A booking must carry", so New booking could not be saved there at all. The 6
+companies on Companies and agents never appeared in it either. Fixed by D27-392: Business source is asked of a
+company guest only, starts on that company, and lists Companies and agents. **The rule:** a list a person must pick
+from has to be fed by something the hotel can add to. Check a required field against a hotel with no history, the
+way a fresh start leaves it.
+
+---
+
 ### 460 · FOUND: two Night audits 13 seconds apart closed a day that had not begun (1 November)
 
 At Amrapali the GM ran the audit at 23:36:52 and again at 23:37:05. The screen offered the next date at once, every

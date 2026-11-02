@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { emailProblem, phoneProblem } from "../../validate.ts";
+import { can, type Role } from "../../permissions.ts";
 import {
   makeBooking, alreadyReceived, answerRepeat, fingerprintOf, isUniqueViolation,
   type BookingRequest, type BookingLineInput, type BookingDiscount, type BookingAddress, type GuestCompany,
@@ -308,8 +309,35 @@ async function missingField(
     "select required_booking_fields as f from hotels where id = $1", [hotelId]);
   const blank = (v: unknown): boolean => v == null || (typeof v === "string" ? !v.trim()
     : typeof v === "object" && Object.values(v as object).every(blank));
-  const f = (rows[0]?.f ?? []).find((k) => blank(input[k]));
+  /* D27-392: a normal guest (no company typed) is never asked a business source. */
+  const f = (rows[0]?.f ?? []).find((k) => blank(input[k])
+    && !(k === "businessSource" && blank(input["guestCompany"])));
   return f ? `${FIELD_WORDS[f]} is needed for a booking at this hotel.` : null;
+}
+
+/* D27-392: a company guest's company that is not on Companies and agents is
+   added to it, without credit (C-7), when whoever books may add a company.
+   One name, one GSTIN (C-11): either already on the list, nothing is added.
+   The booking keeps what was typed either way. */
+async function addGuestCompany(client: Client, hotelId: string, gc: GuestCompany | undefined) {
+  const name = typeof gc?.name === "string" ? gc.name.trim() : "";
+  const gstin = typeof gc?.gstin === "string" ? gc.gstin.trim().toUpperCase() : "";
+  const address = typeof gc?.address === "string" && gc.address.trim() ? gc.address.trim() : null;
+  if (!name || !gstin || name.length > 120 || (address?.length ?? 0) > 200) return;
+  const { rows } = await client.query<{ role: string | null }>(
+    `select case when exists (select 1 from staff s
+                               where s.id = app.current_user_id() and s.is_group_admin)
+                 then 'owner'
+                 else (select sh.role from staff_hotels sh
+                        where sh.staff_id = app.current_user_id() and sh.hotel_id = $1)
+            end as role`, [hotelId]);
+  if (!can((rows[0]?.role ?? "") as Role, "create", "company")) return;
+  await client.query(
+    `insert into companies (name, kind, gstin, address_line)
+     select $1, 'corporate', $2, $3
+      where not exists (select 1 from companies
+                         where is_active and (lower(trim(name)) = lower($1) or upper(gstin) = $2))`,
+    [name, gstin, address]);
 }
 
 /* ── Booking several rooms at once ─────────────────────────────────
@@ -451,6 +479,7 @@ groups.post("/:code/bookings", async (c) => {
       await client.query("select app.record_offers_yes($1, $2)",
         [input.phone ?? null, input.email ?? null]);
     }
+    if (made.ok && !made.duplicate) await addGuestCompany(client, hotelId, input.guestCompany);
     return made;
   }).catch(async (error: unknown) => {
     /* TWO COPIES AT ONCE. Both passed the already-received check before

@@ -28,7 +28,8 @@ import {
   GuestIdFields, guestIdState, guestIdPayload, deskGuestId, type GuestId,
 } from "@/modules/guests";
 import { getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
-import { getContractTariff, type ContractTariff } from "@/modules/contracts";
+import { getContractTariff, listCompanyRecords, type ContractTariff } from "@/modules/contracts";
+import { can } from "@/lib/permissions";
 import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -155,6 +156,9 @@ export default function BookingPage() {
   const [companyName, setCompanyName] = useState("");
   const [companyGstin, setCompanyGstin] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
+  /* D27-392: Normal guest or Company guest (GST registered); a company guest
+     needs the company's name and GSTIN. */
+  const [companyGuest, setCompanyGuest] = useState(false);
   const [whatsapp, setWhatsapp] = useState(false);
   const [offersAgreed, setOffersAgreed] = useState(false);
   /* A safety practice, not a demographic note: placed away from stairwells
@@ -173,7 +177,8 @@ export default function BookingPage() {
   /* D27-246: a booking site's booking is prepaid there unless the desk
      unticks it (the guest pays at the hotel). */
   const [prepaid, setPrepaid] = useState(true);
-  const [businessSource, setBusinessSource] = useState("");
+  /* Null until picked: a company guest's is then that company (D27-392). */
+  const [businessSource, setBusinessSource] = useState<string | null>(null);
   const [marketSegment, setMarketSegment] = useState("");
   const [salesPick, setSalesPick] = useState("");
   const [salesOther, setSalesOther] = useState("");
@@ -251,6 +256,17 @@ export default function BookingPage() {
     company: modules.data?.["booking_company"] !== false,
     notes: modules.data?.["booking_notes"] !== false,
   };
+  /* D27-392: Companies and agents, for the GSTIN typed and Business source. */
+  const companyList = useQuery({
+    queryKey: ["company-records", hotelId],
+    queryFn: () => listCompanyRecords(hotelId),
+    enabled: show.company,
+  });
+  const gstinTyped = companyGstin.trim().length === 15 && !gstinProblem(companyGstin);
+  const byGstin = gstinTyped
+    ? companyList.data?.find((c) => c.gstin?.toUpperCase() === companyGstin.trim()) : undefined;
+  const byName = companyList.data?.find((c) => c.name.trim().toLowerCase() === companyName.trim().toLowerCase());
+  const sourceChosen = businessSource ?? companyName.trim();
   const billable = useQuery({
     queryKey: ["billing-companies", hotelId],
     queryFn: () => listBillingCompanies(hotelId),
@@ -483,15 +499,21 @@ export default function BookingPage() {
     phone: ["The phone number", phone], email: ["The email", email],
     nationality: ["The nationality", guestId.nationality], address: ["The address", addressLine],
     expectedArrival: ["The expected arrival time", expected], marketSegment: ["The market segment", marketSegment],
-    businessSource: ["The business source", businessSource], salesPerson: ["The sales person", salesPerson],
+    businessSource: ["The business source", sourceChosen], salesPerson: ["The sales person", salesPerson],
   };
-  const missing = (rules?.requiredBookingFields ?? []).find((k) => !required[k]?.[1]?.trim());
+  /* D27-392: a normal guest is never asked a business source. */
+  const missing = (rules?.requiredBookingFields ?? [])
+    .find((k) => !required[k]?.[1]?.trim() && (k !== "businessSource" || companyGuest));
 
   const saveReason =
     !guestName.trim() ? "Type the guest's name."
       /* X-2 (round D): the server's own phone and email rules, said first. */
       : (missing ? `${required[missing]![0]} is needed for a booking at this hotel.` : null)
-      ?? phoneProblem(phone) ?? emailProblem(email) ?? (show.company ? gstinProblem(companyGstin) : null)
+      ?? phoneProblem(phone) ?? emailProblem(email)
+      ?? (show.company && companyGuest
+        ? (!companyName.trim() ? "Type the company's name."
+          : !companyGstin.trim() ? "Type the company's GSTIN." : gstinProblem(companyGstin))
+        : null)
       ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
           : (dayUse && lines.some((l) => !l.comp && !(Number(l.rate) > 0)) ? "Type the day-use price." : null)
@@ -521,11 +543,11 @@ export default function BookingPage() {
   const reset = () => {
     setBooked(null);
     setTitle(rules?.defaultTitle ?? ""); setGuestName(""); setPhone(""); setEmail(""); setReturning(null);
-    setCompanyName(""); setCompanyGstin(""); setCompanyAddress("");
+    setCompanyName(""); setCompanyGstin(""); setCompanyAddress(""); setCompanyGuest(false);
     setWhatsapp(false); setOffersAgreed(false); setSingleLady(false);
     setAddressLine(""); setCity(""); setStateName(""); setPincode(""); setCountry("");
     setGuestId(deskGuestId(rules));
-    setBookingSourceId(""); setBusinessSource(""); setMarketSegment("");
+    setBookingSourceId(""); setBusinessSource(null); setMarketSegment("");
     setSalesPick(""); setSalesOther(""); setBillTo(rules?.defaultBillTo ?? "guest"); setCompanyId("");
     setWaiting(rules?.defaultGuarantee === "tentative"); setExpected(""); setExpectedOut(""); setGroupName("");
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
@@ -545,7 +567,7 @@ export default function BookingPage() {
       ...(email.trim() ? { email: email.trim() } : {}),
       bookingSourceId,
       ...(siteSource ? { prepaidOnSite: prepaid } : {}),
-      ...(businessSource ? { businessSource } : {}),
+      ...(companyGuest && sourceChosen ? { businessSource: sourceChosen } : {}),
       ...(marketSegment ? { marketSegment } : {}),
       ...(salesPerson ? { salesPerson } : {}),
       ...(expected ? { expectedArrival: expected } : {}),
@@ -572,7 +594,7 @@ export default function BookingPage() {
       ...(specialRequest.trim() ? { specialRequest: specialRequest.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
-      ...(show.company && (companyName.trim() || companyGstin.trim() || companyAddress.trim())
+      ...(show.company && companyGuest
         ? { guestCompany: { name: companyName.trim(), gstin: companyGstin.trim(), address: companyAddress.trim() } }
         : {}),
       lines: lines.map((l, i) => ({
@@ -720,34 +742,67 @@ export default function BookingPage() {
                 chosen={returning} onChoose={setReturning}
                 {...(show.company ? { onUseCompany: (c: { name: string | null; gstin: string | null; address: string | null }) => {
                   setCompanyName(c.name ?? ""); setCompanyGstin(c.gstin ?? ""); setCompanyAddress(c.address ?? "");
+                  setCompanyGuest(true);
                 } } : {})} />
-              {/* D27-371: the guest's own company, all optional. With a GSTIN
-                  the tax invoice is made out to it; the guest still pays.
-                  D27-372: the Company section switched off hides it too. */}
+              {/* D27-371: the guest's own company. With a GSTIN the tax invoice
+                  is made out to it; the guest still pays. D27-372: the Company
+                  section switched off hides it too. D27-392: only for a company
+                  guest, its name and GSTIN required; one not on Companies and
+                  agents is added to it when the booking saves. */}
               {show.company && <>
+              <Field label="The guest">
+                {() => (
+                  <Segmented value={companyGuest ? "company" : "normal"}
+                    onChange={(v) => setCompanyGuest(v === "company")}
+                    options={[
+                      { value: "normal", label: "Normal guest" },
+                      /* Short on a phone: the toggle does not wrap. */
+                      { value: "company", label: <>Company guest<span className="max-sm:hidden"> (GST registered)</span></> },
+                    ]} />
+                )}
+              </Field>
+              {companyGuest && <>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Company name">
-                  {(f) => (
-                    <Input {...fieldProps(f)} value={companyName} maxLength={200}
-                      onChange={(e) => setCompanyName(e.target.value)} className="h-12 text-base" />
-                  )}
-                </Field>
-                <Field label="GSTIN"
-                  hint="With a GSTIN, the tax invoice is made out to the company. The guest still pays."
+                <Field label="GSTIN" required
+                  hint="The tax invoice is made out to the company. The guest still pays."
                   error={companyGstin.trim().length === 15 ? gstinProblem(companyGstin) ?? undefined : undefined}>
                   {(f) => (
                     <Input {...fieldProps(f)} value={companyGstin} maxLength={15}
-                      onChange={(e) => setCompanyGstin(e.target.value.toUpperCase())}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase();
+                        setCompanyGstin(v);
+                        const hit = v.length === 15 ? companyList.data?.find((c) => c.gstin?.toUpperCase() === v) : undefined;
+                        if (hit) {
+                          setCompanyName(hit.name);
+                          setCompanyAddress([hit.addressLine, hit.city, hit.state, hit.pincode].filter(Boolean).join(", "));
+                        }
+                      }}
                       className="h-12 text-base tabular uppercase" data-guest-gstin />
+                  )}
+                </Field>
+                <Field label="Company name" required>
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={companyName} maxLength={120}
+                      onChange={(e) => setCompanyName(e.target.value)} className="h-12 text-base" />
                   )}
                 </Field>
               </div>
               <Field label="Company address">
                 {(f) => (
-                  <Input {...fieldProps(f)} value={companyAddress} maxLength={500}
+                  <Input {...fieldProps(f)} value={companyAddress} maxLength={200}
                     onChange={(e) => setCompanyAddress(e.target.value)} className="h-12 text-base" />
                 )}
               </Field>
+              {gstinTyped && companyList.data && (
+                <p className="text-base text-grey-600" data-company-on-list>
+                  {byGstin ? `Found: ${byGstin.name}, on Companies and agents.`
+                    : byName ? `${byName.name} is on Companies and agents ${byName.gstin ? `with GSTIN ${byName.gstin}` : "without a GSTIN"}. This booking keeps the GSTIN typed here; the list is not changed.`
+                      : can(role, "create", "company")
+                        ? "This company is not on your list. Saving the booking adds it to Companies and agents."
+                        : "This company is not on your list. It is kept on this booking; the GM can add it to Companies and agents."}
+                </p>
+              )}
+              </>}
               </>}
               {/* D27-176: WhatsApp stays in sight (vouchers and the check-in
                   code need it); offers and the single-lady tick fold away. */}
@@ -987,19 +1042,24 @@ export default function BookingPage() {
               </Field>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Business source" hint="The account or agent behind it, if there is one.">
+              {/* D27-392: a company guest's only, starting on that company; the
+                  list is Companies and agents, then the names on past bookings. */}
+              {companyGuest && (
+              <Field label="Business source" hint="The company or agent behind the booking. It starts on the guest's company.">
                 {(f) => (
-                  <NativeSelect {...fieldProps(f)} value={businessSource}
+                  <NativeSelect {...fieldProps(f)} value={sourceChosen}
                     onChange={(e) => setBusinessSource(e.target.value)} className="h-12 text-base">
                     <option value="">None</option>
                     {/* Keyed by the name: the accounts report's id is a slug of
                         it, and two names can share one ("Walk-In", "Walk-in"). */}
-                    {(accounts.data ?? []).map((cmp) => (
-                      <option key={cmp.name} value={cmp.name}>{cmp.name}</option>
+                    {[...new Set([companyName.trim(), ...(companyList.data ?? []).map((c) => c.name),
+                      ...(accounts.data ?? []).map((c) => c.name)].filter(Boolean))].map((name) => (
+                      <option key={name} value={name}>{name}</option>
                     ))}
                   </NativeSelect>
                 )}
               </Field>
+              )}
               {/* Blank is "unknown", never "Other" - the walk-in's rule. */}
               <Field label="Market segment">
                 {(f) => (

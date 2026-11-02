@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import { startSignedIn } from "@/test/app";
+import { useSession } from "@/lib/session";
 import NewBookingPage from "@/modules/reservations/pages/BookingPage";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -68,6 +69,8 @@ const open = async () => {
   fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }), { target: { value: "src-1" } });
 };
 
+const companyGuest = () => fireEvent.click(screen.getByRole("tab", { name: /^Company guest/ }));
+
 const save = async () => {
   const button = await screen.findByRole("button", { name: "Save booking" });
   await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
@@ -86,10 +89,12 @@ describe("New booking's Guest card (D27-371)", () => {
     expect(salutation.closest(".grid")).toBe(fullName.closest(".grid"));
     expect(screen.queryByText("Guest or company")).toBeNull();
     expect(screen.queryByLabelText(/^Title$/)).toBeNull();
-    /* The three company fields, none of them required. */
-    for (const label of ["Company name", "GSTIN", "Company address"]) {
-      expect(screen.getByText(label).textContent).toBe(label);
-      expect(within(screen.getByText(label)).queryByText("*")).toBeNull();
+    /* D27-392: a normal guest, the default, has no company fields; a company
+       guest has them, the name and GSTIN required. */
+    expect(screen.queryByText("Company name")).toBeNull();
+    companyGuest();
+    for (const [label, required] of [["Company name", true], ["GSTIN", true], ["Company address", false]] as const) {
+      expect(screen.getByText(label).textContent).toBe(required ? `${label}*` : label);
     }
   });
 
@@ -104,6 +109,7 @@ describe("New booking's Guest card (D27-371)", () => {
   it("refuses a GSTIN whose check digit is wrong, on the screen, and sends the right one", async () => {
     await open();
     type("Full name", "Anna Smith");
+    companyGuest();
     type("Company name", "Acme Traders");
     /* The GST pattern is right; the 15th character is not. */
     type("GSTIN", "27aapfu0939f1zw");
@@ -150,7 +156,7 @@ describe("D27-372: the Company section's switch, and a returning guest's last co
     type("Full name", "Anna Smith");
     type("Phone", "9876543210");
     fireEvent.click(await screen.findByRole("button", { name: "Same person" }));
-    expect(input("Company name").value, "nothing fills by itself").toBe("");
+    expect(screen.queryByText("Company name"), "nothing fills by itself").toBeNull();
     expect(screen.getByText(/Last company/).textContent).toMatch(/Acme Traders · GSTIN 27AAPFU0939F1ZV/);
 
     fireEvent.click(screen.getByRole("button", { name: "Use this company" }));
@@ -161,5 +167,45 @@ describe("D27-372: the Company section's switch, and a returning guest's last co
       guestId: "g-anna",
       guestCompany: { name: "Acme Traders", gstin: "27AAPFU0939F1ZV", address: "4 Park Street, Pune" },
     });
+  });
+});
+
+describe("D27-392: Normal guest or Company guest, the GSTIN on Companies and agents, Business source", () => {
+  const ON_LIST = { id: "co-1", name: "Agoda", kind: "travel_agent", gstin: "27AAPFU0939F1ZV",
+    contactName: null, phone: null, email: null, addressLine: "4 Park Street", city: "Pune", state: null,
+    pincode: "411001", creditAllowed: false, creditDays: null, creditLimit: null, contractName: null, contractTo: null };
+
+  it("a GSTIN on the list says Found and fills the name and address; the Business source starts on it", async () => {
+    answer((p) => p.endsWith("/company-records"), [ON_LIST]);
+    await open();
+    type("Full name", "Anna Smith");
+    expect(screen.queryByLabelText("Business source", { selector: "select" }), "a normal guest is not asked").toBeNull();
+    companyGuest();
+    type("GSTIN", "27aapfu0939f1zv");
+    expect(await screen.findByText("Found: Agoda, on Companies and agents.")).toBeTruthy();
+    expect(input("Company name").value).toBe("Agoda");
+    expect(input("Company address").value).toBe("4 Park Street, Pune, 411001");
+    expect(await save()).toMatchObject({
+      businessSource: "Agoda",
+      guestCompany: { name: "Agoda", gstin: "27AAPFU0939F1ZV", address: "4 Park Street, Pune, 411001" },
+    });
+  });
+
+  it("a GSTIN not on the list says saving adds it", async () => {
+    answer((p) => p.endsWith("/company-records"), [ON_LIST]);
+    await open();
+    companyGuest();
+    type("GSTIN", "07AAACF1234K1ZW");
+    type("Company name", "Acme Traders");
+    expect(await screen.findByText("This company is not on your list. Saving the booking adds it to Companies and agents."))
+      .toBeTruthy();
+  });
+
+  it("with Business source required at the hotel, a normal guest saves without one and sends none", async () => {
+    useSession.setState((s) => ({ hotels: s.hotels.map((h) =>
+      ({ ...h, deskRules: { ...h.deskRules, requiredBookingFields: ["businessSource"] } as never })) }));
+    await open();
+    type("Full name", "Anna Smith");
+    expect(await save()).not.toHaveProperty("businessSource");
   });
 });

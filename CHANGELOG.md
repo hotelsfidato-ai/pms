@@ -89,6 +89,23 @@ has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9
 
 ---
 
+## 2026-11-02 · Normal guest or Company guest on New booking (D27-392), for release 19
+
+**Asked for:** the owner's screenshot from Shimla, where Business source offered only "None". A walk-in has no company,
+so they want a toggle between Normal guest and Company guest (GST registered), the GSTIN looked up on Companies and
+agents, and a new company added to it.
+
+**Found:** the list came only from the hotel's past bookings, and Shimla requires Business source, so no booking could
+be saved there (MEMORY 461). Until release 19 is live, the owner unticks Business source in Shimla's Front desk rules.
+
+**Built:** reservations only. The whole entry is in `src/modules/reservations/CHANGELOG.md`. The server adds the
+company to `companies` (no credit) for whoever may add one.
+
+**Proved:** 53/53 screen tests in reservations plus boundaries, the API's 11/11, fail-first on all four parts, both
+type checks, and the screen opened on the local demo at desktop and phone width.
+
+---
+
 ## 2026-11-02 · Release 18 (READY at b9e3c374, it carries 17): the Night audit guard, cancel and redo, and the speed
 
 **Asked for:** the owner, 2 November: Shimla reset to start live; a second layer on Run night audit; a 16-hour lock; the

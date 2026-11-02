@@ -371,6 +371,8 @@ describe("the Business source list", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     open();
     await screen.findByRole("heading", { name: "Guest" });
+    /* D27-392: a company guest's only. */
+    fireEvent.click(screen.getByRole("tab", { name: /^Company guest/ }));
     const list = screen.getByLabelText(/^Business source/, { selector: "select" }) as HTMLSelectElement;
     await waitFor(() => expect([...list.options].map((o) => o.text)).toEqual(["None", "Walk-In", "Walk-in"]));
     /* React logs it as a format string: "...the same key, `%s`". */

@@ -60,7 +60,13 @@
     <li>Open <span class="ui">New booking</span>. It opens on today's business date, one night, one room.</li>
     <li>Choose the <span class="ui">Salutation</span> (Mr, Ms, Mrs, Dr or None; the hotel's own default is chosen first) and type the name in <span class="ui">Full name</span>. The name is the only guest detail that must be typed.</li>
     <li>Type the <span class="ui">Phone</span>, and the <span class="ui">Email</span> if the guest gives one. If the system knows that phone or email, a line under them names the guest and how often they have stayed with the group, and asks <span class="msg">“same person?”</span>. Press <span class="ui">Same person</span> only if it is them (A10.6); nothing is joined until you do.</li>
-    <li>If the guest wants the tax invoice in their company's name, type the <span class="ui">Company name</span>, its <span class="ui">GSTIN</span> and the <span class="ui">Company address</span>. All three may be left empty. With a GSTIN, the stay's tax invoice is made out to that company; <b>the guest still pays at the desk</b>. For a returning guest, once you press <span class="ui">Same person</span>, the line also shows <span class="msg">“Last company”</span> - the company on their last booking that had one - and <span class="ui">Use this company</span> fills the three fields for you. Nothing is filled until you press it; check it with the guest. These three fields are not shown when the hotel has switched off the <span class="ui">Company section</span> in Settings.</li>
+    <li>Under <span class="ui">The guest</span>, leave <span class="ui">Normal guest</span> for a guest paying for themselves, a walk-in for one. Choose <span class="ui">Company guest (GST registered)</span> (on a phone, <span class="ui">Company guest</span>) if the guest wants the tax invoice in their company's name, and type its <span class="ui">GSTIN</span> and <span class="ui">Company name</span> (both needed) and the <span class="ui">Company address</span>. The stay's tax invoice is made out to that company; <b>the guest still pays at the desk</b>.
+      <ul>
+        <li>A GSTIN already on <span class="ui">Companies and agents</span> says <span class="msg">“Found: … , on Companies and agents.”</span> and fills the name and address from its record.</li>
+        <li>One that is not says <span class="msg">“This company is not on your list. Saving the booking adds it to Companies and agents.”</span> It is added with no credit; credit is given by the owner, an administrator or the GM (A10.4). For someone who may not add a company, the line says it is kept on this booking only.</li>
+        <li>A company already on the list under the same name with another GSTIN is not changed; the booking keeps the GSTIN you typed.</li>
+      </ul>
+      For a returning guest, once you press <span class="ui">Same person</span>, the line also shows <span class="msg">“Last company”</span> - the company on their last booking that had one - and <span class="ui">Use this company</span> chooses Company guest and fills the three fields for you. Nothing is filled until you press it; check it with the guest. <span class="ui">The guest</span> is not shown when the hotel has switched off the <span class="ui">Company section</span> in Settings.</li>
     <li>Ask the guest if they agree to WhatsApp, and switch on <span class="ui">Guest agreed to WhatsApp</span> if they do.</li>
     <li>Set <span class="ui">Arrival</span> and <span class="ui">Departure</span>. The number of nights shows under Departure. The night of departure is not charged.</li>
     <li>Choose the <span class="ui">Booking source</span>: how the booking reached us. Nothing is chosen for you (except Walk-in for a walk-in, A2.5).</li>
@@ -71,15 +77,26 @@
   </ol>
 
   <figure class="shot" id="fig-A2-02">
-    <img src="img/A2-02.png" alt="New booking: Salutation and Full name, Phone and Email, the returning-guest line, Company name, GSTIN and Company address, the WhatsApp switch, Arrival and Departure, and The booking on the right">
+    <img src="img/A2-02.png" alt="New booking: Salutation and Full name, Phone and Email, the returning-guest line, The guest with Normal guest chosen, the WhatsApp switch, and The booking on the right">
     <figcaption><b>Figure A2-02.</b> New booking: the guest and the nights.</figcaption>
     <ol class="callouts">
       <li>Salutation and Full name: the name is the one detail that must be typed</li>
       <li>The phone: needed for online check-in and WhatsApp</li>
-      <li>Company name, GSTIN and Company address: optional; with a GSTIN the tax invoice is made out to the company</li>
+      <li>The guest: Normal guest, or Company guest for a tax invoice in the company's name (Figure A2-32)</li>
       <li>Guest agreed to WhatsApp: ask them</li>
       <li>The nights, counted from the two dates</li>
       <li>The booking: nights, rooms, room charges, GST and what is due, as the bill will carry it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-32">
+    <img src="img/A2-32.png" alt="New booking with Company guest (GST registered) chosen: GSTIN 27AAPFU0939F1ZV, Company name A2 Test Traders, Company address, and the line This company is not on your list. Saving the booking adds it to Companies and agents.">
+    <figcaption><b>Figure A2-32.</b> A company guest.</figcaption>
+    <ol class="callouts">
+      <li>Company guest (GST registered)</li>
+      <li>The GSTIN, from the company's GST certificate; with the Company name, both needed</li>
+      <li>The address the tax invoice prints</li>
+      <li>Whether the company is on Companies and agents already, or saving adds it</li>
     </ol>
   </figure>
 
@@ -132,7 +149,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>One page with three buttons, for booking, giving a room and checking in: <span class="d">D27-158</span>. The WhatsApp tick stays in sight because the voucher and the check-in code need it; offers and “woman travelling alone” fold away: <span class="d">D27-176</span>. Rate includes GST, a tick per line, off unless ticked: <span class="d">D27-187</span>, <span class="d">D27-199</span>. A day use's price is typed every time: <span class="d">D27-229</span>. Prepaid on the booking site: <span class="d">D27-246</span>. A returning guest is only suggested; a person confirms: <span class="d">D21-2</span>. Salutation beside Full name, and the guest's company and GSTIN on the Guest card, all optional, the invoice in the company's name while the guest pays: <span class="d">D27-371</span>. A returning guest's last company offered, never filled by itself; the Company section switched off hides the guest's company too: <span class="d">D27-372</span>.</p>
+    <p>One page with three buttons, for booking, giving a room and checking in: <span class="d">D27-158</span>. The WhatsApp tick stays in sight because the voucher and the check-in code need it; offers and “woman travelling alone” fold away: <span class="d">D27-176</span>. Rate includes GST, a tick per line, off unless ticked: <span class="d">D27-187</span>, <span class="d">D27-199</span>. A day use's price is typed every time: <span class="d">D27-229</span>. Prepaid on the booking site: <span class="d">D27-246</span>. A returning guest is only suggested; a person confirms: <span class="d">D21-2</span>. Salutation beside Full name, and the guest's company and GSTIN on the Guest card, all optional, the invoice in the company's name while the guest pays: <span class="d">D27-371</span>. A returning guest's last company offered, never filled by itself; the Company section switched off hides the guest's company too: <span class="d">D27-372</span>. Normal guest or Company guest (GST registered); a company guest's name and GSTIN needed; a GSTIN not on Companies and agents added to it on save, without credit; Business source asked of a company guest only, starting on the company, even where the hotel requires it: <span class="d">D27-392</span>.</p>
   </div>
 
   <!-- A2.3 -->
@@ -159,7 +176,7 @@
     <thead><tr><th style="width:26%">Fold</th><th>What is in it</th></tr></thead>
     <tbody>
       <tr><td>More about the guest</td><td><span class="ui">Guest agreed to offers</span>, <span class="ui">Woman travelling alone</span> (placed away from stairwells and service corridors; not announced at the desk), Address, City, State, PIN code, Country. (The salutation is now at the top of the Guest card.)</td></tr>
-      <tr><td>Booking details</td><td><span class="ui">The booking</span>: Confirmed or Waiting for the hotel (A2.7). Expected check-in and check-out, if they said. Business source (the account or agent behind it), Market segment, Sales person. Discount.</td></tr>
+      <tr><td>Booking details</td><td><span class="ui">The booking</span>: Confirmed or Waiting for the hotel (A2.7). Expected check-in and check-out, if they said. For a company guest only, Business source (the company or agent behind the booking): it starts on the guest's company, and lists Companies and agents and the names on this hotel's past bookings. Market segment, Sales person. Discount.</td></tr>
       <tr><td>Company</td><td><span class="ui">Bill to</span>: Guest or Company. For a company, its GSTIN is shown from its record; the tax invoice prints it.</td></tr>
       <tr><td>Special request</td><td><span class="ui">The guest's special request</span>, up to 500 characters: <span class="msg">“Printed on the booking voucher the guest receives.”</span> A booking site's or the CRS's request is put here too. A guest's wish goes here; anything the hotel says about the guest goes in Notes (<span class="d">D27-347</span>).</td></tr>
       <tr><td>Notes</td><td><span class="ui">Notes on the booking</span>: <span class="msg">“The hotel's own. Never on the voucher.”</span></td></tr>
@@ -168,12 +185,12 @@
   <p>Company and Notes can each be switched off for a hotel in Settings; Special request cannot. A hotel can also make some fields required, such as the phone or the market segment; the reason under the buttons then names the missing one, for example <span class="msg">“The phone number is needed for a booking at this hotel.”</span></p>
 
   <figure class="shot" id="fig-A2-05">
-    <img src="img/A2-05.png" alt="Booking details folded open: Confirmed or Waiting for the hotel, Expected check-in, Business source, Sales person and Discount">
+    <img src="img/A2-05.png" alt="Booking details folded open for a normal guest: Confirmed or Waiting for the hotel, Expected check-in, Market segment, Sales person and Discount">
     <figcaption><b>Figure A2-05.</b> Booking details, folded open.</figcaption>
     <ol class="callouts">
       <li>Confirmed, or Waiting for the hotel</li>
       <li>Expected check-in, if they said (the hotel's own time is under it)</li>
-      <li>Business source: the account or agent behind the booking</li>
+      <li>Market segment. A company guest also has Business source here, starting on their company</li>
       <li>Sales person</li>
       <li>Discount: None, Up to 10%, ₹ off, or Promotion</li>
     </ol>

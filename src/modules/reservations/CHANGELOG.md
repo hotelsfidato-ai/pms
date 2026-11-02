@@ -8,6 +8,35 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · Normal guest or Company guest, and a Business source only for a company (the owner's D27-392)
+
+**Asked for.** The owner's screenshot: Business source offered only "None" at Shimla. Their words: a walk-in has no company, so how can they give one? They asked for a toggle between a normal guest and a GST-registered company guest. For a company, they want the screen to say whether the company already exists, and to add a new one, with the GSTIN needed. They chose all three recommendations (D27-392).
+
+**Found.** Business source was listed from the hotel's own past bookings only. Shimla had none since its fresh start, and its Front desk rules require Business source, so New booking could not save there (MEMORY 461).
+
+**Shipped.**
+- `pages/BookingPage.tsx`, the Guest card:
+  - **The guest**: Normal guest (the default) or Company guest (GST registered), shortened to "Company guest" on a phone.
+  - A company guest needs a GSTIN and a Company name; the address is optional.
+  - A GSTIN on Companies and agents says "Found: …" and fills the name and address from the record. One not on the list says saving adds it, or, for someone who may not add a company, that it stays on this booking.
+  - Business source is asked of a company guest only. It starts on their company and lists Companies and agents, then the names on past bookings.
+  - "Use this company" for a returning guest chooses Company guest.
+- `api/src/modules/reservations/groups.ts`:
+  - The hotel's required Business source is not asked of a booking without a guest company.
+  - After a new booking, `addGuestCompany` adds the company to `companies` (corporate, no credit), when the person holds `company: create` and neither the name nor the GSTIN is already on the list.
+- Manual: A2.2 (new figure A2-32), A2-02, A2-05 and the Booking details table, A17's Front desk rules, and the build.
+
+**Proved.**
+- `guestCompany.test.tsx` 8/8 and `onePage.test.tsx`, with the whole reservations folder and `boundaries.test.ts` at 53/53.
+- The API's `guestCompany.test.ts` 11/11: added once, no credit, no copy for the same GSTIN; nothing added by a hotel manager; Business source required of a company guest only.
+- Fail-first, each break counted and restored with `cmp`: the add, the exemption, the permission check, and the screen's exemption all fail their tests.
+- `tsc -b`, the API's `tsc --noEmit` and oxlint are clean.
+- Opened on the local demo as Reception: Normal guest has no Business source; Company guest shows the line and Business source on the company; the toggle fits at 375 px after a reload.
+
+**Left open.** The stay panel's company edit (A10.3) is unchanged: it doesn't look the company up or add it.
+
+---
+
 ## 2026-11-02 · All bookings opens on the last 90 days (the owner's D27-387)
 
 **Asked for.** The owner's choice after the load test: "Last 90 days and all future", older bookings found by search or by choosing dates.
