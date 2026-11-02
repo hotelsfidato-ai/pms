@@ -51,6 +51,31 @@ export class Unauthenticated extends Error {
   }
 }
 
+/* GOOGLE IS ASKED ONCE A MINUTE (the owner's D27-387, the load test). Asking on
+   every request cost every click about 280 ms, and a slow moment at Google
+   slowed the whole system. The token's signature and expiry are checked here on
+   every request, without Google; whether it was revoked is asked at most once a
+   minute. So a sign-in cancelled at Google can work for up to a minute more.
+   Removing somebody in the PMS still acts at once: withSession reads the staff
+   row on every request.
+
+   Per token, not per uid: one device's check must not stand in for another's,
+   or a cancelled device could ride on a good one for the rest of its hour. */
+const ASK_GOOGLE_EVERY_MS = 60_000;
+const askedGoogle = new Map<string, number>();
+
+async function verified(app: App, token: string) {
+  const auth = getAuth(app);
+  const decoded = await auth.verifyIdToken(token);
+  const key = `${decoded.uid}:${decoded.iat}`;
+  if (Date.now() - (askedGoogle.get(key) ?? 0) >= ASK_GOOGLE_EVERY_MS) {
+    await auth.verifyIdToken(token, true);
+    if (askedGoogle.size >= 10_000) askedGoogle.clear(); // tokens last an hour; the next ask fills it again
+    askedGoogle.set(key, Date.now());
+  }
+  return decoded;
+}
+
 /**
  * Turns an incoming request's headers into a subject, without touching
  * the database. Throws `Unauthenticated` rather than returning null so
@@ -88,7 +113,7 @@ export async function subjectFor(headers: Headers): Promise<string> {
   }
 
   try {
-    const decoded = await getAuth(app).verifyIdToken(token, true);
+    const decoded = await verified(app, token);
     void noteSignIn(decoded.uid, decoded.auth_time, headers); // D27-243 5.4: the sign-in history
     if (await isSignedOut(decoded.uid, decoded.auth_time)) throw new Unauthenticated("Signed out on this device."); // D27-255
     return decoded.uid;
