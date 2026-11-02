@@ -87,8 +87,11 @@ interface StayRow {
 const SELECT = `
   /* THE RACK IS TODAY'S NORMAL PRICE (EP): a base where there is one
      (D27-188, 162), else the old rack rate - app.price_for, as the property
-     page and the night-audit report read it; once per room type, not per stay. */
-  with rack as (
+     page and the night-audit report read it; once per room type, not per stay.
+     MATERIALIZED, or it is not (D27-387, the load test): left to the planner it
+     was folded into the join and priced again for every booking, 8,672 times
+     and 22 s at a hotel three years in, behind every list of bookings. */
+  with rack as materialized (
     select rt.id, (select p.price from app.price_for(rt.id, 'EP', app.business_date($1)) p) as price
       from room_types rt where rt.hotel_id = $1)
   select r.id,
@@ -299,7 +302,13 @@ async function hotelIdFor(client: Client, code: string) {
    TWO MORE BOUNDED READS (D27-387, the load test). `owing=1`: the stays whose
    bill carries a balance, what the Folios page lists. A guest who has left can
    still owe, so no date will do; the balance is the one GET /folios sums.
-   `source=`: the bookings of one source, what Walk-ins lists. */
+   `source=`: the bookings of one source, what Walk-ins lists.
+
+   ALL BOOKINGS (the owner's D27-387): `since=` a day, the bookings leaving on
+   or after it and everything ahead - what the screen opens on, the last 90
+   days. `q=`, a search through every booking ever, by the words the screen
+   searches: the guest, the reference or the group's, the room, three or more
+   digits of the phone. */
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 stays.get("/:code/stays", async (c) => {
@@ -310,6 +319,11 @@ stays.get("/:code/stays", async (c) => {
   const board = c.req.query("board") === "1";
   const owing = c.req.query("owing") === "1";
   const source = c.req.query("source");
+  const since = c.req.query("since");
+  const q = c.req.query("q")?.trim().toLowerCase() ?? "";
+  if (since !== undefined && !DAY.test(since)) {
+    return c.json({ error: "since is a day, YYYY-MM-DD." }, 400);
+  }
   if (from !== undefined && !(DAY.test(from) && DAY.test(to!))) {
     return c.json({ error: "from and to are days, YYYY-MM-DD." }, 400);
   }
@@ -328,6 +342,12 @@ stays.get("/:code/stays", async (c) => {
                    group by f.reservation_id
                   having sum(fp.amount + fp.tax_amount) <> 0)`, [hotelId]]
       : source !== undefined ? [`and app.booking_source_label(bs.name, co.name, r.source) = $2`, [hotelId, source]]
+      : q ? [`and (gu.full_name ilike '%' || $2 || '%' or r.reference ilike '%' || $2 || '%'
+                  or g.block_code ilike '%' || $2 || '%' or rm.number ilike '%' || $2 || '%'
+                  or (length($3) >= 3
+                      and regexp_replace(coalesce(gu.phone, ''), '\\D', '', 'g') like '%' || $3 || '%'))`,
+             [hotelId, q, q.replace(/\D/g, "")]]
+      : since !== undefined ? [`and r.check_out >= $2::date`, [hotelId, since]]
       : from === undefined ? ["", [hotelId]]
       /* Holding a room is asked of the booking's own assignments, not of the
          room join: a condition on the join is tried on every booking ever

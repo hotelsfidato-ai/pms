@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { ClipboardList, LogIn, Users, LogOut, UserX } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { dateLong } from "@/lib/format";
+import { addDays, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, StatusPill, SearchInput, IconChip } from "@/components/ui";
+import { Page, PageHeader, StatusPill, SearchInput, IconChip, Input } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk";
-import { listStays } from "@/modules/front-desk";
+import { fetchStaysWhere } from "@/modules/front-desk";
 import { queryKeys, BUSINESS_DATE, type Stay, type StayStatus } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -18,6 +18,11 @@ import { queryKeys, BUSINESS_DATE, type Stay, type StayStatus } from "@/data/rep
    state it is in. So it filters rather than scopes, and cancelled and
    no-show stays are included — they are exactly what someone comes
    here looking for.
+
+   IT OPENS ON THE LAST 90 DAYS AND EVERYTHING AHEAD (the owner's D27-387):
+   every booking ever was 64 s and 3.7 MB at a hotel three years in. An older
+   one is a search away - a search looks through every booking - or an
+   earlier From date.
    ══════════════════════════════════════════════════════════════════ */
 
 const COLUMNS: StayColumn[] = [
@@ -47,14 +52,22 @@ export default function ReservationsPage() {
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [since, setSince] = useState(() => addDays(BUSINESS_DATE, -90));
+  const q = search.trim().toLowerCase();
+  /* The server is asked once the typing stops, three letters or more. */
+  const [asked, setAsked] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setAsked(q.length >= 3 ? q : ""), 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.stays(hotelId, "book"),
-    queryFn: () => listStays(hotelId),
+    queryKey: queryKeys.stays(hotelId, { book: asked ? `q:${asked}` : `since:${since}` }),
+    queryFn: () => fetchStaysWhere(hotelId,
+      asked ? `q=${encodeURIComponent(asked)}` : `since=${since}`),
   });
 
   const active = FILTERS.find((f) => f.key === filter) ?? FILTERS[0]!;
-  const q = search.trim().toLowerCase();
   /* A phone is found by its digits, however it was typed (QA BK-10). */
   const digits = q.replace(/\D/g, "");
 
@@ -79,10 +92,22 @@ export default function ReservationsPage() {
     <Page>
       <PageHeader
         title="All bookings"
-        description={`Every booking on the file, in any state. Business date ${dateLong(BUSINESS_DATE)}.`}
-        badge={data ? <StatusPill tone="neutral">{data.length} on file</StatusPill> : undefined}
+        description={asked
+          ? "Every booking ever made that matches the search, in any state."
+          : `Bookings leaving from ${dateLong(since)} on, and everything ahead, in any state. A search looks through every booking. Business date ${dateLong(BUSINESS_DATE)}.`}
+        badge={data ? <StatusPill tone="neutral">{data.length} shown</StatusPill> : undefined}
         /* The search sits in the title row, the filters under it. */
         actions={
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Input
+            type="date"
+            className="w-full sm:w-40"
+            value={since}
+            max={BUSINESS_DATE}
+            onChange={(e) => e.currentTarget.value && setSince(e.currentTarget.value)}
+            aria-label="Bookings leaving from"
+            title="Bookings leaving from"
+          />
           <SearchInput
             className="w-full sm:w-64"
             value={search}
@@ -90,6 +115,7 @@ export default function ReservationsPage() {
             placeholder="Guest, reference or room"
             aria-label="Search bookings"
           />
+          </div>
         }
       />
 

@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · Every list of bookings: the rack price once per room type (D27-387, the load test)
+
+**Found.** `GET /stays`'s `rack` step says "once per room type, not per stay", and the planner folded it into the join and priced it for every booking: 8,672 times and 22 s at a hotel three years in, behind every list of bookings.
+
+**Shipped.** `with rack as materialized`. And `since=` (bookings leaving on or after a day) and `q=` (a search of every booking: guest, reference or group's, room, three or more digits of the phone) for All bookings.
+
+**Proved.** Release 17 and this code on one database with three years: `/stays`, the desk's read and the board's read at 5EL, LT001, AGR and PUN, 12 answers byte for byte the same. Every booking at 5EL 22 s to 0.58 s; Folios' read 25.5 s to 0.49 s; Walk-ins' 22.5 s to 0.11 s. `staysAskedBy.test.ts` covers the window and the search, and fails with the name search broken.
+
+---
+
 ## 2026-11-02 · Assign room and Walk-ins stop reading every booking (D27-387, the load test)
 
 **Shipped.** `flows/AssignRoomFlow.tsx` reads who is checked in and every booking still to arrive (`fetchStays(hotel, today, "9999-12-31")`). `pages/WalkIns.tsx` reads the walk-ins only (`fetchStaysWhere(hotel, "source=Walk-in")`). The API's `GET /stays` takes `source=` and `owing=1`.
