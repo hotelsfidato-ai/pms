@@ -788,6 +788,14 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **2 November, afternoon: RELEASE 18 MERGED ON cp6 EXCEPT TWO SMALL ADDS.** Speed (0ce1f897), the Night audit guard and
+> cancel (b167be8e, migration 255), Walk-ins on 90 days (acc9a697). Kept together as one release (the owner). **D27-391,
+> the owner's answers:** Google down: left to me, kept as built (refused after the minute); Walk-ins on 90 days; moved
+> bills all to the chosen day; a redone day's report email sent again marked Corrected (being built); Tally warns which
+> days to delete and export again (being built); a check-in charge on a later day keeps refusing the cancel; dirty rooms
+> stay dirty (my default, not objected to). **Then:** merge those two, open Walk-ins and the Night audit screens, full
+> gates on a clean copy, release.mjs, steps. Release 17 is still not live; release 18 carries it.
+
 > **2 November, 13:40: BOTH OWNER STEPS DONE AND CHECKED (read-only).** Amrapali back on 2 Nov (13:22, the run kept as
 > `failed`, `NIGHT_AUDIT_UNDONE` logged; record `docs/incidents/2026-11-01-amrapali-two-night-audits.md`). Shimla's fresh
 > start at 13:23: on 2 Nov, 0 bookings, bills and audits; 221 removed = the dry run's 207 records + 14 guests; 34 rooms
