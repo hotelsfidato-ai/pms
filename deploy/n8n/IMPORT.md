@@ -145,6 +145,15 @@ Connection health turns red, the PMS emails that address once (at most once
 an hour per connection). Empty: no alert emails. It needs the
 `health-alert` draft in the workflow, below.
 
+### The 2 November change: a corrected day's reports (D27-390)
+
+**Read the message** only: when a day whose night audit was cancelled is
+closed again, the PMS sends its daily reports again with `data.corrected`
+"yes"; the workflow begins the subject with "Corrected:" and the email with a
+line saying so. The node's whole code is in `pms-send-crs.json` (its
+`jsCode`). Until it is pasted, such an email still goes - a new message id,
+so n8n does not take it for a retry - but unmarked.
+
 ### The 28 October paste: the daily reports in one email (D27-371)
 
 **Read the message** only, from `D:\fidato pms\.local\n8n\paste-28oct\read-the-message.js`:

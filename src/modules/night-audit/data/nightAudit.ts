@@ -1,4 +1,5 @@
 import { fetchOr, write, put } from "@/data/repositories/http";
+import { dateShort } from "@/lib/format";
 import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 import { api } from "@/lib/api";
 /* The night audit.
@@ -136,6 +137,15 @@ export async function listUndos(hotelId: string): Promise<AuditUndoRecord[]> {
   if (!hotelId) return [];
   return fetchOr<AuditUndoRecord[]>(`/api/hotels/${hotelId}/night-audit/undos`, []);
 }
+
+/** What Tally needs after a cancel (the owner's D27-390): the days whose
+    audits it undid - closed before it, so possibly exported - deleted there
+    and exported again once closed again. The PMS keeps no record of an
+    export, so it says "if". One sentence, for the cancel and the export card. */
+export const tallyDays = (first: string, last: string) =>
+  first === last
+    ? `Tally: if ${dateShort(first)} was already imported into Tally, delete that day there and export it again once it is closed again.`
+    : `Tally: if ${dateShort(first)} to ${dateShort(last)} were already imported into Tally, delete those days there and export them again once each is closed again.`;
 
 /** The days this property has closed, newest first (the last 60). */
 export async function listClosedDays(hotelId: string): Promise<ClosedDay[]> {

@@ -67,7 +67,7 @@ export const SHOTS = [
     id: "A7-05", title: "Admin, the property's page: Cancel a night audit", as: "Owner",
     path: "/properties/5EL", size: "wall",
     steps: [
-      { waitFor: "text:Cancel a night audit", ms: 15000 },
+      { waitFor: "text:already imported into Tally", ms: 15000 },
       { scroll: "text:I have read what this undoes and moves." }, { wait: 400 },
     ],
     marks: [
@@ -77,6 +77,7 @@ export const SHOTS = [
       { n: 4, at: "text:2 room charges reversed", side: "right" },
       { n: 5, at: "text:moved to", side: "right" },
       { n: 6, at: "text:I have read what this undoes and moves.", side: "right" },
+      { n: 7, at: "text:already imported into Tally", side: "right" },
     ],
   },
 ];

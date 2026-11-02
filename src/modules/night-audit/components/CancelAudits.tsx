@@ -7,7 +7,7 @@ import {
   Skeleton, toast,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
-import { getAuditUndo, setUndoMode, undoAudits, type AuditUndo } from "@/modules/night-audit/data/nightAudit";
+import { getAuditUndo, setUndoMode, undoAudits, tallyDays, type AuditUndo } from "@/modules/night-audit/data/nightAudit";
 
 /* ══════════════════════════════════════════════════════════════════
    CANCEL A NIGHT AUDIT (the owner's D27-390, 2 November)
@@ -114,6 +114,10 @@ export function CancelAudits({ code }: { code: string }) {
                       .map(([day, n]) => `${n} on ${dateShort(day)}`).join(", ")} - moved to {dateShort(d.backTo!)}
                   </p>
                 ))}
+                {/* D27-390: the days these audits closed, and so could have been exported. */}
+                <p className="text-brand-yellow-800">
+                  {tallyDays(d.audits[0]!.businessDate, d.audits.at(-1)!.businessDate)}
+                </p>
               </div>
             )}
 

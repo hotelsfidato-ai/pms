@@ -11,7 +11,8 @@ import { MOST_ATTEMPTS } from "./jobs.ts";
    goes to each address typed for it (Settings → Messages → Daily report
    emails): its KEY FIGURES in the email, the WHOLE REPORT as a PDF. Once
    per business date, report and address; three tries
-   (app.daily_reports_owed, migration "daily report emails").
+   (app.daily_reports_due, migration "corrected daily reports"; until it,
+   app.daily_reports_owed, migration "daily report emails").
 
    ONE EMAIL PER ADDRESS (D27-371, 27 October): everything owed to one
    address for one hotel's business date goes in one email - each report's
@@ -167,18 +168,27 @@ export const keyFigures = (report: DailyReport, doc: ReportDoc): Figure[] => FIG
 interface Owed {
   hotelId: string; hotelCode: string; hotelName: string; timezone: string; businessDate: string;
   report: DailyReport; address: string; builtBy: string;
+  /** What it is written down as; for a day run again after a cancel, its own
+      key (D27-390). */
+  aboutId: string;
+  /** The cancel this day was run again after, or null. */
+  undoId: string | null;
+  /** It replaces an email that went for the day: marked Corrected (D27-390). */
+  corrected: boolean;
 }
 
 export async function reportsOwed(client: Client, hotelId: string | null = null): Promise<Owed[]> {
-  const { rows } = await client.query<Record<string, string>>(
-    `select hotel_id::text, hotel_code, hotel_name, timezone, business_date, report, address, built_by::text
-       from app.daily_reports_owed($1, $2::uuid) o
+  const { rows } = await client.query<Record<string, string | boolean | null>>(
+    `select hotel_id::text, hotel_code, hotel_name, timezone, business_date, report, address, built_by::text,
+            about_id, undo_id::text, corrected
+       from app.daily_reports_due($1, $2::uuid) o
       /* Bar stock switched off (D27-367): its report is not sent. */
       where not (o.report = 'bar-stock' and not app.module_enabled(o.hotel_id, 'bar_stock'))`, [MOST_ATTEMPTS, hotelId]);
   return rows.map((r) => ({
-    hotelId: r["hotel_id"]!, hotelCode: r["hotel_code"]!, hotelName: r["hotel_name"]!, timezone: r["timezone"]!,
-    businessDate: r["business_date"]!, report: r["report"] as DailyReport, address: r["address"]!,
-    builtBy: r["built_by"]!,
+    hotelId: r["hotel_id"] as string, hotelCode: r["hotel_code"] as string, hotelName: r["hotel_name"] as string,
+    timezone: r["timezone"] as string, businessDate: r["business_date"] as string,
+    report: r["report"] as DailyReport, address: r["address"] as string, builtBy: r["built_by"] as string,
+    aboutId: r["about_id"] as string, undoId: r["undo_id"] as string | null, corrected: r["corrected"] === true,
   }));
 }
 
@@ -196,7 +206,7 @@ export async function runReportEmails(
      is written about them, so they all stay owed and go together on a later
      sweep, once every one builds. */
   const built = new Map<string, { title: string; figures: Figure[]; bytes: Uint8Array } | null>();
-  const buildKey = (o: Owed) => [o.hotelId, o.businessDate, o.report, o.builtBy].join("/");
+  const buildKey = (o: Owed) => [o.hotelId, o.businessDate, o.report, o.builtBy, o.corrected].join("/");
   for (const o of owed) {
     if (built.has(buildKey(o))) continue;
     try {
@@ -205,7 +215,10 @@ export async function runReportEmails(
         return {
           title: titleOf(o.report),
           figures: keyFigures(o.report, doc),
-          bytes: await renderPdf(doc, { name: "Sent after the night audit", at: new Date(), timezone: o.timezone }),
+          bytes: await renderPdf(doc, {
+            name: o.corrected ? "Corrected: sent after the night audit was run again" : "Sent after the night audit",
+            at: new Date(), timezone: o.timezone,
+          }),
         };
       }));
     } catch (error) {
@@ -229,8 +242,10 @@ export async function runReportEmails(
     const to = list[0]!;
     const reports = list.map((o) => built.get(buildKey(o))!);
     const sent = await asNobody((client) => send(client, {
-      /* Same reports, same id: the workflow drops a retry it has sent. */
-      id: messageIdFor("daily-report", to.hotelId, to.businessDate, to.address, ...list.map((o) => o.report)),
+      /* Same reports, same id: the workflow drops a retry it has sent. A day
+         run again after a cancel is a new email, so its id names the cancel. */
+      id: messageIdFor("daily-report", to.hotelId, to.businessDate, to.address, ...list.map((o) => o.report),
+        ...(to.undoId ? ["corrected", to.undoId] : [])),
       channel: "email",
       kind: "daily-report",
       hotel: { id: to.hotelId, code: to.hotelCode, name: to.hotelName },
@@ -239,6 +254,9 @@ export async function runReportEmails(
         /* The titles, for a workflow from before D27-371 (its subject). */
         reportTitle: reports.map((r) => r.title).join(", "), hotelName: to.hotelName,
         businessDate: dateReport(to.businessDate),
+        /* D27-390: it replaces the email this day's first audit sent. The
+           workflow marks the subject and the top. Absent otherwise. */
+        ...(to.corrected ? { corrected: "yes" } : {}),
         /* Each report: its title on a line, then one "Label: value" a line;
            a blank line between reports. The workflow sets each out as a table. */
         keyFigures: reports.map((r) => [r.title, ...r.figures.map((f) => `${f.label}: ${f.value}`)].join("\n"))
@@ -249,7 +267,7 @@ export async function runReportEmails(
         contentType: "application/pdf", bytes: r.bytes,
       })),
       /* Written down per report and address, as before: all sent, or all failed. */
-      abouts: list.map((o) => ({ kind: "night-audit", id: `${o.businessDate}/${o.report}/${o.address}` })),
+      abouts: list.map((o) => ({ kind: "night-audit", id: o.aboutId })),
       sentBy: null,
     })).catch((error) => {
       console.error("[guest-messaging] could not email the daily reports", to.businessDate, to.address,

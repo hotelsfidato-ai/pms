@@ -15,6 +15,7 @@ import {
   getTallyLedgers, saveTallyLedgers, whyNot,
   type DayBook, type DayBookRow, type ExportFormat, type TallyLedgers,
 } from "@/modules/accounting/data/accounting";
+import { listUndos, tallyDays } from "@/modules/night-audit";
 
 /* ══════════════════════════════════════════════════════════════════
    ACCOUNTING EXPORT — the hotel's month, handed to its accountant
@@ -91,6 +92,8 @@ export default function AccountingPage() {
           </Button>
         }
       />
+
+      <CancelledDays hotelId={hotelId} />
 
       <Card className="mb-5">
         <CardHeader title="What to export" />
@@ -202,6 +205,37 @@ export default function AccountingPage() {
 /** One name per ledger, exactly as in the hotel's Tally. No name is ever
     suggested: a blank stays blank, and the labels are this system's words for
     what a ledger is for, never a name. */
+/* ── Days to export again (the owner's D27-390) ─────────────────────
+   A cancelled night audit reopens days that were closed, and so could have
+   been exported. The PMS keeps no record of an export, so it says "if".
+   The cancels of the last 60 days, newest first. */
+const RECENT_DAYS = 60;
+
+function CancelledDays({ hotelId }: { hotelId: string }) {
+  const undos = useQuery({
+    queryKey: ["night-audit-undos", hotelId],
+    queryFn: () => listUndos(hotelId),
+    enabled: Boolean(hotelId),
+  });
+  const since = Date.now() - RECENT_DAYS * 86_400_000;
+  const recent = (undos.data ?? []).filter((u) => Date.parse(u.undoneAt) >= since);
+  if (recent.length === 0) return null;
+  return (
+    <Card className="mb-5 border-brand-yellow-200 bg-brand-yellow-50">
+      <CardHeader title="Night audits cancelled" />
+      <CardBody>
+        <ul className="space-y-2 text-sm text-brand-yellow-800">
+          {recent.map((u) => (
+            <li key={u.id}>
+              Cancelled on {dateShort(u.undoneAt)}: {tallyDays(u.backTo, u.lastDay)}
+            </li>
+          ))}
+        </ul>
+      </CardBody>
+    </Card>
+  );
+}
+
 function LedgerNames({ hotelId, answer }: { hotelId: string; answer: TallyLedgers }) {
   const queryClient = useQueryClient();
   const [typed, setTyped] = useState<Record<string, string>>({});

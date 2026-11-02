@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    379 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    380 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -4670,7 +4670,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>The hotel is on that day again: <span class="msg">“5EL is on Monday, 2 November 2026 again”</span>. Run the night audit for it when the day is done.</li>
   </ol>
   <figure class="shot" id="fig-A7-05">
-    <img src="img/A7-05.png" alt="Admin, 5 Elements Akkalkot: the Cancel a night audit card, back to Monday 2 November 2026, one audit undone, two room charges reversed, one no-show booked again, one charge moved from 3 November to 2 November, the Why box and the tick box">
+    <img src="img/A7-05.png" alt="Admin, 5 Elements Akkalkot: the Cancel a night audit card, back to Monday 2 November 2026, one audit undone, two room charges reversed, one no-show booked again, one charge moved from 3 November to 2 November, the Tally line for 2 November, the Why box and the tick box">
     <figcaption><b>Figure A7-05.</b> Admin, the property's page: Cancel a night audit.</figcaption>
     <ol class="callouts">
       <li>How far back: any earlier day, or one audit at a time</li>
@@ -4679,12 +4679,15 @@ figure.shot.phone img { max-width: 72mm; }
       <li>The room charges reversed, and the no-shows booked again</li>
       <li>What moves back, from which day</li>
       <li>Ticked only once it has been read</li>
+      <li>The days to delete in Tally and export again, if they were imported</li>
     </ol>
   </figure>
   <ul>
     <li>Nothing is deleted. The audit stays on record as cancelled; its room charges stay on the bills, each with a reversal beside it on its own day. Run again, the day's audit charges the night again.</li>
     <li>A no-show is booked again, and its room held again if nobody has taken it since. If somebody has, the message names the booking: give it another room.</li>
     <li>Moved back to the chosen day: restaurant bills, charges and payments on room bills, the till's and the desk's drawers and their cash, stock movements and counts, deposits, laundry, and the bar's requests.</li>
+    <li><b>Tally.</b> The card ends with the days the cancel reopens, for example <span class="msg">“Tally: if 1 Nov 2026 to 2 Nov 2026 were already imported into Tally, delete those days there and export them again once each is closed again.”</span> The Accountant sees the same on <span class="ui">Accounting export</span> (A11.8). The PMS does not record what was exported, so it says “if”.</li>
+    <li><b>Daily report emails.</b> When a cancelled day is closed again, its reports go again to the same addresses, marked <b>Corrected</b> in the subject and at the top (A7.6).</li>
     <li>It is refused, and nothing changes, when: a GST tax invoice or a VAT bill stands on those days (<span class="msg">“… Issue a credit note first - and your CA should confirm it.”</span>); a room was charged on a later day by a check-in or a correction; a later day was corrected; or the till was ended twice in those days.</li>
   </ul>
 
@@ -4732,12 +4735,13 @@ figure.shot.phone img { max-width: 72mm; }
       <li><b>Nobody gets anything until an address is typed.</b> A report switched on with no address says <span class="msg">“On, but nobody gets it until an address is typed.”</span></li>
       <li>A yellow box <span class="msg">“Nothing is sent yet”</span> means sending is not set up on the server. Nothing goes by email until it is.</li>
       <li>A report switched on after an audit starts from the next audit.</li>
+      <li><b>A day whose audit was cancelled and run again</b> sends its reports again, to the same addresses: the subject begins <span class="msg">“Corrected:”</span> and the email's first line says <span class="msg">“Corrected: this day's night audit was cancelled and run again. These reports replace the ones sent before.”</span> Each PDF says it too.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>.</p>
+    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>.</p>
   </div>
 
   <!-- A7.7 -->
@@ -7844,6 +7848,19 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
   <p>Under the table, four totals for the range: <b>Sales</b>, <b>Tax</b>, <b>Receipts</b> and <b>Received from companies</b>, then each company payment on its own line.</p>
 
+  <h3>After a night audit is cancelled</h3>
+  <p>When the owner or an Admin cancels a night audit (A7.5), the days it reopens were closed, so they may already be in Tally. For 60 days, a yellow card at the top, <span class="ui">Night audits cancelled</span>, names them, for example <span class="msg">“Cancelled on 2 Nov 2026: Tally: if 1 Nov 2026 to 2 Nov 2026 were already imported into Tally, delete those days there and export them again once each is closed again.”</span></p>
+  <ol class="steps">
+    <li>If those days are in Tally, delete their vouchers there.</li>
+    <li>Wait until each day is closed again: the day book's <span class="ui">Night audit</span> column says <span class="ui">Closed</span>.</li>
+    <li>Export those days again and import them.</li>
+  </ol>
+  <figure class="shot" id="fig-A11-31">
+    <img src="img/A11-31.png" alt="Accounting export: the yellow Night audits cancelled card above What to export, naming the days to delete in Tally and export again">
+    <figcaption><b>Figure A11-31.</b> The days a cancelled night audit reopened.</figcaption>
+    <ol class="callouts"><li>Night audits cancelled</li><li>The days to delete in Tally and export again</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -7856,7 +7873,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. Each hotel's ledger names are typed by its Accountant and none is ever made up: <span class="d">D27-382</span>.</p>
+    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. Each hotel's ledger names are typed by its Accountant and none is ever made up: <span class="d">D27-382</span>. The days a cancelled night audit reopened are named, to delete in Tally and export again; the PMS keeps no record of exports, so it says “if”: <span class="d">D27-390</span>.</p>
   </div>
 
   <h3 id="a11-8-ledgers">To type the Tally ledger names</h3>

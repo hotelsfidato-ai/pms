@@ -4,3 +4,5 @@
 
 /* The Admin section's card for cancelling an audit (D27-390). */
 export { CancelAudits } from "./components/CancelAudits";
+/* The cancels, for the Accounting export's Tally warning (D27-390). */
+export { listUndos, tallyDays, type AuditUndoRecord } from "./data/nightAudit";

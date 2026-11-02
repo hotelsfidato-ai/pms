@@ -396,6 +396,46 @@ describe("daily report emails after the night audit (D27-280)", () => {
       [hotelId])).toEqual([{ n: 2 }]);
   });
 
+  /* D27-390: a day whose audit was cancelled and run again goes again,
+     marked Corrected, to the same addresses - once per cancel. */
+  it("go again, marked Corrected, when a cancelled day is run again", async () => {
+    await save(gmId, [{ key: "night-audit", isOn: true, addresses: ["owner@example.com"] }]);
+    await audit("2000-02-08");
+    await runReportEmails();
+    const first = sent()[0]!;
+    expect(first.data["corrected"], "the first is not marked").toBeUndefined();
+
+    /* Cancelled, then the day run again: what app.undo_night_audits and a
+       run leave behind. */
+    const db = new (await import("pg")).default.Client({ connectionString: SUPER });
+    await db.connect();
+    let undo = "";
+    try {
+      await db.query("begin");
+      await db.query("select set_config('app.user_id', $1, true)", [gmId]);
+      await db.query("update night_audit_runs set status = 'cancelled' where hotel_id = $1 and business_date = '2000-02-08'", [hotelId]);
+      undo = (await db.query(
+        `insert into night_audit_undos (hotel_id, back_to, last_day, reason, undone_by, undone_at, mode, audits, summary)
+         values ($1, '2000-02-08', '2000-02-08', 'Closed twice', $2, now() - interval '1 minute', 'any_date', '[]', '{}')
+         returning id::text`, [hotelId, gmId])).rows[0].id;
+      await db.query("commit");
+      await db.query("update night_audit_runs set status = 'completed', completed_at = now() where hotel_id = $1 and business_date = '2000-02-08'", [hotelId]);
+    } finally { await db.end(); }
+
+    received = [];
+    await runReportEmails();
+    expect(sent().map((m) => m.to["email"]), "the same address, again").toEqual(["owner@example.com"]);
+    expect(sent()[0]!.data["corrected"]).toBe("yes");
+    expect(sent()[0]!.messageId, "a new email, not a retry n8n would drop").not.toBe(first.messageId);
+    expect(await rowsFor("2000-02-08")).toEqual([
+      { about_id: "2000-02-08/night-audit/owner@example.com", status: "sent", n: 1 },
+      { about_id: `2000-02-08/night-audit/owner@example.com/corrected/${undo}`, status: "sent", n: 1 }]);
+
+    received = [];
+    await runReportEmails();
+    expect(sent(), "once per cancel").toEqual([]);
+  });
+
   /* D27-371: one email per address, every report owed to it, a PDF each. */
   const rowsFor = (day: string) => sql(
     `select about_id, status, count(*)::int as n from messages_sent

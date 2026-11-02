@@ -535,6 +535,19 @@
   </figure>
   <p>Under the table, four totals for the range: <b>Sales</b>, <b>Tax</b>, <b>Receipts</b> and <b>Received from companies</b>, then each company payment on its own line.</p>
 
+  <h3>After a night audit is cancelled</h3>
+  <p>When the owner or an Admin cancels a night audit (A7.5), the days it reopens were closed, so they may already be in Tally. For 60 days, a yellow card at the top, <span class="ui">Night audits cancelled</span>, names them, for example <span class="msg">“Cancelled on 2 Nov 2026: Tally: if 1 Nov 2026 to 2 Nov 2026 were already imported into Tally, delete those days there and export them again once each is closed again.”</span></p>
+  <ol class="steps">
+    <li>If those days are in Tally, delete their vouchers there.</li>
+    <li>Wait until each day is closed again: the day book's <span class="ui">Night audit</span> column says <span class="ui">Closed</span>.</li>
+    <li>Export those days again and import them.</li>
+  </ol>
+  <figure class="shot" id="fig-A11-31">
+    <img src="img/A11-31.png" alt="Accounting export: the yellow Night audits cancelled card above What to export, naming the days to delete in Tally and export again">
+    <figcaption><b>Figure A11-31.</b> The days a cancelled night audit reopened.</figcaption>
+    <ol class="callouts"><li>Night audits cancelled</li><li>The days to delete in Tally and export again</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -547,7 +560,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. Each hotel's ledger names are typed by its Accountant and none is ever made up: <span class="d">D27-382</span>.</p>
+    <p>All three kinds of export offered, whoever exports picks: <span class="d">D18-16</span>. Both a CSV and a real Excel file: <span class="d">D22-37</span>. The Accountant opens it: <span class="d">D27-122</span>. Company payments in the day book as receipts of their own: <span class="d">D27-242</span>. Food as its own line: <span class="d">D27-382</span>. Each hotel's ledger names are typed by its Accountant and none is ever made up: <span class="d">D27-382</span>. The days a cancelled night audit reopened are named, to delete in Tally and export again; the PMS keeps no record of exports, so it says “if”: <span class="d">D27-390</span>.</p>
   </div>
 
   <h3 id="a11-8-ledgers">To type the Tally ledger names</h3>

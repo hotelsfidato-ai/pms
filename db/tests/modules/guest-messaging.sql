@@ -433,7 +433,7 @@ end $$;
 -- =============================================================================
 -- Refers to its migration by what it does - "daily report emails". The table
 -- is written by the hotel's owner, Administrator or GM only (the API asks
--- too); the sweep reads through app.daily_reports_owed with nobody signed in.
+-- too); the sweep reads through app.daily_reports_due with nobody signed in.
 do $$
 declare
   h uuid; gm uuid; desk uuid; n int; v text; refused boolean;
@@ -512,7 +512,7 @@ begin
     set local role pms_app;
     select string_agg(o.business_date || ' ' || o.report || ' ' || o.address || ' ' || (o.built_by = gm), ', '
                       order by o.address)
-      into v from app.daily_reports_owed(3, h) o;
+      into v from app.daily_reports_due(3, h) o;
     reset role;
   exception when insufficient_privilege then reset role;
   end;
@@ -525,25 +525,25 @@ begin
   values (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/owner@example.com', 'sent'),
          (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/gm@example.com', 'failed'),
          (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/gm@example.com', 'failed');
-  select string_agg(o.address, ', ') into v from app.daily_reports_owed(3, h) o;
+  select string_agg(o.address, ', ') into v from app.daily_reports_due(3, h) o;
   perform test.ok('daily report emails', 'once per business date and address; two failures, still owed',
     v = 'gm@example.com', coalesce(v, 'nothing'));
-  select count(*) into n from app.daily_reports_owed(2, h);
+  select count(*) into n from app.daily_reports_due(2, h);
   perform test.ok('daily report emails', 'and not after the last try', n = 0, n || ' owed');
 
   update staff set is_active = false where id = gm;
-  select count(*) into n from app.daily_reports_owed(3, h) o where o.built_by is not null and o.built_by <> gm;
+  select count(*) into n from app.daily_reports_due(3, h) o where o.built_by is not null and o.built_by <> gm;
   perform test.ok('daily report emails', 'the GM who saved it leaves: whoever runs the hotel now builds it', n = 1, n || ' owed');
   update staff set is_active = true where id = gm;
 
   update daily_report_emails set addresses = '{}' where hotel_id = h and report = 'night-audit';
   update daily_report_emails set changed_at = now() - interval '1 hour' where hotel_id = h;
-  select count(*) into n from app.daily_reports_owed(3, h);
+  select count(*) into n from app.daily_reports_due(3, h);
   perform test.ok('daily report emails', 'no address, nothing owed', n = 0, n || ' owed');
 
   perform test.ok('daily report emails', 'the API role may ask what is owed, the read-only role may not',
-    has_function_privilege('pms_app', 'app.daily_reports_owed(integer, uuid)', 'execute')
-    and not has_function_privilege('pms_readonly', 'app.daily_reports_owed(integer, uuid)', 'execute'));
+    has_function_privilege('pms_app', 'app.daily_reports_due(integer, uuid)', 'execute')
+    and not has_function_privilege('pms_readonly', 'app.daily_reports_due(integer, uuid)', 'execute'));
 
   -- ---------- clean up ----------
   perform set_config('app.user_id', '', true);

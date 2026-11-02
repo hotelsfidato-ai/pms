@@ -33,7 +33,14 @@ const control = vi.hoisted(() => ({
   book: null as unknown,
   ledgers: null as unknown,
   saved: [] as unknown[],
+  undos: [] as unknown[],
 }));
+
+/* The night audit's cancels (D27-390), through its front door. */
+vi.mock("@/modules/night-audit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/modules/night-audit")>();
+  return { ...actual, listUndos: vi.fn(async () => control.undos) };
+});
 
 vi.mock("@/modules/accounting/data/accounting", async (importOriginal) => {
   const actual = await importOriginal<
@@ -102,6 +109,7 @@ beforeEach(() => {
   control.book = BOOK;
   control.ledgers = BLANK_LEDGERS;
   control.saved = [];
+  control.undos = [];
 });
 
 /* ── The file ──────────────────────────────────────────────────────── */
@@ -201,6 +209,15 @@ describe("the export screen", () => {
     go("/reports/accounting");
     return render(<App />);
   };
+
+  it("names the days a cancelled night audit reopened, to delete in Tally and export again (D27-390)", async () => {
+    control.undos = [{ id: "u1", backTo: "2026-08-23", lastDay: "2026-08-24", reason: "Closed twice",
+      undoneBy: "Group Owner", undoneAt: new Date().toISOString(), audits: 2 }];
+    open("FMT9");
+    expect(await screen.findByText(
+      /if 23 Aug 2026 to 24 Aug 2026 were already imported into Tally, delete those days there and export them again once each is closed again/))
+      .toBeTruthy();
+  });
 
   it("offers every format the owner chose", async () => {
     open("FMT1");

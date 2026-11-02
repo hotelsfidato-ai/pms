@@ -390,6 +390,18 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(html, "a figure is text, never markup").toContain("Money &lt;taken&gt;");
   });
 
+  it("marks a day's reports sent again after a cancel as Corrected, in the subject and at the top (D27-390)", () => {
+    const pdf = { name: "Night-audit-report-5EL-2026-10-02.pdf", contentType: "application/pdf",
+      base64: Buffer.from("%PDF-1.4 made up").toString("base64") };
+    const [report] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "daily-report", file: pdf, to: { email: "owner@example.com" },
+      data: { reportTitle: "Night audit report", hotelName: "Test Hotel", businessDate: "02/10/2026", corrected: "yes",
+        keyFigures: "Night audit report\nRooms occupied: 12 of 18" } }) });
+    expect(report!.json["subject"]).toBe("Corrected: Test Hotel daily reports - 2 Oct 2026");
+    expect(String(report!.json["text"]).split("\n")[0])
+      .toBe("Corrected: this day's night audit was cancelled and run again. These reports replace the ones sent before.");
+  });
+
   it("refuses a kind it has no template for, in a sentence", () => {
     expect(whatsapp({ kind: "bill" })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });

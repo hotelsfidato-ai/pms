@@ -11,6 +11,23 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-02 · A cancelled day's daily reports, sent again marked Corrected (the owner's D27-390)
+
+**Asked for:** the owner, through the main chat: "when a cancelled day is run again, SEND IT AGAIN, marked Corrected in the subject and at the top, to the same addresses."
+
+**Shipped**
+- Migration 256: `app.daily_reports_due`, which the sweep now reads, answers 204's `daily_reports_owed` and `about_id`, `undo_id`, `corrected`. A run completed after a cancel of its day (`night_audit_undos`) is owed under `<date>/<report>/<address>/corrected/<cancel id>`, once per cancel, three tries; `corrected` when an email went for that day before. A function of its own because 204 makes `daily_reports_owed` again on every deploy: changing its answer stopped the second run at 204 (`db/tests/rerun.sh`, "1 of 256 abort on a second run"). `db/tests/modules/guest-messaging.sql` reads the new one.
+- `reportEmails.ts`: written down under that key; the message id names the cancel (n8n would drop the old id as a retry); `data.corrected` "yes"; each PDF says "Corrected: sent after the night audit was run again".
+- `deploy/n8n/pms-send-crs.json`, Read the message: the subject begins "Corrected:" and the first line says so. `IMPORT.md` says what to paste.
+
+**Proved**
+- `messagesAndReports.test.ts` "go again, marked Corrected…": the first email, a cancel and the day closed again, then one email to the same address, marked, a new message id, both rows written, and nothing more on the next sweep. `workflows.test.ts`: the subject and first line. Guest messages and night audit API folders 237 of 237.
+- Fail-first: the key without its `/corrected/` suffix - that test failed alone; restored, hash equal.
+
+**Left open:** the owner pastes Read the message (IMPORT.md); until then the corrected email goes unmarked.
+
+---
+
 ## 2026-10-28 · The daily reports in one email (the owner's D27-371)
 
 **Asked for:** "one email has all the reports in one message and all 5 PDFs ... with the date as the subject": one email per address after the night audit, subject '<Hotel> daily reports - <date>', each report's key figures in the body, each report its own PDF.

@@ -283,6 +283,17 @@ export const SHOTS = [
     ],
   },
 
+  /* D27-390: taken where a night audit had been cancelled. */
+  {
+    id: "A11-31", title: "The days a cancelled night audit reopened", as: "Accountant",
+    path: "/reports/accounting",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Night audits cancelled", ms: 60000 }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Night audits cancelled", side: "right" },
+      { n: 2, at: "text:already imported into Tally", side: "bottom" },
+    ],
+  },
+
   /* ── The Store and equipment ──────────────────────────────────────── */
   {
     id: "A11-19", title: "The Store's Reports menu", as: "Inventory Manager",

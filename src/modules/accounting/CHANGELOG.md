@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-02 · The days a cancelled night audit reopened, to export again (the owner's D27-390)
+
+**Asked for:** the owner, through the main chat: warn on the cancel window and on the Accountant's export card which days must be deleted in Tally and exported again - only the days closed before the cancel; "if these days were already imported into Tally" where the PMS does not know.
+
+**Shipped:** `pages/Accounting.tsx`: a yellow card, Night audits cancelled, over What to export, for the cancels of the last 60 days, each naming its days in the night audit's own sentence (`tallyDays`, through `@/modules/night-audit`). The PMS keeps no record of an export, so it says "if"; no tracking was added. Manual A11.8, Figure A11-31.
+
+**Proved:** `accounting.test.tsx` "names the days a cancelled night audit reopened…"; fail-first (the card made never to show) failed it alone, restored, hash equal.
+
+---
+
 ## 2026-10-31 · The two Tally files, proved on a real TallyPrime (ACC-4, the owner's D27-382) - release 17
 
 **Asked for:** the master: Tally Prime and Tally ERP 9 XML, sales and receipt

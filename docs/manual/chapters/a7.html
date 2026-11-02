@@ -181,7 +181,7 @@
     <li>The hotel is on that day again: <span class="msg">“5EL is on Monday, 2 November 2026 again”</span>. Run the night audit for it when the day is done.</li>
   </ol>
   <figure class="shot" id="fig-A7-05">
-    <img src="img/A7-05.png" alt="Admin, 5 Elements Akkalkot: the Cancel a night audit card, back to Monday 2 November 2026, one audit undone, two room charges reversed, one no-show booked again, one charge moved from 3 November to 2 November, the Why box and the tick box">
+    <img src="img/A7-05.png" alt="Admin, 5 Elements Akkalkot: the Cancel a night audit card, back to Monday 2 November 2026, one audit undone, two room charges reversed, one no-show booked again, one charge moved from 3 November to 2 November, the Tally line for 2 November, the Why box and the tick box">
     <figcaption><b>Figure A7-05.</b> Admin, the property's page: Cancel a night audit.</figcaption>
     <ol class="callouts">
       <li>How far back: any earlier day, or one audit at a time</li>
@@ -190,12 +190,15 @@
       <li>The room charges reversed, and the no-shows booked again</li>
       <li>What moves back, from which day</li>
       <li>Ticked only once it has been read</li>
+      <li>The days to delete in Tally and export again, if they were imported</li>
     </ol>
   </figure>
   <ul>
     <li>Nothing is deleted. The audit stays on record as cancelled; its room charges stay on the bills, each with a reversal beside it on its own day. Run again, the day's audit charges the night again.</li>
     <li>A no-show is booked again, and its room held again if nobody has taken it since. If somebody has, the message names the booking: give it another room.</li>
     <li>Moved back to the chosen day: restaurant bills, charges and payments on room bills, the till's and the desk's drawers and their cash, stock movements and counts, deposits, laundry, and the bar's requests.</li>
+    <li><b>Tally.</b> The card ends with the days the cancel reopens, for example <span class="msg">“Tally: if 1 Nov 2026 to 2 Nov 2026 were already imported into Tally, delete those days there and export them again once each is closed again.”</span> The Accountant sees the same on <span class="ui">Accounting export</span> (A11.8). The PMS does not record what was exported, so it says “if”.</li>
+    <li><b>Daily report emails.</b> When a cancelled day is closed again, its reports go again to the same addresses, marked <b>Corrected</b> in the subject and at the top (A7.6).</li>
     <li>It is refused, and nothing changes, when: a GST tax invoice or a VAT bill stands on those days (<span class="msg">“… Issue a credit note first - and your CA should confirm it.”</span>); a room was charged on a later day by a check-in or a correction; a later day was corrected; or the till was ended twice in those days.</li>
   </ul>
 
@@ -243,12 +246,13 @@
       <li><b>Nobody gets anything until an address is typed.</b> A report switched on with no address says <span class="msg">“On, but nobody gets it until an address is typed.”</span></li>
       <li>A yellow box <span class="msg">“Nothing is sent yet”</span> means sending is not set up on the server. Nothing goes by email until it is.</li>
       <li>A report switched on after an audit starts from the next audit.</li>
+      <li><b>A day whose audit was cancelled and run again</b> sends its reports again, to the same addresses: the subject begins <span class="msg">“Corrected:”</span> and the email's first line says <span class="msg">“Corrected: this day's night audit was cancelled and run again. These reports replace the ones sent before.”</span> Each PDF says it too.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>.</p>
+    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>.</p>
   </div>
 
   <!-- A7.7 -->

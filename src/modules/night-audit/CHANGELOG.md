@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02, later · After a cancel: Tally, and the daily reports (the owner's answers to D27-390's questions)
+
+**Asked for:** moved bills stay as built; the daily report email sent again, marked Corrected; Tally warned on the cancel window and the export card; the check-in refusal kept; rooms left dirty.
+
+**Shipped:** `CancelAudits.tsx` ends with the Tally sentence for the days the cancel reopens (`tallyDays` in `data/nightAudit.ts`, exported by `index.ts` with `listUndos` for the Accounting export). The email is guest messaging's (migration 256, its CHANGELOG). Manual A7.5 and A7.6; Figure A7-05 taken again.
+
+**Proved:** see guest messaging's and accounting's entries.
+
+---
+
 ## 2026-11-02 · Never a day that has not begun, 16 hours between audits, and cancelling an audit (the owner's D27-389, D27-390)
 
 **Asked for:** after Amrapali closed 1 November at 23:36 and 2 November at 23:37, the owner: a second confirmation before the audit runs; at least 16 hours between audits, a warning system - the owner (and an Admin, the same) give a reason and go on, the GM is warned and gives a reason; and an owner/Admin cancel in the Admin section, recorded as a mistake: "edit the date or cancel and redo the day", both ways in a setting, any date by default; bills made on the wrong day moved back, recorded.
