@@ -48,8 +48,16 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-> **3 November, early:**
-> - Live is still release 16.
+> **3 November, 00:53: RELEASE 18 IS LIVE (a4527ea5), the owner's A1-A7, checked read-only:**
+> - GitHub `main`, the server's code: a4527ea5.
+> - The site loads `index-BEoAhrU0.js`, which carries "Company guest".
+> - Health ok; the API restarted 00:53 IST with 0 error lines since.
+> - Migrations 253-256: their tables, column and functions are present.
+> - AMR on 3 Nov, SHI on 2 Nov, AMRT on 10 Oct.
+> - The `release-r17` and `release-r18` copies are recycled, junctions out first, and the main packages unchanged.
+> - **Still the owner's:** N1-N3 (the n8n paste for "Corrected") and A8 at AMRT.
+>
+> **3 November, early (before the deploy):**
 > - Release 18 is rebuilt at **a4527ea5** (website `index-BEoAhrU0.js`). It carries 17 and, on the owner's word ("add
 >   this to release 18 also"), D27-392. It is the owner's to type from `.local/release-18-steps.md`; the b9e3c374
 >   steps are void.
