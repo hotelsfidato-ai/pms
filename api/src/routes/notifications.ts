@@ -58,10 +58,16 @@ notifications.get("/:code/notifications", async (c) => {
     const { rows } = await client.query<{
       kind: string; id: string; label: string; detail: string; amount: string | null;
     }>(
-      `with live as (
-         /* The bill a line is ON (the owner's D27-226): a guest owes their own
-            bills, not the nights their group's master carries for them. */
-         select fp.*, f.reservation_id as bill_stay
+      /* ONE PASS OVER THE LINES (D27-387, the load test): this asked for a balance
+         per booking ever made, and every open screen asks every 30 seconds, so it
+         grew with the hotel's past: 0.8-1 s at three years. The arrivals need no
+         balance, and the balances are summed once. The bill a line is ON (the
+         owner's D27-226): a guest owes their own bills, not the nights their
+         group's master carries for them.
+         ponytail: still every line of the hotel, because a refund can be owed on
+         any stay ever; a running balance on the bill is the next step if it shows. */
+      `with totals as (
+         select f.reservation_id as id, sum(fp.amount + fp.tax_amount) as balance
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -69,33 +75,29 @@ notifications.get("/:code/notifications", async (c) => {
             and not exists (
               select 1 from folio_postings rev where rev.reverses_id = fp.id
             )
-       ),
-       balances as (
-         select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
-                coalesce((select sum(amount + tax_amount) from live
-                           where bill_stay = r.id), 0) as balance
-           from reservations r
-           join guests g on g.id = r.guest_id
-          where r.hotel_id = $1
+          group by f.reservation_id
        )
        /* app.stay_room (086), not the HELD assignment: a refund is owed to
-          somebody who has LEFT, and their room was released at check-out.
-          Called here, on the few rows returned, not inside balances for
-          every booking ever (D27-165, speed check S-1: 1.1 s to 0.1 s). */
-       select 'arrival' as kind, b.id::text, b.guest as label,
-              coalesce(app.stay_room(b.id), '-') as detail, null::text as amount
-         from balances b
-        where b.status = 'confirmed' and b.check_out > $2::date
-          and exists (select 1 from reservations r2
-                       where r2.id = b.id and r2.check_in = $2::date)
+          somebody who has LEFT, and their room was released at check-out. */
+       select 'arrival' as kind, r.id::text, g.full_name as label,
+              coalesce(app.stay_room(r.id), '-') as detail, null::text as amount
+         from reservations r
+         join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and r.status = 'confirmed'
+          and r.check_in = $2::date and r.check_out > $2::date
        union all
-       select 'owing', b.id::text, b.guest, coalesce(app.stay_room(b.id), '-'), b.balance::text
-         from balances b
-        where b.status = 'checked_in' and b.check_out = $2::date and b.balance > 0.5
+       select 'owing', r.id::text, g.full_name, coalesce(app.stay_room(r.id), '-'), t.balance::text
+         from reservations r
+         join guests g on g.id = r.guest_id
+         join totals t on t.id = r.id
+        where r.hotel_id = $1 and r.status = 'checked_in' and r.check_out = $2::date
+          and t.balance > 0.5
        union all
-       select 'refund', b.id::text, b.guest, coalesce(app.stay_room(b.id), '-'), b.balance::text
-         from balances b
-        where b.balance < -0.5
+       select 'refund', r.id::text, g.full_name, coalesce(app.stay_room(r.id), '-'), t.balance::text
+         from totals t
+         join reservations r on r.id = t.id
+         join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and t.balance < -0.5
        union all
        select 'blocked', rm.id::text, rm.number, '', null
          from rooms rm
