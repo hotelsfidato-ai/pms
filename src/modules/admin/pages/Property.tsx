@@ -17,6 +17,7 @@ import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
 import { PasswordBox } from "@/modules/admin/pages/People";
 import { placeLine } from "@/modules/finance";
+import { CancelAudits } from "@/modules/night-audit";
 
 /* The GM setting where somebody starts after sign-in (087). */
 async function startOn(
@@ -63,6 +64,7 @@ export default function PropertyPage() {
   const [password, setPassword] = useState<PropertyTeamMember | null>(null);
   /* D27-117: Remove asks first. */
   const [taking, setTaking] = useState<PropertyTeamMember | null>(null);
+  const mayUndo = can(useRole(), "view", "role");
 
   const detail = useQuery({
     queryKey: ["property-detail", code],
@@ -189,6 +191,10 @@ export default function PropertyPage() {
       </Card>
 
       <FssaiCard code={property.code} value={property.fssaiNumber} onSaved={refresh} />
+
+      {/* D27-390: cancelling a night audit run by mistake - the owner and an
+          administrator (`role` view, the server's UNDO_DAY). */}
+      {mayUndo && <CancelAudits code={property.code} />}
 
       {/* ── The team ──────────────────────────────────────────── */}
       <section>

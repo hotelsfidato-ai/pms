@@ -97,14 +97,28 @@ export async function blockersFor(
      at" (16:00 to begin), by the hotel's own clock - nobody runs it
      earlier. A business date already behind the calendar is a day to catch
      up, never locked. */
-  const { rows: [when] } = await client.query<{ locked: boolean; opens: string }>(
-    `select ($2::date >= (now() at time zone h.timezone)::date
+  const { rows: [when] } = await client.query<{ ahead: boolean; today: string; locked: boolean; opens: string }>(
+    `select $2::date > (now() at time zone h.timezone)::date as ahead,
+            to_char((now() at time zone h.timezone)::date, 'YYYY-MM-DD') as today,
+            ($2::date >= (now() at time zone h.timezone)::date
              and (now() at time zone h.timezone)::time < h.night_audit_opens_at) as locked,
             to_char(h.night_audit_opens_at, 'HH24:MI') as opens
        from hotels h where h.id = $1`,
     [hotelId, businessDate],
   );
-  if (when?.locked) {
+  /* ── Never a day that has not begun (the owner's D27-389) ──────────
+     1 November at Amrapali: 1 November closed at 23:36, and at 23:37 the
+     audit closed 2 November too, whose 16:00 had "passed" only because
+     1 November's had. A business date ahead of the hotel's own calendar
+     is never closed, by anybody. */
+  if (when?.ahead) {
+    blockers.push({
+      id: "not-begun",
+      reason: `${dayMonth(businessDate)} has not begun at the hotel: it is ${dayMonth(when.today)} there. `
+        + "A day closes only once it has begun.",
+      rooms: [],
+    });
+  } else if (when?.locked) {
     blockers.push({
       id: "not-yet",
       reason: `The night audit for ${dayMonth(businessDate)} opens at ${when.opens}, by the hotel's clock.`,
@@ -297,6 +311,53 @@ export async function blockersFor(
   return blockers;
 }
 
+/* ── Sixteen hours (the owner's D27-389, 2 November) ─────────────────
+   Today's date closed under 16 hours after the last audit finished: the
+   owner or an Admin (a group administrator too) go on with a reason, the GM
+   is warned and gives one, everybody else is refused. A day already behind
+   the calendar is catching up and is never held - Shimla closed eleven such
+   days in minutes, rightly. Null when the rule does not apply. */
+export interface EarlyAudit {
+  /** When the last audit finished, and the same by the hotel's clock. */
+  lastAt: string; lastClock: string;
+  hours: number;
+  /** What this person may do: go on with a reason, be warned and give one, or neither. */
+  may: "reason" | "warning" | "refused";
+}
+
+export async function earlyAudit(
+  client: Client, hotelId: string, closing: string,
+  session: { staffId: string; isGroupAdmin: boolean },
+): Promise<EarlyAudit | null> {
+  const { rows: [w] } = await client.query<{
+    applies: boolean; last_at: Date | null; last_clock: string | null; hours: string | null; role: string | null;
+  }>(
+    `select coalesce($2::date >= (now() at time zone h.timezone)::date
+                     and l.at > now() - interval '16 hours', false) as applies,
+            l.at as last_at,
+            app.hotel_clock(h.id, l.at, 'HH24:MI on FMDD Mon') as last_clock,
+            round(extract(epoch from now() - l.at) / 3600, 1)::text as hours,
+            (select sh.role from staff_hotels sh where sh.staff_id = $3 and sh.hotel_id = h.id) as role
+       from hotels h
+       cross join lateral (select max(n.completed_at) as at from night_audit_runs n
+                            where n.hotel_id = h.id and n.status = 'completed') l
+      where h.id = $1`,
+    [hotelId, closing, session.staffId],
+  );
+  if (!w?.applies || !w.last_at) return null;
+  const role = session.isGroupAdmin ? "owner" : w.role;
+  return {
+    lastAt: w.last_at.toISOString(), lastClock: w.last_clock ?? "",
+    hours: Number(w.hours),
+    may: role === "owner" || role === "admin" ? "reason" : role === "gm" ? "warning" : "refused",
+  };
+}
+
+/** The sentence for a person the 16 hours stop. */
+export const earlyRefusal = (e: EarlyAudit) =>
+  `The last night audit finished at ${e.lastClock}, ${e.hours} hours ago. Another day closes only `
+  + "16 hours after the last one - or sooner by the GM, the owner or an administrator, with a reason.";
+
 /* ── Can this day be closed? ─────────────────────────────────────
    GET /:code/night-audit/can-run was here until 17 September. No screen ever
    called it (NA-1); the owner's D17-42 removed it. Whether a day may close is
@@ -325,7 +386,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
 
      Every refusal below comes before the first write — inside
      withSession a refusal is a commit (MEMORY 243). */
-  const body = (await c.req.json().catch(() => ({}))) as { businessDate?: unknown };
+  const body = (await c.req.json().catch(() => ({}))) as { businessDate?: unknown; reason?: unknown };
   const closing = body.businessDate;
   if (closing === undefined) {
     return c.json({
@@ -335,8 +396,11 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
   if (!isIsoDate(closing)) {
     return c.json({ error: "businessDate must be a date, YYYY-MM-DD." }, 400);
   }
+  /* Why a day closes within 16 hours of the last (D27-389): kept with the run. */
+  const why = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (why.length > 500) return c.json({ error: "Keep the reason to 500 characters." }, 400);
 
-  const result = await withSession(c.get("subject"), async (client) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
@@ -383,6 +447,19 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       }) as unknown as Record<string, unknown>;
     }
 
+    /* ── Sixteen hours since the last (D27-389) ───────────────────────── */
+    const early = await earlyAudit(client, hotelId, businessDate, session);
+    if (early?.may === "refused") {
+      return refuse(earlyRefusal(early), { businessDate, early }) as unknown as Record<string, unknown>;
+    }
+    if (early && !why) {
+      return refuse(
+        `The last night audit finished at ${early.lastClock}, ${early.hours} hours ago. `
+          + "Say why this day closes so soon: the reason is kept with the audit.",
+        { businessDate, early, needsReason: true },
+      ) as unknown as Record<string, unknown>;
+    }
+
     /* ── Open the run ────────────────────────────────────────────────
        'running', not 'completed'. The trigger in 012_integrity.sql
        rejects postings onto a CLOSED date, so the charges below must
@@ -392,13 +469,15 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
     const { rows: run } = await client.query<{ id: string }>(
       /* `run_by` has been a column since 006 and nothing wrote it, so
          no closed day could say who closed it (D17-13). */
-      `insert into night_audit_runs (hotel_id, business_date, status, run_by)
-       values ($1, $2::date, 'running', app.current_user_id())
+      `insert into night_audit_runs (hotel_id, business_date, status, run_by, early_reason, early_by)
+       values ($1, $2::date, 'running', app.current_user_id(), $3,
+               case when $3::text is null then null else app.current_user_id() end)
        on conflict (hotel_id, business_date)
          do update set status = 'running', started_at = now(),
-                       error_message = null, run_by = app.current_user_id()
+                       error_message = null, run_by = app.current_user_id(),
+                       early_reason = excluded.early_reason, early_by = excluded.early_by
        returning id::text`,
-      [hotelId, businessDate],
+      [hotelId, businessDate, early ? why : null],
     );
     const runId = run[0]!.id;
 
@@ -717,6 +796,10 @@ export interface ClosedDay {
   /** The audit's room revenue after corrections of the room charges it
       posted: null where none was corrected, or the record holds no revenue. */
   correctedRevenue: number | null;
+  /** Why it closed under 16 hours after the last audit, and who said so
+      (D27-389): null for an audit that waited. */
+  earlyReason: string | null;
+  earlyBy: string | null;
 }
 
 async function closedDays(
@@ -727,6 +810,7 @@ async function closedDays(
     started_at: Date; completed_at: Date | null;
     rooms_posted: number | null; revenue_posted: string | null;
     no_shows: number | null; corrections: number; room_change: string | null;
+    early_reason: string | null; early_by: string | null;
   }>(
     /* The name through app.colleague_name (096), never a join to `staff`:
        staff is row-secured, and most roles read only their own row, so a
@@ -735,7 +819,8 @@ async function closedDays(
             app.colleague_name(na.run_by, na.hotel_id) as ran_by,
             na.started_at, na.completed_at,
             na.rooms_posted, na.revenue_posted::text as revenue_posted,
-            na.no_shows,
+            na.no_shows, na.early_reason,
+            app.colleague_name(na.early_by, na.hotel_id) as early_by,
             (select count(*)::int from closed_day_corrections c
               where c.hotel_id = na.hotel_id
                 and c.business_date = na.business_date) as corrections,
@@ -776,8 +861,99 @@ async function closedDays(
     correctedRevenue: r.revenue_posted === null || r.room_change === null
       ? null
       : Math.round((Number(r.revenue_posted) + Number(r.room_change)) * 100) / 100,
+    earlyReason: r.early_reason,
+    earlyBy: r.early_reason === null ? null : r.early_by,
   }));
 }
+
+/* ── Cancelling night audits (the owner's D27-390, 2 November) ─────────
+   The owner or an Admin, from the Admin section: the hotel goes back to a
+   chosen closed day (or, by the group's setting, the latest only), every
+   audit from it on is undone, and the trade since moves back to that day.
+   All of it is app.undo_night_audits (migration "night audit guard and
+   undo"), in one transaction under the run's own lock: the dry run is the
+   same function with nothing written, so what the window lists is what is
+   done. A refusal is its answer, never a half-done cancel (MEMORY 243). */
+
+/** The closed days a cancel can go back to, newest first, and the setting. */
+nightAudit.get("/:code/night-audit/undo", async (c) => {
+  const to = c.req.query("to");
+  if (to !== undefined && !isIsoDate(to)) return c.json({ error: "to must be a date, YYYY-MM-DD." }, 400);
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows: days } = await client.query<{ d: string }>(
+      `select to_char(business_date, 'YYYY-MM-DD') as d from night_audit_runs
+        where hotel_id = $1 and status = 'completed'
+        order by business_date desc limit 60`,
+      [hotelId]);
+    const backTo = to ?? days[0]?.d ?? null;
+    const { rows: [dry] } = await client.query<{ s: Record<string, unknown> }>(
+      "select app.undo_night_audits($1, $2::date, '', false) as s", [hotelId, backTo]);
+    return { days: days.map((x) => x.d), ...dry!.s };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+nightAudit.post("/:code/night-audit/undo", async (c) => {
+  const input = (await c.req.json().catch(() => ({}))) as { backTo?: unknown; reason?: unknown };
+  if (!isIsoDate(input.backTo)) return c.json({ error: "backTo must be a date, YYYY-MM-DD." }, 400);
+  const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+  if (!reason) return c.json(refuse("Say why: the reason is kept with the cancel, as a mistake."), 400);
+  if (reason.length > 500) return c.json(refuse("Keep the reason to 500 characters."), 400);
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows: [done] } = await client.query<{ s: Record<string, unknown> & { ok: boolean } }>(
+      "select app.undo_night_audits($1, $2::date, $3, true) as s", [hotelId, input.backTo, reason]);
+    return done!.s;
+  });
+  if (!body) return c.json({ error: "No such property." }, 404);
+  return body.ok ? c.json(body) : c.json({ ...body, reason: body["refusal"] }, 409);
+});
+
+/** The group's setting: back to any closed day, or one audit at a time. */
+nightAudit.put("/:code/night-audit/undo-mode", async (c) => {
+  const { mode } = (await c.req.json().catch(() => ({}))) as { mode?: unknown };
+  if (mode !== "any_date" && mode !== "one_at_a_time") {
+    return c.json(refuse("Choose any_date or one_at_a_time."), 400);
+  }
+  const done = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows: [may] } = await client.query<{ ok: boolean }>(
+      "select app.undoes_night_audits($1) as ok", [hotelId]);
+    if (!may!.ok) return refuse("Only the owner or an administrator may change this.");
+    await client.query(
+      `insert into group_settings (id, changed_by) values (1, app.current_user_id())
+       on conflict (id) do nothing`);
+    await client.query(
+      `update group_settings set night_audit_undo = $1, changed_by = app.current_user_id(), changed_at = now()
+        where id = 1`, [mode]);
+    return { ok: true as const, mode };
+  });
+  if (!done) return c.json({ error: "No such property." }, 404);
+  return done.ok ? c.json(done) : c.json(done, 403);
+});
+
+/** Every cancel at this hotel, newest first: the Night audit screen's history. */
+nightAudit.get("/:code/night-audit/undos", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query(
+      `select id::text, to_char(back_to, 'YYYY-MM-DD') as "backTo", to_char(last_day, 'YYYY-MM-DD') as "lastDay",
+              reason, app.colleague_name(undone_by, hotel_id) as "undoneBy", undone_at as "undoneAt",
+              jsonb_array_length(audits) as audits, summary
+         from night_audit_undos where hotel_id = $1
+        order by undone_at desc limit 60`,
+      [hotelId]);
+    return rows;
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
 
 /* ── Correcting a closed day ─────────────────────────────────────────
    D22-18, the owner: "a GM screen; a reason is required, and the old and

@@ -60,7 +60,7 @@ properties and people.
 | — (redirects) | `/settings`, a bare group and every old tab (`/settings/:tab`, `/h/:code/settings/:tab`, the five of 1 October and the eight of 30 September) → its console page (`MOVED` in `pages/Settings.tsx`); `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/rates/taxes` | — | old links, kept working |
 | — (Find a screen) Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
-| — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
+| — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx`; for the owner and an Admin, the night audit's **Cancel a night audit** card (D27-390, `CancelAudits` from `@/modules/night-audit`) | reached from Properties |
 | — (redirect) | `/admin/properties` → `/properties` | — | an old link, kept working |
 
 - Properties and People sit in the menu's **Across properties** section;

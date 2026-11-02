@@ -1,4 +1,4 @@
-import { fetchOr, write } from "@/data/repositories/http";
+import { fetchOr, write, put } from "@/data/repositories/http";
 import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 import { api } from "@/lib/api";
 /* The night audit.
@@ -26,6 +26,23 @@ export interface NightAuditState {
   /** Rule 6 — refused, with the reason on screen rather than hidden. */
   canRun: { allowed: boolean; reason?: string };
   lastRun: string | null;
+  /** The hotel's own today, and when the last audit finished: the window
+      before Run shows both (D27-389). Absent from a server before it. */
+  calendarDate?: string | null;
+  lastCompletedAt?: string | null;
+  /** The 16 hours, for this person: null when they do not apply. */
+  early?: EarlyAudit | null;
+}
+
+/** Today closed under 16 hours after the last audit (D27-389): the owner or
+    an Admin give a reason; the GM is warned and gives one; anyone else is
+    refused. */
+export interface EarlyAudit {
+  lastAt: string;
+  /** "23:36 on 1 Nov", by the hotel's clock. */
+  lastClock: string;
+  hours: number;
+  may: "reason" | "warning" | "refused";
 }
 
 export async function getNightAudit(hotelId: string): Promise<NightAuditState | null> {
@@ -55,6 +72,69 @@ export interface ClosedDay {
   /** Room revenue after the day's corrections; null where no room charge
       was corrected. */
   correctedRevenue?: number | null;
+  /** Why it closed under 16 hours after the last audit, and who said so
+      (D27-389); null for an audit that waited. */
+  earlyReason?: string | null;
+  earlyBy?: string | null;
+}
+
+/* ── Cancelling night audits (D27-390) ───────────────────────────── */
+
+/** What a cancel back to `backTo` would do - the server's dry run, the same
+    function that does it - or why it is refused. */
+export interface AuditUndo {
+  ok: boolean;
+  refusal: string | null;
+  /** The group's setting: back to any closed day, or the latest only. */
+  mode: "any_date" | "one_at_a_time";
+  /** The closed days it can go back to, newest first. */
+  days: string[];
+  latest: string | null;
+  backTo: string | null;
+  audits: Array<{
+    businessDate: string; completedAt: string; ranBy: string | null;
+    roomsPosted: number | null; revenuePosted: number | null; noShows: number | null;
+  }>;
+  chargesReversed: number;
+  chargesTotal: number;
+  noShowsRestored: number;
+  /** What moves back to `backTo`, by the day it is on now. */
+  moves: Array<{ table: string; what: string; byDay: Record<string, number> }>;
+}
+
+export interface AuditUndoDone extends AuditUndo {
+  businessDate: string;
+  roomsHeldAgain: number;
+  /** Bookings whose room somebody else holds now: named, not moved. */
+  roomsNotHeld: string[];
+}
+
+/** One cancel, kept: the Night audit screen's history. */
+export interface AuditUndoRecord {
+  id: string;
+  backTo: string;
+  lastDay: string;
+  reason: string;
+  undoneBy: string | null;
+  undoneAt: string;
+  audits: number;
+}
+
+export async function getAuditUndo(hotelId: string, to?: string): Promise<AuditUndo> {
+  return api<AuditUndo>(`/api/hotels/${hotelId}/night-audit/undo${to ? `?to=${to}` : ""}`);
+}
+
+export async function undoAudits(hotelId: string, backTo: string, reason: string) {
+  return write<AuditUndoDone>(`/api/hotels/${hotelId}/night-audit/undo`, { backTo, reason });
+}
+
+export async function setUndoMode(hotelId: string, mode: AuditUndo["mode"]) {
+  return put<{ mode: AuditUndo["mode"] }>(`/api/hotels/${hotelId}/night-audit/undo-mode`, { mode });
+}
+
+export async function listUndos(hotelId: string): Promise<AuditUndoRecord[]> {
+  if (!hotelId) return [];
+  return fetchOr<AuditUndoRecord[]>(`/api/hotels/${hotelId}/night-audit/undos`, []);
 }
 
 /** The days this property has closed, newest first (the last 60). */
@@ -183,9 +263,12 @@ export interface NightAuditResult {
  * Without it the server would close whatever day it is on — which, for a
  * screen that did not see the day close on another device, is tomorrow.
  */
-export async function runNightAudit(hotelId: string, closing: string): Promise<NightAuditResult> {
+export async function runNightAudit(
+  hotelId: string, closing: string, reason?: string,
+): Promise<NightAuditResult> {
   return api<NightAuditResult>(`/api/hotels/${hotelId}/night-audit/run`, {
     method: "POST",
-    body: JSON.stringify({ businessDate: closing }),
+    /* The reason only when the 16 hours ask for one (D27-389). */
+    body: JSON.stringify({ businessDate: closing, ...(reason ? { reason } : {}) }),
   });
 }

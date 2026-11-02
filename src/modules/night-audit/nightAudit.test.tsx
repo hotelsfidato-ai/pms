@@ -85,18 +85,22 @@ afterEach(() => {
 });
 
 /** Answers the screen's three calls; anything else is a fault. */
-function server({ closedDays, onRun }: {
+function server({ closedDays, onRun, state = checklist }: {
   closedDays: ClosedDay[];
   onRun?: (body: unknown) => unknown;
+  state?: NightAuditState;
 }) {
   vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
     const path = url.split("?")[0]!;
     const method = init?.method ?? "GET";
     if (method === "GET" && path === `/api/hotels/${HOTEL}/night-audit`) {
-      return checklist as never;
+      return state as never;
     }
     if (method === "GET" && path === `/api/hotels/${HOTEL}/night-audit/runs`) {
       return closedDays as never;
+    }
+    if (method === "GET" && path === `/api/hotels/${HOTEL}/night-audit/undos`) {
+      return [] as never;
     }
     if (method === "POST" && path === `/api/hotels/${HOTEL}/night-audit/run` && onRun) {
       return onRun(typeof init?.body === "string" ? JSON.parse(init.body) : init?.body) as never;
@@ -142,9 +146,13 @@ describe("the Night audit screen", TEST_LIMIT, () => {
 
     /* D27-117 (QA NA-1): it asks first, naming the day, and sends nothing
        until the person says yes. It used to close the day on one click. */
-    const sure = await screen.findByRole("button", { name: /^Close 16 Sep/ }, SLOW);
+    const sure = await screen.findByRole("button", { name: /^Close 16 Sep/ }, SLOW) as HTMLButtonElement;
     expect(document.body.textContent).toContain("Close Wednesday, 16 September 2026?");
     expect(posted, "the day was closed before anybody confirmed").toHaveLength(0);
+    /* D27-389: the second layer - Close stays off until the box is ticked. */
+    expect(sure.disabled, "Close was on before the box was ticked").toBe(true);
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(sure.disabled).toBe(false);
     fireEvent.click(sure);
 
     await waitFor(() => expect(posted).toHaveLength(1), SLOW);
@@ -159,6 +167,30 @@ describe("the Night audit screen", TEST_LIMIT, () => {
     expect(text).toContain("rooms posted 12");
     expect(text).toMatch(/room revenue ₹\s?38,400/);
     expect(text).toContain("no-shows 1");
+  });
+
+  it("warns the GM inside 16 hours, and sends the reason they give", async () => {
+    const posted: unknown[] = [];
+    server({
+      closedDays: [],
+      state: {
+        ...checklist, calendarDate: SHOWN, lastCompletedAt: "2026-09-16T18:06:00.000Z",
+        early: { lastAt: "2026-09-16T18:06:00.000Z", lastClock: "23:36 on 16 Sep", hours: 0.1, may: "warning" },
+      },
+      onRun: (body) => { posted.push(body); return { ok: true, businessDate: SHOWN }; },
+    });
+    renderScreen();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Run night audit" }, SLOW));
+    const sure = await screen.findByRole("button", { name: /^Close 16 Sep/ }, SLOW) as HTMLButtonElement;
+    expect(document.body.textContent).toContain("Warning: the last audit finished at 23:36 on 16 Sep, 0.1 hours ago");
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(sure.disabled, "Close was on with no reason").toBe(true);
+    fireEvent.change(screen.getByLabelText(/Why now/), { target: { value: "Rerun after a power cut" } });
+    expect(sure.disabled).toBe(false);
+    fireEvent.click(sure);
+    await waitFor(() => expect(posted).toHaveLength(1), SLOW);
+    expect(posted[0]).toEqual({ businessDate: SHOWN, reason: "Rerun after a power cut" });
   });
 
   it("lists the closed days, with a dash where the record holds nothing", async () => {
@@ -180,8 +212,9 @@ describe("the Night audit screen", TEST_LIMIT, () => {
       .filter((tr) => tr.textContent?.includes("10 Sep 2026"));
     expect(rows.length, "no table row for 10 Sep").toBeGreaterThan(0);
     const cells = Array.from(rows[0]!.querySelectorAll("td")).map((td) => td.textContent?.trim());
-    /* The last cell is Correct's: empty for the clerk these tests sign in as. */
-    expect(cells).toEqual(["10 Sep 2026", "-", expect.any(String), "-", "-", "-", ""]);
+    /* The last cell is Correct's: empty for the clerk these tests sign in as;
+       before it Why early, empty for a day that waited its 16 hours. */
+    expect(cells).toEqual(["10 Sep 2026", "-", expect.any(String), "-", "-", "-", "", ""]);
   });
 
   it("says what belongs in the list when no day has been closed", async () => {

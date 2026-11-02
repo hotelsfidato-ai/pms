@@ -120,6 +120,13 @@ beforeAll(async () => {
   [{ id: puneId }] = await sql<{ id: string }>("select id from hotels where code = 'PUN'") as [{ id: string }];
   /* It closes days; the opening time (D27-338) is opensAt.test.ts's (MEMORY 416). */
   await sql("update hotels set night_audit_opens_at = '00:00' where id = $1", [puneId]);
+  /* A day that has not begun is never closed (D27-389): Pune starts sixty days
+     back, as in nightAudit.test.ts, unless a day was closed there already. */
+  await sql(
+    `update hotels set business_date = (now() at time zone timezone)::date - 60
+      where id = $1 and not exists (select 1 from night_audit_runs n
+                                      where n.hotel_id = hotels.id and n.status = 'completed')`,
+    [puneId]);
   [{ id: gmId }] = await sql<{ id: string }>(
     "insert into staff (email, full_name) values ($1, 'Correction GM') returning id",
     [`${tag.toLowerCase()}-gm@fidato.in`]) as [{ id: string }];

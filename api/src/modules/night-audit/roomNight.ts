@@ -17,13 +17,19 @@ import { POSTING_NIGHTS } from "../reports/index.ts";
 /** Whether a room line already pays for the night `night` (SQL, a date) of
     the stay `r`: any of its lines on any bill - a reversed one too, so a night
     somebody took off is not charged again - read the way the reports read it.
-    The run's rule, and the Bill tab's count of nights to come (FIN-24). */
+    The run's rule, and the Bill tab's count of nights to come (FIN-24).
+    Except a night whose AUDIT was cancelled (D27-390): its line and the
+    cancel's reversal are not a charge, so the day's audit, run again, charges
+    the night again. */
 const CHARGED = (night: string) => `exists (
             select 1 from folio_postings fp
              where fp.reservation_id = r.id
                and fp.category = 'room'
                and fp.business_date <= ${night}
                and fp.business_date + ${POSTING_NIGHTS} > ${night}
+               and fp.source_type is distinct from 'night_audit_undo'
+               and not exists (select 1 from folio_postings u
+                                where u.reverses_id = fp.id and u.source_type = 'night_audit_undo')
           )`;
 
 /** The stays tonight's run charges a room night for, as SQL over `r` with

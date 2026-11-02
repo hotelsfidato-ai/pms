@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-02 · Cancel a night audit, on a property's page (the owner's D27-390)
+
+**Asked for:** the owner: the owner or an Admin cancels a night audit from the Admin section, recorded as a mistake.
+
+**Shipped:** `pages/Property.tsx` shows the night audit service's `CancelAudits` card (its front door) to `can(role, "view", "role")` - the owner and an Admin, the server's `UNDO_DAY`. The card, its data and its routes are the night audit's; see that service's CHANGELOG.
+
+**Proved:** see the night audit's entry (the API refuses the GM and reception; the card opened on the local demo).
+
+---
+
 ## 2026-10-29 · A photo Drive would not delete is tried again every hour (D27-380; release 16)
 
 **Asked for:** the owner, D27-380: a photo Drive refused at a clear is retried automatically, not only at the hotel's

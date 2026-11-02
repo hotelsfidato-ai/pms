@@ -11,11 +11,11 @@ import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Button, StatusPill, Skeleton, Tooltip,
   ErrorState, EmptyState, DataTable, Term, IconChip, type Column,
-  Dialog, DialogContent, DialogClose,
+  Dialog, DialogContent, DialogClose, Checkbox, Field, fieldProps, Textarea,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
-  getNightAudit, runNightAudit, listClosedDays,
+  getNightAudit, runNightAudit, listClosedDays, listUndos,
   type NightAuditResult, type ClosedDay,
 } from "@/modules/night-audit/data/nightAudit";
 import { CorrectDay } from "@/modules/night-audit/components/CorrectDay";
@@ -56,11 +56,20 @@ export default function NightAuditPage() {
     queryFn: () => listClosedDays(hotelId),
   });
 
+  /* Audits cancelled from the Admin section (D27-390). */
+  const undos = useQuery({
+    queryKey: ["night-audit-undos", hotelId],
+    queryFn: () => listUndos(hotelId),
+  });
+
   const queryClient = useQueryClient();
   const [result, setResult] = useState<NightAuditResult | null>(null);
   /* D27-117 (QA NA-1): the audit asks first. It closed the day on one click,
      and a closed day cannot be edited. */
   const [confirming, setConfirming] = useState(false);
+  /* D27-389: the window's tick box, and the reason the 16 hours ask for. */
+  const [checked, setChecked] = useState(false);
+  const [earlyReason, setEarlyReason] = useState("");
 
   /* Correcting a closed day (D22-18): the owner, an administrator and the GM
      (D24-3), this month and last (D24-5). Anybody else sees a day's
@@ -83,7 +92,7 @@ export default function NightAuditPage() {
     /* The day the heading names, not whatever day the server is on. A
        screen that did not see the day close elsewhere would otherwise
        close tomorrow (NA-2); sent, the server refuses it instead. */
-    mutationFn: (closing: string) => runNightAudit(hotelId, closing),
+    mutationFn: (v: { day: string; reason?: string }) => runNightAudit(hotelId, v.day, v.reason),
     onSuccess: async (r) => {
       setResult(r);
       /* The business date has MOVED. Two things are now stale, and
@@ -208,7 +217,7 @@ export default function NightAuditPage() {
                 <span className="shrink-0">
                   <Button variant="primary"
                     disabled={!data.canRun.allowed || run.isPending}
-                    onClick={() => setConfirming(true)}
+                    onClick={() => { setChecked(false); setEarlyReason(""); setConfirming(true); }}
                   >
                     {run.isPending ? "Closing the day…" : "Run night audit"}
                   </Button>
@@ -218,18 +227,57 @@ export default function NightAuditPage() {
               <Dialog open={confirming} onOpenChange={setConfirming}>
                 <DialogContent title={`Close ${dateLong(data.businessDate)}?`} size="sm">
                   <div className="space-y-4">
+                    {/* The second look (D27-389): the three facts that would
+                        have stopped 1 November's second audit, read before
+                        the box can be ticked. */}
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                      <dt className="text-grey-600">Closing</dt>
+                      <dd className="font-medium text-ink-900">{dateLong(data.businessDate)}</dd>
+                      <dt className="text-grey-600">Today at the hotel</dt>
+                      <dd className="font-medium text-ink-900">
+                        {data.calendarDate ? dateLong(data.calendarDate) : "-"}
+                      </dd>
+                      <dt className="text-grey-600">Last audit</dt>
+                      <dd className="font-medium text-ink-900">
+                        {data.lastCompletedAt ? dateTime(data.lastCompletedAt) : "never"}
+                      </dd>
+                    </dl>
+                    {data.early && (
+                      <p className={cn("text-sm leading-relaxed rounded-md px-3 py-2",
+                        data.early.may === "warning"
+                          ? "bg-brand-red-50 text-brand-red-700 font-medium"
+                          : "bg-brand-yellow-50 text-brand-yellow-800")}>
+                        {data.early.may === "warning" ? "Warning: the" : "The"} last audit finished
+                        at {data.early.lastClock}, {data.early.hours} hours ago - less than 16.
+                        Say why this day closes so soon. The reason is kept with the audit.
+                      </p>
+                    )}
+                    {data.early && (
+                      <Field label="Why now" required>
+                        {(p) => (
+                          <Textarea {...fieldProps(p)} rows={2} maxLength={500}
+                            value={earlyReason} onChange={(e) => setEarlyReason(e.target.value)} />
+                        )}
+                      </Field>
+                    )}
                     <p className="text-base text-grey-700 leading-relaxed">
                       The property moves to {dateLong(data.nextBusinessDate)}. Tonight's
                       room charges are posted to every guest in house and arrivals who
                       did not come become no-shows. A closed day cannot be edited, only
                       corrected afterwards.
                     </p>
+                    <Checkbox checked={checked} onCheckedChange={setChecked}
+                      label="I have checked the day being closed, today's date and the last audit." />
                     <div className="flex gap-2">
                       <DialogClose asChild>
                         <Button variant="secondary" className="flex-1">Cancel</Button>
                       </DialogClose>
                       <Button variant="primary" className="flex-1"
-                        onClick={() => { setConfirming(false); run.mutate(data.businessDate); }}>
+                        disabled={!checked || (Boolean(data.early) && !earlyReason.trim())}
+                        onClick={() => {
+                          setConfirming(false);
+                          run.mutate({ day: data.businessDate, reason: data.early ? earlyReason.trim() : undefined });
+                        }}>
                         Close {dateShort(data.businessDate)}
                       </Button>
                     </div>
@@ -391,6 +439,29 @@ export default function NightAuditPage() {
         />
       </Card>
 
+      {/* ── Cancelled audits (D27-390) ─────────────────────────────
+          Kept for good, with the reason given as a mistake. Done from
+          the Admin section, by the owner or an administrator. */}
+      {(undos.data ?? []).length > 0 && (
+        <Card className="mt-6">
+          <CardHeader title="Cancelled audits"
+            description="Night audits the owner or an administrator cancelled, newest first, with the reason given." />
+          <ul className="divide-y divide-grey-100 px-4">
+            {undos.data!.map((u) => (
+              <li key={u.id} className="py-3 text-sm">
+                <p className="font-medium text-ink-900">
+                  Back to {dateLong(u.backTo)}
+                  {" · "}{u.audits} {u.audits === 1 ? "audit" : "audits"} undone, to {dateShort(u.lastDay)}
+                </p>
+                <p className="text-grey-600 mt-0.5">
+                  {u.reason} · {u.undoneBy ?? "-"} · {dateTime(u.undoneAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {correcting && (
         <CorrectDay hotelId={hotelId} day={correcting} canCorrect={canCorrect}
           onClose={() => setCorrecting(null)} />
@@ -420,6 +491,7 @@ function closedDayColumns(
         <span className="inline-flex items-center gap-2">
           {dateShort(d.businessDate)}
           {(d.corrections ?? 0) > 0 && <StatusPill tone="info">Corrected</StatusPill>}
+          {d.earlyReason && <StatusPill tone="warning">Under 16 hours</StatusPill>}
         </span>
       ),
     },
@@ -436,6 +508,11 @@ function closedDayColumns(
         : `${moneyOrDash(d.revenuePosted)} → ${money(d.correctedRevenue)}`,
     },
     { key: "noShows", header: "No-shows", numeric: true, cell: (d) => orDash(d.noShows) },
+    /* D27-389: why it closed under 16 hours after the last, and who said so. */
+    {
+      key: "early", header: "Why early", hideBelow: "md",
+      cell: (d) => (d.earlyReason ? `${d.earlyReason} · ${d.earlyBy ?? "-"}` : ""),
+    },
     {
       key: "correct", header: "",
       cell: (d) => {

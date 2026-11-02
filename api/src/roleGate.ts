@@ -136,6 +136,10 @@ const CLOSE_DAY = grant("invoice", "create", "Closing the day");
    who may waive a charge (the owner's D24-3) - `approve` on a booking is
    exactly those three. The database asks the same three (134). */
 const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
+/* Cancelling night audits (the owner's D27-390): the owner and an
+   administrator - `role` view is exactly those two in the matrix, as for
+   System health. The database asks the same (app.undoes_night_audits). */
+const UNDO_DAY = grant("role", "view", "Cancelling a night audit");
 /* Editing a charge and changing a stay's rate: the same three (D27-157). */
 const EDIT_BILL = grant("reservation", "approve", "Editing a charge on a bill");
 const PAYMENT = grant("payment", "create", "Taking a payment");
@@ -410,6 +414,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* night-audit */
   [`POST ${H}/night-audit/run`]: CLOSE_DAY,
   [`POST ${H}/night-audit/days/:date/corrections`]: CORRECT_DAY,
+  [`POST ${H}/night-audit/undo`]: UNDO_DAY,
+  [`PUT ${H}/night-audit/undo-mode`]: UNDO_DAY,
 
   /* pos: the menu */
   [`POST ${H}/till/menu/categories`]: MENU,
@@ -976,6 +982,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/night-audit`]: REPORTS,
   [`GET ${H}/night-audit/runs`]: REPORTS,
   [`GET ${H}/night-audit/days/:date/charges`]: REPORTS,
+  [`GET ${H}/night-audit/undos`]: REPORTS,
+  [`GET ${H}/night-audit/undo`]: UNDO_DAY,
 
   /* ── Rooms, rates and setup ── */
   [`GET ${H}/pricing`]: PRICES,

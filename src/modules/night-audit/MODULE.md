@@ -68,8 +68,20 @@ All hang from `/api/hotels`, in two files mounted by
 |---|---|---|
 | GET | `/:code/night-audit` | the pre-flight checklist the screen reads, and whether the audit may run |
 
-6 endpoints. The checklist imports `blockersFor` from `nightAudit.ts`, beside
-it, so what the screen shows and what the run refuses are one function.
+**Since 2 November (D27-389, D27-390)**, also in `nightAudit.ts`:
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/:code/night-audit/run` | as above, and: a business date ahead of the hotel's own calendar is a blocker for everybody (`not-begun`); today's date closed under 16 hours after the last completed audit needs `{ reason }` from the owner, an Admin or a group administrator, or from the GM (warned on screen), and is refused for everyone else (`earlyAudit`). Days already over are never held. The reason and who gave it are kept on the run (`early_reason`, `early_by`) |
+| GET | `/:code/night-audit/undo?to=` | the cancel's dry run: the closed days to choose from, the group's setting, and what going back to `to` (default the latest) undoes, reverses, restores and moves, or the refusal. Owner and Admin (`UNDO_DAY`, `role` view) |
+| POST | `/:code/night-audit/undo` | cancel: `{ backTo, reason }` - `app.undo_night_audits`, all or nothing; 409 with the refusal, nothing written |
+| PUT | `/:code/night-audit/undo-mode` | the group's setting: `any_date` (default) or `one_at_a_time`. Owner and Admin |
+| GET | `/:code/night-audit/undos` | every cancel at the hotel, newest first, with its reason: the screen's Cancelled audits. Reports readers |
+
+10 endpoints. The checklist imports `blockersFor` and `earlyAudit` from
+`nightAudit.ts`, beside it, so what the screen shows and what the run refuses
+are one function; it also answers `calendarDate`, `lastCompletedAt` and
+`early` for the window before Run.
 Server tests: `api/test/modules/night-audit/nightAudit.test.ts` and `corrections.test.ts`;
 `api/test/businessDate.test.ts`, which also closes days, is still in
 `api/test/`.
@@ -124,6 +136,24 @@ migrations that made or changed them:
 |---|---|---|
 | `night_audit_runs` | one row per hotel per day: running, then completed (or failed); `run_by` is who pressed Run (written since 17 September) | created `006_folio.sql` (unique per hotel and date — the safety net against a second run); `014_simulation_fixes.sql` (a completed run must carry its finish; the audit writes `running` first, posts, then completes), `016_audit_coverage.sql` (audited), **`100_closed_day_record_needs_gm.sql`** (a completed run is corrected only by the property's owner or GM, or a group administrator — D17-12) |
 | `closed_day_corrections` | one row per correction of a closed day: the line, old and new figure, reason, who, when. Append-only; written only by the owner, an administrator or the GM there, or a group administrator (`app.corrects_closed_days`) | **`134_closed_day_corrections.sql`** (D22-18); `139_closed_day_other_charges.sql` adds `origin` (D25-10) — also replaces 012's `app.reject_closed_business_date` with one exception: a line may carry a closed date when it names a correction of the same property and day, posted by someone who may correct it |
+| `night_audit_undos` | one row per cancel (D27-390): back to which day, the last day undone, the reason (a mistake), who, when, the setting, each audit as it stood and what was done. Written only by `app.undo_night_audits`; pms_app may read it, never write it | **`255_night_audit_guard_and_undo.sql`** - also `night_audit_runs.early_reason`/`early_by` and status `cancelled`, `group_settings.night_audit_undo`, `app.undoes_night_audits` (owner, Admin, group administrator), and `app.audit_undo_allows`, which five guards ask (forbid_mutation, the cashier shift's, the till day's, the deposit's) so a cancel's own transaction may move a row's business date and nothing else |
+
+**Cancelling (`app.undo_night_audits`, D27-390).** One transaction under the
+run's advisory lock. Refused before any write: not the owner, an Admin or a
+group administrator; no reason; not a closed day; in one-at-a-time, any but
+the latest; a standing GST tax invoice or VAT bill on a later day or on a bill
+a reversed charge sits on; a room line on a later day the audits did not post
+(a check-in, a correction - moving it would change the night it pays for); a
+closed day's correction on a later day; two till day ends or bar closed days
+landing on one day. Then: the runs kept as `cancelled`; every charge they
+posted reversed on its own day by a `night_audit_undo` line; every no-show
+they made (read from the audit log, at the run's own `now()`) confirmed again
+and its room held again where nobody holds it since; and every row of trade
+dated after the chosen day moved back to it (bills, non-room bill lines, POS
+tickets, tender changes, till cash, day ends, desk shifts, deposits, stock
+movements and counts, laundry, the bar's requests and closed days). `CHARGED`
+in `roomNight.ts` leaves a cancelled audit's line and its reversal out, so
+the day's audit, run again, charges the night again.
 
 It writes into other services' tables, directly in SQL: `folio_postings`
 (tonight's room charge per stay, and a retention charge for a no-show whose
@@ -152,9 +182,10 @@ A new migration needs a number claimed in `HANDOVER.md` first; the guard is
 
 ## Front door
 
-On the web, `index.ts` exports nothing yet (`export {};`), and no other
-service imports `@/modules/night-audit` (grep, 15 September). Add an export
-only when another service needs one, and only through this file.
+On the web, `index.ts` exports `CancelAudits` (2 November, D27-390): the
+Admin section's card, shown on a property's page (`admin/pages/Property.tsx`)
+to the owner and an administrator. Add an export only when another service
+needs one, and only through this file.
 
 On the server, `api/src/modules/night-audit/index.ts` exports
 `correctClosedCharge` (29 September, D27-162): the Closed days correction -
@@ -204,6 +235,14 @@ room line by its date and do not move.
   for a person, so it refuses and names the rooms (`nightAudit.ts` header).
 - **A hotel's date moves when its night audit completes, never with the
   clock** (MEMORY 19; 023).
+- **Never a day that has not begun; 16 hours between audits of today's
+  date** (the owner's D27-389, 2 November, after Amrapali closed 1 and 2
+  November one minute apart). The owner or an Admin pass the 16 hours with a
+  reason, the GM is warned and gives one, everybody else waits. The window
+  before Run shows the day, today's date and the last audit, with a tick box.
+- **A cancel is the owner's or an Admin's, from the Admin section, with a
+  reason recorded as a mistake** (D27-390). It goes back to any closed day by
+  default, or one audit at a time by the group's setting.
 - **No default prices; a missing figure is a dash, never a zero.** A run that
   failed before posting anything shows a dash for rooms and revenue, not 0
   (the `runs` endpoint); a no-show is charged only what its booking's terms
