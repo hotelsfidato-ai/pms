@@ -788,6 +788,20 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **2 November, 12:15: THE OWNER'S STEPS FIRST, then release 18 on two helper copies.** Live is still release 16; release
+> 17 waits for a quiet moment. **Amrapali is on 3 Nov:** two audits a minute apart (23:36 and 23:37 on 1 Nov) closed
+> 2 Nov early; nothing was dated 2 or 3 Nov yet. The fix (mark that run `failed` with the reason, plus an audit log row;
+> tested on the local demo and rolled back) is Part 1 of `.local/today-steps-2-nov.md`, the owner's to type.
+> **Shimla's fresh start (D27-388, the owner's own words; it replaces D27-381 for Shimla once; Amrapali stays
+> protected)** is Part 2. It is refused while 2 guests are checked in (S1 marks them out if they are not real), and 35
+> future bookings, all marked Walk-in, go with it. **D27-387 (all recommended):** the speed release; the Google check once
+> a minute; All bookings on the last 90 days and all future. **D27-389, the guard:** never close a date not yet
+> happened; under 16 hours, Owner and Admin continue with a reason, the GM with a warning and a reason, everyone else
+> refused; catching up is allowed; the window has a tick box. **D27-390, cancel and redo, Admin section, Owner and Admin
+> only:** both ways as a setting, default "pick any earlier date" (I warned it undoes several days at once), "one audit
+> at a time" the other; bills on the later days move back, recorded; refused where a GST tax invoice was issued (credit
+> note, CA to confirm). Helpers: the speed release, and the guard plus cancel (migration 255; speed 256 if needed).
+
 > **31 October, evening: THE LOAD TEST IS DONE. Waiting on the owner's yes (D27-387):** a free speed release from what it
 > found, before the approved features: the bell in one pass (same alerts); Housekeeping, Assign room, Walk-ins and
 > Folios reading only what they need; why the Manager report slows; the Google check once a minute per person (their
