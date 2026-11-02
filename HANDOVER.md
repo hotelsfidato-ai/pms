@@ -788,6 +788,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **2 November, 13:40: BOTH OWNER STEPS DONE AND CHECKED (read-only).** Amrapali back on 2 Nov (13:22, the run kept as
+> `failed`, `NIGHT_AUDIT_UNDONE` logged; record `docs/incidents/2026-11-01-amrapali-two-night-audits.md`). Shimla's fresh
+> start at 13:23: on 2 Nov, 0 bookings, bills and audits; 221 removed = the dry run's 207 records + 14 guests; 34 rooms
+> clean, 3 types, 48 dishes, 1 outlet kept; backup 13:22. **Shimla has no room rates (0 rows; Amrapali 7)** and only one
+> staff member linked: neither is from the reset, which touches neither. Told the owner.
+
 > **2 November, 12:15: THE OWNER'S STEPS FIRST, then release 18 on two helper copies.** Live is still release 16; release
 > 17 waits for a quiet moment. **Amrapali is on 3 Nov:** two audits a minute apart (23:36 and 23:37 on 1 Nov) closed
 > 2 Nov early; nothing was dated 2 or 3 Nov yet. The fix (mark that run `failed` with the reason, plus an audit log row;
