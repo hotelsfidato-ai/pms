@@ -29,7 +29,10 @@ describe("a SAC on each invoice line", () => {
       `select r.id::text as stay, h.id::text as hotel, f.id::text as folio
          from reservations r join hotels h on h.id = r.hotel_id join folios f on f.reservation_id = r.id
         where h.code = '5EL' and r.status = 'checked_in'
-          and not exists (select 1 from invoices i where i.folio_id = f.id)
+          /* None of the stay's bills invoiced: an earlier file can leave a
+             stay with two, and the charges below go to postCharge's own. */
+          and not exists (select 1 from invoices i join folios f2 on f2.id = i.folio_id
+                           where f2.reservation_id = r.id)
         limit 1`);
     const stay = rows[0] as { stay: string; hotel: string; folio: string } | undefined;
     expect(stay, "the demo has an in-house stay with no invoice yet").toBeTruthy();
@@ -54,8 +57,13 @@ describe("a SAC on each invoice line", () => {
           "select tax_kind from folio_postings where id = any($1::bigint[]) order by amount",
           [[(bar as { id: string }).id, (food as { id: string }).id]])).rows.map((r) => r.tax_kind);
 
-        const issued = await issueFolioInvoice(client, stay!.hotel, stay!.folio,
+        /* The bill the charges went to, not whichever the select above met
+           first (the release-18 gates, 2 November: it invoiced an empty one). */
+        const folio = (await client.query<{ f: string }>(
+          "select folio_id::text as f from folio_postings where id = $1", [(bar as { id: string }).id])).rows[0]!.f;
+        const issued = await issueFolioInvoice(client, stay!.hotel, folio,
           { name: "SAC Test Guest", gstin: null, address: null });
+        expect(issued, JSON.stringify(issued)).toMatchObject({ ok: true });
         const number = (issued as { number: string }).number;
         const before = (await invoiceFacts(client, stay!.hotel, number)) as Facts;
 

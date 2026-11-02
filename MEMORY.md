@@ -6561,6 +6561,18 @@ copy will see of theirs.**
 
 ---
 
+### 463 · FOUND: a test invoiced whichever bill it met first (2 November)
+
+Release 18's second gate run (88ed7075): 3,043 of 3,044 server tests passed. `finance/invoiceSac.test.ts` invoiced
+the first bill its unordered select met, while `postCharge` put the charges on its own "first" bill. On a stay with
+two bills these can differ. The invoice was refused ("nothing to invoice"), and the test failed on a null with no
+reason. It passed alone and in the run before, because the order of test files and rows moves between runs. Fixed:
+the test invoices the bill its charges went to, picks a stay with no invoiced bill, and prints the refusal reason.
+**The rule:** a test that writes to one row and reads another must name the row it wrote, never "the first". Assert
+the step's own answer before reading what came after it.
+
+---
+
 ### 462 · MINE: a phone-width check measured the desktop layout (2 November)
 
 After `resize_window` to 375 px, New booking's Guest card measured 402 px wide, past the screen, and I nearly
