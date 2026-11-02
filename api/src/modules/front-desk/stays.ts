@@ -341,7 +341,10 @@ stays.get("/:code/stays", async (c) => {
                      and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)
                    group by f.reservation_id
                   having sum(fp.amount + fp.tax_amount) <> 0)`, [hotelId]]
-      : source !== undefined ? [`and app.booking_source_label(bs.name, co.name, r.source) = $2`, [hotelId, source]]
+      /* Walk-ins opens on the last 90 days too (the owner, 2 November): `since=` narrows a source. */
+      : source !== undefined ? since !== undefined
+        ? [`and app.booking_source_label(bs.name, co.name, r.source) = $2 and r.check_out >= $3::date`, [hotelId, source, since]]
+        : [`and app.booking_source_label(bs.name, co.name, r.source) = $2`, [hotelId, source]]
       : q ? [`and (gu.full_name ilike '%' || $2 || '%' or r.reference ilike '%' || $2 || '%'
                   or g.block_code ilike '%' || $2 || '%' or rm.number ilike '%' || $2 || '%'
                   or (length($3) >= 3

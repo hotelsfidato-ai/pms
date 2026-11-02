@@ -48,6 +48,16 @@ describe("the stays by their own question", () => {
     expect(expected.length).toBeLessThan(all.length);
     expect(walkIns.map((s) => s.id).sort()).toEqual(expected);
   });
+
+  it("source=Walk-in with since= keeps only the walk-ins leaving on or after the day", async () => {
+    const walkIns = await get<Stay[]>("/stays?source=Walk-in");
+    const day = [...walkIns].sort((a, b) => a.departure.localeCompare(b.departure))[Math.floor(walkIns.length / 2)]!.departure;
+    const since = await get<Stay[]>(`/stays?source=Walk-in&since=${day}`);
+    const expected = walkIns.filter((s) => s.departure >= day).map((s) => s.id).sort();
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.length).toBeLessThan(walkIns.length);
+    expect(since.map((s) => s.id).sort()).toEqual(expected);
+  });
 });
 
 /* ALL BOOKINGS (the owner's D27-387): it opens on the last 90 days and what is

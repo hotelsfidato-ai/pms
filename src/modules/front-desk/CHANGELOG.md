@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-02 · Walk-ins opens on the last 90 days, like All bookings (the owner, 2 November)
+
+**Asked for.** The owner: "Last 90 days, like All bookings".
+
+**Shipped.** `GET /stays?source=…&since=…` narrows a source to the bookings leaving on or after the day. `pages/WalkIns.tsx` opens on the walk-ins leaving in the last 90 days and everything ahead, with a date box beside the heading for older ones, as All bookings has. The badge says "shown". Manual A1 (Walk-ins) says so; manual rebuilt. Its picture A1-17 was still to be taken.
+
+**Proved.** `api/test/modules/front-desk/staysAskedBy.test.ts`, 7 of 7. The new case fails with the date dropped from the source read (6 passed, 1 failed), then the file was restored and checked identical. Web types clean. The screen is to be opened on the release copy before release 18 is called ready.
+
+---
+
 ## 2026-11-02 · Every list of bookings: the rack price once per room type (D27-387, the load test)
 
 **Found.** `GET /stays`'s `rack` step says "once per room type, not per stay", and the planner folded it into the join and priced it for every booking: 8,672 times and 22 s at a hotel three years in, behind every list of bookings.

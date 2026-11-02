@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { ArrowRight } from "lucide-react";
-import { dateLong } from "@/lib/format";
+import { addDays, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, StatusPill } from "@/components/ui";
+import { Page, PageHeader, StatusPill, Input } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
 import { fetchStaysWhere } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
@@ -25,11 +26,13 @@ export default function WalkInsPage() {
   const params = useParams();
   const fallback = useUi((s) => s.hotelId);
   const hotelId = params.code ?? fallback;
+  /* The last 90 days and everything ahead, as All bookings opens (the owner, 2 November). */
+  const [since, setSince] = useState(() => addDays(BUSINESS_DATE, -90));
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.stays(hotelId, "walk-ins"),
+    queryKey: queryKeys.stays(hotelId, { walkIns: since }),
     queryFn: async () => {
-      const all = await fetchStaysWhere(hotelId, "source=Walk-in");
+      const all = await fetchStaysWhere(hotelId, `source=Walk-in&since=${since}`);
       return all.sort((a, b) => b.arrival.localeCompare(a.arrival));
     },
   });
@@ -40,8 +43,19 @@ export default function WalkInsPage() {
     <Page>
       <PageHeader
         title="Walk-ins"
-        description={`Guests taken at the desk without a booking. ${today} today, ${dateLong(BUSINESS_DATE)}.`}
-        badge={data ? <StatusPill tone="neutral">{data.length} on record</StatusPill> : undefined}
+        description={`Guests taken at the desk without a booking, leaving from ${dateLong(since)} on. ${today} today, ${dateLong(BUSINESS_DATE)}.`}
+        badge={data ? <StatusPill tone="neutral">{data.length} shown</StatusPill> : undefined}
+        actions={
+          <Input
+            type="date"
+            className="w-full sm:w-40"
+            value={since}
+            max={BUSINESS_DATE}
+            onChange={(e) => e.currentTarget.value && setSince(e.currentTarget.value)}
+            aria-label="Walk-ins leaving from"
+            title="Walk-ins leaving from"
+          />
+        }
       />
 
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-lg border border-grey-200 bg-white px-4 py-3.5 mb-5">
