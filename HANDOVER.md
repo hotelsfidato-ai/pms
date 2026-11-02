@@ -788,6 +788,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **2 November, evening: RELEASE 18 IS BUILT AND WAITING FOR THE OWNER (b9e3c374; it carries release 17).** Steps
+> `.local/release-18-steps.md`, A1-A8 plus N1-N3 (the n8n paste for "Corrected"). Keep `.claude/worktrees/release-r18`
+> until the website is published from it; `release-r17` can be recycled once 18 is live, since 17 was never deployed.
+> **Next:** after the owner's A1-A7, check read-only (site `index-CIFswQSG.js`, API, code b9e3c374, migrations 253-256,
+> no API errors). Then, with the owner's yes: the approved features (D27-383) or the safety items that wait on
+> server and cost answers. Still asked: Mathura (HGLM) is on 15 October; is it trading?
+
 > **2 November, afternoon: RELEASE 18 MERGED ON cp6 EXCEPT TWO SMALL ADDS.** Speed (0ce1f897), the Night audit guard and
 > cancel (b167be8e, migration 255), Walk-ins on 90 days (acc9a697). Kept together as one release (the owner). **D27-391,
 > the owner's answers:** Google down: left to me, kept as built (refused after the minute); Walk-ins on 90 days; moved

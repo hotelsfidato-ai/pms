@@ -89,6 +89,35 @@ has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9
 
 ---
 
+## 2026-11-02 · Release 18 (READY at b9e3c374, it carries 17): the Night audit guard, cancel and redo, and the speed
+
+**Asked for:** the owner, 2 November: Shimla reset to start live; a second layer on Run night audit; a 16-hour lock; the
+Owner/Admin able to cancel an audit made by mistake; and the speed release from the load test (D27-387 to D27-391).
+
+**The day's live steps (the owner's, checked read-only):** Amrapali back to 2 November at 13:22 after two audits 13
+seconds apart (`docs/incidents/2026-11-01-amrapali-two-night-audits.md`, MEMORY 460); Shimla's fresh start at 13:23.
+
+**Built, by two helper copies and the main chat, merged on cp6:**
+- Speed (0ce1f897): the bell in one pass; Housekeeping, Assign room, Walk-ins and Folios read only what they show;
+  the Manager report asks the business date once; Google once a minute, keyed per token; All bookings on 90 days;
+  every booking list prices the rack once per room type. At three years: Housekeeping 21.8 s to 0.07 s, All bookings
+  23.3 s to 0.10 s, the Manager report 2.6-3.6 s to 0.9-1.1 s, and at 10 × 95% within 0.29 s where 17 took 9.6 s.
+- The guard and cancel (b167be8e, migration 255): never a day not begun; 16 hours (Owner and Admin with a reason, the
+  GM with a warning and a reason, others refused, catching up allowed); a tick box; cancel and redo in Admin, any
+  earlier day by default or one at a time, charges reversed, no-shows restored, later trade moved back, refused where a
+  tax invoice stands or a later check-in charged a night.
+- Corrected report emails and the Tally warning (812aab9a, migration 256); n8n paste in `.local/n8n/paste-2nov/`.
+- Walk-ins on 90 days (acc9a697), and the housekeeping board's test moved into housekeeping (b9e3c374).
+
+**Proved:** one full gate run on the clean copy `.claude/worktrees/release-r18`, green first time in 44 minutes: web
+1,536, API 3,042, db 1,892, replay 256, PG16, restore 1 42 of 42, to minute. `release.mjs`: a fast-forward from
+312c52e2, website `index-CIFswQSG.js`. Walk-ins and the Night audit opened on the local demo after.
+
+**Steps:** `.local/release-18-steps.md` (A1-A8, and N1-N3 for the n8n paste). A5 at a quiet moment: release 17's
+Form III change can make that screen fail to open for a moment.
+
+---
+
 ## 2026-10-31 · The load test (D27-384): the limit is the hotels' past, not their users
 
 **Asked for:** the owner: "yes start the load test", the first safety item, local and free.
