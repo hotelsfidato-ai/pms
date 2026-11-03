@@ -6561,6 +6561,19 @@ copy will see of theirs.**
 
 ---
 
+### 464 · MINE: my hand undo of Amrapali's audit left the redone day's reports unsent (3 November)
+
+On 2 November my step P3 took back the audit that closed 2 November too early. It set the run to failed and wrote an
+audit-log line. It did not deal with what that audit had already sent: its "2 November" report emails, which went
+to five addresses at 23:37 on 1 November. When the real audit closed 2 November at 00:53 on 3 November, those
+counted as sent, and nothing went. The owner noticed. Release 18's cancel records the undo, so the day's reports go
+again marked Corrected, but a hand step outside it records nothing. Fix: a guarded step writes the undo record from
+the audit log (`.local/amr-2nov-corrected-email.md`). **The rule:** a hand fix to a run must also cover everything
+that run already did or sent, not only its status. Use the system's own undo when there is one; when there is none
+yet, list what the run touched before writing the fix.
+
+---
+
 ### 463 · FOUND: a test invoiced whichever bill it met first (2 November)
 
 Release 18's second gate run (88ed7075): 3,043 of 3,044 server tests passed. `finance/invoiceSac.test.ts` invoiced

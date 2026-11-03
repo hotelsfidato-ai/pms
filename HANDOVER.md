@@ -808,6 +808,16 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **3 November, 18:00: D27-393, SHIMLA STARTS ON 1 NOVEMBER.** The owner asked for a "Data backfill" section so the
+> team can put in 1 and 2 Nov.
+> - Shimla had nothing entered (`owner_reset.counts` tables `{}`, read 17:37; business date 2 Nov, no audits, 0 rates).
+> - So the recommendation, chosen, was the owner's guarded step S6 (`.local/shimla-start-1-nov.md`): first day to
+>   1 Nov, then the team enters each day on the normal screens, and the GM closes it as usual.
+> - S6 is tested locally: the refusal, and the success path on an empty test hotel, rolled back.
+> - **Waiting on:** the owner's S6. Then check read-only that SHI is on 1 Nov. The team must enter nothing before S6.
+> - Also waiting: step R1 (Amrapali's 2 Nov reports, Corrected).
+> - The backfill section is not built (not chosen).
+
 > **3 November, early: RELEASE 18 REBUILT WITH D27-392, at a4527ea5, website `index-BEoAhrU0.js`.**
 > - The owner asked for D27-392 in 18, and nothing of 18 had gone out (GitHub and the server still on 312c52e2).
 > - `release/r18` fast-forwarded. The first full gate run failed one fragile test (finance's `invoiceSac`, MEMORY 463),
