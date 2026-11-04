@@ -89,6 +89,27 @@ has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9
 
 ---
 
+## 2026-11-05 · Release 19 (READY at 7c2401ca): NC bills show their value; no 10% limit on a restaurant discount
+
+**Asked for:** the owner, 4-5 November: Amrapali's NC bill (20261104-34) should show its total "in the bill and the
+software, but not count in the entire sale"; 20% off a bill, and "remove the limit". Then: "prepare release 19".
+
+**Found:** the owner's two 20% discounts were in Settings → Discounts, the ROOM discounts list. The Till reads the
+restaurant's Promotions, and Amrapali had none.
+
+**Built:**
+- D27-394 (e0b78093) and D27-395 (7c2401ca), in the POS CHANGELOG.
+- No migrations.
+- `release/r19` cut at 7c2401ca, with junctions.
+
+**Proved:**
+- One full gate run green first time, in 51 minutes: web 1,540, API 3,044, db 1,892, replay 256, PG16, restore 1,
+  to minute.
+- `release.mjs` ran once. Website `index-huO71TJZ.js`, read from `dist/index.html`; it carries "Bill total".
+- Steps in `.local/release-19-steps.md`.
+
+---
+
 ## 2026-11-03 · Release 18 rebuilt with D27-392, at a4527ea5
 
 **Asked for:** the owner, "add this to release 18 also". Nothing of 18 had gone out: GitHub's main and the server were

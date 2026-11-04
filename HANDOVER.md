@@ -808,6 +808,16 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **5 November, about 02:40: RELEASE 19 READY, the owner's to type.** `release/r19` = **7c2401ca** on release 18
+> (a4527ea5, live), no migrations, website `index-huO71TJZ.js` (read from the copy's `dist/index.html`).
+> - It carries D27-394 (an NC bill's prices and Bill total, its value as NC, never a sale) and D27-395 (no 10% limit
+>   on a restaurant discount by hand; Settings → Room discounts).
+> - One full gate run, green first time, in 51 min: web 1,540, API 3,044, db 1,892, replay, PG16, restore 1, to minute.
+> - Steps: `.local/release-19-steps.md`, with S6 and R1 added to the server part.
+> - **Next:** after A1-A7, check read-only that the site loads `index-huO71TJZ.js`, the server is at 7c2401ca, and
+>   there are no API errors. Recycle `.claude/worktrees/release-r19` once the website is published from it, junctions
+>   out first.
+
 > **5 November, later: D27-395 BUILT ON cp6, for release 19.**
 > - No 10% limit on a restaurant discount by hand: any percentage or amount, with a reason, never more than the bill.
 > - Rooms keep 10%.
