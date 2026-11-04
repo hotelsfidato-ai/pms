@@ -808,6 +808,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **5 November, later: D27-395 BUILT ON cp6, for release 19.**
+> - No 10% limit on a restaurant discount by hand: any percentage or amount, with a reason, never more than the bill.
+> - Rooms keep 10%.
+> - Settings' "Discounts" is now "Room discounts". The owner had added 20% there for the restaurant, and the Till
+>   reads Point of sale → Menu → Promotions instead.
+> - Until 19 is live, a 20% restaurant discount needs a promotion there.
+>
 > **5 November: D27-394 BUILT ON cp6, for release 19.** An NC bill shows its menu prices, a Bill total and "NC - No
 > charge ₹0.00 to pay", with no GST. Its value shows on the Till, the Terminal, Bill history (a new NC value column in
 > Excel), Close restaurant day (NC (not in sales)) and the Night audit screen and report, never in sales or tax. POS

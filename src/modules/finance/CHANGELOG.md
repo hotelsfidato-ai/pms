@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-05 · Settings' "Discounts" is "Room discounts" (the owner's D27-395)
+
+**Shipped.** `money.settings.ts`, `pages/money/Discounts.tsx` and the setup steps say **Room discounts**. The page adds: "The restaurant's discounts are Promotions, in Point of sale → Menu." The owner had added two 20% discounts here for a restaurant bill, and the Till never reads this list. Nothing about room discounts changed (10% by hand, D27-36). The whole entry is in the POS CHANGELOG, as is the restaurant's limit, which is gone.
+
+---
+
 ## 2026-11-02 · The Folios page reads the stays with a balance (D27-387, the load test)
 
 **Shipped.** `data/folios.ts`: `listOpenFolios` reads `/stays?owing=1`, not every booking. By balance, not date, as a guest who has left can still owe. The Calendar still passes its own window.

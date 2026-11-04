@@ -6561,6 +6561,16 @@ copy will see of theirs.**
 
 ---
 
+### 466 · MINE: I committed a test the API's type check refused (5 November)
+
+D27-394's commit (e0b78093) added `bill.net` to `api/test/modules/pos/noCharge.test.ts`. The test's own `Order` type
+had no `net`. Vitest does not type-check, so the run passed. I had run `tsc --noEmit` on the API before that edit
+and not after it. The next change's type check caught it, and it is fixed in D27-395's commit. Release 19's gate
+"api types" would have failed. **The rule:** the type check runs after the LAST edit, tests included, and before the
+commit, every time.
+
+---
+
 ### 465 · FOUND: the virtual printer draws its own copy of every slip (5 November)
 
 For D27-394 I changed `BillSlip.tsx`, the paper every real printing computer prints. The picture run then showed the

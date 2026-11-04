@@ -862,17 +862,13 @@ export function applyDiscount(
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   PROMOTIONS — the answer to "what happens above the cap"
+   PROMOTIONS — the discounts a restaurant gives again and again
 
-   A biller has a free hand up to `freehandCapPercent`. Beyond it there
-   is no bigger box and no approval queue: there is a NAMED promotion,
-   decided once and applied by code.
-
-   The owner put it plainly on 9 September — "anything else needs to be
-   a predefined discount category like a promotion, the staff just add
-   the code and it cuts automatically". A queue would ask somebody to
-   decide the same question again every night; a policy is decided once
-   and counted at month end.
+   A NAMED promotion is decided once and applied by code, so the bill
+   and the month-end report say the same thing. Since D27-395 (the owner,
+   5 November) there is no 10% limit by hand either: the GM, the owner or
+   an Admin may take any amount off, with a reason. (It was a free hand
+   up to 10% and a promotion above it, the owner's rule of 9 September.)
    ══════════════════════════════════════════════════════════════════ */
 
 export interface Promotion {
@@ -889,10 +885,6 @@ export interface Promotion {
 }
 
 export interface PromotionList {
-  /** ⚠ THE CAP COMES FROM THE SERVER. It is one number, defined in 083,
-      and a copy of it in the browser would be a second thing to be
-      wrong — which is the most expensive shape in this codebase. */
-  freehandCapPercent: number;
   promotions: Promotion[];
 }
 

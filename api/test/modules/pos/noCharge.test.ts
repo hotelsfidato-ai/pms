@@ -40,6 +40,8 @@ const call = (who: string, path: string, body?: unknown) =>
 interface Order {
   id: string; orderNo: string; status: string; businessDate: string;
   ncBy: string | null; ncAt: string | null; ncReason: string | null;
+  /** The menu prices before discount and tax: an NC bill's value (D27-394). */
+  net: number;
   lines: { kotStatus: string }[];
 }
 

@@ -3204,24 +3204,15 @@ export async function discountOrder(
           [orderId, value])).rows[0]!.amount
       : value;
 
-    /* ⚠ THE CAP, AND IT IS THE DATABASE'S NUMBER. Read rather than
-       written here, because the till shows the same figure in the
-       discount dialog and a second copy is a second thing to be wrong.
-
-       Checked on the MONEY, not on the percentage, so a fixed amount
-       cannot walk around it: ₹5,000 off a ₹6,000 bill is 83% however
-       it was typed. */
-    const { rows: capRow } = await client.query<{ cap: string }>(
-      "select app.pos_freehand_discount_cap()::text as cap");
-    const cap = Number(capRow[0]!.cap);
-    const ceiling = Number(t[0]!.net) * cap / 100;
-
-    if (Number(amount) > ceiling + 0.005) {
+    /* NO 10% LIMIT ANY MORE (the owner's D27-395, 5 November): the GM, the
+       owner or an Admin take any amount off, always with a reason; a waiter
+       asks the GM. Room discounts keep app.pos_freehand_discount_cap.
+       Never more than the bill: free is No charge (NC), not a discount. */
+    if (Number(amount) > Number(t[0]!.net) + 0.005) {
       return refuse(
-        `A biller may take off up to ${cap}% - ₹${ceiling.toLocaleString(
-          "en-IN", { maximumFractionDigits: 2 })} on this `
-        + "bill. Anything larger goes on as a named promotion, so it is the "
-        + "same concession every time and the month-end report can count it.");
+        `₹${Number(amount).toLocaleString("en-IN", { maximumFractionDigits: 2 })} is more than `
+        + `this bill's ₹${Number(t[0]!.net).toLocaleString("en-IN", { maximumFractionDigits: 2 })}. `
+        + "To give it free, use No charge (NC).");
     }
 
     await client.query(
@@ -3397,11 +3388,7 @@ till.get("/:code/till/promotions", async (c) => {
         order by p.is_active desc, lower(p.code)`,
       [hotelId]);
 
-    const { rows: capRow } = await client.query<{ cap: string }>(
-      "select app.pos_freehand_discount_cap()::text as cap");
-
     return {
-      freehandCapPercent: Number(capRow[0]!.cap),
       promotions: rows.map((r) => ({
         id: r.id, code: r.code, name: r.name,
         kind: r.kind as "percent" | "fixed",

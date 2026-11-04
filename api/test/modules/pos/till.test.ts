@@ -728,51 +728,41 @@ describe("a discount has to say why", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   THE CAP, AND THE PROMOTIONS BEYOND IT
+   A DISCOUNT BY HAND, AND THE PROMOTIONS
 
-   The owner's design, given on 9 September when asked what threshold
-   should send a discount for approval: a biller has a free hand up to
-   10% and everything larger is a NAMED promotion applied by code.
-
-   An approval queue asks somebody to decide the same question again
-   every night. "The owner's guests eat at 50%" is not a decision, it
-   is a policy — decided once, named, and counted at month end.
+   Until 5 November a biller had a free hand up to 10% and anything larger
+   was a named promotion (the owner, 9 September). The owner's D27-395
+   took the limit away in the restaurant: the GM, the owner or an Admin
+   take any amount off, always with a reason, never more than the bill.
+   Promotions stay, for the ones given again and again.
    ══════════════════════════════════════════════════════════════════ */
-describe("the free-hand cap", () => {
-  it("refuses a percentage above the cap, and names the money", async () => {
-    const order = await orderWithTwoRates("cap-percent");
+describe("a discount by hand (D27-395)", () => {
+  it("takes 20% off by hand, with a reason, where it was refused above 10%", async () => {
+    const order = await orderWithTwoRates("hand-20");
     const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
-      { type: "percent", value: 50, reason: "a large one" });
-    expect(res.status).toBe(409);
-    const reason = ((await res.json()) as { reason: string }).reason;
-    expect(reason).toMatch(/up to 10%/);
-    /* The rupees, not only the percentage. A biller reads the amount. */
-    expect(reason).toMatch(/₹/);
-    expect(reason).toMatch(/promotion/i);
+      { type: "percent", value: 20, reason: "Regular guest" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as Order;
+    expect(body.discount).toBeCloseTo(Math.round(body.net * 20) / 100, 2);
   });
 
-  it("refuses a FIXED amount that walks around the cap", async () => {
-    /* ⚠ THE ASSERTION THAT MATTERS. Checking the percentage would leave
-       the whole cap open: 5,000 off a 6,000 bill is 83% however it was
-       typed, and a biller who found that out once would never use the
-       percent button again. The check is on the money. */
-    const order = await orderWithTwoRates("cap-fixed");
+  it("refuses a FIXED amount above the whole bill, and names NC", async () => {
+    const order = await orderWithTwoRates("hand-over");
     const before = (await (await as(
       `/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
-
     const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
-      { type: "fixed", value: Math.ceil(before.net * 0.9),
-        reason: "a large one" });
+      { type: "fixed", value: before.net + 1, reason: "too much" });
     expect(res.status).toBe(409);
-    expect(((await res.json()) as { reason: string }).reason)
-      .toMatch(/up to 10%/);
+    const reason = ((await res.json()) as { reason: string }).reason;
+    expect(reason).toMatch(/is more than this bill's ₹/);
+    expect(reason).toMatch(/No charge \(NC\)/);
   });
 
-  it("allows a discount at the cap exactly", async () => {
-    const order = await orderWithTwoRates("cap-exact");
+  it("still needs a reason", async () => {
+    const order = await orderWithTwoRates("hand-why");
     const res = await post(`/api/hotels/5EL/till/orders/${order.id}/discount`,
-      { type: "percent", value: 10, reason: "complaint" });
-    expect(res.status, await res.clone().text()).toBe(200);
+      { type: "percent", value: 30, reason: "  " });
+    expect(res.status).toBe(409);
   });
 });
 
@@ -808,17 +798,14 @@ describe("promotions", () => {
     } finally { await db.end(); }
   });
 
-  it("sends the cap alongside the list", async () => {
-    /* The discount dialog has to say "up to 10% — 247 on this bill"
-       before a biller types anything. The alternative to sending the
-       cap here is a second copy of 10 in the browser. */
+  it("lists the promotions, and no limit beside them any more (D27-395)", async () => {
     const res = await as("/api/hotels/5EL/till/promotions");
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      freehandCapPercent: number;
+      freehandCapPercent?: number;
       promotions: { code: string; name: string; value: number }[];
     };
-    expect(body.freehandCapPercent).toBe(10);
+    expect(body).not.toHaveProperty("freehandCapPercent");
     expect(body.promotions.some((x) => x.code === "TILLOWN")).toBe(true);
   });
 

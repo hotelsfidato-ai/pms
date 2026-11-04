@@ -34,8 +34,9 @@ export default function DiscountsPage() {
 
   return (
     <Page>
-      <PageHeader title="Discounts"
-        description="Named discounts on rooms for New booking: a percentage or rupees off each night." />
+      {/* D27-395: named "Room discounts" so nobody looks for the restaurant's here. */}
+      <PageHeader title="Room discounts"
+        description="Named discounts on rooms for New booking: a percentage or rupees off each night. The restaurant's discounts are Promotions, in Point of sale → Menu." />
       {!view.data ? <Skeleton className="h-64" /> : (
         <>
           <MoneyList

@@ -9,8 +9,9 @@ export const settingsPages: SettingsPage[] = [
   { group: "money", slug: "extra-charges", label: "Extra charges", icon: ReceiptText, order: 20,
     keywords: ["early check-in fee", "late check-out fee", "inclusions"],
     load: () => import("./pages/money/ExtraCharges") },
-  { group: "money", slug: "discounts", label: "Discounts", icon: BadgePercent, order: 30,
-    keywords: ["promotions", "rupees off"],
+  /* "Room discounts" (D27-395): the restaurant's are Promotions, on its Menu. */
+  { group: "money", slug: "discounts", label: "Room discounts", icon: BadgePercent, order: 30,
+    keywords: ["discounts", "promotions", "rupees off"],
     load: () => import("./pages/money/Discounts") },
   { group: "money", slug: "commission", label: "Commission", icon: HandCoins, order: 40,
     keywords: ["agent", "booking source", "OTA"],

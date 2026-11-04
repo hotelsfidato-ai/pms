@@ -95,7 +95,7 @@ const ROWS: Row[] = [
     why: "New booking offers exactly these, so a charge or discount that is not here cannot be added.",
     screens: [
       { label: "Extra charges", to: "/settings/money/extra-charges" },
-      { label: "Discounts", to: "/settings/money/discounts" },
+      { label: "Room discounts", to: "/settings/money/discounts" },
       { label: "Commission", to: "/settings/money/commission" },
     ] },
   { id: "booking-sources", group: "opening", title: "Booking sources",

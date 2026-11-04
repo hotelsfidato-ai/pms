@@ -157,6 +157,24 @@ describe("the Till - a discount is the GM's (D27-352)", () => {
       vi.restoreAllMocks();
     }
   });
+
+  it("D27-395: the GM takes 20% off by hand, with a reason - no 10% limit", async () => {
+    as("gm");
+    /* The old server sent a 10% cap with the promotions; the Till must not hold to it. */
+    const calls = tillWith(() => open(), {
+      [`POST ${API}/till/orders/o-5/discount`]: () => ({ ok: true, ...open({ discount: 128 }) }),
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Discount" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/^Percent off/), { target: { value: "20" } });
+    fireEvent.change(within(dialog).getByLabelText(/^Why/), { target: { value: "Regular guest" } });
+    expect(within(dialog).getByText(/Takes/).textContent).toMatch(/₹128/);
+    const apply = within(dialog).getByRole("button", { name: "Apply" }) as HTMLButtonElement;
+    expect(apply.disabled, "20% is allowed by hand").toBe(false);
+    fireEvent.click(apply);
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/discount")))
+      .toMatchObject({ method: "POST", body: { type: "percent", value: 20, reason: "Regular guest" } }));
+  });
 });
 
 describe("the printed NC bill (D27-394)", () => {

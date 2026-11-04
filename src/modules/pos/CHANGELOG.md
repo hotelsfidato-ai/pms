@@ -11,6 +11,29 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-05 · No 10% limit on a restaurant discount by hand; Settings' "Discounts" is "Room discounts" (the owner's D27-395)
+
+**Asked for.** The owner wanted 20% off a bill, and to "remove the limit". They had added two 20% discounts in Settings → Discounts, but the Till's Discount didn't show them. **Found:** that page is the ROOM discounts list (`room_promotions`, New booking). The Till reads the restaurant's Promotions (Point of sale → Menu), and Amrapali had none. The owner chose: no limit, any percentage or amount with a reason; restaurant only; and rename the Settings page.
+
+**Shipped.**
+- `api/src/modules/pos/till.ts` `discountOrder`: the 10% check is gone. It refuses only more than the bill: "₹… is more than this bill's ₹…. To give it free, use No charge (NC)."
+- The promotions answer no longer sends `freehandCapPercent`.
+- Room discounts keep `app.pos_freehand_discount_cap()` (book.ts), unchanged.
+- `pages/Till.tsx` discount window: no limit line. It reads "Any percentage or amount, up to the bill's ₹…", and Apply is held only over the bill. Promotions still come first.
+- `pages/Menu.tsx` Promotions card: new words. `lib/permissions.ts`: the waiter's description says they ask the GM for a discount or NC, which they have since D27-352.
+- Finance's Settings page is **Room discounts** in the menu, its heading and the setup steps. It adds: "The restaurant's discounts are Promotions, in Point of sale → Menu."
+- Manual: A8's Discount row, A17's Room discounts (picture A17-26 retaken), B3 and B6's discount lines. Built.
+
+**Proved.**
+- The screen's new test: the GM's 20% by hand is sent. Against the previous `Till.tsx` it fails ("20% is allowed by hand").
+- The API's `till.test.ts` rewritten: 20% by hand is taken, more than the bill is refused naming NC, no limit is sent. All three fail against the previous `till.ts`.
+- `till`, `sentToTheGm` and `noCharge` pass 98/98. The screens' `pos`, `finance`, `admin`, `components/app` and `lib` pass 714/714.
+- Both type checks are clean.
+
+**Left open.** Amrapali's two 20% room discounts ("Customer", "awd") stay as the owner made them.
+
+---
+
 ## 2026-11-05 · An NC bill shows what it was worth, and stays out of sales (the owner's D27-394)
 
 **Asked for.** Amrapali's message, sent on by the owner: an NC bill's "total billing amount must reflect in the bill and the software, but should not count in the entire sale". The owner chose, as recommended:

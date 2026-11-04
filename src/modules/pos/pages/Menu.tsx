@@ -251,7 +251,8 @@ export default function MenuPage() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   PROMOTIONS — the named discounts, and the line a biller may not cross
+   PROMOTIONS — the named discounts (the 10% line by hand is gone since
+   the owner's D27-395, 5 November; the history below stands)
 
    ⚠ WHAT THIS REPLACED. The plan was an approval queue: a discount over
    some threshold would wait for the GM to decide. Asked what the
@@ -286,7 +287,6 @@ function Promotions({ hotelId }: { hotelId: string }) {
     void qc.invalidateQueries({ queryKey: ["promotions"] });
   };
 
-  const cap = q.data?.freehandCapPercent ?? null;
   const list = q.data?.promotions ?? [];
 
   return (
@@ -304,13 +304,13 @@ function Promotions({ hotelId }: { hotelId: string }) {
           <div className="flex items-start gap-3">
             <TicketPercent className="size-4 text-grey-400 shrink-0 mt-0.5" />
             <p className="text-sm text-grey-600 leading-relaxed">
-              {/* The cap is the server's number and is shown, not
-                  restated. A copy of "10" in this file would be a
-                  second thing to be wrong. */}
-              A biller may take {cap === null ? "a limited amount" : `up to ${cap}%`}
-              {" "}off a bill by hand. Anything larger is one of these, applied
-              by code - so it is the same concession every time, and the
-              month-end report can count what it cost.
+              {/* D27-395: no limit by hand any more; a promotion is for the
+                  ones given again and again. */}
+              The discounts this restaurant gives again and again, each by name.
+              On the Till's Discount they come first, so it is the same
+              concession every time and the month-end report counts what it
+              cost. The GM, the owner or an Admin can also type any amount off
+              by hand, with a reason.
             </p>
           </div>
 
@@ -336,8 +336,7 @@ function Promotions({ hotelId }: { hotelId: string }) {
             )
           ) : list.length === 0 ? (
             <p className="text-sm text-grey-500">
-              None set up. Until there is one, a discount above the cap is
-              refused at the till.
+              None set up. Discounts can still be typed by hand on the Till.
             </p>
           ) : (
             <ul className="divide-y divide-grey-100">

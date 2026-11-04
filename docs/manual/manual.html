@@ -5192,7 +5192,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>×</td><td>Strike the line. It stays on the record, struck through.</td></tr>
       <tr><td>Send to the kitchen</td><td>Sends every dish not yet sent, as Send does on the pad.</td></tr>
       <tr><td>KOTs sent: Reprint</td><td>At the foot of an open order: prints that KOT again at the computer that printed it, marked REPRINT (A8.4).</td></tr>
-      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason. Up to 10% freely; more is a named promotion. A waiter, the bar and the cashier do not see it.</td></tr>
+      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason, up to the whole bill: no 10% limit since <span class="d">D27-395</span>. A promotion (Point of sale → Menu → Promotions) is the one the restaurant gives again and again, by name, at the top of the window. A waiter, the bar and the cashier do not see it: they <b>Ask for a discount</b>, and the GM approves.</td></tr>
       <tr><td>Round off</td><td>Rounds the total to the rupee. <span class="ui">Undo round off</span> takes it back.</td></tr>
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
       <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
@@ -10035,7 +10035,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
       <tr><td>Rooms</td><td><span class="ui">Room types</span></td><td>A17.5</td></tr>
       <tr><td>Rates and tax</td><td><span class="ui">Rates</span> ↗ (A15), <span class="ui">Rate plans</span>, <span class="ui">Meal plans</span>, <span class="ui">Taxes</span></td><td>A17.6, A17.7</td></tr>
-      <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
+      <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Room discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
       <tr><td>Lists</td><td><span class="ui">Booking sources</span> ↗ (A2), <span class="ui">Market segments</span>, <span class="ui">Reservation types</span>, <span class="ui">Ready reasons</span>, <span class="ui">Holidays</span>, <span class="ui">ID types</span>, <span class="ui">VIP levels</span></td><td>A17.10</td></tr>
       <tr><td>Front desk</td><td><span class="ui">Times and rules</span>, <span class="ui">Front desk rules</span></td><td>A17.11</td></tr>
       <tr><td>Messages</td><td><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗, <span class="ui">Online check-in</span> ↗ (A10), <span class="ui">Guest messages on/off</span>, <span class="ui">Daily report emails</span></td><td>A17.12</td></tr>
@@ -10720,8 +10720,8 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
-  <h3>Discounts</h3>
-  <p>Named discounts on rooms for New booking: a percentage or rupees off each night. <b>By hand the desk may give up to 10% of a night, with a reason. A bigger discount is given only by picking one of these.</b></p>
+  <h3>Room discounts</h3>
+  <p>Named discounts on rooms for New booking: a percentage or rupees off each night. <b>By hand the desk may give up to 10% of a night, with a reason. A bigger discount is given only by picking one of these.</b> They are for rooms only: <b>the restaurant's discounts are Promotions, in Point of sale → Menu</b> (A8), and a restaurant bill can also be discounted by hand by any amount, with a reason. The page was called Discounts until <span class="d">D27-395</span>.</p>
   <figure class="shot" id="fig-A17-26">
     <img src="img/A17-26.png" alt="Add a discount: Name Long stay, % chosen, Percent off each night 15, and Save">
     <figcaption><b>Figure A17-26.</b> A named discount, before Save (not saved).</figcaption>
@@ -11828,7 +11828,7 @@ figure.shot.phone img { max-width: 72mm; }
   <!-- B3.7 -->
   <h2 id="b3-7"><span class="n">B3.7</span>Discounts, promotions and complimentary</h2>
   <ul>
-    <li><b>One rule for rooms and the restaurant</b>: up to 10% by hand, always with a reason; more only by a named promotion <span class="d">D27-36</span>. On a room it is rupees off each night, or a percentage <span class="d">D27-259</span>. A typed room rate is not a discount and stays as it is <span class="d">D27-62</span>.</li>
+    <li><b>Rooms</b>: up to 10% by hand, always with a reason; more only by a named discount (Settings → Room discounts) <span class="d">D27-36</span>. <b>The restaurant</b>: any amount by hand, with a reason, since <span class="d">D27-395</span>. On a room it is rupees off each night, or a percentage <span class="d">D27-259</span>. A typed room rate is not a discount and stays as it is <span class="d">D27-62</span>.</li>
     <li><b>Promotions start empty</b>; the hotel names its own <span class="d">D27-57</span>.</li>
     <li><b>Complimentary</b>: ticked by the owner, an Admin or the GM only <span class="d">D27-59</span>. A complimentary room counts as sold on every report, as eZee counted it <span class="d">D17-72</span>.</li>
     <li><b>Loyalty points</b>, where the hotel has loyalty on, come off the member's own room charges as a discount line; the earn rate is a setting with no default <span class="d">D27-179</span>.</li>
@@ -12351,7 +12351,7 @@ figure.shot.phone img { max-width: 72mm; }
           <li><b>New booking takes every field of your Add Reservation screenshot</b>, in this system's layout (<span class="d">D27-33</span>).</li>
           <li><b>Overbooking</b>: a machine (a booking site, the CRS) is never allowed to (<span class="d">D17-43</span>, <span class="d">D17-80</span>); the desk may, unless the hotel switches that off (<span class="d">D27-243</span>; B7.1).</li>
           <li><b>"Rate includes GST"</b> is a tick per room line, off by default, and also covers the list price (<span class="d">D27-187</span>, <span class="d">D27-199</span>); a contract's rate is always before GST (<span class="d">D27-233</span>).</li>
-          <li><b>Discounts</b>: up to 10% by hand with a reason, more only by a named promotion, as in the restaurant (<span class="d">D27-36</span>, <span class="d">D27-62</span>); a ₹ discount comes off each night (<span class="d">D27-259</span>).</li>
+          <li><b>Discounts</b>: up to 10% by hand with a reason, more only by a named room discount (<span class="d">D27-36</span>, <span class="d">D27-62</span>; the restaurant has no limit since <span class="d">D27-395</span>); a ₹ discount comes off each night (<span class="d">D27-259</span>).</li>
           <li><b>A waiting booking</b> (from the CRS) is confirmed with one button, or cancelled directly with a reason and no charge, freeing the room at once (<span class="d">D27-60</span>, <span class="d">D27-64</span>, <span class="d">D27-69</span>, <span class="d">D27-71</span>).</li>
           <li><b>A day use</b> is booked from New booking with its price typed every time; nothing is filled in for it (<span class="d">D27-227</span>, <span class="d">D27-229</span>).</li>
           <li><b>A booking reference's month</b> is the hotel's business date, not the wall clock (<span class="d">D27-123</span>); who made each booking is recorded (<span class="d">D27-239</span>).</li>

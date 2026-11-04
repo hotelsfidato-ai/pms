@@ -86,7 +86,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   housekeeping: "Room status, task queue, offline sync. One property.",
   kitchen_manager: "The pass and the menu. Sees what the kitchen owes and when.",
   chef: "The pass. Moves dishes along; changes nothing about money.",
-  pos: "Takes orders and sends KOTs, prints bills, takes payment, discounts up to 10% with a reason, closes the restaurant day.",
+  pos: "Takes orders and sends KOTs, prints bills, takes payment, asks the GM for a discount or NC, closes the restaurant day.",
   bar: "The waiter's rights on the bar's menu sections only. Its KOTs print at the bar.",
   stores: "Stock and equipment. Approves equipment leaving the store; raises purchases.",
   finance: "Folios, invoices, payments, city ledger, reports.",
