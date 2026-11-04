@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-05 · An NC bill shows what it was worth, and stays out of sales (the owner's D27-394)
+
+**Asked for.** Amrapali's message, sent on by the owner: an NC bill's "total billing amount must reflect in the bill and the software, but should not count in the entire sale". The owner chose, as recommended:
+- the value shows on the screens and in the reports, never in sales;
+- it is the menu price;
+- the printed total has no GST.
+
+This changes D27-351/D27-365 (4), which printed no prices and showed no value.
+
+**Shipped.**
+- `components/BillSlip.tsx`, the paper every printing computer, Print here and Bill history draw: an NC bill keeps Rate and Amount, then **Bill total** (`net`, before discount and tax), then **NC - No charge ₹0.00 to pay**, with no tax lines.
+- **The Till and the Terminal:**
+  - each line's price;
+  - Bill total, then "NC · No charge ₹0 to pay";
+  - the bill list says "NC ₹…";
+  - the confirmation and "send to the GM" wording describe the new paper.
+- **Bill history:** "NC ₹…" in Total. The Excel file has a new **NC value** column, and Total stays blank for NC, so a sum of Total is still only what was paid.
+- **Close restaurant day:** each NC bill's value and a last line **NC (not in sales)**. The Complimentary tile now reads "NC bills, ₹… not in sales".
+- **The Night audit:** the screen shows "(₹…, not in sales)". The report's **POS Bills No Charge (NC)** section has a **Value (not in sales)** column and a total, so the daily email PDF shows it too.
+- **Server:** `noChargeBills` and both bill lists send `net` / `value` from `app.pos_order_total`, the same arithmetic as every bill. No sales, tax or money figure reads it.
+- **The virtual printer** (`.local/virtual-printer/printer.mjs`, local testing only) draws its own copy of each slip. Its NC paper is changed to match, or the manual's picture would have shown the old slip.
+- **Manual:** A8.8's NC paragraph, the "No charge (NC)" row and D27-394 in the decisions; A11's Tally row. Pictures A8-37, A8-38, A8-39 and A8-46 retaken. Built.
+
+**Proved.**
+- `noCharge.test.tsx` and `billHistory.test.tsx` were changed to the new rule, and all of `src/modules/pos`, `night-audit` and `reports` pass: 265 tests.
+- The API's `noCharge.test.ts` now checks the value in the bill list, Close restaurant day and the report's section and total, and still that sales do not move.
+- Fail-first: the value set to 0 on the server, and the Bill total on the paper set to 0, each fail their test; both restored with `cmp`.
+- `tsc -b` and the API's `tsc --noEmit` are clean.
+- On the local demo, as the GM, through the picture run: the Till showed Dal Tadka ₹260, Butter Roti ₹40, Bill total ₹300, ₹0 to pay; the bill printer printed the same; Bill history showed NC ₹300.00.
+
+**Left open.** The daily report email's key figures don't name NC; it is in the attached PDF.
+
+---
+
 ## 2026-10-29 · A dish's MRP, for NC bills in the stock (D27-351, D27-373)
 
 **Asked for** The owner: NC has no value anywhere; "the stock will show it at MRP, which the GM sets up", typed per dish in the Menu, empty a dash.

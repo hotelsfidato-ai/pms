@@ -6561,6 +6561,17 @@ copy will see of theirs.**
 
 ---
 
+### 465 · FOUND: the virtual printer draws its own copy of every slip (5 November)
+
+For D27-394 I changed `BillSlip.tsx`, the paper every real printing computer prints. The picture run then showed the
+NC slip still with no prices. The manual's bill printer is `.local/virtual-printer/printer.mjs`, a local stand-in,
+and it renders each bill and KOT from the job's data with its own `billPaper`. The real paper was right; only the
+stand-in was stale. A picture of it would have shown the owner a slip that no longer exists. **The rule:** a change
+to a printed slip changes the virtual printer's copy in the same change, and the picture is read back before it goes
+in the book.
+
+---
+
 ### 464 · MINE: my hand undo of Amrapali's audit left the redone day's reports unsent (3 November)
 
 On 2 November my step P3 took back the audit that closed 2 November too early. It set the run to failed and wrote an

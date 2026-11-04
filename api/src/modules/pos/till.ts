@@ -2052,12 +2052,14 @@ till.get("/:code/till/orders", async (c) => {
        filtering it out by date is how it stays lost. */
     const { rows } = await client.query<{
       id: string; order_no: string; outlet: string; table_ref: string | null;
-      status: string; business_date: string; gross: string;
+      status: string; business_date: string; gross: string; net: string;
       payment_method: string | null; opened_at: string; lines: string;
     }>(
       `select o.id::text, o.order_no, ou.code as outlet, o.table_ref,
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
+              /* An NC bill's value (D27-394): the menu prices, never a sale. */
+              (select net from app.pos_order_total(o.id))::text as net,
               o.payment_method,
               app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
@@ -2081,6 +2083,7 @@ till.get("/:code/till/orders", async (c) => {
         status: r.status,
         businessDate: r.business_date,
         gross: Number(r.gross),
+        net: Number(r.net),
         paymentMethod: r.payment_method,
         openedAt: r.opened_at,
         lines: Number(r.lines),
@@ -2165,7 +2168,7 @@ till.get("/:code/till/bills", async (c) => {
     }
     const { rows } = await client.query<{
       id: string; order_no: string; outlet: string; table_ref: string | null;
-      status: string; business_date: string; gross: string; payable: string;
+      status: string; business_date: string; gross: string; payable: string; net: string;
       payment_method: string | null; modes: string[]; opened_at: string; lines: string;
       waiter: string | null; customer_name: string | null; customer_phone: string | null;
       settled_at: string | null; stay_guest: string | null; stay_room: string | null;
@@ -2174,6 +2177,7 @@ till.get("/:code/till/bills", async (c) => {
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               (select payable from app.pos_order_total(o.id))::text as payable,
+              (select net from app.pos_order_total(o.id))::text as net,
               o.payment_method,
               array(select distinct t.method from pos_order_tenders t
                      where t.order_id = o.id order by t.method)::text[] as modes,
@@ -2224,6 +2228,7 @@ till.get("/:code/till/bills", async (c) => {
       bills: rows.slice(0, cap).map((r) => ({
         id: r.id, orderNo: r.order_no, outlet: r.outlet, table: r.table_ref, status: r.status,
         businessDate: r.business_date, gross: Number(r.gross), payable: Number(r.payable),
+        net: Number(r.net),
         paymentMethod: r.payment_method,
         modes: r.modes.length ? r.modes : r.payment_method ? [r.payment_method] : [],
         openedAt: r.opened_at, lines: Number(r.lines),
@@ -3018,9 +3023,10 @@ export async function noChargeBills(
 ) {
   const { rows } = await client.query<{
     order_no: string; table_ref: string | null; outlet: string; reason: string;
-    by: string | null; at: string;
+    by: string | null; at: string; value: string;
   }>(
     `select o.order_no, o.table_ref, ou.name as outlet, o.nc_reason as reason,
+            (select net from app.pos_order_total(o.id))::text as value,
             coalesce(s.full_name, hp.full_name) as by,
             to_char(o.nc_at at time zone h.timezone, 'HH24:MI') as at
        from pos_orders o
@@ -3036,6 +3042,8 @@ export async function noChargeBills(
   return rows.map((r) => ({
     orderNo: r.order_no, table: r.table_ref, outlet: r.outlet, reason: r.reason,
     by: r.by, at: r.at,
+    /* Its value at menu prices (D27-394): shown as NC, never in sales or tax. */
+    value: Number(r.value),
   }));
 }
 

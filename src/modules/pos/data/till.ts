@@ -392,6 +392,8 @@ export interface OrderSummary {
   status: string;
   businessDate: string;
   gross: number;
+  /** The menu prices before discount and tax: an NC bill's value (D27-394). */
+  net: number;
   paymentMethod: string | null;
   openedAt: string;
   lines: number;
@@ -658,7 +660,8 @@ export interface StruckDish {
   at: string;
 }
 
-/** A bill given free, NC, that day (D27-351): who, when and why - no value. */
+/** A bill given free, NC, that day (D27-351): who, when, why, and its value
+    at menu prices, never a sale (D27-394). */
 export interface NoChargeBill {
   orderNo: string;
   table: string | null;
@@ -667,6 +670,7 @@ export interface NoChargeBill {
   /** null: a name the reader may not see (the owner's, to a GM; D27-9). */
   by: string | null;
   at: string;
+  value: number;
 }
 
 /** A paid bill voided that day (D27-324): who, when, why and how much. */
@@ -1989,8 +1993,8 @@ export interface DayEnd {
       `summary`; their cash went back out of the tin (D27-327), so it is
       not in `cash.expected` either. */
   voided?: VoidedBill[];
-  /** Bills given free, NC, that day (D27-351): no value, left out of every
-      figure in `summary`. */
+  /** Bills given free, NC, that day (D27-351): left out of every figure in
+      `summary`; each with its value at menu prices (D27-394). */
   noCharge?: NoChargeBill[];
   /** Paid bills whose payment mode was changed (D27-363); afterDayEnd: after the drawer was counted. */
   modeChanges?: { orderNo: string; table: string | null; from: string; to: string; amount: number;

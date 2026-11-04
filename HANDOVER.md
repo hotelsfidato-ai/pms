@@ -808,6 +808,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **5 November: D27-394 BUILT ON cp6, for release 19.** An NC bill shows its menu prices, a Bill total and "NC - No
+> charge ₹0.00 to pay", with no GST. Its value shows on the Till, the Terminal, Bill history (a new NC value column in
+> Excel), Close restaurant day (NC (not in sales)) and the Night audit screen and report, never in sales or tax. POS
+> CHANGELOG has the proof. The owner was also told how to give 20% today: Point of sale → Menu → Promotions → Add a
+> promotion; the Till's Discount then lists it (a hand discount stops at 10%). **Still waiting on the owner:** S6
+> (Shimla's first day to 1 Nov) and R1 (Amrapali's 2 Nov reports, Corrected).
+
 > **3 November, 18:00: D27-393, SHIMLA STARTS ON 1 NOVEMBER.** The owner asked for a "Data backfill" section so the
 > team can put in 1 and 2 Nov.
 > - Shimla had nothing entered (`owner_reset.counts` tables `{}`, read 17:37; business date 2 Nov, no audits, 0 rates).

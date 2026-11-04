@@ -412,7 +412,8 @@ export const SHOTS = [
   },
 
   /* ── NC, a bill given free (the owner's D27-351): the GM gives an open
-     bill no charge with a reason; it prints at once, no prices. ── */
+     bill no charge with a reason; it prints at once, with its prices and
+     Bill total and nothing to pay (D27-394). ── */
   { id: "A8-37a", title: "An order on N5 for the NC pictures", as: "General Manager", noShot: true,
     path: "/pos/5EL/tables",
     steps: [
@@ -443,15 +444,16 @@ export const SHOTS = [
     ],
     marks: [
       { n: 1, at: "text:Approved by", side: "left" },
-      { n: 2, at: "text:NC · No charge", side: "left", nth: 0 },
+      { n: 2, at: "text:Bill total", side: "left", nth: 0 },
     ],
   },
   {
-    id: "A8-39", title: "The NC bill on the bill printer: no prices", path: PRINTERS,
+    id: "A8-39", title: "The NC bill on the bill printer: its prices and Bill total, nothing to pay", path: PRINTERS,
     steps: [{ waitFor: "text:NC · NO CHARGE", ms: 20000 }, { wait: 2500 }],
     marks: [
       { n: 1, at: "css:.printer:nth-of-type(2) .slip .head", side: "left" },
-      { n: 2, at: "text:Approved by", side: "left", nth: 0 },
+      { n: 2, at: "text:Bill total", side: "left", nth: 0 },
+      { n: 3, at: "text:Approved by", side: "left", nth: 0 },
     ],
   },
 

@@ -5197,7 +5197,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
       <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
       <tr><td>Part - pay two ways</td><td>Split the payment: each way with its amount. For cash, type the <span class="ui">Cash given</span> and the change is shown. <span class="ui">Settle</span> appears only when the parts add up.</td></tr>
-      <tr><td>No charge (NC)</td><td>The owner, an Admin or the GM only: the bill is given free, with a reason, and prints at once with the dishes and no prices (below; <span class="d">D27-351</span>).</td></tr>
+      <tr><td>No charge (NC)</td><td>The owner, an Admin or the GM only: the bill is given free, with a reason, and prints at once with the dishes, their prices and the Bill total, and nothing to pay (below; <span class="d">D27-351</span>, <span class="d">D27-394</span>).</td></tr>
       <tr><td>Close unpaid</td><td>Closes the bill without payment. It always asks why. The table then reads “Closed unpaid - clear it”.</td></tr>
     </tbody>
   </table>
@@ -5303,18 +5303,18 @@ figure.shot.phone img { max-width: 72mm; }
     <ol class="callouts"><li>Why it is free: it prints on the bill</li><li>Give NC</li></ol>
   </figure>
 
-  <p>The bill reads <b>NC · No charge</b> in place of a total, with the reason, who approved it and when; on the screen, as on paper, each dish shows how many and no price. The paper lists the dishes and how many, with no prices, no tax and no total, headed <b>NC · No charge</b>. The kitchen's KOTs stay as they were: the food was made. An NC bill is no sale and carries no value: the day's sales, the tax and the reports leave it out. Only the stock counts it: the Consumption report lists its dishes as given away, each at its MRP from the Menu (A8.11, A11.9). <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">No charge (NC)</span>, with who approved it, when and why, and Close restaurant day's <span class="ui">Complimentary</span> tile counts the NC bills. Its table is freed at once.</p>
+  <p>The bill keeps every dish with its price and amount, and shows the <b>Bill total</b> at menu prices, then <b>NC · No charge: ₹0 to pay</b>, with the reason, who approved it and when. The paper is the same, headed <b>NC · No charge</b>, and has no tax lines: nothing was sold, so nothing was taxed. The kitchen's KOTs stay as they were: the food was made. <b>An NC bill is no sale.</b> Its value is shown, but always on its own as NC, never in the day's sales, the tax or the money taken. The stock counts it too: the Consumption report lists its dishes as given away, each at its MRP from the Menu (A8.11, A11.9). <span class="ui">Close restaurant day</span> lists each NC bill under <span class="ui">No charge (NC)</span>: who approved it, when and why, and its value. A last line, <span class="ui">NC (not in sales)</span>, gives the day's total. The <span class="ui">Complimentary</span> tile counts the NC bills and gives that value. The Night audit screen and its report list them the same way, with a <span class="ui">Value (not in sales)</span> column and a total, and <span class="ui">Bill history</span> shows <b>NC ₹…</b> for each. Its table is freed at once.</p>
 
   <figure class="shot" id="fig-A8-38">
-    <img src="img/A8-38.png" alt="The NC bill on the Till: each dish with how many and no price, Total NC · No charge, the reason and Approved by Test GM, and Print the bill">
+    <img src="img/A8-38.png" alt="The NC bill on the Till: each dish with its price, Bill total, NC · No charge ₹0 to pay, the reason and Approved by Test GM, and Print the bill">
     <figcaption><b>Figure A8-38.</b> Given NC.</figcaption>
-    <ol class="callouts"><li>The reason, who approved it and when</li><li>No total: NC</li></ol>
+    <ol class="callouts"><li>The reason, who approved it and when</li><li>The Bill total at menu prices, and nothing to pay</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A8-39">
-    <img src="img/A8-39.png" alt="The NC bill printed on the bill printer: NC · NO CHARGE, the dishes with their quantities and no prices, the reason and Approved by">
-    <figcaption><b>Figure A8-39.</b> The NC bill on paper: no prices.</figcaption>
-    <ol class="callouts"><li>NC · No charge at its head</li><li>Who approved it, and when</li></ol>
+    <img src="img/A8-39.png" alt="The NC bill printed on the bill printer: NC · NO CHARGE, the dishes with their prices, Bill total, NC - No charge ₹0.00 to pay, the reason and Approved by">
+    <figcaption><b>Figure A8-39.</b> The NC bill on paper: its prices and Bill total, nothing to pay.</figcaption>
+    <ol class="callouts"><li>NC · No charge at its head</li><li>The Bill total, then ₹0.00 to pay; no tax</li><li>Who approved it, and when</li></ol>
   </figure>
 
   <h3>Sent to the GM: what a waiter or cashier may not do</h3>
@@ -5376,7 +5376,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. An NC bill's screen without prices, and Complimentary counting the NC bills: <span class="d">D27-365</span>. The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason: <span class="d">D27-351</span>. Its prices and Bill total on the screen and the paper, ₹0 to pay and no tax lines, its value at menu prices shown as NC everywhere and never in sales, tax or the money taken: <span class="d">D27-394</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. Complimentary counting the NC bills: <span class="d">D27-365</span> (its screen without prices, until <span class="d">D27-394</span>). The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>.</p>
   </div>
 
   <!-- A8.8 -->
@@ -7945,7 +7945,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>A company's payment</td><td>A <b>Receipt</b> voucher of its own, with the company and the reference in its narration</td></tr>
       <tr><td>The owner's allowance, its free part</td><td>The Sales voucher, on Owner's allowance: it is a sale, with its GST</td></tr>
       <tr><td>A reversed charge, a struck line</td><td>In no voucher: the day book does not count them</td></tr>
-      <tr><td>An NC bill, a voided bill</td><td>In no voucher: they have no value</td></tr>
+      <tr><td>An NC bill, a voided bill</td><td>In no voucher: neither is a sale (an NC bill's value is shown only as NC, <span class="d">D27-394</span>)</td></tr>
     </tbody>
   </table>
 

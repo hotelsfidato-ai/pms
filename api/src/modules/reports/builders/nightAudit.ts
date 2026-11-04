@@ -624,18 +624,24 @@ export async function nightAuditReport(
         by: v.by, at: v.at, reason: v.reason, reference: v.reference,
       })),
       empty: "No restaurant bill was voided on this day." },
-    /* D27-351: a bill given free, out of every figure above and with no
-       value of its own (the owner); here, who gave it, when and why. */
+    /* D27-351: a bill given free, out of every figure above; here, who gave
+       it, when and why, and its value at menu prices (D27-394) - never in
+       sales, tax or the money taken. */
     { key: "pos-no-charge", title: "POS Bills No Charge (NC)",
       columns: [
         col("orderNo", "Bill", "text"), col("outlet", "Outlet", "text"),
         col("table", "Table", "text"), col("by", "Given By", "text"),
         col("at", "At", "text"), col("reason", "Reason", "text"),
+        col("value", "Value (not in sales)", "money"),
       ],
-      rows: noCharge.map((v) => row({
-        orderNo: v.orderNo, outlet: v.outlet, table: v.table, by: v.by, at: v.at,
-        reason: v.reason,
-      })),
+      rows: noCharge.length === 0 ? [] : [
+        ...noCharge.map((v) => row({
+          orderNo: v.orderNo, outlet: v.outlet, table: v.table, by: v.by, at: v.at,
+          reason: v.reason, value: v.value,
+        })),
+        total({ orderNo: "Total", outlet: null, table: null, by: null, at: null, reason: null,
+                value: round2(noCharge.reduce((t, v) => t + v.value, 0)) }),
+      ],
       empty: "No restaurant bill was given free on this day." },
   ];
 

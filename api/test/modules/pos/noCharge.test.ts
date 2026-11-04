@@ -147,18 +147,32 @@ describe("NC: a restaurant bill given free", () => {
     expect(print.status, await print.clone().text()).toBe(200);
     expect(((await print.json()) as { heading: string }).heading).toBe("nc");
 
+    /* D27-394: its value is the menu prices before tax - shown as NC, never a sale. */
+    expect(bill.net).toBeGreaterThan(0);
     const earlier = (await (await call(gm, `/till/bills?date=${bill.businessDate}`)).json()) as {
-      bills: { orderNo: string; status: string }[];
+      bills: { orderNo: string; status: string; net: number }[];
     };
-    expect(earlier.bills.find((b) => b.orderNo === bill.orderNo)?.status).toBe("no_charge");
+    expect(earlier.bills.find((b) => b.orderNo === bill.orderNo))
+      .toMatchObject({ status: "no_charge", net: bill.net });
 
     const day = (await (await call(gm, "/till/day-end")).json()) as {
       noCharge: Record<string, unknown>[];
     };
     const line = day.noCharge.find((v) => v.orderNo === bill.orderNo);
-    expect(line).toMatchObject({ table: `${TAG} report`, reason: "Staff meal" });
+    expect(line).toMatchObject({ table: `${TAG} report`, reason: "Staff meal", value: bill.net });
     expect(line!.at).toMatch(/^\d{2}:\d{2}$/);
-    expect(Object.keys(line!), "no value on it").not.toContain("amount");
+    expect(Object.keys(line!), "no amount paid on it").not.toContain("amount");
+
+    /* The Night audit report: its own section with the value and a total. */
+    const doc = (await (await call(gm, `/reports/night-audit?asOn=${bill.businessDate}`)).json()) as {
+      sections: { key: string; columns: { key: string }[]; rows: { kind: string; cells: Record<string, unknown> }[] }[];
+    };
+    const section = doc.sections.find((x) => x.key === "pos-no-charge")!;
+    expect(section.columns.map((c) => c.key)).toContain("value");
+    expect(section.rows.find((r) => r.cells["orderNo"] === bill.orderNo)?.cells["value"]).toBe(bill.net);
+    const total = section.rows.find((r) => r.kind === "total")!;
+    expect(total.cells["value"]).toBe(Math.round(section.rows.filter((r) => r.kind === "row")
+      .reduce((t, r) => t + Number(r.cells["value"]), 0) * 100) / 100);
   });
 
   it("only an open bill: a paid one is refused", async () => {

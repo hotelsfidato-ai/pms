@@ -380,10 +380,11 @@ export default function NightAuditPage() {
                         {" · "}{v.by ?? "-"} at {v.at} · {v.reason}
                       </p>
                     ))}
-                    {/* D27-351: bills given free, no value, not in the figures above. */}
+                    {/* D27-351: bills given free, not in the figures above;
+                        their value at menu prices (D27-394). */}
                     {(result.restaurant.noCharge ?? []).map((v) => (
                       <p key={v.orderNo} className="text-2xs text-success-600 mt-0.5">
-                        NC: {v.orderNo}{v.table ? ` · ${v.table}` : ""}
+                        NC: {v.orderNo}{v.table ? ` · ${v.table}` : ""} ({money(v.value)}, not in sales)
                         {" · "}approved by {v.by ?? "-"} at {v.at} · {v.reason}
                       </p>
                     ))}

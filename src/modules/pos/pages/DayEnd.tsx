@@ -269,9 +269,11 @@ function Overview({ day }: { day: DayEnd }) {
                     note={`${s.abandonedOrders} abandoned`} />
         <FigureTile icon={<Percent />} label="Discount given" value={money(s.discountGiven)}
                     note="Off the settled bills" />
-        {/* The NC bills given free (D27-365 (4)); it counted 100%-discounted bills. */}
+        {/* The NC bills given free (D27-365 (4)); it counted 100%-discounted
+            bills. Their value at menu prices, never a sale (D27-394). */}
         <FigureTile icon={<Gift />} label="Complimentary" value={String((day.noCharge ?? []).length)}
-                    note={(day.noCharge ?? []).length === 1 ? "NC bill, given free" : "NC bills, given free"} />
+                    note={`${(day.noCharge ?? []).length === 1 ? "NC bill" : "NC bills"}, ${
+                      money((day.noCharge ?? []).reduce((t, v) => t + v.value, 0))} not in sales`} />
       </FigureRow>
 
       <Card>
@@ -324,20 +326,29 @@ function Overview({ day }: { day: DayEnd }) {
         </Card>
       )}
 
-      {/* D27-351: bills given free - who approved, when and why. No value
-          (the owner): not in any figure above. */}
+      {/* D27-351: bills given free - who approved, when and why; with their
+          value at menu prices (D27-394), never in any figure above. */}
       {(day.noCharge ?? []).length > 0 && (
         <Card>
           <CardHeader title="No charge (NC)"
-            description="Bills given free. Not in the sales above, and no value is counted for them." />
+            description="Bills given free, at their menu prices. Not in the sales above, nor in the tax or the money taken." />
           <CardBody>
             <ul className="divide-y divide-grey-200">
               {day.noCharge!.map((v) => (
-                <li key={v.orderNo} className="py-3">
-                  <p className="text-base">{v.orderNo}{v.table ? ` · ${v.table}` : ""} - {v.reason}</p>
-                  <p className="text-sm text-grey-500">Approved by {v.by ?? "-"} · {v.at}</p>
+                <li key={v.orderNo} className="flex items-start gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base">{v.orderNo}{v.table ? ` · ${v.table}` : ""} - {v.reason}</p>
+                    <p className="text-sm text-grey-500">Approved by {v.by ?? "-"} · {v.at}</p>
+                  </div>
+                  <span className="text-base font-medium tabular shrink-0">{moneyPrecise(v.value)}</span>
                 </li>
               ))}
+              <li className="flex items-baseline justify-between py-3" data-nc-total>
+                <span className="text-base font-medium">NC (not in sales)</span>
+                <span className="text-base font-semibold tabular">
+                  {moneyPrecise(day.noCharge!.reduce((t, v) => t + v.value, 0))}
+                </span>
+              </li>
             </ul>
           </CardBody>
         </Card>

@@ -16,9 +16,10 @@ import DayEndPage from "@/modules/pos/pages/DayEnd";
    NC, A BILL GIVEN FREE, ON THE SCREENS (the owner's D27-351)
 
    The owner, an administrator or the GM gives an open bill NC with a
-   reason; nobody else sees the button. It prints at once: the dishes, no
-   prices, "NC · No charge", the reason and who approved it. Close
-   restaurant day lists it, with no value. The server's half:
+   reason; nobody else sees the button. It prints at once: the dishes with
+   their prices, the Bill total, "NC - No charge: ₹0.00 to pay" and no tax
+   (D27-394), the reason and who approved it. Close restaurant day lists it
+   with its value, apart from the sales. The server's half:
    api/test/modules/pos/noCharge.test.ts.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -114,7 +115,7 @@ describe("the Till - NC, no charge", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "No charge (NC)" }));
-    expect(await screen.findByText(/prints the dishes with no prices, marked NC/)).toBeTruthy();
+    expect(await screen.findByText(/prints the dishes and their prices, marked NC with nothing to pay/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Why is it no charge?"), { target: { value: "Owner's guests" } });
     fireEvent.click(screen.getByRole("button", { name: "Give NC" }));
 
@@ -123,12 +124,13 @@ describe("the Till - NC, no charge", () => {
     expect(await screen.findByText("NC · No charge - Owner's guests. Approved by Hotel Manager GM at 21:05."))
       .toBeTruthy();
     await vi.waitFor(() => expect(calls.some((c) => c.path.endsWith("/bill-print"))).toBe(true));
-    expect(screen.getByText("NC · No charge"), "no value: the total says NC").toBeTruthy();
+    /* The screen as the paper (D27-394): the Bill total, then nothing to pay. */
+    expect(screen.getByText("Bill total").parentElement!.textContent).toMatch(/640/);
+    expect(screen.getByText("NC · No charge").parentElement!.textContent).toMatch(/₹0 to pay/);
     expect(screen.queryByRole("button", { name: "No charge (NC)" }), "NC for good").toBeNull();
-    /* The screen as the paper: the dish and its quantity, no price (D27-365 (4)). */
     const line = screen.getAllByText("Paneer Tikka").map((e) => e.closest("li")).find((li) => li?.textContent?.includes("×"));
     expect(line, "the order's line").toBeTruthy();
-    expect(line!.textContent, "no price on an NC bill's line").not.toMatch(/320|640/);
+    expect(line!.textContent, "the line's price on an NC bill").toMatch(/640/);
   });
 
   it("a waiter, reception or the hotel manager never sees it", async () => {
@@ -157,20 +159,24 @@ describe("the Till - a discount is the GM's (D27-352)", () => {
   });
 });
 
-describe("the printed NC bill", () => {
-  it("lists the dishes with no prices, says NC at its head, and why and who approved it", () => {
+describe("the printed NC bill (D27-394)", () => {
+  it("lists the dishes with their prices and the Bill total, ₹0.00 to pay, no tax; NC at its head, why and who", () => {
     const { container } = render(<BillSlip order={given()} heading="nc" />);
     expect(screen.getByText("NC · No charge")).toBeTruthy();
     expect(screen.getByText("Paneer Tikka")).toBeTruthy();
     expect(screen.getByText("NC · No charge - Owner's guests")).toBeTruthy();
     expect(screen.getByText("Approved by Hotel Manager GM at 21:05")).toBeTruthy();
+    const total = container.querySelector("[data-bill-nc-total]")!.textContent ?? "";
+    expect(total).toMatch(/Bill total640\.00/);
+    expect(total).toMatch(/NC - No charge₹0\.00 to pay/);
     const text = container.textContent ?? "";
-    expect(text, "no price, no tax, no total").not.toMatch(/320|640|672|Rate|Amount|GRAND TOTAL|CGST|Paid by/);
+    expect(text, "each line's rate and amount").toMatch(/Rate.*Amount.*320\.00.*640\.00/);
+    expect(text, "no tax and no grand total: nothing was sold").not.toMatch(/672|GRAND TOTAL|CGST|SGST|Paid by/);
   });
 });
 
 describe("Close restaurant day - the NC bills", () => {
-  it("lists who approved, when and why, with no value", async () => {
+  it("lists who approved, when and why, with each value and the total not in sales (D27-394)", async () => {
     as("gm");
     const day: DayEnd = {
       outlet: { code: "REST", name: "Fidato Restaurant" }, businessDate: "2026-08-25",
@@ -179,7 +185,7 @@ describe("Close restaurant day - the NC bills", () => {
                  compOrders: 3, discountGiven: 0, byMethod: {} },
       blockers: [], struck: [], voided: [],
       noCharge: [{ orderNo: "20260825-5", table: "4", outlet: "Fidato Restaurant",
-                   reason: "Owner's guests", by: "Hotel Manager GM", at: "21:05" }],
+                   reason: "Owner's guests", by: "Hotel Manager GM", at: "21:05", value: 640 }],
       movements: [],
       cash: { opening: 0, expected: 0, counted: null, variance: null, waiting: 0,
               varianceReason: null, denominations: [] },
@@ -195,7 +201,8 @@ describe("Close restaurant day - the NC bills", () => {
     expect(screen.getByText("20260825-5 · 4 - Owner's guests")).toBeTruthy();
     expect(screen.getByText("Approved by Hotel Manager GM · 21:05")).toBeTruthy();
     const tile = screen.getByText("Complimentary").closest("div")!.parentElement!;
-    expect(within(tile).getByText("NC bill, given free")).toBeTruthy();
+    expect(within(tile).getByText("NC bill, ₹640 not in sales")).toBeTruthy();
+    expect(screen.getByText("NC (not in sales)").parentElement!.textContent).toMatch(/640\.00/);
     expect(within(tile).getByText("1"), "one NC bill, not the three 100% discounts").toBeTruthy();
   });
 });

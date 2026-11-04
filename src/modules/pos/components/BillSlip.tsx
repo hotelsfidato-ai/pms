@@ -24,9 +24,10 @@ import { TestDocumentMark } from "@/components/app/TestHotel";
    discounted value) and GRAND TOTAL is `payable`, what the till asks for:
    Sub total - Discount + tax + Round off = GRAND TOTAL, to the paisa.
 
-   A BILL GIVEN FREE, NC (the owner's D27-351): the dishes and their
-   quantities with no prices, no tax and no total - "NC · No charge" at the
-   head, the reason and who approved it at the foot.
+   A BILL GIVEN FREE, NC (the owner's D27-351; its value since D27-394): the
+   dishes with their menu prices and amounts and the Bill total (net, before
+   any discount), then "NC - No charge: ₹0.00 to pay". No tax lines: nothing
+   was sold, so nothing was taxed. The reason and who approved it at the foot.
    ══════════════════════════════════════════════════════════════════ */
 
 /** A figure in a column: paise, no rupee sign, as a restaurant bill prints. */
@@ -100,8 +101,8 @@ export function BillSlip({ order: o, heading, sample }: {
           <tr className="text-xs font-semibold border-b border-dashed border-ink-700">
             <th className="py-1 text-left font-semibold">Item</th>
             <th className="py-1 px-1 text-right font-semibold">Qty</th>
-            {!nc && <th className="py-1 px-1 text-right font-semibold">Rate</th>}
-            {!nc && <th className="py-1 text-right font-semibold">Amount</th>}
+            <th className="py-1 px-1 text-right font-semibold">Rate</th>
+            <th className="py-1 text-right font-semibold">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -113,23 +114,26 @@ export function BillSlip({ order: o, heading, sample }: {
                 {/* The owner's breakdown (D27-289): what the dish and each
                     numbered add-on cost, under the one line. */}
                 {l.numberedAddons && (
-                  <span className="block text-xs">
-                    {nc
-                      ? l.numberedAddons.addons.map((a) => `+ ${a.name}${a.qty > 1 ? ` ×${a.qty}` : ""}`).join(" · ")
-                      : addonBreakdown(l.numberedAddons)}
-                  </span>
+                  <span className="block text-xs">{addonBreakdown(l.numberedAddons)}</span>
                 )}
                 {l.note && <span className="block text-xs">{l.note}</span>}
               </td>
               <td className="py-1 px-1 text-right">{l.qty}</td>
-              {!nc && <td className="py-1 px-1 text-right whitespace-nowrap">{fig(l.unitPrice)}</td>}
-              {!nc && <td className="py-1 text-right whitespace-nowrap">{fig(l.qty * l.unitPrice)}</td>}
+              <td className="py-1 px-1 text-right whitespace-nowrap">{fig(l.unitPrice)}</td>
+              <td className="py-1 text-right whitespace-nowrap">{fig(l.qty * l.unitPrice)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {!nc && <dl className={cn(rule, "mt-1 pt-1.5 tabular")}>
+      {nc ? (
+        <dl className={cn(rule, "mt-1 pt-1.5 tabular")} data-bill-nc-total>
+          <div className="flex justify-between gap-2"><dt>Bill total</dt><dd>{fig(o.net)}</dd></div>
+          <div className={cn(rule, "mt-1.5 border-b py-1.5 flex justify-between gap-2 text-md font-extrabold")}>
+            <dt>NC - No charge</dt><dd>{moneyPrecise(0)} to pay</dd>
+          </div>
+        </dl>
+      ) : <dl className={cn(rule, "mt-1 pt-1.5 tabular")}>
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-2">
             <dt>{label}</dt><dd>{value}</dd>

@@ -30,7 +30,7 @@ const PAID = {
 
 const row = (over: Record<string, unknown>) => ({
   id: "o-9", orderNo: "20260822-4", outlet: "REST", table: "T2", status: "settled",
-  businessDate: "2026-08-22", gross: 336, payable: 336, paymentMethod: "upi", modes: ["upi"],
+  businessDate: "2026-08-22", gross: 336, payable: 336, net: 320, paymentMethod: "upi", modes: ["upi"],
   openedAt: "20:15", settledAt: "21:40", lines: 1, waiter: "Ravi", guest: "Asha Rao", phone: "98765 43210",
   stayGuest: null, room: null, ...over,
 });
@@ -90,8 +90,9 @@ describe("Bill history", () => {
     }
     expect(voided.textContent).toContain("VOID");
     expect(voided.textContent).toContain("Cash");
-    expect(nc.textContent).toContain("NC");
-    expect(nc.textContent, "a bill given free has no value").not.toContain("₹");
+    /* A bill given free shows its value at menu prices (D27-394), not what was paid. */
+    expect(nc.textContent).toContain("NC ₹320.00");
+    expect(nc.textContent).not.toContain("₹336.00");
     expect(screen.getByText("4 bills.")).toBeTruthy();
   });
 
@@ -150,7 +151,7 @@ describe("Bill history", () => {
     await vi.waitFor(() => expect(asked).toContain(`POST ${API}/till/orders/o-9/bill-print`));
   });
 
-  it("downloads the list on screen as a file Excel opens: bare numbers, NC blank, the dates it covers in the name", async () => {
+  it("downloads the list on screen as a file Excel opens: bare numbers, NC in its own column, the dates it covers in the name", async () => {
     const blobs: Blob[] = [];
     vi.stubGlobal("URL", Object.assign(Object.create(URL), {
       createObjectURL: (b: Blob) => { blobs.push(b); return "blob:bills"; }, revokeObjectURL: vi.fn(),
@@ -168,11 +169,12 @@ describe("Bill history", () => {
     await vi.waitFor(() => expect(names).toHaveLength(1));
     expect(names).toEqual(["5el-bill-history-2026-08-25-to-2026-08-25.csv"]);
     const lines = (await blobs[0]!.text()).replace(/^﻿/, "").split("\r\n");
-    expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,State");
-    expect(lines[1]).toBe("20260822-4,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,UPI,336.00,Paid");
-    expect(lines[2]).toBe("20260822-3,2026-08-22,21:40,Restaurant,T2,,,,Ravi,Cash,336.00,VOID");
-    expect(lines[3]).toBe("20260822-2,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,,,NC");
-    expect(lines[4]).toBe("20260822-1,2026-08-22,21:40,Restaurant,T2,Meera Iyer,204,,Ravi,To a room,336.00,Paid");
+    expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,NC value,State");
+    expect(lines[1]).toBe("20260822-4,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,UPI,336.00,,Paid");
+    expect(lines[2]).toBe("20260822-3,2026-08-22,21:40,Restaurant,T2,,,,Ravi,Cash,336.00,,VOID");
+    /* Total stays blank, so a sum of it is what was paid; NC value has the menu value (D27-394). */
+    expect(lines[3]).toBe("20260822-2,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,,,320.00,NC");
+    expect(lines[4]).toBe("20260822-1,2026-08-22,21:40,Restaurant,T2,Meera Iyer,204,,Ravi,To a room,336.00,,Paid");
   });
 
   it("is offered to the managers, the Accountant and Reception only (D27-372)", () => {

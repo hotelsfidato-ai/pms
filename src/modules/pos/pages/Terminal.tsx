@@ -382,7 +382,7 @@ export default function TerminalPage() {
     /* Anyone else sends it to the GM (D27-363). */
     if (!mayNc) return setAsk({
       title: "Send to the GM: no charge (NC) for this bill?",
-      body: "The GM decides. When they approve, the bill is NC: it prints the dishes with no prices.",
+      body: "The GM decides. When they approve, the bill is NC: it prints the dishes and their prices, with nothing to pay.",
       field: { label: "Why is it no charge?", required: true },
       confirm: "Send to the GM",
       onConfirm: async (reason) => {
@@ -395,8 +395,9 @@ export default function TerminalPage() {
     });
     setAsk({
       title: "Give this bill no charge (NC)?",
-      body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
-        + "name as the approval. It is no sale and carries no value, and it cannot be undone.",
+      body: "The bill prints the dishes and their prices, marked NC with nothing to pay, with this "
+        + "reason and your name as the approval. It is no sale: its value is shown as NC, never in "
+        + "sales or tax, and it cannot be undone.",
       field: { label: "Why is it no charge?", required: true },
       confirm: "Give NC",
       onConfirm: async (reason) => {
@@ -862,15 +863,13 @@ export default function TerminalPage() {
                       )}>
                         {l.extra ? `+ ${l.name}` : l.name}
                       </span>
-                      {/* An NC bill shows no prices, as its paper (D27-365 (4)). */}
-                      {order.status !== "no_charge" && (
-                        <span className="tabular text-base text-ink-900">
-                          {moneyPrecise(l.qty * l.unitPrice)}
-                        </span>
-                      )}
+                      {/* An NC bill shows its prices too, as its paper (D27-394). */}
+                      <span className="tabular text-base text-ink-900">
+                        {moneyPrecise(l.qty * l.unitPrice)}
+                      </span>
                     </div>
                     {/* The owner's breakdown (D27-289), under the one line. */}
-                    {l.numberedAddons && order.status !== "no_charge" && (
+                    {l.numberedAddons && (
                       <p className="text-2xs text-grey-600 tabular mt-0.5 pl-0.5 truncate">
                         {addonBreakdown(l.numberedAddons)}
                       </p>
@@ -957,8 +956,7 @@ export default function TerminalPage() {
                     ) : (
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-2xs text-grey-500 tabular">
-                          {order.status === "no_charge" ? `Qty ${l.qty}`
-                            : `${l.qty} × ${l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}`}
+                          {`${l.qty} × ${l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}`}
                         </p>
                         {/* An add-on line comes off by itself (D27-291). */}
                         {l.extra && !l.voided && order.status === "open" && (
@@ -992,7 +990,7 @@ export default function TerminalPage() {
                 <div className="flex items-baseline justify-between">
                   <span className="text-base text-grey-600">Total</span>
                   <span className="text-xl font-semibold tabular text-ink-900">
-                    {order.status === "no_charge" ? "NC" : moneyPrecise(order.gross)}
+                    {order.status === "no_charge" ? `NC ${moneyPrecise(order.net)}` : moneyPrecise(order.gross)}
                   </span>
                 </div>
 
@@ -1000,7 +998,7 @@ export default function TerminalPage() {
                   <div className="space-y-2">
                     <p className="text-base text-grey-600">
                       {order.status === "no_charge"
-                        ? `NC · No charge - ${order.ncReason ?? "-"}. Approved by ${order.ncBy ?? "-"}.`
+                        ? `NC · No charge, ${moneyPrecise(0)} to pay - ${order.ncReason ?? "-"}. Approved by ${order.ncBy ?? "-"}.`
                         : order.status === "void"
                         ? `VOID - ${order.voidReason ?? "-"}.`
                         : order.status === "settled"

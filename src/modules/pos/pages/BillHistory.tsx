@@ -89,14 +89,16 @@ export default function BillHistoryPage() {
   const outletName = (c: string) => history.data?.outlets.find((o) => o.code === c)?.name ?? c;
 
   const download = () => {
-    /* Figures are bare numbers so Excel can sum them; NC has none, and a
+    /* Figures are bare numbers so Excel can sum them. An NC bill's value is
+       its own column (D27-394), so Total still sums only what was paid; a
        blank is not a zero. The bill's own date, 2026-10-27, sorts there. */
     const csv = toCsv(
-      ["Bill", "Date", "Settled at", "Outlet", "Table", "Guest", "Room", "Phone", "Waiter", "Paid by", "Total", "State"],
+      ["Bill", "Date", "Settled at", "Outlet", "Table", "Guest", "Room", "Phone", "Waiter", "Paid by", "Total", "NC value", "State"],
       bills.map((b) => [
         b.orderNo, b.businessDate, b.settledAt ?? "", outletName(b.outlet), b.table ?? "", guestOf(b) ?? "",
         b.room ?? "", b.phone ?? "", b.waiter ?? "", b.modes.map((m) => MODE_WORD[m] ?? m).join(", "),
-        b.status === "no_charge" ? "" : b.payable.toFixed(2), STATE[b.status]?.words ?? b.status,
+        b.status === "no_charge" ? "" : b.payable.toFixed(2),
+        b.status === "no_charge" ? b.net.toFixed(2) : "", STATE[b.status]?.words ?? b.status,
       ]),
     );
     downloadCsv(reportFilename(code, "bill history", `${applied?.from || "start"} to ${applied?.to || "end"}`), csv);
@@ -122,9 +124,9 @@ export default function BillHistoryPage() {
     { key: "mode", header: "Paid by", cell: (b) => modesWords(b) },
     {
       /* A voided bill keeps its number and its total, struck (D27-324); a
-         bill given free says NC and no value (D27-351). */
+         bill given free says NC with its value, never a sale (D27-394). */
       key: "total", header: "Total", numeric: true,
-      cell: (b) => b.status === "no_charge" ? "NC"
+      cell: (b) => b.status === "no_charge" ? `NC ${moneyPrecise(b.net)}`
         : <span className={cn(b.status === "void" && "text-grey-500 line-through")}>{moneyPrecise(b.payable)}</span>,
     },
     {

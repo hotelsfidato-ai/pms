@@ -610,10 +610,10 @@ function OrderRow({ order, active, onOpen, withDate = false }: {
           </p>
         </div>
         {/* A voided bill keeps its number and its total, struck (D27-324);
-            a bill given free says NC and no value (D27-351). */}
+            a bill given free says NC with its value, never a sale (D27-394). */}
         <span className={cn("tabular text-base font-medium shrink-0",
           order.status === "void" ? "text-grey-500 line-through" : "text-ink-900")}>
-          {order.status === "no_charge" ? "NC" : money(order.gross)}
+          {order.status === "no_charge" ? `NC ${money(order.net)}` : money(order.gross)}
         </span>
         {/* It opens the order: the Tappable Rule's arrow. */}
         <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
@@ -1262,7 +1262,7 @@ function OrderPanel({
   /* NC, NO CHARGE (the owner's D27-351): the owner, an administrator or the
      GM - the same three as a void, as the server asks - gives an open bill
      free, with a reason; their name on it is the approval. It prints at
-     once: the dishes, no prices, marked NC. */
+     once: the dishes and their prices, marked NC with nothing to pay (D27-394). */
   /* A waiter's or cashier's is sent to the GM, who approves it on their own
      screen and that gives it (D27-363). */
   const send = async (body: Parameters<typeof sendToGm>[2], done: string): Promise<Reply | undefined> => {
@@ -1276,15 +1276,16 @@ function OrderPanel({
   };
   const giveNc = () => mayVoid ? giveNcNow() : setAsk({
     title: `Send to the GM: no charge for bill ${order.orderNo}?`,
-    body: "The GM decides. When they approve, the bill is NC: it prints the dishes with no prices.",
+    body: "The GM decides. When they approve, the bill is NC: it prints the dishes and their prices, with nothing to pay.",
     field: { label: "Why is it no charge?", required: true },
     confirm: "Send to the GM",
     onConfirm: (reason) => send({ kind: "no_charge", reason }, `Bill ${order.orderNo} is NC when they approve.`),
   });
   const giveNcNow = () => setAsk({
     title: `No charge for bill ${order.orderNo}?`,
-    body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
-      + "name as the approval. It is no sale and carries no value, and it cannot be undone.",
+    body: "The bill prints the dishes and their prices, marked NC with nothing to pay, with this "
+      + "reason and your name as the approval. It is no sale: its value is shown as NC, never in "
+      + "sales or tax, and it cannot be undone.",
     field: { label: "Why is it no charge?", required: true },
     confirm: "Give NC",
     onConfirm: async (reason): Promise<Reply | undefined> => {
@@ -1460,12 +1461,10 @@ function OrderPanel({
                     </span>
                   )}
                 </span>
-                {/* An NC bill shows no prices, as its paper (D27-365 (4)). */}
-                {order.status !== "no_charge" && (
-                  <span className="tabular text-base text-ink-900 shrink-0">
-                    {money(line.qty * line.unitPrice)}
-                  </span>
-                )}
+                {/* An NC bill shows its prices too, as its paper (D27-394). */}
+                <span className="tabular text-base text-ink-900 shrink-0">
+                  {money(line.qty * line.unitPrice)}
+                </span>
                 {/* Customise on any dish (D27-289); once the kitchen has it, its
                     add-ons are lines of their own for the next Send (D27-291). */}
                 {!settled && !line.voided && line.parentLineId === null && !line.packing && (
@@ -1517,8 +1516,9 @@ function OrderPanel({
         )}
 
         {order.status === "no_charge" ? (
-          <div className="border-t border-grey-200 pt-2.5">
-            <Row label="Total" value="NC · No charge" strong />
+          <div className="border-t border-grey-200 pt-2.5 space-y-1">
+            <Row label="Bill total" value={money(order.net)} />
+            <Row label="NC · No charge" value={`${money(0)} to pay`} strong />
           </div>
         ) : (
         <div className="border-t border-grey-200 pt-2.5 space-y-1">

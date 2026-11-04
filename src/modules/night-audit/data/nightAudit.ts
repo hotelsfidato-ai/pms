@@ -239,10 +239,11 @@ export interface NightAuditResult {
       orderNo: string; outlet: string; amount: number; method: string | null;
       reason: string; reference: string | null; by: string | null; at: string;
     }>;
-    /** Bills given free, NC (D27-351): who, when and why - no value. */
+    /** Bills given free, NC (D27-351): who, when, why, and the value at menu
+        prices, never a sale (D27-394). */
     noCharge?: Array<{
       orderNo: string; table: string | null; outlet: string; reason: string;
-      by: string | null; at: string;
+      by: string | null; at: string; value: number;
     }>;
   };
 
