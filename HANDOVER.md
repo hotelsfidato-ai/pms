@@ -48,6 +48,16 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **5 November, 16:18 IST: RELEASE 19 IS LIVE (7c2401ca).** The owner typed A1-A7; I checked them by reading only.
+> - GitHub `main` and the server's code are on 7c2401ca. The site loads `index-huO71TJZ.js`.
+> - Health is ok, and the API restarted at 16:18. Its log has no errors since.
+> - AMR is on 5 Nov; its 4 Nov audit completed at 02:14, and the reports went.
+> - SHI is on **1 Nov**. S6 already ran on 3 Nov at 19:48, not in this release (MEMORY 467). Shimla has entered
+>   8 bookings, 7 payments and 4 invoices, but **no Night audit yet**: 1 Nov to 4 Nov are still to close.
+> - R1 already ran too: the 25 Corrected 2 Nov reports went on 3 Nov at 01:50.
+> - `release-r19` is recycled, junctions out first.
+> - A8 at AMRT is the owner's to do.
+
 > **3 November, 00:53: RELEASE 18 IS LIVE (a4527ea5), the owner's A1-A7, checked read-only:**
 > - GitHub `main`, the server's code: a4527ea5.
 > - The site loads `index-BEoAhrU0.js`, which carries "Company guest".
@@ -808,6 +818,9 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **5 November, 16:18: release 19 is LIVE (see section 2).** Next: the owner's A8 at AMRT. Shimla's GM has to
+> close 1-4 Nov, one at a time. S6 and R1 are done, so nothing is waiting on them.
+>
 > **5 November, about 02:40: RELEASE 19 READY, the owner's to type.** `release/r19` = **7c2401ca** on release 18
 > (a4527ea5, live), no migrations, website `index-huO71TJZ.js` (read from the copy's `dist/index.html`).
 > - It carries D27-394 (an NC bill's prices and Bill total, its value as NC, never a sale) and D27-395 (no 10% limit

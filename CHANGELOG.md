@@ -89,7 +89,15 @@ has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9
 
 ---
 
-## 2026-11-05 · Release 19 (READY at 7c2401ca): NC bills show their value; no 10% limit on a restaurant discount
+## 2026-11-05 · Release 19 (LIVE at 7c2401ca): NC bills show their value; no 10% limit on a restaurant discount
+
+**Live, 5 November, 16:18 IST (the owner's A1-A7, checked by reading only):**
+- GitHub `main` and the server are on 7c2401ca. The site loads `index-huO71TJZ.js`.
+- Health is ok, and the API restarted at 16:18. Its 36 log lines since have no errors.
+- `release-r19` is recycled, junctions out first; the main packages are untouched.
+- **S6 and R1 had already run before this release (MEMORY 467).** S6 ran on 3 Nov at 19:48 IST, and SHI is on
+  1 Nov. R1's cancel record went in on 3 Nov at 01:50 IST, and the 25 Corrected 2 Nov reports went one minute later.
+  Pasted again, both refuse and change nothing.
 
 **Asked for:** the owner, 4-5 November: Amrapali's NC bill (20261104-34) should show its total "in the bill and the
 software, but not count in the entire sale"; 20% off a bill, and "remove the limit". Then: "prepare release 19".

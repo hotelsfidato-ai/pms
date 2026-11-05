@@ -6561,6 +6561,17 @@ copy will see of theirs.**
 
 ---
 
+### 467 · MINE: I gave the owner two steps that had already run (5 November)
+
+I put S6 (Shimla's first day to 1 Nov) and R1 (Amrapali's Corrected 2 Nov reports) into release 19's server steps
+as "waiting". I had copied that from my own HANDOVER notes. The live database said otherwise. R1's cancel record
+had been in since 3 Nov at 01:50 IST, with the 25 Corrected reports sent a minute later. S6 had run on 3 Nov at
+19:48 IST. Both steps are guarded, so a second paste refuses and changes nothing. But the owner was asked to type
+work that was already done, and my notes said "waiting" for two days. **The rule:** before a waiting step goes into
+anything for the owner, read live whether it has already run. The steps' own guards say what to read.
+
+---
+
 ### 466 · MINE: I committed a test the API's type check refused (5 November)
 
 D27-394's commit (e0b78093) added `bill.net` to `api/test/modules/pos/noCharge.test.ts`. The test's own `Order` type
