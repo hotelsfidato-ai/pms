@@ -245,6 +245,10 @@ export interface NightAuditResult {
       orderNo: string; table: string | null; outlet: string; reason: string;
       by: string | null; at: string; value: number;
     }>;
+    /** The voluntary service charge on the paid bills, inside the takings
+        above; the tips for the staff, in no sale (pos 264). */
+    serviceCharge?: { bills: number; amount: number };
+    tips?: { cash: number; card: number; upi: number; total: number };
   };
 
   /** TWO drawers, and they are never added together. The front desk

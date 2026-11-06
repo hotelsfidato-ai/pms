@@ -111,16 +111,17 @@ export function registerTableMoves(till: App, hotelFor: HotelFor): void {
           ? `${t.label} already has ${busy.order_no} running on it. Join it instead, or choose a free table.`
           : `${t.label} still has bill ${busy.order_no} on it. Clear the table first.`);
       }
-      /* A table a hotel guest has booked for today (172) is not taken from
-         two hours before the booking (D27-372); earlier in the day it is. */
+      /* A table booked for today (172; an outside diner's too, 259) is not
+         taken from two hours before the booking (D27-372); earlier in the day
+         it is. Arrived and not yet seated still holds it. */
       const { rows: [booked] } = await client.query<{ at: string }>(
         `select app.hotel_clock(b.hotel_id, b.at, 'HH24:MI') as at from table_bookings b
-          where b.table_id = $1 and b.status = 'confirmed'
+          where b.table_id = $1 and b.status in ('confirmed', 'arrived')
             and app.hotel_clock(b.hotel_id, b.at, 'YYYY-MM-DD') = $2
             and now() >= b.at - interval '2 hours'
           order by b.at limit 1`,
         [t.id, await businessDateFor(client, hotelId)]);
-      if (booked) return refuse(`${t.label} is booked by a hotel guest at ${booked.at}. Choose another table.`);
+      if (booked) return refuse(`${t.label} is booked for ${booked.at}. Choose another table.`);
 
       await client.query(
         `update pos_orders set table_id = $2, table_ref = $3, updated_at = now() where id = $1`,

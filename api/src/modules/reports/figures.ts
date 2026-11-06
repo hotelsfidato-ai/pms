@@ -416,6 +416,9 @@ export async function posSales(
           rate — the same function the Manager report reads. */
        select s.business_date as date,
               sum(r.discount) as discount,
+              /* A voluntary service charge (pos 264) is part of the sale and
+                 taxed with it: inside each rate's taxable, never a line. */
+              sum(r.taxable - r.rate_net + r.discount) as service,
               sum(r.tax)      as tax,
               /* ...and by tax, so VAT can be named apart (D21-91). */
               sum(r.taxable) filter (where r.tax_scheme = 'vat') as alcohol,
@@ -433,7 +436,7 @@ export async function posSales(
         group by 1
      )
      select to_char(d.date, 'YYYY-MM-DD') as date,
-            coalesce(l.gross, 0) - coalesce(r.discount, 0) as net,
+            coalesce(l.gross, 0) - coalesce(r.discount, 0) + coalesce(r.service, 0) as net,
             coalesce(r.tax, 0)                             as tax,
             coalesce(r.alcohol, 0)                         as alcohol,
             coalesce(r.vat, 0)                             as vat,

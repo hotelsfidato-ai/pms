@@ -298,6 +298,18 @@ export interface Order {
   ncBy?: string | null;
   ncAt?: string | null;
   ncReason?: string | null;
+  /** A voluntary service charge the guest agreed to (260): the rate ticked
+      and its amount before tax - inside `taxable`, `tax` and `payable`.
+      Optional: an answer from before it has no such key. */
+  serviceChargePct?: number | null;
+  serviceCharge?: number;
+  /** The restaurant's rate, which the cashier may tick; null: none set. */
+  serviceChargeOffered?: number | null;
+  /** A tip for the staff taken with the payment (260): outside the bill. */
+  tip?: number | null;
+  tipMethod?: "cash" | "card" | "upi" | null;
+  /** The coupon's code, when the discount came from one (261). */
+  couponCode?: string | null;
   /** What was sent to the GM about this bill, and the answer (D27-363). */
   requests?: PosRequest[];
   /** Its payment mode changed before the night audit (D27-363). */
@@ -492,6 +504,11 @@ export interface BillHistoryRow extends OrderSummary {
   /** A bill charged to a room: the stay's guest and room (D27-372). */
   stayGuest: string | null;
   room: string | null;
+  /** The voluntary service charge in it, 0 when none; and a tip taken with
+      it, outside the bill (260). Optional: an answer from before them. */
+  serviceCharge?: number;
+  tip?: number | null;
+  tipMethod?: string | null;
 }
 export interface BillHistoryAsk {
   from?: string; to?: string; no?: string; table?: string; guest?: string;
@@ -880,8 +897,13 @@ export interface Promotion {
   kind: "percent" | "fixed";
   value: number;
   isActive: boolean;
-  /** Bills that used it at this property. */
+  /** Bills that used it at this property (a bill closed unpaid gives it back). */
   used: number;
+  /** A coupon (261): typed from the code the guest brings, between its two
+      business dates, on at most `maxUses` bills of at least `minBill`;
+      null where a limit is not set. Null for a plain promotion. Optional:
+      an answer from before it has no such key. */
+  coupon?: { from: string; to: string; maxUses: number | null; minBill: number | null } | null;
 }
 
 export interface PromotionList {
@@ -905,9 +927,22 @@ export function applyPromotion(
 
 export async function addPromotion(
   hotelId: string,
-  input: { code: string; name: string; kind: "percent" | "fixed"; value: number },
+  input: {
+    code: string; name: string; kind: "percent" | "fixed"; value: number;
+    /** A coupon's limits (261); left out for a plain promotion. */
+    coupon?: { from: string; to: string; maxUses: number | null; minBill: number | null };
+  },
 ): Promise<{ ok: boolean; reason?: string }> {
   return simplePost(`/api/hotels/${hotelId}/till/promotions`, input);
+}
+
+/** The voluntary service charge on an open bill (260): on only with the
+    guest's agreement, which the cashier confirms. */
+export function setServiceCharge(
+  hotelId: string, orderId: string, on: boolean,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/service-charge`,
+    on ? { on, agreed: true } : { on });
 }
 
 /** The CODE cannot be changed, deliberately: bills already printed name
@@ -982,9 +1017,11 @@ export function settleOrder(
       (D17-21). The server refuses every other method for such an order. */
   method: "room" | "cash" | "card" | "upi" | "function",
   room?: string, folioId?: string, cashId: CashId = {},
+  /** A tip for the staff, taken the same way (260); cash, card or UPI only. */
+  tip?: number | null,
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/settle`,
-    { method, room, folioId, ...cashId });
+    { method, room, folioId, ...cashId, ...(tip ? { tip } : {}) });
 }
 
 /* ── The owner's restaurant allowance (D27-355, D27-365, D27-366) ── */
@@ -1491,7 +1528,11 @@ export interface SetupTable {
 
 export interface TillSetup {
   /** Null until somebody names it: there is no restaurant yet. */
-  restaurant: { name: string; packingCharge?: number | null } | null;
+  restaurant: {
+    name: string; packingCharge?: number | null;
+    /** The voluntary service charge, % (260); null is none, the default. */
+    serviceChargePct?: number | null;
+  } | null;
   /** Every section switched on, an empty one included. */
   sections: { id: string; name: string; tables: SetupTable[] }[];
   /** People with the Waiter role here. */
@@ -1513,6 +1554,30 @@ export function nameRestaurant(hotelId: string, name: string): Done {
 export function setPackingCharge(hotelId: string, amount: number | null): Done {
   return simplePost(setupPath(hotelId, "packing"), { amount });
 }
+
+/** The voluntary service charge's rate (260); null for none. Never on a
+    bill by itself: the cashier ticks it, per bill, with the guest's yes. */
+export function setServiceChargeRate(hotelId: string, percent: number | null): Done {
+  return simplePost(setupPath(hotelId, "service-charge"), { percent });
+}
+
+/* ── Profit per dish (D27-383 item 9) ──────────────────────────────── */
+
+/** Why a dish has no cost: it is a dash, never zero. */
+export type NoCost = "no recipe" | "an ingredient has no cost";
+export interface DishProfit {
+  from: string; to: string;
+  /** Each dish on the menu - each size of one sold by size - at its menu
+      price, its recipe's cost at the Store's average today, and the margin. */
+  dishes: { itemId: string; variationId: string | null; section: string; name: string;
+    price: number; cost: number | null; margin: number | null; marginPct: number | null; noCost: NoCost | null }[];
+  /** What the paid bills of those days sold of each, at the price sold. */
+  sold: { itemId: string; variationId: string | null; section: string; name: string;
+    qty: number; sales: number; cost: number | null; margin: number | null; noCost: NoCost | null }[];
+  totals: { sales: number; costedSales: number; cost: number; margin: number; uncostedSales: number };
+}
+export const getDishProfit = (hotelId: string, from: string, to: string) =>
+  api<DishProfit>(`/api/hotels/${hotelId}/till/dish-profit?from=${from}&to=${to}`);
 
 export function addSection(hotelId: string, name: string): Done {
   return simplePost(setupPath(hotelId, "sections"), { name });
@@ -1991,6 +2056,11 @@ export interface DayEnd {
   /** Paid bills whose payment mode was changed (D27-363); afterDayEnd: after the drawer was counted. */
   modeChanges?: { orderNo: string; table: string | null; from: string; to: string; amount: number;
     reason: string; by: string | null; at: string; afterDayEnd: boolean }[];
+  /** The voluntary service charge on the paid bills - inside `summary`'s
+      takings - and the tips for the staff, in no sale; a cash tip is in
+      `cash.expected` (260). Optional: an answer from before them. */
+  serviceCharge?: { bills: number; amount: number };
+  tips?: { cash: number; card: number; upi: number; total: number };
   movements: {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */

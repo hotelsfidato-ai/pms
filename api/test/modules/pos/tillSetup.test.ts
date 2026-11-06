@@ -116,7 +116,7 @@ describe("setting it up", () => {
       [hotelId]);
     expect(rows).toEqual([
       { code: "REST", name: "Sattva Restaurant", api_key_hash: null, staff_id: gm }]);
-    expect((await setup()).restaurant).toEqual({ name: "Sattva Restaurant", packingCharge: null });
+    expect((await setup()).restaurant).toEqual({ name: "Sattva Restaurant", packingCharge: null, serviceChargePct: null });
   });
 
   it("adds a section, refuses a second of the same name, and shows it while it is empty", async () => {

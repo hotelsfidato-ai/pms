@@ -223,7 +223,10 @@ const MENU = grant("menu", "edit", "Changing the menu");
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
 /* Table booking (D27-224): a guest's request is answered by whoever may ring
-   an order; the restaurant's booking hours are Restaurant setup's. */
+   an order; the restaurant's booking hours are Restaurant setup's. An outside
+   diner's booking and every booking on the night - arrived, seated (which
+   opens the table's bill), a no-show, cancelled (259) - are the same people's,
+   under the same rule (the Roles screen names its words). */
 const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos", "bar"]);
 const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
@@ -459,6 +462,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/promotion`]: DISCOUNT,
   [`POST ${H}/till/orders/:id/discount/clear`]: DISCOUNT,
   [`POST ${H}/till/orders/:id/round-off`]: TILL,
+  /* The voluntary service charge, ticked with the guest's agreement (260). */
+  [`POST ${H}/till/orders/:id/service-charge`]: TILL,
   [`POST ${H}/till/outlet/:outlet/closed`]: TILL,
   [`POST ${H}/till/orders/:id/printed`]: TILL,
   [`POST ${H}/till/orders/:id/clear`]: TILL,
@@ -511,6 +516,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* pos: restaurant setup */
   [`POST ${H}/till/setup/restaurant`]: TILL_SETUP,
   [`POST ${H}/till/setup/packing`]: TILL_SETUP,  // D27-359
+  [`POST ${H}/till/setup/service-charge`]: TILL_SETUP,  // 264
   [`POST ${H}/till/setup/sections`]: TILL_SETUP,
   [`PATCH ${H}/till/setup/sections/:id`]: TILL_SETUP,
   [`POST ${H}/till/setup/sections/:id/off`]: TILL_SETUP,
@@ -520,6 +526,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/table-bookings/:id/confirm`]: TABLE_ANSWER,
   [`POST ${H}/table-bookings/:id/decline`]: TABLE_ANSWER,
   [`PUT ${H}/table-bookings/hours`]: TABLE_HOURS,
+  [`POST ${H}/table-bookings`]: TABLE_ANSWER,  // 263: an outside diner, and the night's acts below
+  [`POST ${H}/table-bookings/:id/arrive`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/seat`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/no-show`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/cancel`]: TABLE_ANSWER,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */
@@ -1039,6 +1050,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* An earlier day's bill, to print again (20 Oct). */
   [`GET ${H}/till/bills`]: TILL_READ,
+  /* Each dish's cost and margin (D27-383 item 9): the owner, an administrator
+     or the GM - `approve` on a booking is exactly those three; costs are not
+     the kitchen's (D27-141). */
+  [`GET ${H}/till/dish-profit`]: grant("reservation", "approve", "Reading each dish's cost and margin"),
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-setup`]: KOT_READ,

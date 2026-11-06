@@ -301,6 +301,35 @@ function Overview({ day }: { day: DayEnd }) {
         </CardBody>
       </Card>
 
+      {/* 264: the voluntary service charge (inside the money above) and the
+          tips for the staff (in no sale; a cash tip is in the tin). */}
+      {((day.serviceCharge?.bills ?? 0) > 0 || (day.tips?.total ?? 0) > 0) && (
+        <Card>
+          <CardHeader title="Service charge and tips"
+            description="The service charge the guests agreed to is in the money above, with its GST. Tips are the staff's: not a sale, not taxed, and a cash tip is in the tin." />
+          <CardBody>
+            <dl className="divide-y divide-grey-200">
+              <div className="flex items-baseline justify-between py-2.5" data-day-service>
+                <dt className="text-base">
+                  Service charge (voluntary), {day.serviceCharge?.bills ?? 0} {(day.serviceCharge?.bills ?? 0) === 1 ? "bill" : "bills"}
+                </dt>
+                <dd className="text-base font-medium tabular">{moneyPrecise(day.serviceCharge?.amount ?? 0)}</dd>
+              </div>
+              {(["cash", "card", "upi"] as const).filter((m) => (day.tips?.[m] ?? 0) > 0).map((m) => (
+                <div key={m} className="flex items-baseline justify-between py-2.5">
+                  <dt className="text-base">Tips by {METHOD_LABEL[m] ?? m}</dt>
+                  <dd className="text-base font-medium tabular">{moneyPrecise(day.tips![m])}</dd>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between py-2.5" data-day-tips>
+                <dt className="text-base font-medium">Tips for the staff (not in sales)</dt>
+                <dd className="text-base font-semibold tabular">{moneyPrecise(day.tips?.total ?? 0)}</dd>
+              </div>
+            </dl>
+          </CardBody>
+        </Card>
+      )}
+
       {/* D27-324: paid bills voided today - who, when, why and how much.
           Left out of every figure above; the kitchen's KOTs stand. */}
       {(day.voided ?? []).length > 0 && (
@@ -476,6 +505,8 @@ function CashStep({ hotelId, day, onDone }: {
               <Line label="Opening float" value={day.opened ? day.cash.opening : null} />
               <Line label="Cash taken"
                     value={day.summary.byMethod["cash"] ?? 0} />
+              {/* Cash tips are in the tin until handed to the staff (260). */}
+              {(day.tips?.cash ?? 0) > 0 && <Line label="Cash tips" value={day.tips!.cash} />}
               {MOVEMENTS.map((m) => {
                 const total = day.movements
                   .filter((x) => x.kind === m.kind && !waitsOrRefused(x))

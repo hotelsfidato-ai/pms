@@ -1198,3 +1198,130 @@ begin
     format($q$insert into pos_item_variations (hotel_id, item_id, label, price, kind, mrp)
               values (%L, %L, 'Half', 30, 'quantity', -1)$q$, h, dish), '23514');
 end $$;
+
+
+-- =============================================================================
+-- A VOLUNTARY SERVICE CHARGE AND A TIP (D27-383 item 9; "a voluntary service
+-- charge, and tips")
+-- =============================================================================
+-- Off unless the restaurant sets a rate; on a bill only at that rate; inside
+-- the GST groups' taxable and taxed with them, never on alcohol's VAT; neither
+-- it nor a tip changes once the bill is not open. A tip is only on a paid
+-- bill, never a room's, and a cash one is in the tin.
+-- =============================================================================
+do $$
+declare
+  h uuid; waiter uuid; v_out uuid; bd date; bill uuid; paid uuid; t record;
+begin
+  h := app.provision_property_unchecked('PSC', 'Service Charge Test', 'Nowhere');
+  select id into waiter from staff where email = 'agra@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (waiter, h, 'pos')
+  on conflict (staff_id, hotel_id) do update set role = excluded.role;
+  bd := app.business_date(h);
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'SCT', 'Service Test', 'food', waiter) returning id into v_out;
+  insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash) values (h, v_out, bd, 0);
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into bill;
+  -- ₹1,000 of food at 5% and ₹500 of alcohol under VAT 10%.
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, tax_scheme, added_by)
+  values (bill, h, 'Thali', 2, 500, 5, 'gst', waiter), (bill, h, 'Beer', 1, 500, 10, 'vat', waiter);
+
+  perform test.raises('pos service charge', 'none goes on a bill where the restaurant set no rate',
+    format('update pos_orders set service_charge_pct = 5 where id = %L', bill), '23514');
+  update pos_outlets set service_charge_pct = 5 where id = v_out;
+  perform test.raises('pos service charge', 'nor at a rate that is not the restaurant''s',
+    format('update pos_orders set service_charge_pct = 7 where id = %L', bill), '23514');
+  perform test.raises('pos service charge', 'a rate is at most 20%',
+    format('update pos_outlets set service_charge_pct = 25 where id = %L', v_out), '23514');
+  perform test.allows('pos service charge', 'ticked at the restaurant''s rate',
+    format('update pos_orders set service_charge_pct = 5 where id = %L', bill));
+
+  select * into t from app.pos_order_by_tax(bill) where tax_scheme = 'gst';
+  perform test.ok('pos service charge', 'it is in the food''s taxable, and taxed with it',
+    t.taxable = 1050 and t.tax = 52.50, t.taxable || ' / ' || t.tax);
+  select * into t from app.pos_order_by_tax(bill) where tax_scheme = 'vat';
+  perform test.ok('pos service charge', 'and never on the alcohol''s VAT',
+    t.taxable = 500 and t.tax = 50, t.taxable || ' / ' || t.tax);
+  perform test.ok('pos service charge', 'its amount, from the breakdown',
+    app.pos_order_service_charge(bill) = 50, app.pos_order_service_charge(bill)::text);
+  perform test.ok('pos service charge', 'and the bill adds it up',
+    (select payable from app.pos_order_total(bill)) = 1652.50,
+    (select payable::text from app.pos_order_total(bill)));
+
+  update pos_orders set discount_type = 'fixed', discount_value = 150, discount_amount = 150,
+                        discount_reason = 'a test' where id = bill;
+  perform test.ok('pos service charge', 'after the discount: on the food''s share of what is left',
+    app.pos_order_service_charge(bill) = 45, app.pos_order_service_charge(bill)::text);
+  update pos_orders set discount_type = null, discount_value = null, discount_amount = 0,
+                        discount_reason = null where id = bill;
+
+  -- ---------- a tip ----------
+  perform test.raises('pos tip', 'a tip is only on a paid bill',
+    format($q$update pos_orders set tip = 50, tip_method = 'cash' where id = %L$q$, bill), '23514');
+  perform test.allows('pos tip', 'written with the payment that settles it',
+    format($q$update pos_orders set status = 'settled', settled_by = %L, settled_at = now(),
+                     payment_method = 'cash', tip = 50, tip_method = 'cash' where id = %L$q$, waiter, bill));
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (bill, h, 'cash', 1652.50, waiter);
+  perform test.ok('pos tip', 'a cash tip is in the tin: the bill and the tip are expected',
+    app.pos_expected_cash(v_out, bd) = 1702.50, app.pos_expected_cash(v_out, bd)::text);
+  perform test.raises('pos tip', 'a paid bill''s tip stays as it was paid',
+    format('update pos_orders set tip = 10 where id = %L', bill), '23514');
+  perform test.raises('pos service charge', 'and so does its service charge',
+    format('update pos_orders set service_charge_pct = null where id = %L', bill), '23514');
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into paid;
+  perform test.raises('pos tip', 'a bill charged to a room takes no tip',
+    format($q$update pos_orders set status = 'settled', settled_by = %L, settled_at = now(),
+                     payment_method = 'room', tip = 50, tip_method = 'cash' where id = %L$q$, waiter, paid), '23514');
+end $$;
+
+
+-- =============================================================================
+-- COUPONS (D27-383 item 9; "coupons"): a promotion with dates, a use limit and
+-- a least bill, refused by the database behind the till.
+-- =============================================================================
+do $$
+declare
+  h uuid; waiter uuid; v_out uuid; bd date; a uuid; b uuid; c uuid; once uuid; old uuid; big uuid;
+begin
+  select id into h from hotels where code = 'PSC';
+  select id into waiter from staff where email = 'agra@fidato.in';
+  select id into v_out from pos_outlets where hotel_id = h and code = 'SCT';
+  bd := app.business_date(h);
+  insert into pos_promotions (hotel_id, code, name, kind, value, is_coupon, valid_from, valid_to, max_uses)
+  values (h, 'ONCE', 'Once only', 'percent', 10, true, bd, bd, 1) returning id into once;
+  insert into pos_promotions (hotel_id, code, name, kind, value, is_coupon, valid_from, valid_to)
+  values (h, 'OLD', 'Last year', 'percent', 10, true, bd - 400, bd - 300) returning id into old;
+  insert into pos_promotions (hotel_id, code, name, kind, value, is_coupon, valid_from, valid_to, min_bill)
+  values (h, 'BIG', 'Big bills', 'fixed', 100, true, bd, bd, 5000) returning id into big;
+  perform test.raises('pos coupon', 'a coupon has its two dates',
+    format($q$insert into pos_promotions (hotel_id, code, name, kind, value, is_coupon)
+              values (%L, 'NODATE', 'No dates', 'percent', 5, true)$q$, h), '23514');
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into a;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into b;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into c;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  select o, h, 'Thali', 1, 500, 5, waiter from unnest(array[a, b, c]) o;
+
+  perform test.allows('pos coupon', 'its first use goes on',
+    format('update pos_orders set promotion_id = %L where id = %L', once, a));
+  perform test.raises('pos coupon', 'one more than its limit is refused',
+    format('update pos_orders set promotion_id = %L where id = %L', once, b), '23514');
+  update pos_orders set status = 'abandoned', abandoned_reason = 'walked out' where id = a;
+  perform test.allows('pos coupon', 'a bill closed unpaid gives its use back',
+    format('update pos_orders set promotion_id = %L where id = %L', once, b));
+  perform test.raises('pos coupon', 'a coupon out of its dates is refused',
+    format('update pos_orders set promotion_id = %L where id = %L', old, c), '23514');
+  perform test.raises('pos coupon', 'and one under its least bill',
+    format('update pos_orders set promotion_id = %L where id = %L', big, c), '23514');
+  perform test.ok('pos coupon', 'its uses: the bills that carry it, but one closed unpaid',
+    app.pos_coupon_uses(once) = 1, app.pos_coupon_uses(once)::text);
+end $$;
