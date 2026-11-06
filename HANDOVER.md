@@ -818,6 +818,14 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **7 November, about 04:30: RELEASE 20 GATES GREEN at 1c3db06d** (copy `.claude/worktrees/release-r20`, branch
+> `release/r20`): web 1,565, API 3,127, db 1,958, replay 262, PG16, restore 1, to minute, in 78 min. It carries D27-397
+> (merged, migration 262), the Night audit fix and wave 1. **Not yet done:** `node scripts/release.mjs release/r20`
+> once, read the bundle from `dist/index.html`, and write `.local/release-20-steps.md` (A1-A8). The demo database
+> `fidato` is at 262 (backup `.local/backups/fidato-before-migrate-262-7nov.dump`). D27-398 Backfill data is being
+> built by a helper in `.claude/worktrees/backfill` (migration 264; 263 is the build-all chat's). Copy
+> `.claude/worktrees/after-checkin` is merged: recycle it, junctions out first.
+>
 > **6 November, 20:15: D27-397, AFTER CHECK-IN (this chat, not the build-all waves).** The owner: the GM undoes a
 > check-in, cancels or voids an in-house guest, and changes its arrival date, rate, room type and payment method;
 > the front desk asks and the GM approves; a switch in Front desk rules, on. **Migrations 266-268 are taken by it.**
