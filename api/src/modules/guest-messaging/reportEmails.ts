@@ -1,7 +1,9 @@
 import { withUser, type Client } from "../../db.ts";
 import { canSend, messageIdFor, send } from "../../sending.ts";
 import { dateReport, formatCell, inr, kindOf, renderPdf } from "../../reportRender.ts";
-import { buildReport, type CellKind, type ReportDoc, type ReportSection } from "../reports/index.ts";
+import {
+  buildReport, runScheduledReports, type CellKind, type ReportDoc, type ReportSection,
+} from "../reports/index.ts";
 import { MOST_ATTEMPTS } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -276,5 +278,10 @@ export async function runReportEmails(
     });
     if (sent.ok) result.sent += list.length;
   }
+
+  /* Then the reports on a schedule (D27-383 item 5), in the same pass: after
+     the night audit of their day, each its own email. Counted on their own. */
+  await runScheduledReports(MOST_ATTEMPTS, asNobody, asPerson).catch((error) =>
+    console.error("[guest-messaging] the scheduled reports failed", error instanceof Error ? error.message : error));
   return result;
 }

@@ -373,6 +373,12 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      database asks app.manages_hotel too. */
   [`PUT ${H}/guest-message-settings/:kind`]: grant("room_config", "edit", "Switching a guest message"),
   [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
+  /* D27-383 item 5: any report by email - whoever may open it (its own read rule,
+     asked by the route) - and the reports on a schedule, set as the daily ones. */
+  [`POST ${H}/reports/:key/email`]: own("reports/emails.ts: the report's own read rule (READ_RULES)"),
+  [`POST ${H}/report-schedules`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),
+  [`PUT ${H}/report-schedules/:id`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),
+  [`DELETE ${H}/report-schedules/:id`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),
   /* Rivals' prices (D27-270): switched by the people who set the hotel up; the
      table asks app.manages_hotel too. */
   [`PUT ${H}/market-rates/switch`]: grant("room_config", "edit", "Switching rivals' prices"),
@@ -890,6 +896,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
   [`GET ${H}/guest-message-settings`]: see("room_config", "the guest messages' switches"),
   [`GET ${H}/report-emails`]: see("room_config", "who gets the reports by email"),
+  [`GET ${H}/report-schedules`]: see("room_config", "the reports sent on a schedule"),
+  [`GET ${H}/reports/:key/email`]: own("reports/emails.ts: the report's own read rule (READ_RULES)"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,

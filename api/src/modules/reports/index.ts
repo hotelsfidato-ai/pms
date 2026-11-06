@@ -3,6 +3,7 @@ import { statistics } from "./statistics.ts";
 import { reports } from "./reports.ts";
 import { documents } from "./documents.ts";
 import { dueOut } from "./dueOut.ts";
+import { emails } from "./emails.ts";
 
 /* The front door of the reports service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -15,9 +16,14 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", statistics],
   ["/api/hotels", reports],
   ["/api/hotels", dueOut],
+  /* Email a report, and reports on a schedule (D27-383 item 5). */
+  ["/api/hotels", emails],
 ];
 
 export { buildReport, BUILT_KEYS, paramsProblem, switchedOff } from "./build.ts";
+/* The reports on a schedule, sent in the daily report emails' pass after the
+   night audit (guest-messaging/reportEmails.ts, D27-383 item 5). */
+export { runScheduledReports } from "./emails.ts";
 export { REPORT_KEYS, STORE_REPORT_KEYS } from "./document.ts";
 /* ⚠ ADDED FOR PURCHASING (D18-3), by that chat — the master reviews it at
    merge. The three builders that exist so "no report spells a row by hand":
