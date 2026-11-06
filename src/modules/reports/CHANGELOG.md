@@ -11,6 +11,114 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-06 · Money owed by age, statements, commission, GSTR-1, input tax credit, GST on advances (D27-383 items 2-4)
+
+**Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), items 2, 3 and 4, built
+under D27-396 ("build all of them and I will take a look at it"). Reports and files only: nothing here
+changes a bill, an invoice number or a payment.
+
+**Shipped.** Six reports, each a `ReportDoc` (screen, Print, PDF, Excel, CSV through the shared renderer):
+
+| Report | Key, screen | Read by |
+|---|---|---|
+| Money owed by age | `dues-by-age`, `/reports/dues-by-age` (`DuesByAgePage`) | Company accounts' readers: `invoice` view (roleGate MONEY_REPORT, D27-145) |
+| Statement of account | `company-statement`, `/reports/company-statement?account=` (`CompanyStatementPage`) | the same |
+| Commission owed | `commission`, `/reports/commission` (`CommissionPage`) | `commission` view: owner, Admin, GM, revenue manager, accountant, Viewer |
+| GSTR-1 | `gstr-1`, `/reports/gstr-1` (`Gstr1Page`), and the file `GET /:code/reports/gstr-1.json?month=` | the GST sales register's (`report`); the file `report` export |
+| Input tax credit | `input-tax-credit`, `/reports/input-tax-credit` | the supplier dues' four (`invoice` approve, D27-370) |
+| GST on advances | `gst-advances`, `/reports/gst-advances` | `invoice` view (money taken, D27-147) |
+
+- `builders/cityLedger.ts`: `duesByAge` and `companyStatement` read **the City ledger's own `cityLedgerMoves`**
+  (which now also carries each line's booking, guest, method, reference and note for the statement; the
+  summary adds up the same five columns as before). Total owed = the City ledger's Closing Balance; the
+  statement's Closing balance = its Closing Balance for the account. A test holds both.
+- `builders/commission.ts`, `builders/gst.ts` (GSTR-1 data, its ReportDoc and its JSON from ONE `gstr1Data`,
+  so the screen and the file cannot differ; ITC; advances).
+- Menu entries (search only) in `nav.ts`, cards in All reports (Money owed; Statutory), routes. Finance's
+  Company accounts: a **Statement** link per account and a **Money owed by age** link (finance's
+  `pages/Billing.tsx`). Finance's server door now exports `sacOf` (one line) so the HSN/SAC rule is not copied.
+- ReportParams gains `account` (both copies of the type; documents.ts and the file route pass it).
+
+**Decided under D27-396** (the owner reviews later; each the safest, simplest reading):
+
+1. *Payments set against bills first in, first out.* A company payment names the account, never a bill, so
+   oldest first is the only allocation the records allow. Age = days since the bill was sent ("Bill to
+   company"), not since its due date; the company's credit days are shown beside it.
+2. *A credit note does not move what an account owes.* The City ledger counts the bill sent to the account,
+   not the invoice; a credit note cancels the invoice. Counting it would make Money owed and the statement
+   disagree with the City ledger and Company accounts (D27-127, one figure for a company). The statement lists
+   each credit note on the account's bills in its own section, not in the balance.
+3. *"Paid ahead"* (payments beyond the bills) is shown below zero, so the total is the City ledger's.
+4. *The statement names the account as the City ledger does* (its name), the list being the City ledger's own
+   accounts.
+5. *Commission:* D17-84 (the site's figure, else the % stamped on the booking, else "-"). **No setting or
+   contract names the amount it is on, so room revenue before GST** (the stay's live room charges, the Manager
+   report's Room Charges), discounts not taken off. A booking counts **in the window it checked out in, whole**.
+   Only bookings from an OTA or travel-agent source, a travel-agent company, or with a rate or figure on record.
+6. *The Manager report's Outstanding Commission stays "-"* (D17-75: until commission paid is recorded; D27-259:
+   no payouts). Not re-decided.
+7. *GSTR-1 B2C small includes the restaurant's bills paid at the outlet* (posSales' rule, by
+   `app.pos_order_by_tax`): they are B2C supplies, and leaving them out understates the return. A B2C credit
+   note is netted in B2C small (CDNUR is for B2C large and exports only). B2C large is always empty for a hotel
+   (place of supply = the property, IGST Act s.12(3)); the ₹1,00,000 limit (Notification 12/2024-CT) is named.
+8. *Each invoice's rate-wise lines are read from its folio as they stood when it was issued* (posted by then, not
+   reversed by then), and checked against its stored totals; **a mismatch, an imported "tax" line, a line with
+   no HSN/SAC or a GSTIN that is not the property's refuses the file**, with the reasons, and lists them on the
+   screen. A file that does not match the invoices is worse than none.
+9. *Table 13:* tax invoices and credit notes as two rows of the one series they share; a credit-noted invoice
+   is not "cancelled"; restaurant bills: settled and NC issued, voided cancelled, closed-unpaid not a bill.
+10. *Advances (Table 11) are their own report, not in the JSON* - the task's list for the file did not name them,
+    and putting tax on deposits into a return is the CA's call.
+11. *An advance* = money taken on a bill (not "Bill to company") before its first tax invoice; reported in the
+    month received when no invoice is issued by that month's end (11A), adjusted in the invoice's month (11B);
+    a refund before an invoice is "Given back". Treated as including its tax. Rate: the room rule at the
+    booking's rate; not known (a function, a group's master, a free room) → **18%, CGST Rule 50 proviso**.
+12. *ITC* from the Store's deliveries (`stock_movements` receipts; purchase orders land there), as marked; bar
+    bills carry no GST. CGST/SGST vs IGST from the supplier's GSTIN on its record (name match), else a dash.
+
+**Law followed** (checked 6 November 2026): GSTR-1 JSON of the GST Returns Offline Tool **3.2.2** (keys
+`b2b`, `b2cl`, `b2cs`, `cdnr`, `cdnur`, `hsn.hsn_b2b` / `hsn.hsn_b2c`, `doc_issue`; Table 12 split B2B/B2C
+and Table 13 mandatory from the May 2025 period, GSTN advisory of 1 May 2025; GSTN publishes no schema, so the
+shape is the tool's as documented by Tally's and community notes). CGST Act s.13(2) (time of supply of
+services); Notification 66/2017-CT (no GST on advances for goods only); CGST Rule 50 (receipt voucher, 18%
+where the rate is not determinable), Rule 51 (refund voucher); s.16 and s.17(5) for ITC; Notification
+12/2024-CT (B2CL ₹1,00,000).
+
+**For the CA (the `.local/ca-lawyer-questions.md` list, kept here because this helper may not edit `.local`):**
+- CA-1 Commission's basis: room revenue before GST, discounts not taken off? Or the booking amount the site
+  quotes (incl. GST, or after discount)? The site's GST on its commission (RCM or ITC) and TCS (s.52) / TDS
+  (194-O) are not in the report.
+- CA-2 Credit notes share the tax invoice series (`app.next_invoice_number`): acceptable for Table 13, or a
+  series of their own (a finance change)?
+- CA-3 Is a credit-noted invoice "cancelled" in Table 13?
+- CA-4 Advances: is a pre-arrival deposit an advance for GST (s.13(2)) in every case? How to report a refund
+  of an advance (Table 11B or an amendment)? Should Table 11 go in the JSON file?
+- CA-5 The HSN `desc` is left empty in the file for the offline tool's HSN master to fill: acceptable?
+- CA-6 ITC: confirm against GSTR-2B; blocked credits (s.17(5)) - rooms at ₹7,500 or less and restaurant
+  service at 5% are without ITC since 22 September 2025, food and beverages blocked.
+- CA-7 Owner's allowance bills (D27-366) are counted as restaurant sales in B2C small, as the day book counts them.
+
+**Found.** REP-21 (DEFECTS.md): the GST sales register lists only tax invoices, so the restaurant's bills paid
+at the outlet are in no GST report but the new GSTR-1. Not changed here.
+
+**Proved.** `api/test/modules/reports/receivablesAndGst.test.ts`, 16 tests, its own property RGT: ageing by
+hand (500 / 1,500; paid ahead -200) equal to the City ledger's closing; the statement's running balance
+1,000 → 3,000 → 3,500 → 2,000 and its credit note listed, not counted; commission 300 + 123.45 + 50, one dash;
+GSTR-1 B2B by rate, 9B, B2C small netted, HSN apart, the JSON's keys and values, Table 13 counts; the file
+refused for an invoice that no longer adds up; ITC split CGST/SGST and a dash; advances 11A in July, 11B in
+August. Refusals: the revenue manager on money owed (screen and file), reception and the hotel manager on
+commission, reception on the GSTR-1 file, the hotel manager on ITC (screen and file). **Three guards broken
+and seen to fail:** first-in-first-out reversed (ageing test red), the commission read opened to `report`
+(refusal test red), the GSTR-1 add-up check disabled (file test red); all put back.
+
+**Left open.** The owner reviews the twelve decisions above; the CA answers CA-1 to CA-7. Not done: commission
+on cancellation charges; a statement for several hotels at once (item 6 of the list); emailing a statement.
+
+**Frozen files touched** (the master's): `api/src/roleGate.ts` (7 read rules), `api/src/routes/reportFiles.ts`
+(the lists for the new money, dues and commission reports; the `account` parameter).
+
+---
+
 ## 2026-11-02 · The Manager report with a year in it (D27-387, the load test)
 
 **Found.** `figures.ts`'s NIGHTS left `bd` to the planner, which folded `app.business_date` into booked_nights and asked it once per night of the window: 2,042 times, 1.7 s of the report's 2.4 s at a hotel with a year of stays, growing as the financial year fills. `app.sellable_rooms` was asked twice a day for available and blocked.

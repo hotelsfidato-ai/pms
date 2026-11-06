@@ -47,7 +47,7 @@ a screen (Ctrl K).
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
 | Cash deposits (Finance) | `/h/:code/cash-deposits` | `pages/CashDeposits.tsx` | none (owner, Admin, GM, accountant, Viewer; D27-191) |
-| Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) + `flows/CompanyPayments.tsx` | none - Opening, Sent, Received, Balance (the City ledger report's); Record payment (desk or accounts) and Payments received with Reverse (D27-239, D27-242) |
+| Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) + `flows/CompanyPayments.tsx` | none - Opening, Sent, Received, Balance (the City ledger report's); Record payment (desk or accounts) and Payments received with Reverse (D27-239, D27-242); a Statement link per account and Money owed by age, reports' (D27-383) |
 
 Six addresses, five page files. Menu gates (`nav.ts`): Folios and Invoices
 `invoice`; Payments and Cashiering `payment`; Company accounts `commission`.
@@ -255,7 +255,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |
 | `RefundStep` | (D27-315 B) the Bill tab shows it when the bill is overpaid; exported for the check-out dialog (Lane A's "Leaving early") |
 
-On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E). `editFolioCharge` since 30 September (D27-205): the front desk's room move puts tonight's posted night right to a new rate through it.
+On the server (`api/src/modules/finance/index.ts`): `sacOf` (reports' GSTR-1 file, D27-383), `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E). `editFolioCharge` since 30 September (D27-205): the front desk's room move puts tonight's posted night right to a new rate through it.
 
 ## Leans on
 

@@ -51,7 +51,7 @@ export async function commissionReport(
         and r.check_out between $2::date and $3::date
         and (r.commission_pct is not null or r.commission_amount is not null
              or bs.kind in ('ota', 'travel_agent') or co.kind = 'travel_agent')
-      order by 1, r.check_out, r.reference`,
+      order by lower(app.booking_source_label(bs.name, co.name, r.source)), r.check_out, r.reference`,
     [property.id, from, to],
   );
 
@@ -100,7 +100,7 @@ export async function commissionReport(
       ...(noRate ? { note: `${noRate} booking${noRate === 1 ? " has" : "s have"} no commission on record: a dash, not counted in the totals.` } : {}),
     }],
     footnotes: [
-      "Commission is the site's own figure when it sent one; else the rate on record when the booking was taken, times its room revenue; else \"-\" (D17-84).",
+      "Commission is the site's own figure when it sent one; else the rate on record when the booking was taken, times its room revenue; else \"-\", never a rate made up.",
       "Room revenue is the stay's room charges before GST, discounts not taken off: no booking source or contract names another amount. The CA confirms the basis.",
       "A booking counts in the days it checked out in. The site's GST on its commission, and the TCS or TDS it keeps, are not here.",
       "No commission paid out is recorded, so this is what is owed for these stays, not what is left to pay.",

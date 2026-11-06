@@ -29,8 +29,10 @@ export const halves = (tax: number) => {
 /** Months as the return names them: "2026-11" is period "112026". */
 const period = (month: string) => `${month.slice(5, 7)}${month.slice(0, 4)}`;
 const ddmmyyyy = (iso: string) => iso.split("-").reverse().join("-");
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+  "October", "November", "December"];
 const monthFacts = (month: string) => [
-  { label: "Month", value: `${month}-01`, kind: "date" as const },
+  { label: "Month", value: `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`, kind: "text" as const },
   { label: "Return period", value: period(month), kind: "text" as const },
 ];
 
@@ -319,7 +321,7 @@ export async function gstr1Report(client: Client, property: Property, month: str
       },
       {
         key: "b2cl", title: "5 - B2C large", columns: [col("what", "What", "text")], rows: [],
-        empty: "None, and never for a hotel: B2C large is an invoice to another state over Rs 1,00,000 "
+        empty: "None, and never for a hotel: B2C large is an invoice to another state over ₹1,00,000 "
           + "(Notification 12/2024-CT), and a hotel's place of supply is always its own state (IGST Act s.12(3)).",
       },
       {
@@ -427,7 +429,7 @@ export async function inputTaxCreditReport(client: Client, property: Property, m
       "The GST on each delivery as the supplier's bill said it, recorded when it was received in the Store; purchase orders are received there too.",
       `${notRecorded} deliver${notRecorded === 1 ? "y" : "ies"} this month recorded no GST, and ${notRecorded === 1 ? "is" : "are"} not here. Bar bills record none: liquor is outside GST.`,
       "CGST and SGST where the supplier's GSTIN is in this state, IGST where it is in another; a dash where the supplier's GSTIN is not on record.",
-      "For the CA: claimable is what the person receiving marked. Credit is taken only as GSTR-2B shows it (s.16), and is blocked on food and on supplies taxed without credit, such as rooms at Rs 7,500 or less and restaurant service at 5% (s.17(5)).",
+      "For the CA: claimable is what the person receiving marked. Credit is taken only as GSTR-2B shows it (s.16), and is blocked on food and on supplies taxed without credit, such as rooms at ₹7,500 or less and restaurant service at 5% (s.17(5)).",
     ],
   };
 }

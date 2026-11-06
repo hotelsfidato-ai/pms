@@ -208,7 +208,91 @@ export const SHOTS = [
     ],
   },
 
+  /* D27-383: money owed by age, a statement of account, commission owed. Taken
+     where companies, an agent and a booking site were sent bills and paid some
+     (the master's demo steps, or this helper's own example data). */
+  {
+    id: "A11-32", title: "Money owed by age", as: "Accountant", size: "wall",
+    path: "/reports/dues-by-age", steps: [LOADED("Owed by each company, agent and booking site")],
+    marks: [
+      { n: 1, at: "css:input[aria-label='Owed on']", side: "right" },
+      { n: 2, at: "text:Companies", nth: 0, side: "left" },
+      { n: 3, at: "text:0-30 DAYS", side: "top" },
+      { n: 4, at: "text:PAID AHEAD", side: "top" },
+      { n: 5, at: "text:Total owed", nth: 0, side: "left" },
+    ],
+  },
+  {
+    id: "A11-33", title: "A statement of account", as: "Accountant", size: "wall",
+    path: "/reports/company-statement?account=Sharma%20Textiles%20Pvt%20Ltd",
+    steps: [LOADED("Bills sent, payments and reversals"),
+      /* From the 1st of July, as a person would choose it. */
+      { eval: `(() => { const i = document.querySelector("input[aria-label=From]");
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, "2026-07-01");
+        i.dispatchEvent(new Event("input", { bubbles: true })); })()` },
+      { waitFor: "text:Amit Kulkarni", ms: 20000 }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "css:select[aria-label=Account]", side: "right" },
+      { n: 2, at: "text:Opening balance", nth: 0, side: "left" },
+      { n: 3, at: "text:Payment received", nth: 0, side: "left" },
+      { n: 4, at: "text:Closing balance", nth: 0, side: "left" },
+      { n: 5, at: "text:Credit notes on this account's bills", side: "left" },
+    ],
+  },
+  {
+    id: "A11-34", title: "Commission owed", as: "General Manager", size: "wall",
+    path: "/reports/commission", steps: [LOADED("Bookings checked out, by booking site and agent")],
+    marks: [
+      { n: 1, at: "css:input[aria-label=From]", side: "right" },
+      { n: 2, at: "text:SITE'S FIGURE", side: "top" },
+      { n: 3, at: "text:RATE %", side: "top" },
+      { n: 4, at: "text:booking has no commission on record", side: "left" },
+    ],
+  },
+
   /* ── Statutory ────────────────────────────────────────────────────── */
+  /* D27-383 item 4: GSTR-1, input tax credit, GST on advances, the month in view. */
+  {
+    id: "A11-35", title: "GSTR-1: the month, table by table", as: "Accountant", size: "wall",
+    path: "/reports/gstr-1", steps: [LOADED("4A - B2B: invoices to registered recipients")],
+    marks: [
+      { n: 1, at: "css:input[aria-label=Month]", side: "right" },
+      { n: 2, at: "text:GSTR-1 file (JSON)", side: "right" },
+      { n: 3, at: "text:4A - B2B: invoices to registered recipients", side: "left" },
+      { n: 4, at: "text:5 - B2C large", side: "left" },
+    ],
+  },
+  {
+    id: "A11-36", title: "GSTR-1: B2C small, the HSN summary and the documents", as: "Accountant", size: "wall",
+    path: "/reports/gstr-1", steps: [LOADED("4A - B2B: invoices to registered recipients"),
+      { scroll: "text:7 - B2C small: by rate, within the state" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:7 - B2C small: by rate, within the state", side: "left" },
+      { n: 2, at: "text:12 - HSN/SAC summary, B2B", side: "left" },
+      { n: 3, at: "text:12 - HSN/SAC summary, B2C", side: "left" },
+      { n: 4, at: "text:13 - Documents issued", side: "left" },
+    ],
+  },
+  {
+    id: "A11-37", title: "Input tax credit", as: "Accountant", size: "wall",
+    path: "/reports/input-tax-credit", steps: [LOADED("GST marked claimable")],
+    marks: [
+      { n: 1, at: "text:GST marked claimable", side: "left" },
+      { n: 2, at: "text:SUPPLIER GSTIN", side: "top" },
+      { n: 3, at: "text:IGST", nth: 0, side: "top" },
+      { n: 4, at: "text:GST marked not claimable", side: "left" },
+    ],
+  },
+  {
+    id: "A11-38", title: "GST on advances", as: "Accountant", size: "wall",
+    path: "/reports/gst-advances", steps: [LOADED("By rate, for GSTR-1 Table 11")],
+    marks: [
+      { n: 1, at: "text:11A - Advances received", side: "left" },
+      { n: 2, at: "text:11B - Advances adjusted", side: "left" },
+      { n: 3, at: "text:Advances received this month, no tax invoice by its end", side: "left" },
+      { n: 4, at: "text:Advances of earlier months, adjusted against invoices issued this month", side: "left" },
+    ],
+  },
   {
     id: "A11-15", title: "GST sales register: the month's invoices and credit notes", as: "General Manager",
     path: "/reports/gst-sales", steps: [LOADED("GSTR-1 extract")],
