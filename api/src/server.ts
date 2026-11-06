@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env } from "./env.ts";
 import { healthCheck, closePool, hotelInView, type Client } from "./db.ts";
-import { subjectFor, Unauthenticated } from "./auth.ts";
+import { signInFor, Unauthenticated } from "./auth.ts";
 import { roleGate } from "./roleGate.ts";
 import { nothingLeavesTestHotels } from "./testHotels.ts";
 import { telemetry, routeOf, errorKind } from "./telemetry.ts";
@@ -66,6 +66,8 @@ import { notifications } from "./routes/notifications.ts";
 type Env = {
   Variables: {
     subject: string;
+    /* A person's sign-in (Firebase's auth_time), for the two-step routes. */
+    authTime?: number;
     /* Set only on /api/pos requests. Optional because a person's
        request has no outlet, and the type should say so rather than
        let a handler read one that was never resolved. */
@@ -107,6 +109,9 @@ app.use(
        satisfy. Adding it would advertise the header to every origin. */
     allowHeaders: [
       "authorization", "content-type", "x-dev-staff-id",
+      /* The dev sign-in's time, for two-step sign-in (D27-396); read only
+         when ALLOW_DEV_AUTH is on (auth.ts). */
+      "x-dev-sign-in",
       "x-provisioning-key",
       /* The offline outbox sends this on every retry so a held write
          cannot be applied twice. Missing from this list it cost a
@@ -240,14 +245,21 @@ app.use("/api/*", async (c, next) => {
     return;
   }
 
+  let signIn: { subject: string; authTime: number };
   try {
-    c.set("subject", await subjectFor(c.req.raw.headers));
+    signIn = await signInFor(c.req.raw.headers);
   } catch (error) {
     if (error instanceof Unauthenticated) {
       return c.json({ error: error.message }, 401);
     }
     throw error;
   }
+  c.set("subject", signIn.subject);
+  c.set("authTime", signIn.authTime);
+  /* Two-step sign-in (D27-396): a sign-in that owes a code reaches the
+     two-step routes and nothing else. Asked once a minute per sign-in. */
+  const twoStep = await admin.twoStepRefusal(signIn.subject, signIn.authTime, c.req.path);
+  if (twoStep) return c.json(twoStep, 403);
   await next();
 });
 

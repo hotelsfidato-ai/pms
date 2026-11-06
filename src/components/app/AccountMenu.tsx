@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router";
-import { Check, ChevronDown, Compass, LogOut, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Compass, KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { TwoStepDialog } from "@/modules/admin";
 import { cn } from "@/lib/cn";
 import {
   useSession, useRole, useCurrentHotel, useWorkableHotels, roleFor,
@@ -96,6 +98,8 @@ export function AccountMenu() {
   const current = useCurrentHotel();
   const workable = useWorkableHotels();
   const queryClient = useQueryClient();
+  /* D27-396: the person's own two-step sign-in, in a dialog of its own. */
+  const [twoStep, setTwoStep] = useState(false);
 
   if (!scope) return null;
 
@@ -153,6 +157,8 @@ export function AccountMenu() {
   };
 
   return (
+    <>
+    <TwoStepDialog open={twoStep} onOpenChange={setTwoStep} />
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
@@ -306,6 +312,13 @@ export function AccountMenu() {
           </DropdownMenuItem>
         )}
 
+        <DropdownMenuItem onSelect={() => setTwoStep(true)}>
+          <span className="flex items-center gap-2 text-ink-900">
+            <KeyRound className="size-4 text-grey-400" />
+            Two-step sign-in
+          </span>
+        </DropdownMenuItem>
+
         {/* The lists in memory go AFTER the sign-out: cleared while the
             screens were still signed in, they would fetch it all again. */}
         <DropdownMenuItem onSelect={() => void signOut().then(() => queryClient.clear())}>
@@ -316,5 +329,6 @@ export function AccountMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }

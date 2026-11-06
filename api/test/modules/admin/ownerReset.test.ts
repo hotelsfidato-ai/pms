@@ -493,3 +493,66 @@ describe("the server's script, reset-property.ts (D27-379)", () => {
     expect(await listed()).toEqual([]);
   });
 });
+
+/* D27-381, D27-396: a hotel locked against the reset - as SHI and AMR are, by
+   migration - is refused by the button and by the script, with nothing gone
+   and no backup taken. A hotel of this file's own: the lock never comes off. */
+describe("a hotel that can never be reset (Shimla and Amrapali)", () => {
+  const sentence = "Owner Reset Locked (ORL) can never be reset: the owner locked it (D27-381).";
+  let orl: string;
+  const orlBookings = async () =>
+    Number((await sql("select count(*) from reservations where hotel_id = $1", [orl])).rows[0].count);
+
+  beforeAll(async () => {
+    await sql(`begin;
+      select set_config('app.user_id', '${groupOwner}', true);
+      select app.provision_property_unchecked('ORL', 'Owner Reset Locked', 'Nowhere');
+      commit;`);
+    orl = (await sql("select id::text from hotels where code = 'ORL'")).rows[0].id;
+    await sql(`do $$
+      declare h uuid := '${orl}'; g uuid;
+      begin
+        insert into guests (full_name) values ('ORL Guest') returning id into g;
+        insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+        values (h, app.next_reference(h), g, (select id from room_types where hotel_id = h order by code limit 1),
+                app.business_date(h) - 1, app.business_date(h), 3000, 'checked_out');
+        update hotels set reset_locked = true where id = h;
+      end $$;`);
+  });
+
+  afterAll(async () => {
+    await sql(`begin;
+      delete from staff_hotels where hotel_id = '${orl}';
+      alter table hotels disable trigger hotels_no_delete;
+      delete from hotels where id = '${orl}';
+      alter table hotels enable trigger hotels_no_delete;
+      commit;`).catch((e) => console.error("ORL cleanup:", e.message));
+  });
+
+  it("the button's dry run says so, and its clear refuses before the backup", async () => {
+    expect((await body(await call(resetter, "GET", "/api/admin/hotels/ORL/owner-reset"))).refusal).toBe(sentence);
+    const res = await call(resetter, "POST", "/api/admin/hotels/ORL/owner-reset", { confirm: "ORL" });
+    expect(res.status).toBe(409);
+    expect((await body(res)).error).toBe(sentence);
+    expect(backups).toBe(0);
+    expect(await orlBookings()).toBe(1);
+  });
+
+  it("the server's script refuses too, saying why, and changes nothing", async () => {
+    const file = fileURLToPath(new URL("../../../scripts/reset-property.ts", import.meta.url));
+    const run = await new Promise<{ code: number; out: string }>((done) => {
+      execFile(process.execPath, ["--experimental-strip-types", "--no-warnings", file, "ORL", "--fresh-start", "--yes"],
+        { env: { ...process.env }, timeout: 60_000 }, (error, stdout, stderr) =>
+          done({ code: error ? Number(error.code ?? 1) : 0, out: stdout + stderr }));
+    });
+    expect(run.code, run.out).toBe(1);
+    expect(run.out).toContain(sentence);
+    expect(run.out).toMatch(/Nothing was changed\./);
+    expect(await orlBookings()).toBe(1);
+  });
+
+  it("and the lock is never lifted", async () => {
+    await expect(sql("update hotels set reset_locked = false where code = 'ORL'"))
+      .rejects.toThrow("ORL can never be reset, and that lock is not lifted (D27-381).");
+  });
+});

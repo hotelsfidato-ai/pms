@@ -1022,19 +1022,30 @@
   </ul>
 
   <figure class="shot" id="fig-A17-46">
-    <img src="img/A17-46.png" alt="Signing in: the rules for passwords and sign-ins, read only">
-    <figcaption><b>Figure A17-46.</b> Signing in: the rules, read only.</figcaption>
+    <img src="img/A17-46.png" alt="Signing in: the rules for passwords and sign-ins, and the Two-step sign-in card with its Required switch">
+    <figcaption><b>Figure A17-46.</b> Signing in: the rules, and whether two-step sign-in is required.</figcaption>
+    <ol class="callouts"><li>The rules, read only</li><li>Required for the owner, Admins, GMs and Accountants</li></ol>
   </figure>
   <ul>
     <li>A password is at least 10 characters for the owner, an Admin and a GM, and at least 8 for everybody else.</li>
     <li>Somebody given the owner's, an Admin's or a GM's role with a shorter password sets a new one at their next sign-in.</li>
     <li>Each sign-in is kept for 90 days: when, and on what device. The owner and an Admin see it under <span class="ui">Sign-ins and devices</span>.</li>
-    <li>Two-step sign-in, for the owner, Admins and GMs, comes after this release.</li>
+    <li>Two-step sign-in (a code from a phone app as well as the password, A0.1): anybody may set it up from their account menu.</li>
   </ul>
+
+  <h3>To require two-step sign-in</h3>
+  <ol class="steps">
+    <li>Set up your own first: your name at the top right, <span class="ui">Two-step sign-in</span> (A0.1). The switch refuses until yours is on, so it cannot lock you out.</li>
+    <li>Open Settings, <span class="ui">Signing in</span>.</li>
+    <li>Switch on <span class="ui">Required for the owner, Admins, GMs and Accountants</span>.</li>
+  </ol>
+  <p>From then on, each of them sets it up the next time they open the system, before anything else; everybody else is not asked. It starts <b>off</b>. Only the owner or an Admin may change it; the GM sees it greyed, with <span class="msg">“The owner or an Admin changes this.”</span> Every change is in the audit log.</p>
+  <p>A lost phone: on <span class="ui">People</span> (A16.6) the person shows <span class="ui">Two-step on</span>; the owner, or an Admin at their hotel, clicks <span class="ui">Two-step off</span>, types why, and clicks <span class="ui">Switch it off</span>. The reason goes into the audit log, and the person sets it up again on their new phone.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>; the Signing in page names it so: <span class="d">D27-308</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.</p>
+    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>; the Signing in page names it so: <span class="d">D27-308</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.
+       Two-step sign-in, off until required, the four roles, and the owner or an Admin switching somebody's off with a reason: <span class="d">D27-384</span>, <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A17.14 -->

@@ -77,16 +77,18 @@ async function verified(app: App, token: string) {
 }
 
 /**
- * Turns an incoming request's headers into a subject, without touching
- * the database. Throws `Unauthenticated` rather than returning null so
- * a caller cannot forget to check.
+ * Turns an incoming request's headers into a subject and its sign-in
+ * (Firebase's `auth_time`, which the two-step check asks about: D27-396).
+ * Throws `Unauthenticated` rather than returning null so a caller cannot
+ * forget to check.
  */
-export async function subjectFor(headers: Headers): Promise<string> {
+export async function signInFor(headers: Headers): Promise<{ subject: string; authTime: number }> {
   /* Development only. `env.ts` refuses to start the process with this
-     on in production, so this branch cannot exist on a deployed box. */
+     on in production, so this branch cannot exist on a deployed box.
+     A test names its sign-in with x-dev-sign-in (two-step, D27-396). */
   if (env.allowDevAuth) {
     const dev = headers.get("x-dev-staff-id");
-    if (dev) return dev;
+    if (dev) return { subject: dev, authTime: Number(headers.get("x-dev-sign-in")) || 0 };
   }
 
   const header = headers.get("authorization");
@@ -116,7 +118,7 @@ export async function subjectFor(headers: Headers): Promise<string> {
     const decoded = await verified(app, token);
     void noteSignIn(decoded.uid, decoded.auth_time, headers); // D27-243 5.4: the sign-in history
     if (await isSignedOut(decoded.uid, decoded.auth_time)) throw new Unauthenticated("Signed out on this device."); // D27-255
-    return decoded.uid;
+    return { subject: decoded.uid, authTime: decoded.auth_time };
   } catch (error) {
     /* Never echo the library's message back to the CALLER — it
        distinguishes "expired" from "wrong project" from "revoked",

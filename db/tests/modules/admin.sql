@@ -1382,3 +1382,167 @@ begin
   select 'owner full reset', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
     from jsonb_array_elements(res) x;
 end $$;
+
+
+
+-- =============================================================================
+-- TWO-STEP SIGN-IN (D27-396)
+-- =============================================================================
+-- The keys and the codes typed are closed to the API's own role; a key is on
+-- from its first right code, and passes only the sign-in it was typed for;
+-- five wrong codes stop the sixth try; a recovery code is taken once; only the
+-- owner or the hotel's Admin switches somebody's off, with a reason; the GM may
+-- not require it, nor an Admin before their own is on; when on, a GM without
+-- it must set it up and reception is not asked. All of it undone at the end.
+do $$
+declare
+  h uuid; gm uuid; clerk uuid; adm uuid; t record; v text;
+  res jsonb := '[]';
+  ts timestamptz;
+begin
+  begin
+    h := app.provision_property_unchecked('TSS', 'Two Step Test', 'Nowhere');
+    insert into staff (email, full_name) values ('tss-gm@fidato.in', 'TSS GM') returning id into gm;
+    insert into staff (email, full_name) values ('tss-clerk@fidato.in', 'TSS Clerk') returning id into clerk;
+    insert into staff (email, full_name) values ('tss-admin@fidato.in', 'TSS Admin') returning id into adm;
+    insert into staff_hotels (staff_id, hotel_id, role) values (gm, h, 'gm'), (clerk, h, 'front_desk'), (adm, h, 'admin');
+
+    set local role pms_app;
+    v := null;
+    begin perform count(*) from staff_two_step; exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'the API''s own role cannot read the keys', 'ok', v = '42501', 'd', v);
+    v := null;
+    begin perform count(*) from two_step_log; exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'nor the codes typed', 'ok', v = '42501', 'd', v);
+    reset role;
+
+    perform set_config('app.user_id', gm::text, true);
+    res := res || jsonb_build_object('n', 'nothing is asked of somebody without it',
+      'ok', app.two_step_state(to_timestamp(1)) = 'off');
+    perform app.two_step_begin('JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP');
+    res := res || jsonb_build_object('n', 'nor while it is being set up',
+      'ok', app.two_step_state(to_timestamp(1)) = 'off');
+    select * into t from app.two_step_try(to_timestamp(1));
+    perform app.two_step_passed(t.attempt, 100, null, array['h1', 'h2']);
+    res := res || jsonb_build_object('n', 'on from the first right code, which passes that sign-in and no other',
+      'ok', app.two_step_state(to_timestamp(1)) = 'passed' and app.two_step_state(to_timestamp(2)) = 'code',
+      'd', app.two_step_state(to_timestamp(2)));
+    v := null;
+    begin perform app.two_step_begin('JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXQ'); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'a key already on is not replaced', 'ok', v = '23514', 'd', v);
+
+    for i in 1..5 loop perform app.two_step_try(to_timestamp(2)); end loop;
+    v := null;
+    begin perform app.two_step_try(to_timestamp(2)); exception when others then v := sqlstate || ': ' || sqlerrm; end;
+    res := res || jsonb_build_object('n', 'five wrong codes in a quarter of an hour stop the sixth try, and are kept',
+      'ok', v like '54000: Five wrong codes in a quarter of an hour.%'
+            and (select count(*) from two_step_log where staff_id = gm and not ok) = 5,
+      'd', v);
+
+    delete from two_step_log where staff_id = gm and not ok;
+    select * into t from app.two_step_try(to_timestamp(3));
+    perform app.two_step_passed(t.attempt, null, 'h1', null);
+    select * into t from app.two_step_try(to_timestamp(4));
+    v := null;
+    begin perform app.two_step_passed(t.attempt, null, 'h1', null); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'a recovery code is taken once',
+      'ok', v = '23514' and app.two_step_state(to_timestamp(3)) = 'passed'
+            and app.two_step_state(to_timestamp(4)) = 'code'
+            and (select recovery from staff_two_step where staff_id = gm) = array['h2'],
+      'd', v);
+
+    perform set_config('app.user_id', clerk::text, true);
+    v := null;
+    begin perform app.two_step_off(gm, 'Lost phone'); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'reception may not switch somebody''s off', 'ok', v = '42501', 'd', v);
+    perform set_config('app.user_id', adm::text, true);
+    v := null;
+    begin perform app.two_step_off(gm, '  '); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'nor anybody without a reason', 'ok', v = '23514', 'd', v);
+    perform app.two_step_off(gm, 'Lost phone');
+    res := res || jsonb_build_object('n', 'the hotel''s Admin switches it off, and the audit log says why',
+      'ok', not exists (select 1 from staff_two_step where staff_id = gm)
+            and exists (select 1 from audit_log where action = 'TWO_STEP_OFF' and row_id = gm::text
+                         and actor = adm and after ->> 'reason' = 'Lost phone'));
+
+    perform set_config('app.user_id', gm::text, true);
+    v := null;
+    begin perform app.set_two_step_required(true); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'the GM may not require it of the group', 'ok', v = '42501', 'd', v);
+    perform set_config('app.user_id', adm::text, true);
+    v := null;
+    begin perform app.set_two_step_required(true); exception when others then v := sqlstate; end;
+    res := res || jsonb_build_object('n', 'nor an Admin before their own is on', 'ok', v = '23514', 'd', v);
+    perform app.two_step_begin('JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP');
+    select * into t from app.two_step_try(to_timestamp(5));
+    perform app.two_step_passed(t.attempt, 100, null, array['x']);
+    perform app.set_two_step_required(true);
+    perform set_config('app.user_id', gm::text, true);
+    ts := to_timestamp(6);
+    res := res || jsonb_build_object('n', 'when it is required, a GM without it sets it up',
+      'ok', app.two_step_state(ts) = 'setup' and (select two_step_required from group_settings) is true,
+      'd', app.two_step_state(ts));
+    perform set_config('app.user_id', clerk::text, true);
+    res := res || jsonb_build_object('n', 'and reception is not asked', 'ok', app.two_step_state(ts) = 'off');
+
+    raise exception using errcode = 'TS001', message = 'undo';
+  exception when sqlstate 'TS001' then
+    null;
+  end;
+
+  insert into test.results (suite, name, passed, detail)
+  select 'two-step sign-in', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
+    from jsonb_array_elements(res) x;
+end $$;
+
+
+-- =============================================================================
+-- SHIMLA AND AMRAPALI ARE NEVER RESET (D27-381)
+-- =============================================================================
+-- A hotel locked against the full reset is refused by the dry run and by the
+-- clear - the button and reset-property.ts both ask those two - with nothing
+-- gone, and the lock cannot be lifted. SHI and AMR are locked wherever they
+-- are. Undone at the end.
+do $$
+declare
+  h uuid; rt uuid; g uuid; v text;
+  res jsonb := '[]';
+begin
+  begin
+    h := app.provision_property_unchecked('ORL', 'Owner Reset Locked', 'Nowhere');
+    select id into rt from room_types where hotel_id = h and code = 'STD';
+    insert into guests (full_name) values ('ORL Guest') returning id into g;
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, app.next_reference(h), g, rt, date '2027-03-01', date '2027-03-02', 3000, 'confirmed');
+    update hotels set reset_locked = true where id = h;
+    set constraints all immediate;
+
+    res := res || jsonb_build_object('n', 'the dry run says the hotel can never be reset',
+      'ok', owner_reset.counts('ORL') ->> 'refusal'
+            = 'Owner Reset Locked (ORL) can never be reset: the owner locked it (D27-381).',
+      'd', owner_reset.counts('ORL') ->> 'refusal');
+    v := null;
+    set local role pms_owner_reset;
+    begin perform owner_reset.clear('ORL', true, null, 'x.dump'); exception when others then v := sqlstate || ': ' || sqlerrm; end;
+    reset role;
+    res := res || jsonb_build_object('n', 'and the clear refuses, saying why, with nothing gone',
+      'ok', v = '23514: Owner Reset Locked (ORL) can never be reset: the owner locked it (D27-381).'
+            and (select count(*) from reservations where hotel_id = h) = 1
+            and exists (select 1 from guests where id = g),
+      'd', v);
+    v := null;
+    begin update hotels set reset_locked = false where id = h; exception when others then v := sqlstate || ': ' || sqlerrm; end;
+    res := res || jsonb_build_object('n', 'the lock is never lifted, whoever asks',
+      'ok', v = '23514: ORL can never be reset, and that lock is not lifted (D27-381).', 'd', v);
+    res := res || jsonb_build_object('n', 'SHI and AMR are locked wherever they are',
+      'ok', not exists (select 1 from hotels where code in ('SHI', 'AMR') and not reset_locked));
+
+    raise exception using errcode = 'OR002', message = 'undo';
+  exception when sqlstate 'OR002' then
+    null;
+  end;
+
+  insert into test.results (suite, name, passed, detail)
+  select 'reset lock', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
+    from jsonb_array_elements(res) x;
+end $$;

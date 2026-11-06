@@ -29,6 +29,7 @@ import { join, relative } from "node:path";
 const MARKERS = [
   "x-dev-staff-id",      // the header that names the caller
   "fidato.dev-subject",  // where the test identity is kept
+  "x-dev-sign-in",       // and when it signed in (two-step, D27-396)
   "dev-owner",           // the test accounts themselves
   "dev-gm",
   "dev-desk",

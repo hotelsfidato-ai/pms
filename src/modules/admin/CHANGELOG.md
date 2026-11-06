@@ -11,6 +11,86 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-06 · Two-step sign-in; Shimla and Amrapali can never be reset; staging and standby steps (D27-384, D27-396)
+
+**Asked for:** the safety work the owner put before every feature (D27-384), the parts that cost nothing, built
+without asking (D27-396): (1) two-step sign-in with an authenticator app in our own API; (2) the server itself refuses
+a full reset of SHI and AMR (D27-381); (3) staging server and standby database as steps only.
+
+**Shipped**
+- Migration 257: `group_settings.two_step_required` (off); `staff_two_step` (key, hashed recovery codes, last step
+  taken) and `two_step_log` (every code typed; a right one is that sign-in's pass), both closed to pms_app;
+  `app.two_step_state/my_two_step/has_two_step/two_step_begin/two_step_try/two_step_passed/two_step_off/
+  set_two_step_required`; the test hotel's classes (`group`).
+- `api/src/modules/admin/twoStep.ts`: RFC 6238 with `node:crypto` (SHA-1, 30 s, one step either side, never a step
+  twice), the five routes, and `twoStepRefusal`, which `server.ts` asks for every person's request (403 with
+  `twoStep: "code" | "setup"`, the two-step routes excepted; a sign-in owing nothing is not asked again for a minute).
+  People's list says `twoStepOn` / `mayTwoStepOff` (`app.has_two_step`, `app.may_see_sign_ins`).
+- Website: `components/TwoStep.tsx` - the code page after the password (`TwoStepGate`), the account menu's
+  `TwoStepDialog` (set up: QR code by `qrcode`, the key as text, one code, ten recovery codes shown once), Settings →
+  Signing in's `TwoStepRequiredCard`, People's "Two-step on" pill and "Two-step off" with a reason.
+- Migration 258: `hotels.reset_locked`, true for SHI and AMR on every replay; `owner_reset.refusal` refuses it first
+  (so the button's dry run and clear, and `reset-property.ts`, all refuse, naming why); a trigger refuses lifting it;
+  `test_hotel_hotels_columns` (not copied).
+- `docs/go-live/STAGING.md`, `docs/go-live/STANDBY.md`: what each is for, what Oracle's public pages say it costs
+  (no price could be read: said so), numbered steps by where they run. Nothing run, nothing read on the server.
+- Manual: A0.1 (two-step: set up, sign in, recovery codes; A0-15 to A0-17, A0-5 retaken), A17.13 (requiring it,
+  switching somebody's off; A17-46 retaken), A16.6 (the pill and the button).
+
+**Decided under D27-396** (the owner reviews later)
+- The key is kept like the sign-in history and the guest's codes: a table no policy opens, reached only through
+  definer functions; the API is handed it only inside a try already counted. Not also encrypted with a server key,
+  because that adds a setting a lost copy of locks everybody out; add one if backups ever leave the bucket unencrypted.
+- The limit counts only wrong codes, 5 in any 15 minutes, per person; the sixth try is refused before it is checked
+  (429), with the reason. Every try is kept in `two_step_log`; a wrong one is also a line in the server log.
+- Who switches somebody's off: the owner anybody's, an owner or Admin the people at their hotel - the same people who
+  read and sign out their devices (`app.may_see_sign_ins`), so no new rule. By that rule an owner or Admin may also
+  switch their own off; nobody else can switch off their own.
+- The group setting is the owner's or an Admin's, and **switching it on is refused until their own is on**, so it
+  cannot lock out the person switching it. It applies from each person's next request, not only their next sign-in
+  (a desk sign-in lasts until signed out); the gate's minute means up to a minute late.
+- "Required" covers the owner (a group administrator or owner at a hotel), Admin, GM and Accountant (`finance`)
+  roles anywhere.
+- The authenticator's label is the group's name from Settings (`Hotel PMS` when none), never a name in code (D21-27).
+- The development sign-in names each sign-in (`x-dev-sign-in`, kept in the tab like the dev subject), so two-step is
+  asked once per dev sign-in exactly as for a real one; the API tests name theirs.
+- The reset lock cannot be lifted at all, by anybody, without a migration that drops its trigger.
+- Staging gets its own Firebase project and no live data, not even "anonymised" (DPDP Act 2023: personal data only
+  where needed); standby promotion is a person's decision, never automatic.
+
+**Frozen core files touched** (the smallest edits): `api/src/auth.ts` (`subjectFor` became `signInFor`, which also
+returns `auth_time`), `api/src/server.ts` (the gate after sign-in, `authTime` on the context, `x-dev-sign-in` in
+CORS), `src/lib/session.ts` (status `two-step`), `src/lib/api.ts` (the dev sign-in's time), `src/App.tsx` (the gate
+screen), `src/components/app/AccountMenu.tsx` (the menu item and its dialog). Also `api/src/roleGate.ts` (five rules)
+and `scripts/check-no-dev-login.mjs` (one marker).
+
+**Found:** React's development double start made two keys at set-up; the screen showed one and the server kept the
+other, so the app's code was refused (the manual's picture run). `SetUp` now starts once (a ref).
+
+**Proved** - fidato_safety at 258; a scratch database for every test run.
+- API (`with-test-db.sh`, six files): twoStep 13/13 - no code, a wrong code, the same code twice, a used recovery
+  code, the limit (429 with the right code), reception and the GM refused, a reason required, the setting refused to
+  the GM and to an Admin without their own, and when on an Admin sent to set up while reception goes on; ownerReset
+  18/18 (3 new: the button's dry run and clear and the script refuse ORL, the lock cannot be lifted); roleGate,
+  apiGate, signIns, resetOrder: 127 of 127 in all.
+- Database (`db/tests/run.sh`): two-step sign-in 15/15, reset lock 4/4; the whole run 1,911 assertions, exit 0.
+- Whole gates in this copy (7 Nov): `npx tsc -b --force` no output, exit 0; web `npx vitest run` 232 files,
+  1,543 tests, exit 0; API all 242 files: the full run reached 198 before Postgres stopped (6 Nov, 22:25), 195
+  green and 3 timed out under load (guestDoorBehindTheCode, suAvailability, chargeDoor; the PC at 97%), which passed
+  alone with my six files (9 files, 186 tests, exit 0); the 44 not reached passed in one run (119 tests, exit 0).
+- On my own database: fake SHI and AMR made after 258 were locked by the next replay; `reset-property.ts SHI` and
+  `AMR --fresh-start --yes` both printed "... can never be reset: the owner locked it (D27-381). Nothing was changed."
+  and exited 1; lifting the lock by hand was refused.
+- Browser (5181): set up from the account menu as the GM (QR, key, code, ten codes), the code page on the next
+  sign-in, a wrong code's sentence, a recovery code let in and the dialog then said 9 left; People as the owner showed
+  "Two-step on" and "Two-step off"; Signing in showed the card, and switching on was refused with the reason.
+
+**Left open**
+- The Connection health screen does not watch a standby yet (STANDBY.md says to check weekly by hand).
+- Staging and standby: the owner's account type and the Oracle prices are unknown until STAGING.md S1.
+
+---
+
 ## 2026-11-02 · Cancel a night audit, on a property's page (the owner's D27-390)
 
 **Asked for:** the owner: the owner or an Admin cancels a night audit from the Admin section, recorded as a mistake.

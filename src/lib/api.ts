@@ -86,6 +86,13 @@ const readStored = (): string | null => {
 };
 
 let devSubject: string | null = readStored();
+/* WHEN this dev sign-in happened, as Firebase's auth_time says it for a real
+   one: two-step sign-in asks once per sign-in (D27-396), so each dev sign-in
+   is a new one and a reload is not. */
+const DEV_SIGN_IN_KEY = "fidato.dev-sign-in";
+let devSignIn: string | null = (() => {
+  try { return devAuth ? sessionStorage.getItem(DEV_SIGN_IN_KEY) : null; } catch { return null; }
+})();
 
 export const getDevSubject = () => devSubject;
 
@@ -94,9 +101,12 @@ export const setDevSubject = (subject: string | null) => {
      the storage key's name — sign-out calls this unconditionally. */
   if (!devAuth) return;
   devSubject = subject;
+  devSignIn = subject ? String(Math.floor(Date.now() / 1000)) : null;
   try {
     if (subject) sessionStorage.setItem(DEV_KEY, subject);
     else sessionStorage.removeItem(DEV_KEY);
+    if (devSignIn) sessionStorage.setItem(DEV_SIGN_IN_KEY, devSignIn);
+    else sessionStorage.removeItem(DEV_SIGN_IN_KEY);
   } catch {
     /* The session still works for this page load. */
   }
@@ -175,6 +185,7 @@ export async function authHeaders(): Promise<HeadersInit> {
 
   if (devAuth && devSubject) {
     base["x-dev-staff-id"] = devSubject;
+    if (devSignIn) base["x-dev-sign-in"] = devSignIn;
     return base;
   }
 
