@@ -73,7 +73,11 @@ other, so the app's code was refused (the manual's picture run). `SetUp` now sta
   the GM and to an Admin without their own, and when on an Admin sent to set up while reception goes on; ownerReset
   18/18 (3 new: the button's dry run and clear and the script refuse ORL, the lock cannot be lifted); roleGate,
   apiGate, signIns, resetOrder: 127 of 127 in all.
-- Database (`db/tests/run.sh`): two-step sign-in 15/15, reset lock 4/4.
+- Database (`db/tests/run.sh`): two-step sign-in 15/15, reset lock 4/4; the whole run 1,911 assertions, exit 0.
+- Whole gates in this copy (7 Nov): `npx tsc -b --force` no output, exit 0; web `npx vitest run` 232 files,
+  1,543 tests, exit 0; API all 242 files: the full run reached 198 before Postgres stopped (6 Nov, 22:25), 195
+  green and 3 timed out under load (guestDoorBehindTheCode, suAvailability, chargeDoor; the PC at 97%), which passed
+  alone with my six files (9 files, 186 tests, exit 0); the 44 not reached passed in one run (119 tests, exit 0).
 - On my own database: fake SHI and AMR made after 258 were locked by the next replay; `reset-property.ts SHI` and
   `AMR --fresh-start --yes` both printed "... can never be reset: the owner locked it (D27-381). Nothing was changed."
   and exited 1; lifting the lock by hand was refused.
