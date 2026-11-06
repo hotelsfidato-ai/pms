@@ -110,6 +110,13 @@ August. Refusals: the revenue manager on money owed (screen and file), reception
 commission, reception on the GSTR-1 file, the hotel manager on ITC (screen and file). **Three guards broken
 and seen to fail:** first-in-first-out reversed (ageing test red), the commission read opened to `report`
 (refusal test red), the GSTR-1 add-up check disabled (file test red); all put back.
+Gates, run here on 6 November: `npx tsc -b --force` exit 0, no output; `cd api && npx tsc --noEmit` exit 0;
+`npx vitest run` exit 0 (231 files, 1,540 tests, the manual guard included); the API files this work touches
+(`npm test -- modules/reports modules/finance modules/accounting modules/purchasing reportFiles reportColumns
+reportCsv testHotels suAvailability`) exit 0, 51 files, 450 tests. The full `cd api && npm test` was stopped
+at 32 of 242 files (about a file a minute on the shared PC): `roleGate.test.ts` and this file had passed in it;
+`admin/testHotels` (a voucher PDF's text) and `channel-manager/suAvailability` (154 s) failed in it under load
+and pass alone. The master's full run after merging is the proof.
 
 **Left open.** The owner reviews the twelve decisions above; the CA answers CA-1 to CA-7. Not done: commission
 on cancellation charges; a statement for several hotels at once (item 6 of the list); emailing a statement.
