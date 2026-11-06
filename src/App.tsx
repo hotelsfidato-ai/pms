@@ -17,6 +17,7 @@ import { reCheckMoney } from "@/lib/freshness";
 import { NotificationsPage } from "@/pages/Notifications";
 import PlacesAndSuppliersPage from "@/pages/PlacesAndSuppliers";
 import SignInPage from "@/pages/SignIn";
+import { TwoStepGate } from "@/modules/admin";
 import DesignSystemPage from "@/pages/DesignSystem";
 /* Every service's screen addresses, from its own routes file
    (docs/SERVICE-FOLDERS-PLAN.md). */
@@ -161,7 +162,9 @@ export function returnPath(state: unknown): string {
 function SignInRoute() {
   const status = useSession((s) => s.status);
   const location = useLocation();
-  if (status === "signed-in") return <Navigate to={returnPath(location.state)} replace />;
+  if (status === "signed-in" || status === "two-step") {
+    return <Navigate to={returnPath(location.state)} replace />;
+  }
   return <SignInPage />;
 }
 
@@ -229,6 +232,9 @@ function RequireSession() {
     return <Navigate to="/signin" replace
                      state={{ from: location.pathname + location.search + location.hash }} />;
   }
+
+  /* D27-396: the code from the authenticator app first, and nothing else. */
+  if (status === "two-step") return <TwoStepGate />;
 
   return <AppShell />;
 }

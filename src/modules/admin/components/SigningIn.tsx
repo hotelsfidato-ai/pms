@@ -29,8 +29,9 @@ export function SigningIn() {
             Each sign-in is kept for 90 days: when, and on what device. The owner and an
             Admin see it under Sign-ins and devices.
           </li>
-          <li className="text-grey-600">
-            Two-step sign-in, for the owner, Admins and GMs, comes after this release.
+          <li>
+            Two-step sign-in asks for a code from an app on the phone as well as the password.
+            Anybody may set it up from their account menu; whether it is required is below.
           </li>
         </ul>
       </CardBody>

@@ -564,8 +564,11 @@ export const SHOTS = [
   {
     id: "A17-46", title: "Signing in", as: "Owner",
     path: "/settings/people/signing-in",
-    steps: [{ waitFor: "text:Two-step sign-in, for the owner, Admins and GMs, comes after this release." }],
-    marks: [],
+    steps: [{ waitFor: "text:Required for the owner, Admins, GMs and Accountants" }, LOADED],
+    marks: [
+      { n: 1, at: "text:A password is at least 10 characters", side: "top" },
+      { n: 2, at: "css:[data-two-step-required] [role=switch]", side: "left" },
+    ],
   },
 
   /* ── Modules and connections ─────────────────────────────────────── */

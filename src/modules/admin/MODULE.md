@@ -257,6 +257,13 @@ DELETE /api/admin/staff/:id/access/:code
 POST   /api/admin/staff/:id/deactivate
 POST   /api/admin/staff/:id/reactivate
 PUT    /api/admin/staff/:id/home-screen      the first screen, set by the GM
+GET    /api/me/two-step                  two-step sign-in (D27-396, twoStep.ts): where the person stands
+                                             (off / passed / code / setup), recovery codes left, the group's setting
+POST   /api/me/two-step/setup            a new key (as text and an otpauth link), refused once on
+POST   /api/me/two-step                  a code: confirms the key (+10 recovery codes, once) or passes
+                                             this sign-in; a recovery code once; 5 wrong in 15 min -> 429
+POST   /api/admin/staff/:id/two-step/off switched off for somebody, with a reason (app.may_see_sign_ins)
+PUT    /api/admin/two-step-required      the group's setting: owner or Admin, on only with their own on
 PUT    /api/me/preferences                   a person's own first screen, room grouping and
                                              Start here flag — called from the core
                                              (src/data/repositories/me.ts)
@@ -571,6 +578,16 @@ hotel_setup_steps                       215_setting_up_a_hotel.sql (D27-311): pe
                                         (chosen_by defaults to the signed-in person) and when;
                                         FORCE RLS on app.manages_hotel for reads AND writes;
                                         audited; test-hotel class 'never'. Done-ness is never here.
+staff_two_step, two_step_log            257_two_step_sign_in.sql (D27-396): a person's authenticator
+                                        key and hashed recovery codes; every code typed (a right one
+                                        is that sign-in's pass). Both closed to pms_app (no grant, no
+                                        policy); only app.two_step_* functions. group_settings.
+                                        two_step_required, off by default. The API's gate: twoStep.ts,
+                                        asked by server.ts once a minute per sign-in (auth_time).
+  SHI and AMR never reset               258_reset_lock.sql (D27-381): hotels.reset_locked, true for
+                                        SHI and AMR on every replay; owner_reset.refusal asks it
+                                        first (the button and reset-property.ts); a trigger refuses
+                                        lifting it; a test hotel never copies it.
 ```
 
 Isolation is checked as the application role in `db/tests/rls.sql`, never in

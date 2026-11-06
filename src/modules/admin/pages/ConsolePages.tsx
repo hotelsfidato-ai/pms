@@ -9,6 +9,7 @@ import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
 import { HotelGalleryCard } from "@/modules/admin/components/HotelGalleryCard";
 import { SigningIn } from "@/modules/admin/components/SigningIn";
+import { TwoStepRequiredCard } from "@/modules/admin/components/TwoStep";
 import { BankDetailsCard, HousePoliciesCard } from "@/modules/admin/components/VoucherSettings";
 import { ModulesCard, BOOKING_SECTION } from "@/modules/admin/pages/Admin";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
@@ -108,7 +109,7 @@ export function FrontDeskSettings() {
 }
 
 export function SigningInSettings() {
-  return <ConsolePage title="Signing in"><SigningIn /></ConsolePage>;
+  return <ConsolePage title="Signing in"><SigningIn /><TwoStepRequiredCard /></ConsolePage>;
 }
 
 /* D17-36: the switches stay with the owner and an Admin; the page is not

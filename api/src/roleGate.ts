@@ -566,6 +566,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/staff/:id/access`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
   [`DELETE /api/admin/staff/:id/access/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
+  /* D27-396: two-step sign-in - a person's own, and the owner's or an Admin's switches. */
+  [`POST /api/me/two-step/setup`]: SELF,
+  [`POST /api/me/two-step`]: SELF,
+  [`POST /api/admin/staff/:id/two-step/off`]: own("admin/twoStep.ts: app.two_step_off asks app.may_see_sign_ins"),
+  [`PUT /api/admin/two-step-required`]: own("admin/twoStep.ts: app.set_two_step_required, the owner or an Admin"),
 
   /* inventory */
   [`PUT ${H}/room-types/:id/rate`]: PRICE,
@@ -1106,6 +1111,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.devices_of (195)"),
   /* D27-245: a person's own "set a longer password" check. */
   [`GET /api/me/password`]: SELF,
+  /* D27-396: where the signed-in person stands with two-step sign-in. */
+  [`GET /api/me/two-step`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
   /* D27-243 5.1, D27-245: the hotel's to owner/Admin/GM; scope=group to owner/Admin. */

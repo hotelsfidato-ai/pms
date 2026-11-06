@@ -17,6 +17,7 @@ import { hotelLabel, isTestHotel, useTestCodes } from "@/lib/testHotel";
 import { TestTag } from "@/components/app/TestHotel";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
+import { TwoStepOffDialog } from "@/modules/admin/components/TwoStep";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PEOPLE WHO WORK HERE
@@ -275,6 +276,8 @@ function PersonCard({ person, places, testCodes, onGrant, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [password, setPassword] = useState(false);
+  /* D27-396: two-step switched off for them (a lost phone), with a reason. */
+  const [twoStepOff, setTwoStepOff] = useState(false);
   /* D27-117: the ✕ asks first. */
   const [taking, setTaking] = useState<string | null>(null);
 
@@ -349,6 +352,7 @@ function PersonCard({ person, places, testCodes, onGrant, onChanged }: {
                 {person.isActive && !person.canSignIn && (
                   <StatusPill tone="danger">No password yet</StatusPill>
                 )}
+                {person.twoStepOn && <StatusPill tone="success">Two-step on</StatusPill>}
               </div>
               <p className="text-sm text-grey-500 truncate">{person.email}</p>
             </div>
@@ -370,6 +374,11 @@ function PersonCard({ person, places, testCodes, onGrant, onChanged }: {
                   <Button variant="ghost"
                           onClick={() => setEditing(true)}>
                     Edit
+                  </Button>
+                )}
+                {person.mayTwoStepOff && (
+                  <Button variant="ghost" onClick={() => setTwoStepOff(true)}>
+                    Two-step off
                   </Button>
                 )}
                 {person.maySwitch && (
@@ -448,6 +457,10 @@ function PersonCard({ person, places, testCodes, onGrant, onChanged }: {
       {password && (
         <PasswordDialog person={person} onClose={() => setPassword(false)}
                         onSaved={onChanged} />
+      )}
+      {twoStepOff && (
+        <TwoStepOffDialog staffId={person.id} name={person.name}
+                          onClose={() => setTwoStepOff(false)} onDone={onChanged} />
       )}
     </li>
   );
