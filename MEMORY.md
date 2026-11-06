@@ -6561,6 +6561,18 @@ copy will see of theirs.**
 
 ---
 
+### 470 · A helper's: NOT over a comparison with a nullable column let a charge through (6 November)
+
+The D27-397 helper's Undo check-in had to refuse while any charge other than the check-in's own night stands on the
+bill. Its filter was `not (fp.category = 'room' and fp.source_type = 'check_in')`. A walk-in's "Room 201 · 2 nights"
+(₹7,084.69) is posted with no source. For that line `source_type = 'check_in'` is NULL, so the whole NOT is NULL, the
+row drops out, and the undo went through with the charge still on the bill. The helper found it by opening the
+screen, not from the tests. Fixed with `is not distinct from` in the undo's and the void's checks; the new test fails
+on the old line. Nothing reached production. **The rule:** a NOT, or a `<>`, over a nullable column needs `is
+distinct from`, or a `coalesce`, and a test row where the column is null.
+
+---
+
 ### 469 · A helper's: a migration edited after it ran is not in the database (7 November)
 
 The safety helper changed migration 257 after it had run on its own database, then trusted the screens: they ran on the
