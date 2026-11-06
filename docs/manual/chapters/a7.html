@@ -250,9 +250,67 @@
     </ul>
   </div>
 
+  <h3>Reports on a schedule</h3>
+  <p>Any other report can go by email on a schedule, in the same send right after the night audit: <b>every day</b>, <b>once a week</b> after the audit of a chosen day, or <b>once a month</b> after the audit of a chosen date. Each is one report, the days it covers, the file (PDF or Excel) and the addresses; each address gets its own email, its subject the hotel, the report and its days, saying it was sent by schedule. A day the night audit never closes sends nothing. The owner, an Admin or the GM sets them, for each hotel, in <span class="ui">Settings</span>, <span class="ui">Messages</span>, <span class="ui">Scheduled reports</span>.</p>
+
+  <figure class="shot" id="fig-A7-06">
+    <img src="img/A7-06.png" alt="Scheduled reports: the Manager report every Friday, Monthly statistics on the 6th, Closing stock paused, each with its last send">
+    <figcaption><b>Figure A7-06.</b> Settings, Messages: Scheduled reports.</figcaption>
+    <ol class="callouts">
+      <li>Add a schedule</li>
+      <li>The report, the days it covers, when it goes and the file</li>
+      <li>Who gets it</li>
+      <li>The last send and its result</li>
+      <li>Pause, change or delete it</li>
+      <li>A paused one sends nothing</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:30%">Days it covers</th><th>For the audit of the day it goes after</th></tr></thead>
+    <tbody>
+      <tr><td>The day the audit closed</td><td>That day. A report of one day is as on it.</td></tr>
+      <tr><td>Last week, Monday to Sunday</td><td>The last whole week: on a Sunday, the week ending that day; on any other day, the week before. Pick Sunday to get it the moment the week closes.</td></tr>
+      <tr><td>Last month</td><td>The whole calendar month before that day's month.</td></tr>
+      <tr><td>This month so far</td><td>The 1st of that day's month to that day.</td></tr>
+    </tbody>
+  </table>
+  <p>A report that is as on one day - the Manager report, the Night audit report, Closing stock, Money owed by age and the like - is as on the last day of its period; a report over days covers them all.</p>
+
+  <h3>To add one</h3>
+  <figure class="shot" id="fig-A7-07">
+    <img src="img/A7-07.png" alt="Add a schedule: Report, Days it covers, How often with Every week, After the night audit of Sunday, File PDF, Send to, and Save">
+    <figcaption><b>Figure A7-07.</b> Add a schedule (not saved).</figcaption>
+    <ol class="callouts">
+      <li>The report</li>
+      <li>The days it covers</li>
+      <li>Every day, every week or every month</li>
+      <li>The day of the week, or the date (1 to 28)</li>
+      <li>PDF or Excel</li>
+      <li>Who gets it: one address a line</li>
+    </ol>
+  </figure>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a schedule</span>.</li>
+    <li>Choose the <span class="ui">Report</span> and the <span class="ui">Days it covers</span>.</li>
+    <li>Choose <span class="ui">Every day</span>, <span class="ui">Every week</span> with its day, or <span class="ui">Every month</span> with its date.</li>
+    <li>Choose <span class="ui">PDF</span> or <span class="ui">Excel</span>, type the addresses (at most 20), and tap <span class="ui">Save</span>.</li>
+  </ol>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A report of a whole month</b> (Monthly statistics, Monthly occupancy, Lodging tax, FLR-3, GSTR-1, Input tax credit, GST on advances) <b>goes for last month only</b>: this month holds days not closed yet. <b>Yearly statistics</b>, and a statement of one supplier or account, cannot go on a schedule: <span class="msg">“Yearly statistics covers a whole year, which none of the periods is, so it cannot go on a schedule.”</span></li>
+      <li><b>Nothing is sent for days the night audit has not closed.</b> If it ever finds one, it sends nothing that day and the list says why: <span class="msg">“Not sent: the period runs to …, and the night audit has not closed … yet, so the report would not be final.”</span> The same for a file over 9 MB, and for the bar's reports while Bar stock is switched off.</li>
+      <li><b>A failed email</b> is tried again, three times in all, and shows on <span class="ui">Connection health</span> (A17.14), as the daily ones do. The list shows <span class="msg">“Last: Failed”</span> with the reason.</li>
+      <li><b>Pause</b> stops it and keeps everything; <span class="ui">Resume</span> starts it from the next audit. A schedule added or changed after an audit starts from the next one.</li>
+      <li>A day cancelled and closed again does not send its scheduled reports a second time; only the daily report emails go again, marked Corrected.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>.</p>
+    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>. Any report on a schedule, weekly or monthly, after that day's audit: <span class="d">D27-383</span>; its periods, its own email per report, a whole month's report for last month only, and nothing for a day not closed: decided under <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A7.7 -->

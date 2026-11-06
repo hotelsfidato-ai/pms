@@ -355,7 +355,9 @@ emails.get("/:code/report-schedules", async (c) => {
         last: r["last_status"]
           ? { date: r["last_date"], status: r["last_status"], detail: r["last_detail"], at: r["last_at"] } : null,
       })),
-      reports: BUILT_KEYS.map((key) => ({ key, title: ABOUT[key].title, periods: periodsFor(key) })),
+      /* In the reports' own order (document.ts), not the builders'. */
+      reports: (Object.keys(ABOUT) as ReportKey[]).filter(isBuilt)
+        .map((key) => ({ key, title: ABOUT[key].title, periods: periodsFor(key) })),
       notConnected: canSend() ? null : NOT_CONNECTED,
     };
   });
@@ -503,7 +505,7 @@ export async function runScheduledReports(
     }
     await note(failures.length ? "failed" : "sent", failures.length
       ? `Not sent to ${failures.join(" ")}`.trim()
-      : `Sent to ${list.map((d) => d.address).join(", ")}, for ${periodWords(key, params)}.`);
+      : `Sent to ${list.map((d) => d.address).join(", ")} (${periodWords(key, params)}).`);
   }
   return result;
 }

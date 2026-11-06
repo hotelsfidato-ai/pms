@@ -32,7 +32,7 @@ const addressesIn = (text: string) => text.split(/[\s,;]+/).filter(Boolean);
 
 type Draft = Omit<ScheduleInput, "addresses"> & { text: string };
 const NEW: Draft = {
-  report: "", period: "last-week", frequency: "weekly", weekday: 1, dayOfMonth: 1, fileType: "pdf",
+  report: "", period: "last-week", frequency: "weekly", weekday: 7, dayOfMonth: 1, fileType: "pdf",
   isPaused: false, text: "",
 };
 const toInput = (d: Draft): ScheduleInput => ({
@@ -107,7 +107,7 @@ export default function ScheduledReports() {
                     {s.isPaused && <StatusPill tone="neutral">Paused</StatusPill>}
                   </p>
                   <p className="text-sm text-grey-600 mt-0.5">
-                    {PERIOD_WORDS[s.period]}, {s.when}, as {FILE_WORDS[s.fileType]}
+                    {PERIOD_WORDS[s.period]}, {s.when} after the night audit, as {FILE_WORDS[s.fileType]}
                   </p>
                   <p className="text-sm text-grey-600 break-words">To {s.addresses.join(", ")}</p>
                   <p className="text-xs text-grey-500 mt-0.5">
@@ -205,7 +205,7 @@ function ScheduleForm({ reports, editing, saving, onClose, onSave }: {
           </Field>
           <Field label="How often">
             {() => (
-              <Segmented<Frequency> value={d.frequency} onChange={(frequency) => change({ frequency })}
+              <Segmented<Frequency> className="self-start" value={d.frequency} onChange={(frequency) => change({ frequency })}
                 options={[{ value: "daily", label: "Every day" }, { value: "weekly", label: "Every week" },
                   { value: "monthly", label: "Every month" }]} />
             )}
@@ -230,7 +230,7 @@ function ScheduleForm({ reports, editing, saving, onClose, onSave }: {
           )}
           <Field label="File">
             {() => (
-              <Segmented value={d.fileType} onChange={(fileType) => change({ fileType })}
+              <Segmented className="self-start" value={d.fileType} onChange={(fileType) => change({ fileType })}
                 options={[{ value: "pdf", label: "PDF" }, { value: "xlsx", label: "Excel" }]} />
             )}
           </Field>

@@ -472,4 +472,21 @@ export const SHOTS = [
       { n: 3, at: "text:no MRP and", nth: 0, side: "left" },
     ],
   },
+  /* D27-383 item 5: the Email dialog over the Manager report - an address
+     picked, a note typed, NOT sent. The hotel's report addresses come from
+     a daily report email or a schedule in the demo database. */
+  {
+    id: "A11-39", title: "Email the Manager report", as: "General Manager",
+    path: "/reports/manager",
+    steps: [LOADED("Cancellation Revenue"), { click: "text:Email" }, { waitFor: "css:[role=dialog]" },
+      { waitFor: "text:The hotel's report addresses", ms: 15000 }, { click: "text:owner@example.com" },
+      { type: ["css:[role=dialog] textarea[maxlength]", "For Monday's meeting."] }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "css:[role=dialog] textarea", side: "right" },
+      { n: 2, at: "text:The hotel's report addresses", side: "right" },
+      { n: 3, at: "css:[role=dialog] [role=tablist]", side: "right" },
+      { n: 4, at: "css:[role=dialog] textarea[maxlength]", side: "right" },
+      { n: 5, at: "text:Send", side: "top" },
+    ],
+  },
 ];

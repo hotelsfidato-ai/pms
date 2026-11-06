@@ -80,4 +80,40 @@ export const SHOTS = [
       { n: 7, at: "text:already imported into Tally", side: "right" },
     ],
   },
+  /* D27-383 item 5: Scheduled reports, read only. Taken with three schedules
+     in the demo database (one paused) after an audit, so each shows its last
+     send. */
+  {
+    id: "A7-06", title: "Settings, Messages: Scheduled reports", as: "Owner",
+    path: "/settings/messages/scheduled-reports",
+    steps: [{ waitFor: "text:Monthly statistics", ms: 15000 }],
+    marks: [
+      { n: 1, at: "text:Add a schedule", side: "left" },
+      { n: 2, at: "text:Last week, Monday to Sunday", nth: 0, side: "right" },
+      { n: 3, at: "text:To owner@example.com", nth: 0, side: "right" },
+      { n: 4, at: "text:Last: Sent", nth: 0, side: "right" },
+      { n: 5, at: "text:Pause", nth: 0, side: "left" },
+      { n: 6, at: "text:Paused", side: "right" },
+    ],
+  },
+  /* The form, filled in and NOT saved. */
+  {
+    id: "A7-07", title: "Add a schedule", as: "Owner",
+    path: "/settings/messages/scheduled-reports",
+    steps: [
+      { waitFor: "text:Monthly statistics", ms: 15000 }, { click: "text:Add a schedule" }, { waitFor: "css:[role=dialog]" },
+      { eval: `(() => { const s = document.querySelector("[role=dialog] select");
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(s, "voids");
+        s.dispatchEvent(new Event("change", { bubbles: true })); })()` },
+      { type: ["css:[role=dialog] textarea", "owner@example.com"] }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "css:[role=dialog] select", nth: 0, side: "right" },
+      { n: 2, at: "css:[role=dialog] select", nth: 1, side: "right" },
+      { n: 3, at: "css:[role=dialog] [role=tablist]", nth: 0, side: "right" },
+      { n: 4, at: "css:[role=dialog] select", nth: 2, side: "right" },
+      { n: 5, at: "css:[role=dialog] [role=tablist]", nth: 1, side: "right" },
+      { n: 6, at: "css:[role=dialog] textarea", side: "right" },
+    ],
+  },
 ];

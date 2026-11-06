@@ -101,8 +101,45 @@
   <ul>
     <li><span class="ui">Print</span>: prints the report alone, without the menu or the buttons.</li>
     <li><span class="ui">PDF</span>, <span class="ui">Excel</span>, <span class="ui">CSV</span>: save the report as a file (Figure A11-04). The file is made on the server from the same figures as the screen. They wait until the report has loaded. The message <span class="msg">“PDF saved”</span> names the file; if it fails, <span class="msg">“The PDF was not made”</span> says why.</li>
-    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span> and <span class="ui">CSV</span> only.</li>
+    <li><span class="ui">Email</span>: sends the report, as it is on screen, as a PDF or an Excel file (below). It waits until the report has loaded.</li>
+    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span> and <span class="ui">CSV</span> only, and no <span class="ui">Email</span>.</li>
   </ul>
+
+  <h3>To email a report</h3>
+  <figure class="shot" id="fig-A11-39">
+    <img src="img/A11-39.png" alt="The Manager report with Email the Manager report open: Send to with an address, the hotel's report addresses, File PDF or Excel, a note, and Send">
+    <figcaption><b>Figure A11-39.</b> Email the Manager report (not sent).</figcaption>
+    <ol class="callouts">
+      <li>The addresses it goes to, one a line</li>
+      <li>The hotel's report addresses: tap one to add it</li>
+      <li>PDF or Excel</li>
+      <li>A short note, at the top of the email</li>
+      <li>Send</li>
+    </ol>
+  </figure>
+  <ol class="steps">
+    <li>Open the report and choose its days and its other choices, as for printing it.</li>
+    <li>Tap <span class="ui">Email</span>.</li>
+    <li>Under <span class="ui">Send to</span>, type each address on its own line, or tap one of <b>the hotel's report addresses</b> (the addresses its daily report emails and scheduled reports go to). At most 20.</li>
+    <li>Choose <span class="ui">PDF</span> or <span class="ui">Excel</span>, and type a note if you want one.</li>
+    <li>Tap <span class="ui">Send</span>. <span class="msg">“Emailed”</span> names who it went to.</li>
+  </ol>
+  <ul>
+    <li><b>It goes as it is on screen</b>: the same days and the same choices, the same file the PDF or Excel button saves. Each address gets its own email; its subject is the hotel, the report and its days ("5 Elements Akkalkot: Manager report - As on 05/11/2026"), and it says who sent it.</li>
+    <li><b>Who may:</b> whoever may open the report. Anyone else is told who may, in the report's own words, for example <span class="msg">“Reading money owed and taken is for the owner, an administrator, the general manager, the hotel manager, reception, the accountant or a viewer. Ask one of them.”</span></li>
+    <li><b>Every email is written down</b>: who sent it, which report and days, to whom, when, and whether it went. One that fails says why (<span class="msg">“Not sent”</span>) and shows on <span class="ui">Connection health</span> (A17.14).</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A report of a day the night audit has not closed is sent as it is</b>, and the email says so: <span class="msg">“The night audit has not closed 6 Nov 2026 yet: the figures for that day may still change.”</span> To send final figures, choose a day before the business date where the report has a date, or send it after the audit.</li>
+      <li><b>An address that is not one is refused</b>, and nothing is sent: <span class="msg">“"name@example" is not an email address.”</span></li>
+      <li><b>A file over 9 MB is not sent</b>, never cut: <span class="msg">“This report's PDF is 12.3 MB, and an email can carry at most 9.0 MB. Nothing was sent: choose fewer days, or download it.”</span></li>
+      <li>A yellow box <span class="msg">“Nothing can be sent yet”</span> means sending is not set up on the server; <span class="ui">Send</span> stays grey.</li>
+      <li>To send a report every day, week or month by itself, use <span class="ui">Scheduled reports</span> (A7.6).</li>
+    </ul>
+  </div>
 
   <h3>Reading the figures</h3>
   <ul>
@@ -136,7 +173,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The layout of the owner's eZee exports: <span class="d">D17-62</span>. A real Excel file and a CSV: <span class="d">D17-31</span>. PDFs made on the server: <span class="d">D17-32</span>. Dates as 25/08/2026: <span class="d">D17-77</span>. A figure the system does not hold is a dash, never a zero, because a zero would be read as a fact.</p>
+    <p>The layout of the owner's eZee exports: <span class="d">D17-62</span>. A real Excel file and a CSV: <span class="d">D17-31</span>. PDFs made on the server: <span class="d">D17-32</span>. Any report by email, as it is on screen, by whoever may open it, each send written down: <span class="d">D27-383</span>; a day not yet closed is sent as on screen and says so, the 9 MB limit from what the sending workflow takes: decided under <span class="d">D27-396</span>. Dates as 25/08/2026: <span class="d">D17-77</span>. A figure the system does not hold is a dash, never a zero, because a zero would be read as a fact.</p>
   </div>
 
   <!-- A11.3 -->

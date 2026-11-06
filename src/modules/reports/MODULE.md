@@ -67,6 +67,9 @@ most export CSV.
 | GSTR-1 | `/reports/gstr-1` | `pages/Gst.tsx` (`Gstr1Page`) | search only; `report`; the JSON file `report` export |
 | Input tax credit | `/reports/input-tax-credit` | `pages/Gst.tsx` | search only; `invoice` approve (the supplier dues' four) |
 | GST on advances | `/reports/gst-advances` | `pages/Gst.tsx` | search only; `invoice` view |
+| Scheduled reports | `/settings/messages/scheduled-reports` (`reports.settings.ts`) | `pages/ScheduledReports.tsx` | Settings, Messages; the console's `setting` (owner, Admin, GM) (D27-383 item 5) |
+
+**Email** (D27-383 item 5): every `DocumentReport` screen (each report with a PDF and an Excel) has an **Email** button beside its files, `components/EmailReport.tsx`, through `ReportShell`'s `email` slot: the report's own file question, PDF or Excel, typed or picked addresses, a note.
 
 **D27-383 (items 2-4)**: `builders/cityLedger.ts` (`duesByAge`, `companyStatement`, on the City
 ledger's own `cityLedgerMoves`, so their totals ARE its closing balances), `builders/commission.ts`
@@ -115,7 +118,21 @@ Night audit report that prints the same voids); downloaded by the report exporte
 ## Server endpoints
 
 `api/src/modules/reports/`; the door `index.ts` mounts them at `/api/hotels`.
-Every one is a GET.
+Every one is a GET, except `emails.ts`'s (D27-383 item 5):
+
+```
+GET    /:code/reports/:key/email     the hotel's report addresses to pick from; can it send
+POST   /:code/reports/:key/email     { query, fileType, to, note }: the report as on screen, one email
+                                     per address through sending.ts; who may: the report's own READ_RULES
+GET    /:code/report-schedules       the list; every report with the periods it may be scheduled with
+POST   /:code/report-schedules       add (owner, Admin, GM: roleGate room_config edit, app.manages_hotel)
+PUT    /:code/report-schedules/:id   change; pausing is a change
+DELETE /:code/report-schedules/:id   take off
+```
+
+`runScheduledReports` (exported by the door) is called by guest-messaging's `runReportEmails`, after the
+daily ones, in the same sweep. `build.ts`'s `ABOUT` (each report's title, span and whether it is of one
+supplier or account) and `periodOf` say what days a report's question covers.
 
 **The eight reports, each one document** — `documents.ts`, one explicit route per
 key so the master's `<key>.pdf`, `.xlsx` and `.csv` routes are never answered
@@ -215,7 +232,10 @@ components/ReportShell.tsx     the chrome: the property and the person from the
 
 ## Database
 
-This service owns no tables and writes nothing. It reads `folio_postings`,
+**Since D27-383 item 5 it owns one table, `report_schedules`** (migration "scheduled reports"), and
+`app.report_schedules_due` (a definer, for the sweep); each send is a `messages_sent` row (kind `report`,
+about `report` or `report-schedule`), written by `sending.ts`. db checks: `db/tests/modules/reports.sql`.
+Otherwise this service writes nothing. It reads `folio_postings`,
 `folios`, `reservations`, `room_assignments`, `rooms`, `room_types`,
 `guests`, `guest_documents`, `form_c_filings`, `companies`,
 `booking_sources`, `invoices`, `payments`, `staff` and `hotels`, and calls:

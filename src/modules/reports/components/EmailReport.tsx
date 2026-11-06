@@ -88,7 +88,8 @@ export function EmailReport({ hotel, report, title, query, ready }: {
               </Card>
             )}
             <Field label="Send to"
-              hint={typed.length ? "One email address a line." : "Type at least one address, or pick one below."}>
+              hint={typed.length ? "One email address a line."
+                : info.data?.recipients.length ? "Type at least one address, or pick one below." : "Type at least one address."}>
               {(f) => (
                 <Textarea {...fieldProps(f)} rows={3} placeholder="name@example.com" value={to}
                   onChange={(e) => setTo(e.target.value)} />
@@ -108,7 +109,7 @@ export function EmailReport({ hotel, report, title, query, ready }: {
             )}
             <Field label="File" hint={info.data ? `At most ${info.data.mostMegabytes} MB; a larger one is not sent.` : undefined}>
               {() => (
-                <Segmented value={fileType} onChange={setFileType}
+                <Segmented className="self-start" value={fileType} onChange={setFileType}
                   options={[{ value: "pdf", label: "PDF" }, { value: "xlsx", label: "Excel" }]} />
               )}
             </Field>

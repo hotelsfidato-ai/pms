@@ -11,6 +11,83 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Email any report, and reports on a schedule (D27-383 item 5)
+
+Branch `worktree-agent-a0bf00ca95f207bdb`, copy `.claude\worktrees\agent-a0bf00ca95f207bdb`, on cp6 at `c12c58af`.
+
+**Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), item 5, built under D27-396:
+an Email button on every report that makes a PDF or Excel (as on screen, typed or picked addresses, a note;
+whoever may open the report; each send recorded), and scheduled reports per hotel (report, period, daily /
+weekly / monthly, file, recipients; after that day's night audit in the daily emails' send; pause, edit, delete;
+last send and result; a failed send on Connection health). Through the one sending path, never a second.
+
+**Shipped.**
+- `api/src/modules/reports/emails.ts`: `GET|POST /:code/reports/:key/email`, `GET|POST /:code/report-schedules`,
+  `PUT|DELETE /:code/report-schedules/:id`, and `runScheduledReports`. Sends through `sending.ts` (kind
+  `report`), one email and one `messages_sent` row per address: who (`sent_by`), what (`about_id`
+  `<key>?<the report's file query>`, or `<schedule>/<day>/<address>`), to whom, when, sent or failed.
+- Who emails: the report screen's own role-gate read rule (`READ_RULES` of `GET .../reports/<key>`), asked by
+  the route, so an email is no way round the screen. Who schedules: owner, Admin, GM (`room_config` edit;
+  `app.manages_hotel`, and a restrictive delete policy).
+- `build.ts`: `ABOUT` (each report's title, the span of its question, whether it is of one supplier or account)
+  and `periodOf`; a report key without a line does not compile. `documents.ts`: `readQuery`, the screen route's
+  own checks, reused by the email.
+- Migration 268 "scheduled reports": `report_schedules` (forced row security, shared policy name, audited on
+  what people change, refused in a test hotel, class `never`), `app.report_schedules_due` (a definer: each
+  completed audit of the last two days x each schedule not paused, saved before it, whose day it is x each
+  address, not sent, under three tries, not a day already refused).
+- The sweep: guest-messaging's `runReportEmails` calls `runScheduledReports` after the daily emails, same pass.
+- Web: `components/EmailReport.tsx` in `ReportShell`'s new `email` slot (`DocumentReport` passes the same
+  question its files are asked); `pages/ScheduledReports.tsx` in Settings, Messages (`reports.settings.ts`);
+  `data/emails.ts`.
+- `deploy/n8n/pms-send-crs.json`, Read the message: the `report` email. `roleGate.ts` and `testHotels.ts`: the
+  new routes (a test hotel's email or schedule is refused 409).
+- Manual: A11.2 (Email, picture A11-39), A7.6 (Reports on a schedule, A7-06, A7-07), A17 (named); built.
+
+**Decided under D27-396** (the owner reviews later):
+1. *An emailed report goes as on screen, even with a day still open*, and the email says which day the night
+   audit has not closed, because every report screen opens on the business date (manual A11.2: "a report
+   opened at noon is the day so far"); refusing would make the button useless on most reports. The "no open
+   day" rule is the schedules'.
+2. *A schedule never sends a period with a day not closed*: its period is worked out from the day the audit
+   closed (always closed), a report of a whole month may only go for last month, Yearly statistics and the two
+   statements (of one supplier, of one account) cannot be scheduled; the sweep asks again before it builds and
+   refuses, writing the reason on the schedule, not on Connection health.
+3. *Each scheduled report is its own email*, in the same sweep as the daily ones, not inside the daily email:
+   that email's words are "daily reports - <date>", wrong for a week or a month.
+4. *A report as on one day* (Manager, Night audit, Closing stock, Money owed by age...) *scheduled for a week or a
+   month is as on the period's last day*; a report over days covers them all; the City ledger with zero
+   balances left out, as its screen opens.
+5. *Weekly on a day = after the night audit of that day*; *monthly dates 1 to 28*, so every month has it.
+6. *The size limit is 9 MB of file*: n8n takes 16 MB a request (`N8N_PAYLOAD_SIZE_MAX`), base64 adds a third
+   (the ID photos' figure, `routes/idPhotos.ts`). Refused with the size and the reason, never cut.
+7. *The hotel's report recipients* = every address its daily report emails and schedules go to.
+8. *A cancelled day run again does not send its scheduled reports twice* (the Corrected resend, D27-390, is the
+   daily emails' only).
+9. *Built as the person who saved the schedule while they run the hotel*, else whoever runs it, as the daily ones.
+
+**Proved.** `api/test/modules/reports/emailReports.test.ts` 13/13 alone, seeing each refusal: not allowed to
+open the report (revenue manager, City ledger: 403 and its sentence), a bad address, nobody to send to, a
+paused schedule, a period holding a day not closed (the sweep: nothing sent, the reason on the row, not tried
+again), a file over the limit, a receiver that refuses (502, written failed, on Connection health, tried
+again). `workflows.test.ts` 35/35 (the `report` email: subject, note as text, facts table, open day, by
+schedule). `db/tests/modules/reports.sql` (new). Opened: the Email dialog on the Manager report (sent to a
+stand-in receiver on this PC: two emails, PDF, note, open day), Scheduled reports (empty, added, paused); an
+audit row for 6 Nov in this copy's database made the sweep send the three schedules (Manager as on 01/11,
+Monthly statistics October 2026, the paused one not).
+
+**Left open.**
+- **The owner's n8n paste** (until then a `report` email is refused by n8n, shown as failed):
+  `deploy/n8n/OWNER-STEPS.md` part 7. Where: the owner's PC, then the CRS's n8n in the browser - open
+  `D:\fidato pms\.local\n8n\paste-7nov\read-the-message.js` (the master copies it from this copy's
+  `.local\n8n\paste-7nov\`), Ctrl+A, Ctrl+C; workflow "PMS send · email and WhatsApp (CRS)", Read the message,
+  Ctrl+A, Ctrl+V; check FROM, REPLY_TO, VOUCHER_TEMPLATE, OWN_TEMPLATE_READY; Save.
+- Migration 268 is one of 266-268, also given to the after-check-in helper (it has 266): the master renumbers at
+  merge. It redefines `app.test_hotel_classes()` from 255's list; merge it with any later list.
+- Who sent what is in `messages_sent`; no screen lists the report emails yet.
+
+---
+
 ## 2026-11-06 · Money owed by age, statements, commission, GSTR-1, input tax credit, GST on advances (D27-383 items 2-4)
 
 **Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), items 2, 3 and 4, built

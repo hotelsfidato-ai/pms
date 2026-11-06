@@ -154,6 +154,14 @@ line saying so. The node's whole code is in `pms-send-crs.json` (its
 `jsCode`). Until it is pasted, such an email still goes - a new message id,
 so n8n does not take it for a retry - but unmarked.
 
+### The 7 November paste: any report by email, and on a schedule (D27-383 item 5)
+
+**Read the message** only, from `D:\fidato pms\.local\n8n\paste-7nov\read-the-message.js`
+(the master copies it there from the helper's copy): a `report` email - the subject "<hotel>: <report> -
+<its days>", the note, the facts as a table, the PDF or Excel attached, who sent it or "Sent by schedule".
+`OWNER-STEPS.md` part 7 has the steps and what happens if the PMS is updated first. It holds
+everything the 28 October paste put in Read the message.
+
 ### The 28 October paste: the daily reports in one email (D27-371)
 
 **Read the message** only, from `D:\fidato pms\.local\n8n\paste-28oct\read-the-message.js`:
