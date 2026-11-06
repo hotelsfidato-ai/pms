@@ -6561,6 +6561,23 @@ copy will see of theirs.**
 
 ---
 
+### 469 · A helper's: a migration edited after it ran is not in the database (7 November)
+
+The safety helper changed migration 257 after it had run on its own database, then trusted the screens: they ran on the
+old version, and it lost time to a fault that was already fixed. **The rule:** after editing a migration, run
+`db/migrate.sh` again (it replays) before believing anything the development database shows.
+
+---
+
+### 468 · FOUND: the local Postgres died under its keeper, cause not known (6 November)
+
+At 22:25:40 a backend running `app.record_telemetry` ended with 0xC000013A (a console close) and Postgres stopped, as on
+28 September, though the keeper of that day was running. The helpers had been stopped an hour earlier (21:28), so that
+is not shown to be the cause. Nobody noticed for three hours, because nothing was running. **The rule:** when work
+resumes after a pause, run `pg_isready` first; a stopped Postgres is restarted only by the master, under the keeper.
+
+---
+
 ### 467 · MINE: I gave the owner two steps that had already run (5 November)
 
 I put S6 (Shimla's first day to 1 Nov) and R1 (Amrapali's Corrected 2 Nov reports) into release 19's server steps

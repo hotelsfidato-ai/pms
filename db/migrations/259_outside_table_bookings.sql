@@ -27,7 +27,7 @@ alter table table_bookings add column if not exists diner_name  text;
 alter table table_bookings add column if not exists diner_phone text;
 alter table table_bookings add column if not exists section_id  uuid references pos_sections(id);
 alter table table_bookings add column if not exists arrived_at  timestamptz;
-alter table table_bookings add column if not exists order_id    uuid references pos_orders(id);
+alter table table_bookings add column if not exists order_id    uuid references pos_orders(id) on delete set null;
 
 comment on column table_bookings.diner_name is
   'An outside diner''s name (259): set exactly when the booking is for nobody staying.';
@@ -121,3 +121,93 @@ $fn$;
 
 revoke all on function app.guest_table_bookings_mine(text, text) from public;
 grant execute on function app.guest_table_bookings_mine(text, text) to pms_app;
+
+-- The full reset deletes an outside diner's booking before the order its table opened
+-- (order_id above): owner_reset.steps as migration 255 left it, with table_bookings moved
+-- ahead of the restaurant's orders. api/test/resetOrder.test.ts checks the order against
+-- the foreign keys (it failed in the full gate run of 7 November).
+create or replace function owner_reset.steps(p_fresh boolean)
+returns table (step int, table_name text, where_sql text)
+language sql
+immutable
+as $fn$
+  select s.step::int, s.e ->> 0, s.e ->> 1
+    from (
+      select e, o as step from jsonb_array_elements($list$[
+        ["vat_bills",                 "hotel_id = $1"],
+        ["guest_food_orders",         "hotel_id = $1"],
+        ["table_bookings",            "hotel_id = $1"],
+        ["pos_order_tenders",         "order_id in (select id from pos_orders where hotel_id = $1)"],
+        ["pos_order_lines",           "hotel_id = $1"],
+        ["pos_tender_changes",        "hotel_id = $1"],
+        ["pos_requests",              "hotel_id = $1"],
+        ["pos_orders",                "hotel_id = $1"],
+        ["pos_tickets",               "hotel_id = $1"],
+        ["pos_cash_movements",        "hotel_id = $1"],
+        ["pos_denominations",         "day_end_id in (select id from pos_day_ends where hotel_id = $1)"],
+        ["pos_day_ends",              "hotel_id = $1"],
+        ["banquet_event_packages",    "hotel_id = $1"],
+        ["cashier_float_claims",      "closed_shift_id in (select id from cashier_shifts where hotel_id = $1)"],
+        ["cashier_denominations",     "shift_id in (select id from cashier_shifts where hotel_id = $1)"],
+        ["cashier_movements",         "hotel_id = $1"],
+        ["cashier_shifts",            "hotel_id = $1"],
+        ["cash_deposit_notes",        "hotel_id = $1"],
+        ["cash_deposits",             "hotel_id = $1"],
+        ["company_payments",          "hotel_id = $1"],
+        ["spa_appointments",          "hotel_id = $1"],
+        ["laundry_dockets",           "hotel_id = $1"],
+        ["guest_id_photo_views",      "hotel_id = $1"],
+        ["guest_id_photos",           "hotel_id = $1"],
+        ["guest_digilocker_attempts", "hotel_id = $1"],
+        ["guest_links",               "hotel_id = $1"],
+        ["form_c_filings",            "hotel_id = $1"],
+        ["form_iii_stays",            "hotel_id = $1"],
+        ["stay_companions",           "hotel_id = $1"],
+        ["closed_day_corrections",    "hotel_id = $1"],
+        ["invoices",                  "hotel_id = $1"],
+        ["refunds",                   "hotel_id = $1"],
+        ["payments",                  "hotel_id = $1"],
+        ["loyalty_points",            "hotel_id = $1"],
+        ["folio_postings",            "hotel_id = $1"],
+        ["folios",                    "hotel_id = $1"],
+        ["guest_documents",           "guest_id in (select guest_id from reservations where hotel_id = $1) and not exists (select 1 from reservations r where r.guest_id = guest_documents.guest_id and r.hotel_id <> $1) and not exists (select 1 from stay_companions c where c.guest_id = guest_documents.guest_id and c.hotel_id <> $1)"],
+        ["housekeeping_assignments",  "hotel_id = $1"],
+        ["room_assignments",          "hotel_id = $1"],
+        ["room_status_log",           "hotel_id = $1"],
+        ["work_order_costs",          "hotel_id = $1"],
+        ["work_orders",               "hotel_id = $1"],
+        ["wake_up_calls",             "hotel_id = $1"],
+        ["lost_items",                "hotel_id = $1"],
+        ["room_blocks",               "hotel_id = $1"],
+        ["banquet_events",            "hotel_id = $1"],
+        ["reservations",              "hotel_id = $1"],
+        ["reservation_groups",        "(lead_hotel_id is null or lead_hotel_id = $1) and not exists (select 1 from reservations r where r.group_id = reservation_groups.id and r.hotel_id <> $1) and not exists (select 1 from folios f where f.group_id = reservation_groups.id and f.hotel_id <> $1)"],
+        ["night_audit_undos",         "hotel_id = $1"],
+        ["night_audit_runs",          "hotel_id = $1"],
+        ["bar_request_lines",         "hotel_id = $1"],
+        ["bar_requests",              "hotel_id = $1"],
+        ["bar_closed_days",           "hotel_id = $1"],
+        ["supplier_reversals",        "hotel_id = $1"],
+        ["supplier_payments",         "hotel_id = $1"],
+        ["supplier_credit_notes",     "hotel_id = $1"],
+        ["supplier_bills",            "hotel_id = $1"],
+        ["bar_purchase_lines",        "hotel_id = $1"],
+        ["stock_count_lines",         "hotel_id = $1"],
+        ["stock_movements",           "hotel_id = $1"],
+        ["bar_purchases",             "hotel_id = $1"]
+      ]$list$::jsonb) with ordinality as x(e, o)
+      union all
+      select e, 1000 + o from jsonb_array_elements($list$[
+        ["equipment_moves",           "hotel_id = $1"],
+        ["equipment_history",         "hotel_id = $1"],
+        ["purchase_request_lines",    "hotel_id = $1"],
+        ["purchase_requests",         "hotel_id = $1"],
+        ["approvals",                 "hotel_id = $1"],
+        ["crs_bookings",              "hotel_id = $1"],
+        ["channel_bookings",          "hotel_id = $1"],
+        ["messages_sent",             "hotel_id = $1"]
+      ]$list$::jsonb) with ordinality as x(e, o)
+       where p_fresh
+    ) s
+   order by s.step
+$fn$;
