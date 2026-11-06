@@ -290,6 +290,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/stays/:id`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/unassign`]: ROOMING,
   [`POST ${H}/stays/:id/void`]: VOID,
+  /* D27-397: the route decides who (afterCheckIn.ts: the owner, an Admin, the
+     GM with the switch on); the desk is let in to be told to ask the GM. */
+  [`POST ${H}/stays/:id/undo-check-in`]: CHANGE_BOOKING,
+  [`POST ${H}/stays/:id/cancel-in-house`]: grant("reservation", "cancel", "Cancelling a booking"),
+  [`POST ${H}/stays/:id/requests`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/exchange`]: ROOMING,
   /* room-systems */
   [`POST ${H}/stays/:id/keys`]: KEY_CARDS,
@@ -328,6 +333,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/charges/:postingId/edit`]: EDIT_BILL,
   [`POST ${H}/stays/:id/rate`]: EDIT_BILL,
   [`POST ${H}/stays/:id/payments`]: PAYMENT,
+  /* D27-397: how a payment was taken - the owner, an Admin or the GM; the desk asks. */
+  [`POST ${H}/stays/:id/payments/:postingId/method`]: grant("reservation", "approve", "Changing how a payment was taken"),
   /* D27-315 B: a refund - the owner, an administrator, the GM or the
      accountant (D27-125's four), asked by the route and by the database. */
   [`POST ${H}/stays/:id/refunds`]: own("finance/refunds.ts: the four of D27-125"),

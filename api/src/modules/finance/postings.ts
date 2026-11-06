@@ -358,6 +358,10 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
 export async function reverseFolioCharge(
   client: Client, hotelId: string, postingId: string, reason: string | undefined,
   within: { reservationId: string } | { folioId: string },
+  /** Who reverses it, when it is not a person at the bill: 'check_in_undo',
+      an undone check-in's own first night (D27-397), which the night audit
+      and the next check-in do not count as charged (roomNight.ts). */
+  source?: "check_in_undo",
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
   /* A stay's line: on its own bill, or its own room night on its group's
      (D27-204 posts a routed room's first night there on an open day). */
@@ -437,15 +441,15 @@ export async function reverseFolioCharge(
     const { rows: made } = await client.query<{ id: string }>(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount, reverses_id)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint)
+          amount, tax_rate, tax_amount, reverses_id, source_type)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint,$10)
        returning id::text`,
       [hotelId, p.folio_id, p.business_date, p.category,
        /* The reason rides on the reversal's own line, which the desk
           reads and the guest's bill and invoice never print (both
           leave a reversed pair out). */
        `Reversal - ${p.description} (why: ${reason})`,
-       -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId],
+       -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId, source ?? null],
     );
     return { ok: true, id: made[0]!.id };
   } catch (error) {
@@ -457,6 +461,122 @@ export async function reverseFolioCharge(
     }
     throw error;
   }
+}
+
+/* ── How a payment was taken (the owner's D27-397, 6 November) ──────
+   "Methods": cash typed instead of UPI is the common mistake. The ledger is
+   append-only, so the payment is reversed and the same amount is received
+   again, the same day, the new way - the reversal carrying the reason, the
+   new line naming the old way and pointing at the old payment (source
+   'method_change', the old payment's id). Never a refund, never another
+   amount. The owner, an Admin or the GM (roleGate); the front desk asks the
+   GM (front-desk/afterCheckIn.ts), and approving comes here as the GM.
+   Finance had no way to correct one before: a manager reversed it and took
+   it again, two acts nothing tied together. The restaurant's tender change
+   (pos/tenderChanges.ts) is the till's, for a restaurant bill. */
+postings.post("/:code/stays/:id/payments/:postingId/method", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { method?: unknown; reason?: unknown };
+  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const done = await changePaymentMethod(client, hotelId, c.req.param("id"), c.req.param("postingId"),
+      typeof body.method === "string" ? body.method : "", typeof body.reason === "string" ? body.reason : "");
+    return done.ok ? { ok: true, data: { id: done.id } } : refuse(done.reason);
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Every refusal before the first write (MEMORY 243); a refusal is returned. */
+export async function changePaymentMethod(
+  client: Client, hotelId: string, stayId: string, postingId: string, method: string, reason: string,
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const no = (why: string) => ({ ok: false as const, reason: why });
+  const why = reason.trim();
+  if (!why || why.length > 300) return no("Say why it is changed. It stays on the bill, on the reversed line.");
+  if (!/^\d+$/.test(postingId) || !UUID.test(stayId)) return no("No such payment on this bill.");
+  const { rows: [p] } = await client.query<{
+    folio_id: string; business_date: string; amount: string; kind: string; label: string;
+    payment_id: string; posted_by: string | null; foreign: boolean;
+    reversal: boolean; reversed: boolean; day_closed: boolean; drawer_closed: boolean;
+  }>(
+    `select fp.folio_id::text, fp.business_date::text, (-fp.amount)::text as amount,
+            pay.method as kind, coalesce(pay.method_label, pay.method) as label, pay.id::text as payment_id,
+            fp.posted_by::text, g.nationality <> 'IN' as foreign,
+            fp.reverses_id is not null as reversal,
+            exists (select 1 from folio_postings x where x.reverses_id = fp.id) as reversed,
+            exists (select 1 from night_audit_runs na where na.hotel_id = fp.hotel_id
+                     and na.business_date = fp.business_date and na.status = 'completed') as day_closed,
+            /* The drawer the cash went into, or comes into: the taker's shift
+               over the moment it was taken, counted and closed. */
+            exists (select 1 from cashier_shifts cs
+                     where cs.hotel_id = fp.hotel_id and cs.staff_id = fp.posted_by
+                       and cs.opened_at <= fp.created_at and cs.closed_at is not null
+                       and fp.created_at < cs.closed_at) as drawer_closed
+       from folio_postings fp
+       join folios f on f.id = fp.folio_id
+       join reservations r on r.id = f.reservation_id
+       join guests g on g.id = r.guest_id
+       join payments pay on pay.posting_id = fp.id
+      where f.hotel_id = $1 and f.reservation_id = $2::uuid and fp.id = $3::bigint
+        and fp.category = 'payment'`,
+    [hotelId, stayId, postingId]);
+  if (!p) return no("No such payment on this bill.");
+  if (p.reversal || p.reversed) return no("This payment is reversed already. Take the money again the right way instead.");
+  if (p.day_closed) return no("This day is closed by the Night audit. Its payments are not changed - put it right today.");
+  if (p.kind === "city_ledger") return no("A transfer to the city ledger is not money taken. Reverse it instead.");
+  const { rows: [way] } = await client.query<{ label: string; kind: string }>(
+    "select label, kind from payment_methods where hotel_id = $1 and is_active and label = $2",
+    [hotelId, method.trim()]);
+  if (!way) return no(`"${method}" is not a way of paying this hotel takes.`);
+  if (way.kind === "city_ledger") return no("Billing a company is not a way of paying. Choose how the money came.");
+  if (way.label === p.label) return no(`It was taken by ${p.label} already.`);
+  const cash = p.kind === "cash" || way.kind === "cash";
+  if (cash && p.drawer_closed) {
+    return no("The cash drawer this payment was counted in has been closed. "
+      + "A counted drawer is not changed - put the difference right on today's drawer.");
+  }
+  const amount = Number(p.amount);
+  let roundOff = 0;
+  if (way.kind === "cash") {
+    /* Counted where the money is: the drawer of whoever took it, open now. */
+    const { rows: [open] } = await client.query(
+      "select 1 from cashier_shifts where hotel_id = $1 and staff_id = $2::uuid and closed_at is null",
+      [hotelId, p.posted_by]);
+    if (!open) {
+      return no("The person who took it has no cash drawer open. They open it on Cashiering first, "
+        + "so the cash is counted there.");
+    }
+    /* The same cash checks as taking it (D25-40): over the limit, or over the
+       PAN's line, is refused here rather than asked - reverse it and take it
+       in cash at the desk, with the PAN. */
+    const { rows: [taken] } = await client.query<{ n: string }>(
+      "select app.cash_taken($1, $2::date)::text as n", [stayId, p.business_date]);
+    const over = overCashLimit(Number(taken!.n), amount, "the way it was taken");
+    if (over) return no(over);
+    const pan = panFor(amount, { foreign: p.foreign });
+    if (!pan.ok) return no("More than ₹1,00,000 in cash needs the guest's PAN. Reverse it and take it in cash with the PAN.");
+    roundOff = Math.round((Math.round(amount) - amount) * 100) / 100;
+  }
+
+  const reversed = await reverseFolioCharge(client, hotelId, postingId,
+    `${p.label} to ${way.label}: ${why}`, { reservationId: stayId });
+  if (!reversed.ok) return reversed;
+  /* The same amount, the same day, the same bill, in the name of whoever took
+     it - so a drawer still open counts it where the money is. */
+  const { rows: [made] } = await client.query<{ id: string }>(
+    `insert into folio_postings
+       (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount,
+        posted_by, source_type, source_id)
+     values ($1, $2, $3::date, 'payment', $4, $5, 0, 0, $6, 'method_change', $7::uuid)
+     returning id::text`,
+    [hotelId, p.folio_id, p.business_date, `Received - ${way.label} (was ${p.label})`,
+     -amount, p.posted_by, p.payment_id]);
+  await client.query(
+    `insert into payments (hotel_id, posting_id, method, method_label, amount, round_off)
+     values ($1, $2::bigint, $3, $4, $5, $6)`,
+    [hotelId, made!.id, way.kind, way.label, amount, roundOff]);
+  return { ok: true, id: made!.id };
 }
 
 /* ── Edit one ────────────────────────────────────────────────────── */

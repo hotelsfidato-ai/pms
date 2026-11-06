@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { PoolClient as Client } from "pg";
 import { withSession } from "../auth.ts";
 import { performPosRequest, rejectPosRequest } from "../modules/pos/index.ts";
+import { performStayRequest, rejectStayRequest } from "../modules/front-desk/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    APPROVALS
@@ -108,10 +109,12 @@ approvals.get("/:code/approvals", async (c) => {
               app.colleague_name(a.requested_by, a.hotel_id) as requested_by_colleague,
               app.colleague_name(a.decided_by, a.hotel_id) as decided_by_colleague,
               a.decided_at::text, a.decision_note,
-              pr.summary as detail
+              coalesce(pr.summary, sr.summary) as detail
          from approvals a
          /* A waiter's request to the GM: what exactly (D27-363). */
          left join pos_requests pr on a.subject_table = 'pos_requests' and pr.id = a.subject_id
+         /* The front desk's, after check-in (D27-397). */
+         left join stay_requests sr on a.subject_table = 'stay_requests' and sr.id = a.subject_id
          /* ⚠ LEFT, NOT INNER (16 September). The staff table is row-secured: most
             roles read only their own row (027). An inner join therefore
             HID every request somebody else raised - the Inventory Manager,
@@ -262,6 +265,15 @@ approvals.post("/:code/approvals/:id/:decision", async (c) => {
         if (!done.ok) return done;
       } else {
         await rejectPosRequest(client, session, row.subject_id, note!);
+      }
+    }
+    /* The front desk's request after check-in (D27-397), the same way. */
+    if (row.kind === "stay_request" && row.subject_table === "stay_requests") {
+      if (decision === "approved") {
+        const done = await performStayRequest(client, session, hotelId, row.subject_id);
+        if (!done.ok) return done;
+      } else {
+        await rejectStayRequest(client, session, row.subject_id, note!);
       }
     }
 

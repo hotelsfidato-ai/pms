@@ -183,6 +183,22 @@ desk.post("/:code/stays/:id/cancel", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    return cancelBooking(client, hotelId, c.req.param("id"), session.staffId,
+      { reason, dryRun, waive: input.waive === true });
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** Cancel a booking, as `staffId`: the route, and a guest in house once the
+    front desk's check-in is undone in the same transaction (D27-397,
+    front-desk/afterCheckIn.ts) - which is a confirmed booking by then, so its
+    terms apply, the owner, an Admin or the GM may waive them, as today. */
+export async function cancelBooking(
+  client: Client, hotelId: string, stayId: string, staffId: string,
+  ask: { reason: string; dryRun: boolean; waive: boolean },
+) {
+    const { reason, dryRun } = ask;
     const { rows } = await client.query<{
       reference: string; status: string; terms: string | null; basis: string | null;
       retention: string | null; free: boolean | null; nightly: string;
@@ -199,12 +215,12 @@ desk.post("/:code/stays/:id/cancel", async (c) => {
               r.agreed_rate::text as nightly
          from reservations r join hotels h on h.id = r.hotel_id
         where r.id = $1 and r.hotel_id = $2`,
-      [c.req.param("id"), hotelId]);
+      [stayId, hotelId]);
     const stay = rows[0];
     if (!stay) return refuse("No such booking.");
     if (stay.status === "confirmed") {
-      return cancelConfirmed(client, hotelId, c.req.param("id"), stay,
-        { reason, dryRun, waive: input.waive === true, staffId: session.staffId });
+      return cancelConfirmed(client, hotelId, stayId, stay,
+        { reason, dryRun, waive: ask.waive, staffId });
     }
     if (stay.status !== "tentative") {
       const why: Record<string, string> = {
@@ -220,12 +236,9 @@ desk.post("/:code/stays/:id/cancel", async (c) => {
               cancel_reason = $4
         where hotel_id = $2 and status = 'tentative'
           and (id = $1 or group_id = (select group_id from reservations where id = $1))`,
-      [c.req.param("id"), hotelId, session.staffId, reason]);
+      [stayId, hotelId, staffId, reason]);
     return { ok: true as const, rooms: rowCount ?? 0, reference: stay.reference };
-  });
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
+}
 
 /* ── Cancelling a CONFIRMED booking (BK-1; the owner, 28 September) ────
    Until now a confirmed booking could only be voided, and the Void dialog

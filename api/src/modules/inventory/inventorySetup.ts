@@ -438,6 +438,8 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
     defaultTitle?: string | null;
     /** D27-338: the night audit opens at this time; the owner's and an admin's. */
     nightAuditOpensAt?: string;
+    /** D27-397: the GM may undo a check-in (266). */
+    gmMayUndoCheckIn?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const rule = rulesProblem(input);
@@ -498,13 +500,15 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
          weekend_days            = coalesce($5::smallint[], weekend_days),
          default_id_type = case when $6::boolean then $7 else default_id_type end,
          default_nationality     = coalesce($8, default_nationality),
-         default_title   = case when $9::boolean then $10 else default_title end
+         default_title   = case when $9::boolean then $10 else default_title end,
+         gm_may_undo_check_in    = coalesce($11, gm_may_undo_check_in)
        where id = $1`,
       [hotelId, input.defaultPaymentMethod ?? null, input.deskMayOverbook ?? null,
        input.advanceBeforeCheckIn ?? null, input.weekendDays ?? null,
        Object.hasOwn(input, "defaultIdType"), input.defaultIdType || null,
        input.defaultNationality?.trim().toUpperCase() ?? null,
-       Object.hasOwn(input, "defaultTitle"), input.defaultTitle || null]);
+       Object.hasOwn(input, "defaultTitle"), input.defaultTitle || null,
+       input.gmMayUndoCheckIn ?? null]);
     return { ok: true as const };
   });
 
@@ -519,8 +523,11 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
 function rulesProblem(input: {
   defaultPaymentMethod?: string; deskMayOverbook?: boolean; advanceBeforeCheckIn?: string;
   weekendDays?: number[]; defaultIdType?: string | null; defaultNationality?: string;
-  defaultTitle?: string | null;
+  defaultTitle?: string | null; gmMayUndoCheckIn?: boolean;
 }): string | null {
+  if (input.gmMayUndoCheckIn !== undefined && typeof input.gmMayUndoCheckIn !== "boolean") {
+    return "Whether the GM may undo a check-in is a yes or a no.";
+  }
   const one = (v: unknown, of: readonly unknown[]) => v === undefined || of.includes(v);
   if (!one(input.defaultPaymentMethod, ["Cash", "UPI", "Credit Card", "Debit Card"])) {
     return "The default way of paying is Cash, UPI, Credit Card or Debit Card.";

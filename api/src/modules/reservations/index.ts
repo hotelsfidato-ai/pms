@@ -18,6 +18,10 @@ export const mounts: readonly Mount[] = [
    refusals, as a booking taken at the desk - and add what only a booking
    site has: its reference, its commission, and a cancellation that is a
    cancellation rather than a void. */
+/* D27-397: a guest in house cancelled, once the front desk's check-in is
+   undone in the same transaction (front-desk/afterCheckIn.ts). */
+export { cancelBooking } from "./desk.ts";
+
 export {
   createChannelBooking, cancelChannelBooking, channelBookingAlreadyHere,
   isUniqueViolation,

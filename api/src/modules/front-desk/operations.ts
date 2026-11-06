@@ -12,6 +12,7 @@ import {
 import { earnAtCheckOut } from "../loyalty/index.ts";
 import { countProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
 import { cancelStaleKeys } from "../room-systems/index.ts";
+import { ARRIVED, ASK_THE_GM, undoCheckIn, undoRight } from "./afterCheckIn.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -1351,6 +1352,13 @@ operations.post("/:code/stays/:id/move", async (c) => {
        tonight on — a posted night is history. On the arrival day tonight IS
        posted, at check-in (D27-204): that one line is put right too. */
     agreedRate?: number;
+    /* D27-397: the guest's menu's "Change room type". For a guest in a room
+       the room type is the type of the room they are in (decided under
+       D27-396), so a guest in house moved from tonight takes the room's type
+       onto the booking - the panel, the inventory and the reports then count
+       the type they sleep in. A plain move keeps the type booked (an upgrade,
+       D27-328 (1)). */
+    changeType?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -1452,6 +1460,11 @@ operations.post("/:code/stays/:id/move", async (c) => {
           `update reservations set agreed_rate = $1 where id = $2`,
           [input.agreedRate.toFixed(2), stayId]);
       }
+      if (input.changeType === true && stay[0].status === "checked_in"
+          && from <= await businessDateFor(client, hotelId)) {
+        await client.query("update reservations set room_type_id = $1 where id = $2",
+          [room[0].room_type_id, stayId]);
+      }
       /* Moved from tonight: the old room's key cards stop (D27-178). */
       await cancelStaleKeys(client, hotelId, stayId);
 
@@ -1495,18 +1508,27 @@ operations.post("/:code/stays/:id/move", async (c) => {
    so two extra nights are charged at the rate the guest agreed to — which is
    what a guest expects, and changing it is somebody's decision rather than a
    side effect of extending a stay. */
+export interface StayAmend { checkIn?: string; checkOut?: string; adults?: number; children?: number }
+
 operations.patch("/:code/stays/:id", async (c) => {
-  type Body = {
-    checkIn?: string; checkOut?: string;
-    adults?: number; children?: number;
-  };
-  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const input = await c.req.json<StayAmend>().catch(() => ({}) as StayAmend);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const stayId = c.req.param("id");
+    return amendBooking(client, session, hotelId, c.req.param("id"), input);
+  });
 
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/** Change dates or guests, as the person signed in: the PATCH, and a front
+    desk's request to move an in-house arrival once the GM approves it
+    (D27-397) - app.amend_stay asks who (266). */
+export async function amendBooking(
+  client: Client, session: Session, hotelId: string, stayId: string, input: StayAmend,
+) {
     /* Every field is optional and absent means UNCHANGED, so the current row
        is read first. A PATCH that treated a missing key as null would shorten
        a stay to nothing because a form did not send a field. */
@@ -1579,11 +1601,7 @@ operations.patch("/:code/stays/:id", async (c) => {
       if (e?.code === "P0001" && e.message) return refuse(e.message);
       throw error;
     }
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, "ok" in result && result.ok ? 200 : 409);
-});
+}
 
 operations.post("/:code/stays/:id/unassign", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
@@ -1634,8 +1652,21 @@ operations.post("/:code/stays/:id/void", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const stayId = c.req.param("id");
+    return voidBooking(client, session, hotelId, c.req.param("id"), reason);
+  });
 
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/** Void a booking, as the person signed in: the route, and a front desk's
+    request once the GM approves it (D27-397). A guest IN HOUSE is voided by
+    the people who may undo the check-in (afterCheckIn.ts): the check-in is
+    undone first and the void follows, in one transaction - a refusal of
+    either takes back both. */
+export async function voidBooking(
+  client: Client, session: Session, hotelId: string, stayId: string, reason: string,
+): Promise<Outcome> {
     const { rows } = await client.query<{
       status: string; reference: string;
     }>(
@@ -1649,29 +1680,48 @@ operations.post("/:code/stays/:id/void", async (c) => {
     if (stay.status === "void") return refuse("This booking is already void.");
 
     /* A guest who arrived cannot un-arrive. Voiding a stay somebody
-       occupied would remove a night the hotel actually sold. */
-    if (["checked_in", "checked_out"].includes(stay.status)) {
+       occupied would remove a night the hotel actually sold. IN HOUSE, the
+       owner, an Admin or the GM may (D27-397): the check-in is undone first,
+       with every one of its refusals. */
+    const inHouse = stay.status === "checked_in";
+    if (inHouse) {
+      const right = await undoRight(client, hotelId, session.staffId);
+      if (right !== "yes") return refuse(right === "ask" ? ASK_THE_GM : ARRIVED);
+    }
+    if (stay.status === "checked_out") {
       return refuse(
-        `${stay.reference} has been checked ${stay.status === "checked_in" ? "in" : "out"}. ` +
+        `${stay.reference} has been checked out. ` +
         "A stay that happened cannot be made not to have happened - " +
         "reverse the charges instead.");
     }
 
     /* THE LINE BETWEEN VOID AND CANCEL. Money on the folio means the
        booking was real enough to be billed, and erasing it would take
-       a posting out of an append-only ledger by the back door. */
+       a posting out of an append-only ledger by the back door. Not the
+       first night a check-in posted, nor the undo's reversal of it: the
+       system wrote both, they come to nothing, and the undo takes it off
+       first (D27-397). Anything else, payments included, is a cancel. */
     const { rows: posted } = await client.query<{ n: string }>(
       `select count(*)::text as n
          from folio_postings p
          join folios f on f.id = p.folio_id
-        where f.reservation_id = $1`,
-      [stayId],
+        where f.reservation_id = $1
+          and coalesce(p.source_type, '') <> 'check_in_undo'
+          and not (p.category = 'room' and p.source_type = 'check_in'
+                   and ($2 or exists (select 1 from folio_postings u
+                                       where u.reverses_id = p.id and u.source_type = 'check_in_undo')))`,
+      [stayId, inHouse],
     );
     if (Number(posted[0]!.n) > 0) {
       return refuse(
         `${stay.reference} already has charges on its folio. That is a ` +
         "cancellation, not a void - cancel it so the terms and any charge " +
         "are applied.");
+    }
+
+    if (inHouse) {
+      const undone = await undoCheckIn(client, session, hotelId, stayId, `Voided: ${reason}`, { keys: false });
+      if (!undone.ok) return undone;
     }
 
     await client.query(
@@ -1681,14 +1731,12 @@ operations.post("/:code/stays/:id/void", async (c) => {
         where id = $3`,
       [reason, session.staffId, stayId],
     );
+    /* The guest in house may have had a key: it stops now (D27-178). */
+    if (inHouse) await cancelStaleKeys(client, hotelId, stayId);
 
     /* The room comes back on its own — a trigger in 043 releases the
        assignment, because a voided booking holding a room out of
        inventory is found weeks later by a clerk who cannot sell a room
        that looks empty. */
     return { ok: true as const, data: { reference: stay.reference } };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, "ok" in result && result.ok ? 200 : 409);
-});
+}

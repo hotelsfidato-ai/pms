@@ -65,6 +65,9 @@ export type { ChargeToPost } from "./postings.ts";
    no stay - goes through the same checks and the same insert. Each answers
    a refusal as {ok:false, reason} (MEMORY 243). */
 export { takeFolioPayment, postFolioCharge, reverseFolioCharge, editFolioCharge } from "./postings.ts";
+/* D27-397: what the GM does when the front desk asked - the rate of a guest
+   in house, and how a payment was taken (front-desk/afterCheckIn.ts). */
+export { changeStayRate, changePaymentMethod } from "./postings.ts";
 export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice, invoiceFacts } from "./invoices.ts";
 /* The stay as the documents print it (D27-344): the registration card too. */
