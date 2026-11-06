@@ -66,12 +66,20 @@ last send and result; a failed send on Connection health). Through the one sendi
    daily emails' only).
 9. *Built as the person who saved the schedule while they run the hotel*, else whoever runs it, as the daily ones.
 
+**Found.** Moving the screen route's checks into `readQuery` through a shell one-liner lost the backslash of
+`\d` in the month and year patterns, so every `?month=` was refused; the existing reports tests caught it (17
+failed) and it is fixed in its own commit. A lesson for MEMORY: write code with the Write or Edit tool, never
+through `node -e` inside a shell string.
+
 **Proved.** `api/test/modules/reports/emailReports.test.ts` 13/13 alone, seeing each refusal: not allowed to
 open the report (revenue manager, City ledger: 403 and its sentence), a bad address, nobody to send to, a
 paused schedule, a period holding a day not closed (the sweep: nothing sent, the reason on the row, not tried
 again), a file over the limit, a receiver that refuses (502, written failed, on Connection health, tried
 again). `workflows.test.ts` 35/35 (the `report` email: subject, note as text, facts table, open day, by
-schedule). `db/tests/modules/reports.sql` (new). Opened: the Email dialog on the Manager report (sent to a
+schedule). `db/tests/modules/reports.sql` (new): `db/tests/run.sh` all 1910 assertions, "scheduled reports"
+18/0, exit 0. API `npm test` (after the fix below): 3080 of 3080 tests, 242 of 243 files, exit 1 - the one,
+`inventory/unpriced.test.ts`, timed out in its 30 s setup under load and passes alone (exit 0). Web `npx vitest run` 1540 of 1541, exit 1: the one is `migrationNumbers.test.ts`, the gap 257-267
+in this copy (268 is mine; the others are other helpers'), which the master's merge closes. Opened: the Email dialog on the Manager report (sent to a
 stand-in receiver on this PC: two emails, PDF, note, open day), Scheduled reports (empty, added, paused); an
 audit row for 6 Nov in this copy's database made the sweep send the three schedules (Manager as on 01/11,
 Monthly statistics October 2026, the paused one not).
