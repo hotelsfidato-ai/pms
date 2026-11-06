@@ -19,9 +19,11 @@ import { cancelConfirmed, cancelPreview, LIST_KEEPERS } from "@/modules/reservat
    room only. The server decides; this shows its answer.
    ══════════════════════════════════════════════════════════════════ */
 
-export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenChange }: {
+export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenChange, inHouse = false }: {
   hotelId: string; stayId: string; reference: string;
   open: boolean; onOpenChange: (open: boolean) => void;
+  /** A guest in house (D27-397): the check-in is undone first, in the same act. */
+  inHouse?: boolean;
 }) {
   const [reason, setReason] = useState("");
   const [waive, setWaive] = useState(false);
@@ -31,8 +33,8 @@ export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenCh
   const mayWaive = (LIST_KEEPERS as readonly string[]).includes(role);
 
   const terms = useQuery({
-    queryKey: ["cancel-preview", hotelId, stayId],
-    queryFn: () => cancelPreview(hotelId, stayId),
+    queryKey: ["cancel-preview", hotelId, stayId, inHouse],
+    queryFn: () => cancelPreview(hotelId, stayId, inHouse),
     enabled: open,
   });
   const preview = terms.data?.ok ? terms.data.preview : null;
@@ -40,7 +42,7 @@ export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenCh
 
   const submit = async () => {
     setBusy(true);
-    const result = await cancelConfirmed(hotelId, stayId, reason.trim(), mayWaive && waive);
+    const result = await cancelConfirmed(hotelId, stayId, reason.trim(), mayWaive && waive, inHouse);
     setBusy(false);
     if (!result.ok) return toast.error("Not cancelled", result.reason);
     onOpenChange(false);
@@ -57,7 +59,9 @@ export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         title="Cancel this booking"
-        description="The guest cancelled. This room only; the terms it was booked under decide the charge."
+        description={inHouse
+          ? "The guest cancelled after checking in. The check-in is undone first; then the terms it was booked under decide the charge. This room only."
+          : "The guest cancelled. This room only; the terms it was booked under decide the charge."}
         size="sm"
         footer={
           <div className="flex gap-2 w-full justify-end">

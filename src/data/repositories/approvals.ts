@@ -66,6 +66,8 @@ const KINDS: Record<string, { label: string; where?: (a: Approval, code: string)
   },
   /* A waiter's or cashier's request: strike, discount, NC, void (D27-363). */
   pos_request: { label: "Restaurant: sent to you" },
+  /* The front desk's request after check-in (D27-397). */
+  stay_request: { label: "Front desk: sent to you" },
 };
 
 export const labelFor = (kind: string): string =>

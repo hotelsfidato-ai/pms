@@ -170,6 +170,22 @@ export async function changeRate(
   }
 }
 
+/** HOW IT WAS PAID (the owner's D27-397): the payment reversed and taken
+    again the same day the new way, with the reason - the owner, an Admin or
+    the GM. Refused, in a sentence, on a closed day or a counted drawer. */
+export async function changePaymentMethod(
+  hotelId: string, stayId: string, postingId: string, input: { method: string; reason: string },
+): Promise<OperationResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/payments/${postingId}/method`,
+      { method: "POST", body: JSON.stringify(input) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+}
+
 /** What Settle hands the server: a stay's bill, or a group's master bill. */
 export interface SettleInput {
   method: string; amount: number; businessDate: string;

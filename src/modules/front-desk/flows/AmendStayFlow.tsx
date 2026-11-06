@@ -6,7 +6,10 @@ import {
 } from "@/components/ui";
 import { money, dateShort } from "@/lib/format";
 import { amendStay } from "@/modules/front-desk/data/operations";
+import { AskGmDialog } from "@/modules/front-desk/flows/AfterCheckIn";
 import type { Stay } from "@/data/repositories";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import { countProblem, dateProblem, MAX_NIGHTS } from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -63,8 +66,12 @@ export function AmendStayFlow({
 
   /* Once they have arrived, the arrival is a fact. The server refuses a
      change and says so, but a field somebody can type into and then be
-     told off for is worse than one they cannot. */
+     told off for is worse than one they cannot. Except for the owner, an
+     Admin or the GM (D27-397, app.amend_stay 266): no later than today, never
+     into a closed day; the front desk asks the GM. */
   const arrived = stay.status === "in-house" || stay.status === "due-out";
+  const mayMoveArrival = can(useRole(), "approve", "reservation");
+  const [asking, setAsking] = useState(false);
 
   const nights = useMemo(
     () => nightsBetween(checkIn, checkOut), [checkIn, checkOut]);
@@ -148,12 +155,14 @@ export function AmendStayFlow({
             <div className="grid grid-cols-2 gap-3">
               <Field
                 label="Arrival"
-                hint={arrived ? "They have already arrived." : undefined}
+                hint={!arrived ? undefined
+                  : mayMoveArrival ? "They have arrived: no later than today, and never a closed day."
+                  : "They have already arrived. The GM may change it."}
               >
                 {(f) => (
                   <Input
                     {...fieldProps(f)}
-                    type="date" value={checkIn} disabled={arrived}
+                    type="date" value={checkIn} disabled={arrived && !mayMoveArrival}
                     onChange={(e) => setCheckIn(e.target.value)}
                     className="h-12 text-base"
                   />
@@ -238,9 +247,18 @@ export function AmendStayFlow({
               which. Added nights are charged at the rate already agreed - 
               changing that is separate.
             </p>
+            {arrived && !mayMoveArrival && (
+              <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setAsking(true); }}>
+                Ask the GM to change the arrival date
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
+      {asking && (
+        <AskGmDialog hotelId={hotelId} stay={stay} kind="arrival" open
+          onOpenChange={(o) => { if (!o) setAsking(false); }} />
+      )}
     </>
   );
 }

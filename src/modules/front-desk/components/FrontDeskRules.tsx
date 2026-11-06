@@ -36,6 +36,7 @@ const START: DeskRules = {
   idTypesOff: [], statusColours: null, posRoundOff: "manual",
   kpiDayUseHalf: false, kpiCompAsSold: true, holidays: [],
   invoiceAtCheckout: "print", invoiceCopies: 2,
+  gmMayUndoCheckIn: true,
 };
 
 export function FrontDeskRulesCard({ hotelId }: { hotelId: string }) {
@@ -55,6 +56,7 @@ export function FrontDeskRulesCard({ hotelId }: { hotelId: string }) {
           value={IDS.find(([v]) => v === (rules.defaultIdType ?? ""))?.[1] ?? "None"} />
         <Figure label="Nationality" value={rules.defaultNationality} />
         <Figure label="Title" value={rules.defaultTitle ?? "-"} />
+        <Figure label="GM may undo a check-in" value={rules.gmMayUndoCheckIn === false ? "No" : "Yes"} />
       </dl>
       <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
       {editing && (
@@ -126,6 +128,10 @@ function RulesDialog({ hotelId, current, onClose }: {
           <Switch checked={r.deskMayOverbook} onCheckedChange={(v) => set({ deskMayOverbook: v })}
             label="The desk may overbook"
             description="Off: a booking - or a group - past a full house is refused." />
+          {/* D27-397: on at every hotel to begin with. */}
+          <Switch checked={r.gmMayUndoCheckIn !== false} onCheckedChange={(v) => set({ gmMayUndoCheckIn: v })}
+            label="The GM may undo a check-in"
+            description="And cancel or void a guest in house; the front desk asks the GM. Off: a guest who has arrived is checked out instead. The owner and an Admin always may." />
           <fieldset>
             <legend className="text-sm font-medium text-ink-900">Weekend</legend>
             <p className="text-sm text-grey-500">Shaded on the Calendar and Rates. No price reads it.</p>

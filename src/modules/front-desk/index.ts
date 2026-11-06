@@ -25,3 +25,5 @@ export { LeavingEarlyStep } from "./flows/LeavingEarlyStep";
    adds the stay's extras through front desk's own doors, not copies. */
 export { checkIn, assignableRooms } from "./data/operations";
 export { listInclusions, addStayInclusion } from "./data/stayExtras";
+/* D27-397: the front desk asks the GM - the Bill tab's payment line too. */
+export { AskGmDialog } from "./flows/AfterCheckIn";

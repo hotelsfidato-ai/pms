@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check, FileText, IndianRupee } from "lucide-react";
+import {
+  CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check, FileText, IndianRupee, Undo2, BedDouble, Send,
+} from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
 import { confirmWaiting, viewVoucher, CancelWaitingFlow, CancelConfirmedFlow } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
@@ -9,8 +11,10 @@ import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
 import { ExchangeRoomFlow } from "@/modules/front-desk/flows/ExchangeRoomFlow";
 import { InclusionsFlow } from "@/modules/front-desk/flows/InclusionsFlow";
 import { ChangeRateDialog } from "@/modules/finance";
+import { AskGmDialog, UndoCheckInFlow, UNDO_OFF, undoRightFor } from "@/modules/front-desk/flows/AfterCheckIn";
+import type { AskKind } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
-import { useRole } from "@/lib/session";
+import { useCurrentHotel, useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -34,6 +38,9 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const [inclusions, setInclusions] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [rerate, setRerate] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const [retype, setRetype] = useState(false);
+  const [asking, setAsking] = useState<AskKind | null>(null);
 
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   /* The statuses this type actually has. `void` is a BAR TONE on the
@@ -50,10 +57,15 @@ export function StayActions({ hotelId, stay, businessDate }: {
      and the inclusions are all `reservation: edit`; the void is `cancel`.
      Nobody refused them is offered the menu. */
   const role = useRole();
+  const rules = useCurrentHotel()?.deskRules;
   if (!can(role, "edit", "reservation")) return null;
   const mayVoid = can(role, "cancel", "reservation");
   /* D27-187: the owner, an administrator or the GM, as on the bill. */
   const mayRerate = can(role, "approve", "reservation");
+  /* D27-397: who may unmake an arrival - undo it, cancel or void a guest in
+     house - by the hotel's switch; the front desk asks the GM. */
+  const undo = undoRightFor(role, rules);
+  const unmakes = arrived && undo === "yes";
 
   return (
     <>
@@ -90,6 +102,16 @@ export function StayActions({ hotelId, stay, businessDate }: {
           >
             View voucher
           </MenuItem>
+          {/* D27-397: back to confirmed, arriving - the GM's; the desk asks. */}
+          {arrived && (undo === "ask" ? (
+            <MenuItem icon={Send} onSelect={() => setAsking("undo_check_in")}>
+              Ask the GM to undo the check-in
+            </MenuItem>
+          ) : (
+            <MenuItem icon={Undo2} onSelect={() => setUndoing(true)} disabled={undo === "no"} reason={UNDO_OFF}>
+              Undo check-in
+            </MenuItem>
+          ))}
 
           <MenuLabel>The room</MenuLabel>
           <MenuItem
@@ -107,6 +129,13 @@ export function StayActions({ hotelId, stay, businessDate }: {
           >
             Move to another room
           </MenuItem>
+          {/* D27-397: in a room, the room type is the room's - so the type
+              changes by moving them to a room of another type. */}
+          {arrived && (
+            <MenuItem icon={BedDouble} onSelect={() => setRetype(true)}>
+              Change room type
+            </MenuItem>
+          )}
           <MenuItem
             icon={Repeat}
             onSelect={() => setSwap(true)}
@@ -128,10 +157,16 @@ export function StayActions({ hotelId, stay, businessDate }: {
             What this booking includes
           </MenuItem>
           {/* D27-187: after confirmation, before check-in; nothing is posted,
-              the agreed rate changes. In house, it is on the bill. */}
-          {mayRerate && stay.status === "due-in" && (
+              the agreed rate changes. In house too (D27-397), as on the bill;
+              the front desk asks the GM. */}
+          {mayRerate && (stay.status === "due-in" || arrived) && (
             <MenuItem icon={IndianRupee} onSelect={() => setRerate(true)}>
               Change rate
+            </MenuItem>
+          )}
+          {!mayRerate && arrived && (
+            <MenuItem icon={Send} onSelect={() => setAsking("rate")}>
+              Ask the GM to change the rate
             </MenuItem>
           )}
 
@@ -143,18 +178,29 @@ export function StayActions({ hotelId, stay, businessDate }: {
               Cancel this booking
             </MenuItem>
           </>}
-          {mayVoid && !waiting && <>
+          {mayVoid && !waiting && arrived && undo === "ask" && <>
+            <MenuSeparator />
+            {/* D27-397: in house, the GM's; the desk asks. */}
+            <MenuItem icon={Send} danger onSelect={() => setAsking("cancel")}>
+              Ask the GM to cancel this booking
+            </MenuItem>
+            <MenuItem icon={Send} danger onSelect={() => setAsking("void")}>
+              Ask the GM to void this booking
+            </MenuItem>
+          </>}
+          {mayVoid && !waiting && !(arrived && undo === "ask") && <>
             <MenuSeparator />
             {/* BK-1 (the owner, 28 September): the guest cancelled - the
                 booking's terms decide the charge. Void stays for a booking
-                that should never have existed. */}
+                that should never have existed. In house (D27-397) the
+                check-in is undone first, by whoever may undo it. */}
             <MenuItem
               icon={Ban}
               danger
               onSelect={() => setCancelling(true)}
-              disabled={stay.status !== "due-in"}
+              disabled={stay.status !== "due-in" && !unmakes}
               reason={
-                arrived ? "They have arrived. Check them out instead."
+                arrived ? "They have arrived, and undoing a check-in is off at this hotel. Check them out instead."
                         : "Only a booking that has not arrived can be cancelled."
               }
             >
@@ -164,9 +210,9 @@ export function StayActions({ hotelId, stay, businessDate }: {
               icon={Ban}
               danger
               onSelect={() => setVoiding(true)}
-              disabled={stay.status !== "due-in"}
+              disabled={stay.status !== "due-in" && !unmakes}
               reason={
-                arrived ? "They have arrived. Check them out instead."
+                arrived ? "They have arrived, and undoing a check-in is off at this hotel. Check them out instead."
                         : "Only a booking that has not arrived can be voided."
               }
             >
@@ -190,11 +236,18 @@ export function StayActions({ hotelId, stay, businessDate }: {
           open={cancelling} onOpenChange={setCancelling}
         />
       )}
-      {stay.status === "due-in" && (
+      {(stay.status === "due-in" || unmakes) && (
         <CancelConfirmedFlow
-          hotelId={hotelId} stayId={stay.id} reference={stay.reference}
+          hotelId={hotelId} stayId={stay.id} reference={stay.reference} inHouse={arrived}
           open={cancelling} onOpenChange={setCancelling}
         />
+      )}
+      {unmakes && (
+        <UndoCheckInFlow hotelId={hotelId} stay={stay} open={undoing} onOpenChange={setUndoing} />
+      )}
+      {asking && (
+        <AskGmDialog hotelId={hotelId} stay={stay} kind={asking}
+          open onOpenChange={(o) => { if (!o) setAsking(null); }} />
       )}
       {arrived && (
         <ExchangeRoomFlow
@@ -206,7 +259,7 @@ export function StayActions({ hotelId, stay, businessDate }: {
         hotelId={hotelId} stay={stay}
         open={inclusions} onOpenChange={setInclusions}
       />
-      {mayRerate && stay.status === "due-in" && (
+      {mayRerate && (stay.status === "due-in" || arrived) && (
         <ChangeRateDialog
           hotelId={hotelId} stay={stay}
           open={rerate} onOpenChange={setRerate}
@@ -217,6 +270,12 @@ export function StayActions({ hotelId, stay, businessDate }: {
         <MoveRoomFlow
           hotelId={hotelId} stay={stay} businessDate={businessDate}
           open={move} onOpenChange={setMove}
+        />
+      )}
+      {arrived && (
+        <MoveRoomFlow
+          hotelId={hotelId} stay={stay} businessDate={businessDate} changeType
+          open={retype} onOpenChange={setRetype}
         />
       )}
     </>

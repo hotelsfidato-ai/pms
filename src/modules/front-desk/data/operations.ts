@@ -331,6 +331,8 @@ export async function moveRoom(
     roomNumber: string; from: string;
     reason?: "move" | "upgrade" | "downgrade" | "fault" | "group_consolidation";
     agreedRate?: number;
+    /** D27-397: the booking takes the room's type (Change room type). */
+    changeType?: boolean;
   },
 ): Promise<
   | { ok: true; guest: string; from: string; to: string;
@@ -491,3 +493,30 @@ export async function saveDeskRules(
     throw error;
   }
 }
+
+/* ── After check-in (the owner's D27-397) ─────────────────────────── */
+
+async function postFor(path: string, body: unknown): Promise<OperationResult> {
+  try {
+    await api(path, { method: "POST", body: JSON.stringify(body) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return refuse(p?.reason ?? error.message);
+    }
+    throw error;
+  }
+}
+
+/** Back to confirmed, arriving: the owner, an Admin, or the GM while the
+    switch is on. The server refuses in a sentence (a charge, Form C, a
+    closed day). */
+export const undoCheckIn = (hotelId: string, stayId: string, reason: string) =>
+  postFor(`/api/hotels/${hotelId}/stays/${stayId}/undo-check-in`, { reason });
+
+/** What the front desk asks the GM to do after check-in. */
+export type AskKind = "undo_check_in" | "cancel" | "void" | "arrival" | "rate" | "payment_method";
+export const askTheGm = (hotelId: string, stayId: string,
+  body: { kind: AskKind; reason: string; checkIn?: string; rate?: number; postingId?: string; method?: string }) =>
+  postFor(`/api/hotels/${hotelId}/stays/${stayId}/requests`, body);

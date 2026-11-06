@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, DoorOpen } from "lucide-react";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
@@ -7,7 +7,7 @@ import {
 } from "@/components/ui";
 import { money } from "@/lib/format";
 import { moveRoom, unassignRoom } from "@/modules/front-desk/data/operations";
-import type { Stay } from "@/data/repositories";
+import { listAllRooms, type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    MOVING A GUEST
@@ -54,11 +54,14 @@ const REASONS: { value: string; label: string; hint: string }[] = [
 ];
 
 export function MoveRoomFlow({
-  hotelId, stay, businessDate, open: openProp, onOpenChange,
+  hotelId, stay, businessDate, open: openProp, onOpenChange, changeType = false,
 }: {
   hotelId: string; stay: Stay; businessDate: string;
   /* Controlled when both are given, so this can sit in a menu. */
   open?: boolean; onOpenChange?: (o: boolean) => void;
+  /* D27-397, the guest's menu's Change room type: the rooms of the OTHER
+     types to choose from, and the booking takes the chosen room's type. */
+  changeType?: boolean;
 }) {
   const [ownOpen, setOwnOpen] = useState(false);
   const controlled = openProp !== undefined;
@@ -67,7 +70,16 @@ export function MoveRoomFlow({
     if (controlled) onOpenChange?.(o); else setOwnOpen(o);
   };
   const [room, setRoom] = useState("");
-  const [reason, setReason] = useState("move");
+  const [reason, setReason] = useState(changeType ? "upgrade" : "move");
+  /* The type they sleep in now: the room's, where it is not the one booked. */
+  const typeNow = stay.givenRoomType ?? stay.roomType;
+  const rooms = useQuery({
+    queryKey: ["rooms", hotelId],
+    queryFn: () => listAllRooms(hotelId),
+    enabled: changeType && (openProp ?? false),
+  });
+  const otherTypes = (rooms.data ?? [])
+    .filter((r) => r.type !== typeNow && r.status !== "out-of-service");
   const [rate, setRate] = useState("");
   const [busy, setBusy] = useState(false);
   const queryClient = useQueryClient();
@@ -102,6 +114,7 @@ export function MoveRoomFlow({
       from,
       reason: reason as "move",
       ...(rate.trim() === "" ? {} : { agreedRate: Number(rate) }),
+      ...(changeType ? { changeType: true } : {}),
     });
     setBusy(false);
 
@@ -150,8 +163,10 @@ export function MoveRoomFlow({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          title={`Move ${stay.guest}`}
-          description={`Currently in ${stay.roomNumber || "no room"}.`}
+          title={changeType ? "Change room type" : `Move ${stay.guest}`}
+          description={changeType
+            ? `${stay.guest} is in ${stay.roomNumber || "no room"}, a ${typeNow}. They move to a room of another type, and the booking becomes that type.`
+            : `Currently in ${stay.roomNumber || "no room"}.`}
           size="sm"
           footer={
             <div className="flex gap-2 w-full justify-end">
@@ -168,8 +183,18 @@ export function MoveRoomFlow({
           }
         >
           <div className="space-y-4">
-            <Field label="To which room" required>
-              {(f) => (
+            <Field label="To which room" required
+              {...(changeType && rooms.isSuccess && otherTypes.length === 0
+                ? { hint: "No room of another type is in service here." } : {})}>
+              {(f) => changeType ? (
+                <NativeSelect {...fieldProps(f)} value={room} onChange={(e) => setRoom(e.target.value)}
+                  className="h-12 text-base">
+                  <option value="">{rooms.isLoading ? "Reading the rooms…" : "Choose a room"}</option>
+                  {otherTypes.map((r) => (
+                    <option key={r.number} value={r.number}>{r.number} · {r.type}</option>
+                  ))}
+                </NativeSelect>
+              ) : (
                 <Input
                   {...fieldProps(f)}
                   value={room}
@@ -240,7 +265,7 @@ export function MoveRoomFlow({
               )}
             </p>
 
-            <button
+            {!changeType && <button
               type="button"
               onClick={() => void unassign()}
               disabled={busy || !stay.roomNumber}
@@ -250,7 +275,7 @@ export function MoveRoomFlow({
             >
               <DoorOpen className="size-3.5" />
               Take them out of the room without assigning another
-            </button>
+            </button>}
           </div>
         </DialogContent>
       </Dialog>

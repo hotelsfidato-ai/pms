@@ -70,15 +70,19 @@ export const cancelWaiting = (hotelId: string, stayId: string, reason: string) =
 /** A CONFIRMED booking's cancellation under the terms it was booked under
     (BK-1): this room only; the charge the terms retain goes on its bill,
     unless the owner, an administrator or the GM waives it. */
-export const cancelConfirmed = (hotelId: string, stayId: string, reason: string, waive: boolean) =>
+/* A guest IN HOUSE (D27-397): the front desk's door undoes the check-in and
+   cancels in one transaction (front-desk/afterCheckIn.ts). */
+const cancelDoor = (inHouse: boolean) => (inHouse ? "cancel-in-house" : "cancel");
+
+export const cancelConfirmed = (hotelId: string, stayId: string, reason: string, waive: boolean, inHouse = false) =>
   send<{ rooms: number; reference: string; charged: number | null; waived: boolean }>(
-    `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { reason, ...(waive ? { waive } : {}) });
+    `/api/hotels/${hotelId}/stays/${stayId}/${cancelDoor(inHouse)}`, "POST", { reason, ...(waive ? { waive } : {}) });
 
 /** What cancelling would charge, written nowhere. `charge` null: the
     booking carries no terms; 0: inside the free window. */
-export const cancelPreview = (hotelId: string, stayId: string) =>
+export const cancelPreview = (hotelId: string, stayId: string, inHouse = false) =>
   send<{ preview: { terms: string | null; charge: number | null } }>(
-    `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { dryRun: true });
+    `/api/hotels/${hotelId}/stays/${stayId}/${cancelDoor(inHouse)}`, "POST", { dryRun: true });
 
 /** A new link to the guest's own page (114). Only its hash is kept, so each
     press makes a new one; the old ones keep working. */

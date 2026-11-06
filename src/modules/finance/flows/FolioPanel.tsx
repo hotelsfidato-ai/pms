@@ -1,8 +1,8 @@
-import { ReadyReasons } from "@/modules/front-desk";
+import { ReadyReasons, AskGmDialog } from "@/modules/front-desk";
 import { useEffect, useRef, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight, Pencil,
+  Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight, Pencil, Wallet,
   Split as SplitIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -20,7 +20,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
-import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
+import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, changePaymentMethod, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
 import { checkOut, earlyArrival, expressCheckIn, leavingEarly, LeavingEarlyStep, type StayRow } from "@/modules/front-desk";
 import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
@@ -192,6 +192,8 @@ export function FolioPanel({
         folios={folios}
         mayChange={mayChange}
         mayEdit={mayEdit}
+        mayAsk={mayCheckOut}
+        stay={stay}
         onChanged={refresh}
       />
 
@@ -492,7 +494,7 @@ function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
    so a section's lines add up to its subtotal; the running balance under
    each line went, the subtotals, the total and the closing row replace it. */
 function LedgerList({
-  lines, toCome, closing: close, hotelId, stayId, folios, mayChange, mayEdit, onChanged,
+  lines, toCome, closing: close, hotelId, stayId, folios, mayChange, mayEdit, mayAsk, stay, onChanged,
 }: {
   lines: BillLine[];
   toCome: ToCome | null;
@@ -502,6 +504,9 @@ function LedgerList({
   folios: StayFolio[];
   mayChange: boolean;
   mayEdit: boolean;
+  /** Changes a booking, so may ask the GM to change how it was paid (D27-397). */
+  mayAsk: boolean;
+  stay: Stay;
   onChanged: () => void;
 }) {
   if (lines.length === 0 && !toCome) {
@@ -571,6 +576,9 @@ function LedgerList({
 
         {mayEdit && (
           <EditButton hotelId={hotelId} stayId={stayId} posting={p} onDone={onChanged} />
+        )}
+        {(mayEdit || mayAsk) && (
+          <MethodButton hotelId={hotelId} stay={stay} posting={p} ask={!mayEdit} onDone={onChanged} />
         )}
         {mayChange && (
           <>
@@ -744,6 +752,102 @@ function EditButton({
           </div>
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
+
+/* HOW IT WAS PAID (the owner's D27-397): cash typed instead of UPI is the
+   common mistake. The owner, an Admin or the GM change it, with a reason: the
+   payment reversed and the same amount taken the same day the new way. The
+   front desk asks the GM. Off, with the reason, on a closed day. Only money
+   taken: not a reversal, not one reversed, not a transfer to the city ledger. */
+function MethodButton({
+  hotelId, stay, posting, ask, onDone,
+}: {
+  hotelId: string; stay: Stay; posting: BillLine; ask: boolean; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const ways = (useCurrentHotel()?.deskRules?.paymentMethods ?? [])
+    .filter((w) => w.kind !== "city_ledger").map((w) => w.label);
+  if (posting.category !== "payment" || posting.reversalOf || posting.reversed || !(posting.amount < 0)
+      || posting.description.startsWith("Transferred to city ledger")) return null;
+
+  const why = posting.dayClosed ? "This day is closed by the Night audit. Its payments are not changed." : null;
+  const save = async () => {
+    setBusy(true);
+    const res = await changePaymentMethod(hotelId, stay.id, posting.id, { method, reason: reason.trim() });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success("Changed", "The payment is reversed with the reason and taken again the new way, the same day.");
+    setOpen(false); setMethod(""); setReason("");
+    onDone();
+  };
+  const label = ask ? "Ask the GM to change how it was paid" : "Change how it was paid";
+  const button = (
+    <button
+      type="button"
+      disabled={!!why}
+      onClick={() => setOpen(true)}
+      aria-label={`${label}: ${posting.description}`}
+      className={cn(
+        "shrink-0 grid place-items-center size-9 pointer-coarse:size-11 rounded-full transition-colors duration-150",
+        why ? "text-grey-300 cursor-not-allowed" : "text-grey-500 hover:text-ink-900 hover:bg-grey-50",
+      )}
+    >
+      <Wallet className="size-4" />
+    </button>
+  );
+
+  return (
+    <>
+      <Tooltip content={why ?? label}>{button}</Tooltip>
+      {ask ? (
+        open && (
+          <AskGmDialog hotelId={hotelId} stay={stay} kind="payment_method" postingId={posting.id}
+            methods={ways} open onOpenChange={setOpen} />
+        )
+      ) : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent
+            title="Change how it was paid"
+            description={`${posting.description} · ${moneyPrecise(Math.abs(posting.amount))}`}
+            size="sm"
+            footer={
+              <div className="flex gap-2 w-full justify-end">
+                <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+                <Button variant="primary" loading={busy} disabled={!method || !reason.trim()}
+                  onClick={() => void save()}>
+                  Change it
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-grey-700 leading-relaxed">
+                The payment is reversed and the same amount is taken again, the same day, the new way.
+                Never a refund and never another amount. Cash in a drawer already counted is not changed.
+              </p>
+              <Field label="How it was really paid" required>
+                {(f) => (
+                  <NativeSelect {...fieldProps(f)} value={method} onChange={(e) => setMethod(e.target.value)}>
+                    <option value="">Choose</option>
+                    {ways.map((w) => <option key={w} value={w}>{w}</option>)}
+                  </NativeSelect>
+                )}
+              </Field>
+              <Field label="Why" required hint="Kept on the reversed line. The guest's bill never shows it.">
+                {(f) => (
+                  <Textarea {...fieldProps(f)} rows={2} value={reason}
+                    onChange={(e) => setReason(e.target.value)} placeholder="Typed Cash, paid by UPI" />
+                )}
+              </Field>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

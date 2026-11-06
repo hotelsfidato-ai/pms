@@ -414,6 +414,10 @@ export interface DeskRules {
       default), offered as a button, or left to Invoices; and its copies. */
   invoiceAtCheckout?: "print" | "offer" | "invoices";
   invoiceCopies?: 1 | 2;
+  /** Front desk rules (266, D27-397): the GM may undo a check-in, and cancel
+      or void a guest in house; the front desk asks the GM. Absent from an
+      older server: on. */
+  gmMayUndoCheckIn?: boolean;
   /** Shaded like a weekend on the Calendar and Rates; no price reads them. */
   holidays: Array<{ day: string; name: string; colour: string | null }>;
 }
