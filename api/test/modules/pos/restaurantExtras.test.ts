@@ -234,6 +234,8 @@ describe("a voluntary service charge", () => {
     expect(await reason(await post(who.gm, "/till/setup/service-charge", { percent: 25 })))
       .toBe("A service charge is a percentage above 0 and at most 20, or left blank for none.");
     expect((await post(who.waiter, "/till/setup/service-charge", { percent: 5 })).status).toBe(403);
+    /* A rate with paise is a rate (5.1 * 100 is not a whole number in floating point). */
+    expect((await post(who.gm, "/till/setup/service-charge", { percent: 5.1 })).status).toBe(200);
     expect((await post(who.gm, "/till/setup/service-charge", { percent: 5 })).status).toBe(200);
   });
 
@@ -295,22 +297,22 @@ describe("a tip", () => {
   it("is taken with the payment, outside the bill, and a cash tip is in the tin", async () => {
     const before = await dayEnd();
     const b = await bill("tip cash");
-    const res = await post(who.waiter, `/till/orders/${b.id}/settle`, { method: "cash", tip: 50 });
+    const res = await post(who.waiter, `/till/orders/${b.id}/settle`, { method: "cash", tip: 50.1 });
     expect(res.status, await res.clone().text()).toBe(200);
     const o = (await res.json()) as Order;
-    expect([o.tip, o.tipMethod]).toEqual([50, "cash"]);
+    expect([o.tip, o.tipMethod]).toEqual([50.1, "cash"]);
     const [t] = await sql<{ sum: string }>("select sum(amount)::text as sum from pos_order_tenders where order_id = $1", [b.id]);
     expect(Number(t!.sum), "the payment is the bill alone").toBe(o.payable);
     const after = await dayEnd();
-    expect(after.tips.cash).toBe(before.tips.cash + 50);
-    expect(after.cash.expected).toBeCloseTo(before.cash.expected + o.payable + 50, 2);
+    expect(after.tips.cash).toBeCloseTo(before.tips.cash + 50.1, 2);
+    expect(after.cash.expected).toBeCloseTo(before.cash.expected + o.payable + 50.1, 2);
     /* Not changed once paid. */
     await expect(sql("update pos_orders set tip = 10 where id = $1", [b.id]))
       .rejects.toThrow(/service charge and tip stay as they were/);
     const [day] = await sql<{ d: string }>("select business_date::text as d from pos_orders where id = $1", [b.id]);
     const list = (await (await call(who.gm, "GET", `/till/bills?date=${day!.d}`)).json()) as
       { bills: { id: string; tip: number | null; tipMethod: string | null }[] };
-    expect(list.bills.find((x) => x.id === b.id)).toMatchObject({ tip: 50, tipMethod: "cash" });
+    expect(list.bills.find((x) => x.id === b.id)).toMatchObject({ tip: 50.1, tipMethod: "cash" });
   });
 });
 

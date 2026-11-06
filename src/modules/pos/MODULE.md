@@ -47,7 +47,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), bar (`bar`, D27-324), Reception. Its order pad (`flows/OrderPad.tsx`) lists the open order's **KOTs sent** with Reprint (D27-324 (4); printed at the KOT's station, D27-329 (2)) and opens a Bar person on the bar's dishes |
-| Table bookings | `/pos/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
+| Table bookings | `/pos/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / the Day picked (Today) / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224); **New booking** for somebody not staying, and on the night Arrived, Seat (opens the table's bill), No-show, Cancel booking (263, D27-383 item 9) |
 | Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, bar, Reception. An open order's **KOTs sent** with Reprint (D27-329 (5)) |
 | Bill history | `/pos/:code/bill-history` | `pages/BillHistory.tsx` | none - those who may reach the Till (`mayRingUp`; D27-370). Every paid, VOID and NC bill of any dates, found by number, table, guest (name or phone), payment mode, waiter and outlet; tap one to see it on `BillSlip` and Print the bill (the Till's DUPLICATE reprint, `flows/printBill.ts`); Download to Excel is the list on screen as a CSV (`lib/csv.ts`). Asks the Till's own `GET /till/bills` (`from`, `to`, `no`, `table`, `guest`, `mode`, `waiter`, `outlet`; `date` still means one day); at most 500 rows, and `capped` says when more matched |
 | Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, bar, Reception. An open order's **KOTs sent** with Reprint (D27-329 (5)) |
@@ -139,9 +139,16 @@ till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
 `/api/hotels`, NOT in till.ts:
 
 ```
-GET   /:code/table-bookings              the hotel's today, waiting first then today and upcoming, the tables
+GET   /:code/table-bookings?date=        waiting first, then that day (the hotel's today) and after; tables, sections
 POST  /:code/table-bookings/:id/confirm  { tableId? } - only while requested; roleGate TABLE_ANSWER
 POST  /:code/table-bookings/:id/decline  { reason } - required, the guest reads it; TABLE_ANSWER
+POST  /:code/table-bookings              263: somebody not staying { name, phone, party 1-20, date, time,
+                                         tableId? | sectionId?, note? }, confirmed as taken; TABLE_BOOK
+POST  /:code/table-bookings/:id/arrive   confirmed -> arrived; TABLE_BOOK
+POST  /:code/table-bookings/:id/seat     { tableId }: confirmed or arrived -> seated; opens the table's bill
+                                         through till.ts's openOrderFor (covers = party, the diner's name)
+POST  /:code/table-bookings/:id/no-show  confirmed, once its time has come -> no_show
+POST  /:code/table-bookings/:id/cancel   { reason? }: confirmed or arrived -> cancelled
 GET   /:code/table-bookings/hours        each food restaurant's lunch and dinner, and today's slots
 PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }; TABLE_HOURS (owner, admin, GM)
 ```
@@ -300,9 +307,17 @@ money       POST   /:code/till/orders/:id/discount          these three: the GM,
             POST   /:code/till/orders/:id/discount/clear    only (roleGate DISCOUNT, D27-352) - not the till,
             POST   /:code/till/orders/:id/promotion         the bar or a waiter
             POST   /:code/till/orders/:id/round-off
-            GET    /:code/till/promotions
-            POST   /:code/till/promotions
+            POST   /:code/till/orders/:id/service-charge    264: {on, agreed: true} - the voluntary service charge
+                                                            at the restaurant's rate, only with the guest's yes (TILL)
+            GET    /:code/till/promotions                   each with `coupon` {from, to, maxUses, minBill} or null (265)
+            POST   /:code/till/promotions                   {code, name, kind, value, coupon?} - a coupon's limits (265)
             PATCH  /:code/till/promotions/:id
+            (a coupon goes on through POST …/orders/:id/promotion: its dates, uses and least bill
+             refused in sentences, the coupon locked; the settle asks its least bill again)
+            (POST …/orders/:id/settle takes {tip}: cash, card or UPI one way, never more than the bill - 264)
+profit      GET    /:code/till/dish-profit?from&to          dishProfit.ts: each dish's cost from its recipe at the
+                                                            Store's average, margin; a period's paid sales (owner,
+                                                            Admin, GM - roleGate READ_RULES)
 floor       GET    /:code/till/floor
             GET    /:code/till/waiters
 day end     GET    /:code/till/day-end
@@ -315,6 +330,7 @@ setup       GET    /:code/till/setup                        D22-6 (25 Sep): the 
                                                             sections - an empty one too - and tables, each table's
                                                             `busy` (a bill on it), and how many have the Waiter role
             POST   /:code/till/setup/restaurant             names REST, or makes it through addOutlet, with no key
+            POST   /:code/till/setup/service-charge         264: {percent} 0-20, or null - none (the default)
             POST   /:code/till/setup/sections               a section of a switched-off name comes back on
             PATCH  /:code/till/setup/sections/:id           rename
             POST   /:code/till/setup/sections/:id/off       switched off, never deleted; refused while a bill sits
@@ -412,6 +428,15 @@ the offline rules (`@/lib/offline.ts`), the import dialog and `MENU_SPEC`
 Tables this service owns, and the migrations that made or changed them:
 
 ```
+  table_bookings.diner_name, .diner_phone,      263 "table bookings for outside diners": no stay, a name
+  .section_id, .arrived_at, .order_id;          and a phone; arrived / seated (its bill) / no_show; the
+  statuses arrived, seated, no_show             staff insert only these; the guest reads "confirmed"
+  pos_outlets.service_charge_pct,              264 "a voluntary service charge, and tips": off by
+  pos_orders.service_charge_pct, .tip,          default; in each GST group's taxable (app.pos_order_by_tax,
+  .tip_method; app.pos_order_service_charge     same signature), never alcohol's; app.pos_expected_cash
+                                               adds cash tips; neither changes once the bill is not open
+  pos_promotions.is_coupon, valid_from,        265 "coupons": app.pos_coupon_uses; the trigger
+  .valid_to, .max_uses, .min_bill               pos_orders_coupon_guard locks and refuses
 table_bookings; pos_outlets.table_lunch,       "a table for the guest" (172; D27-224): a
   .table_dinner                                hotel guest's request, requested / confirmed /
                                                declined / cancelled, a decline's reason, an
@@ -539,6 +564,10 @@ And `noChargeAtMrp` (D27-373): the dishes on NC bills in a window, per outlet an
 dish, with the MRP typed on the Menu (a first-type choice's for a dish sold by
 variation; null is a dash) - the Consumption report's "Given free (NC), at MRP"
 reads it; no sales figure does.
+And `serviceAndTips` (264): a business day's voluntary service charge (bills,
+amount) and tips by cash, card and UPI - Close restaurant day and the night
+audit read it. (`openOrderFor` is till.ts's, shared with tableBookings.ts in
+this folder; not on the door.)
 
 ---
 
@@ -665,11 +694,17 @@ One other service's door is imported by this folder (17 September):
   rounding come only from the server (owner, 8 September — CHANGELOG
   "Deploy to production, then Stage C"). The rule lives in two places, so
   `padTotal.test.ts` must stay (MEMORY 195).
-- **Discounts**: a free hand up to 10%; anything more is a named promotion the
-  till applies (owner's words in `083_promotions.sql`; commit `1890b67`,
-  9 September). The cap is the database's number,
-  `app.pos_freehand_discount_cap()` (083), and the discount route reads it.
-  This replaced the planned approval queue.
+- **Discounts**: no limit by hand since D27-395 (the GM, the owner or an Admin,
+  with a reason, never more than the bill); promotions for the ones given again
+  and again; room discounts keep `app.pos_freehand_discount_cap()` (083). A
+  **coupon** (265) is a promotion with a code, dates, uses and a least bill,
+  applied by the same three (D27-352), refused by the database behind the till.
+- **A voluntary service charge** (264, D27-396; the CCPA's guidelines of 4 July
+  2022): never by default - a rate on Restaurant setup lets the Till and the
+  Terminal offer it, and the cashier ticks it per bill with the guest's yes.
+  Taxed with the food (part of the value of supply), never on alcohol's VAT.
+  A **tip** is the staff's: written with the payment, outside the tenders, in
+  no sale; a cash tip is in the tin.
 - **No privileged path to the ledger.** Settling to a room goes through
   `pos_tickets` like an outside till (028, `till.ts` header). A posting carries
   one tax rate, so a mixed bill posts one row per rate (MEMORY 55). The

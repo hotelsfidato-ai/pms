@@ -4975,7 +4975,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
      split and the owner's allowance take none. */
   const tip = input.tip === undefined || input.tip === null ? null : Number(input.tip);
   if (tip !== null) {
-    if (!Number.isFinite(tip) || tip <= 0 || Math.round(tip * 100) !== tip * 100) {
+    if (!Number.isFinite(tip) || tip <= 0 || Math.abs(Math.round(tip * 100) - tip * 100) > 1e-6) {
       return c.json(refuse("A tip is an amount above zero, in rupees and paise."), 409);
     }
     const way = Array.isArray(input.tenders) ? "split" : input.method;
@@ -6948,7 +6948,7 @@ till.post("/:code/till/setup/service-charge", async (c) => {
   const input = await c.req.json<{ percent?: number | null }>().catch(() => ({} as { percent?: number | null }));
   const pct = input.percent ?? null;
   if (pct !== null && (typeof pct !== "number" || !Number.isFinite(pct) || pct <= 0 || pct > 20
-      || Math.round(pct * 100) !== pct * 100)) {
+      || Math.abs(Math.round(pct * 100) - pct * 100) > 1e-6)) {
     return c.json(refuse("A service charge is a percentage above 0 and at most 20, or left blank for none."), 409);
   }
   const result = await withSession(c.get("subject"), async (client) => {
