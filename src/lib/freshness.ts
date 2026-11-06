@@ -31,6 +31,9 @@ export const MONEY_KEYS: readonly string[] = [
   /* Close restaurant day (QA NA-3): opened before the evening's bills were
      settled, it went on saying "Settled ₹0" at the count. */
   "day-end",
+  /* The Night audit's list of what stops it (Shimla, 6 November): opened
+     with the drawer open, it still said so after the drawer was closed. */
+  "night-audit",
 ];
 
 export function reCheckMoney(client: QueryClient): void {

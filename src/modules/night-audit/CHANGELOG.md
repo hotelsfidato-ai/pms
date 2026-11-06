@@ -8,6 +8,24 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-06 · The Night audit list is checked again every time it opens (Shimla)
+
+**Asked for:** the owner, 6 November: Shimla's Night audit "is not running because of an error, even though the drawer is closed".
+
+**Found** (live, reading only):
+- The GM opened Night audit at 19:39 IST with the front-desk drawer open, so Run was refused for that reason.
+- The drawer was closed at 19:42. No Night audit request reached the server after that.
+- The checklist (`["night-audit", code]`) was cached with `staleTime: Infinity`, like every query (App.tsx). So coming back to the screen showed the 19:39 answer.
+- Nothing else stops 1 November: no due-outs, the room GST rule is set, no till orders, no bar stock, and no 16-hour hold on a catch-up day. There is no error in the API log.
+
+**Shipped:** `"night-audit"` joins the keys re-checked on opening and on coming back to the tab (`src/lib/freshness.ts`). "night-audit-closed-days" and the rest keep their quiet.
+
+**Proved:** `src/lib/freshness.test.ts` gains "re-checks the Night audit's list". It failed on the old code (1 failed of 5, exit 1) and passes on the new (5 of 5). `src/modules/night-audit` 9 of 9.
+
+**Until it is live:** reload the Night audit screen (F5) after closing a drawer.
+
+---
+
 ## 2026-11-02, later · After a cancel: Tally, and the daily reports (the owner's answers to D27-390's questions)
 
 **Asked for:** moved bills stay as built; the daily report email sent again, marked Corrected; Tally warned on the cancel window and the export card; the check-in refusal kept; rooms left dirty.

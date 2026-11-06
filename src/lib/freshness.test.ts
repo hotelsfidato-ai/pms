@@ -33,6 +33,14 @@ describe("money is re-checked", () => {
     expect(MONEY_KEYS).toContain("day-end");
   });
 
+  /* Shimla, 6 November: the GM opened Night audit (drawer open), closed the
+     drawer, came back, and the screen still said the drawer was open. */
+  it("re-checks the Night audit's list, not the closed days beside it", () => {
+    const client = fresh();
+    expect(client.getQueryDefaults(["night-audit", "SHI"]).staleTime).toBe(0);
+    expect(client.getQueryDefaults(["night-audit-closed-days", "SHI"]).staleTime).toBeUndefined();
+  });
+
   it("leaves rooms, menus and the floor as they were", () => {
     const client = fresh();
     for (const key of ["rooms", "floor", "till-menu", "housekeeping"]) {
