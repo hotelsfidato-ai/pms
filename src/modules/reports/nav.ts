@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban, Wallet,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban, Wallet, Percent,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -135,6 +135,31 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 237,
     label: "Supplier statement", to: "/reports/supplier-statement", icon: HandCoins, resource: "invoice",
     canSee: seesSupplierDues, keywords: ["supplier ledger", "statement", "creditor ledger", "account"], listed: false },
+  /* D27-383: what companies, agents and booking sites owe by age, and one
+     account's statement - read as Company accounts is (`invoice` view, D27-145). */
+  { section: "reports", order: 41,
+    label: "Money owed by age", to: "/reports/dues-by-age", icon: Building2, resource: "invoice",
+    canSee: seesMoney, keywords: ["ageing", "aging", "receivables", "debtors", "0-30", "overdue", "city ledger"], listed: false },
+  { section: "reports", order: 42,
+    label: "Statement of account", to: "/reports/company-statement", icon: Building2, resource: "invoice",
+    canSee: seesMoney, keywords: ["company statement", "soa", "company ledger", "agent statement", "debtor ledger"], listed: false },
+  /* Commission owed to booking sites and agents: whoever holds `commission`
+     (the revenue manager keeps it, D27-145; not reception). */
+  { section: "reports", order: 43,
+    label: "Commission owed", to: "/reports/commission", icon: Percent, resource: "commission",
+    canSee: (role) => can(role, "view", "commission"),
+    keywords: ["ota commission", "agent commission", "booking.com", "makemytrip", "agoda", "commission"], listed: false },
+  /* GST, a month at a time (D27-383 item 4). GSTR-1 as the GST sales register;
+     input tax credit as what is owed to suppliers (D27-370); advances are money taken. */
+  { section: "reports", order: 101,
+    label: "GSTR-1", to: "/reports/gstr-1", icon: ScrollText, resource: "report",
+    keywords: ["gst return", "gstr1", "json", "offline tool", "b2b", "b2cs", "hsn summary", "gst portal"], listed: false },
+  { section: "reports", order: 102,
+    label: "Input tax credit", to: "/reports/input-tax-credit", icon: ScrollText, resource: "invoice",
+    canSee: seesSupplierDues, keywords: ["itc", "gst on purchases", "gstr-3b", "gstr-2b", "claimable gst"], listed: false },
+  { section: "reports", order: 103,
+    label: "GST on advances", to: "/reports/gst-advances", icon: ScrollText, resource: "invoice",
+    canSee: seesMoney, keywords: ["advance", "deposit", "table 11", "11a", "11b", "receipt voucher"], listed: false },
   /* The bar's day (D27-354). */
   { section: "reports", order: 240,
     label: "Bar stock", to: "/reports/bar-stock", icon: Wine, resource: "stock",

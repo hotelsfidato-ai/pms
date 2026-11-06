@@ -970,6 +970,19 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The petty cash book (D27-370): money paid out, read as Cashier shift is. */
   [`GET ${H}/reports/petty-cash`]: MONEY_REPORT,
   [`GET ${H}/reports/balances-by-source`]: MONEY_REPORT,
+  /* D27-383: money owed by age and a statement of account, read as Company
+     accounts is (D27-145); GST on advances is money taken, the same. */
+  [`GET ${H}/reports/dues-by-age`]: MONEY_REPORT,
+  [`GET ${H}/reports/company-statement`]: MONEY_REPORT,
+  [`GET ${H}/reports/gst-advances`]: MONEY_REPORT,
+  /* Commission owed: whoever holds `commission` - the booking sources' own grant
+     (the revenue manager keeps it, D27-145), not reception. */
+  [`GET ${H}/reports/commission`]: see("commission", "commission owed"),
+  /* GSTR-1, read as the GST sales register it is made from; the file is a download. */
+  [`GET ${H}/reports/gstr-1`]: REPORTS,
+  [`GET ${H}/reports/gstr-1.json`]: grant("report", "export", "Downloading the GSTR-1 file"),
+  /* The GST on purchase bills: the readers of what is owed to suppliers (D27-370). */
+  [`GET ${H}/reports/input-tax-credit`]: SUPPLIER_DUES,
   [`GET ${H}/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("routes/reportFiles.ts: REPORT_EXPORTERS, and `invoice` for the money reports"),
   [`GET ${H}/statistics/daily`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/statistics/period`]: see(["report", "rate"], "occupancy and ADR"),

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { Input, NativeSelect, Switch } from "@/components/ui";
 import { DocumentReport } from "@/modules/reports/components/DocumentReport";
+import { getReport } from "@/modules/reports/data/document";
 import { monthOf } from "@/modules/reports/data/statistics";
 import { BUSINESS_DATE } from "@/data/repositories";
 
@@ -51,6 +52,89 @@ export function CityLedgerPage() {
           onCheckedChange={setIgnoreZero}
           label="Ignore zero balance account"
         />
+      }
+    />
+  );
+}
+
+/* ── Money owed by age, a statement of account (D27-383) ──────────── */
+
+/* What each company, agent and booking site owed on a date, by how old each
+   bill is - the City ledger's own figures. */
+export function DuesByAgePage() {
+  const [asOn, setAsOn] = useState(BUSINESS_DATE);
+  return (
+    <DocumentReport
+      report="dues-by-age"
+      title="Money owed by age"
+      period={asOn ? `Owed on ${dateShort(asOn)}` : "Choose the date"}
+      query={asOn ? { asOn } : undefined}
+      what="the money owed by age"
+      controls={<Input type="date" aria-label="Owed on" value={asOn} max={BUSINESS_DATE} onChange={(e) => setAsOn(e.target.value)} />}
+    />
+  );
+}
+
+/* One account's statement for the days chosen. The account comes from the
+   address (Company accounts links here) or the list: every account the City
+   ledger has ever named, zero balances included. */
+export function CompanyStatementPage() {
+  const code = useUi((s) => s.hotelId);
+  const [params, setParams] = useSearchParams();
+  const account = params.get("account") ?? "";
+  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+  const [to, setTo] = useState(BUSINESS_DATE);
+  const accounts = useQuery({
+    queryKey: ["report", "city-ledger", code, "accounts"],
+    queryFn: () => getReport(code, "city-ledger", { asOn: BUSINESS_DATE, from: BUSINESS_DATE, ignoreZero: false }),
+    enabled: Boolean(code),
+  });
+  const names = (accounts.data?.sections[0]?.rows ?? [])
+    .filter((r) => r.kind === "row" && typeof r.cells["account"] === "string")
+    .map((r) => r.cells["account"] as string);
+  const ok = Boolean(account && from && to && from <= to);
+  return (
+    <DocumentReport
+      report="company-statement"
+      title={account ? `Statement: ${account}` : "Statement of account"}
+      period={ok ? `${dateShort(from)} to ${dateShort(to)}` : "Pick an account and the days"}
+      query={ok ? { from, asOn: to, account } : undefined}
+      what="the statement of account"
+      controls={
+        <div className="flex flex-wrap items-center gap-2">
+          <NativeSelect aria-label="Account" value={account}
+            onChange={(e) => setParams(e.target.value ? { account: e.target.value } : {}, { replace: true })}>
+            <option value="">Pick an account</option>
+            {[...new Set([...names, ...(account ? [account] : [])])].map((n) => <option key={n} value={n}>{n}</option>)}
+          </NativeSelect>
+          <Input type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </div>
+      }
+    />
+  );
+}
+
+/* ── Commission owed (D27-383) ─────────────────────────────────────── */
+
+/* The bookings from booking sites and agents that checked out in the days
+   chosen, and the commission each owes. */
+export function CommissionPage() {
+  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+  const [to, setTo] = useState(BUSINESS_DATE);
+  const ok = Boolean(from && to && from <= to);
+  return (
+    <DocumentReport
+      report="commission"
+      title="Commission owed"
+      period={ok ? `Checked out ${dateShort(from)} to ${dateShort(to)}` : "Choose the days"}
+      query={ok ? { from, asOn: to } : undefined}
+      what="the commission owed"
+      controls={
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </div>
       }
     />
   );

@@ -3,7 +3,9 @@ import { REPORT_KEYS, type ReportDoc, type ReportKey, type ReportParams } from "
 import { propertyById, type Property } from "./figures.ts";
 import { monthlyStatistics, monthlyOccupancy, yearlyStatistics } from "./builders/statistics.ts";
 import { noShowReport } from "./builders/noShow.ts";
-import { cityLedgerReport } from "./builders/cityLedger.ts";
+import { cityLedgerReport, duesByAge, companyStatement } from "./builders/cityLedger.ts";
+import { commissionReport } from "./builders/commission.ts";
+import { gstr1Report, inputTaxCreditReport, gstAdvancesReport } from "./builders/gst.ts";
 import { managerReport } from "./builders/manager.ts";
 import { nightAuditReport } from "./builders/nightAudit.ts";
 import { lodgingTaxReport } from "./builders/lodgingTax.ts";
@@ -69,6 +71,15 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "supplier-statement": (c, h, p) => supplierStatement(c, h, p.supplier!, from(p), p.asOn),
   /* The petty cash book (D27-370): the 1st of the month to the date. */
   "petty-cash": (c, h, p) => pettyCashReport(c, h, from(p), p.asOn),
+  /* What companies, agents and booking sites owe, by age, and one account's
+     statement; commission owed for the stays checked out (D27-383). */
+  "dues-by-age": (c, h, p) => duesByAge(c, h, p.asOn),
+  "company-statement": (c, h, p) => companyStatement(c, h, p.account!, from(p), p.asOn),
+  commission: (c, h, p) => commissionReport(c, h, from(p), p.asOn),
+  /* GST, a month at a time (D27-383 item 4). */
+  "gstr-1": (c, h, p) => gstr1Report(c, h, month(p)),
+  "input-tax-credit": (c, h, p) => inputTaxCreditReport(c, h, month(p)),
+  "gst-advances": (c, h, p) => gstAdvancesReport(c, h, month(p)),
 };
 
 /** The Bar stock switch (D27-367): its three reports are refused where it is off -
@@ -83,8 +94,10 @@ export async function switchedOff(client: Client, hotelId: string, key: string):
 /** What a report needs that it was not given, in a sentence, or null. Asked by
     the screen's route and the file route alike (D27-372: a statement is of one supplier). */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const paramsProblem = (key: string, supplier: string | undefined): string | null =>
-  key === "supplier-statement" && !UUID.test(supplier ?? "") ? "Pick a supplier for the statement." : null;
+export const paramsProblem = (key: string, supplier: string | undefined, account?: string): string | null =>
+  key === "supplier-statement" && !UUID.test(supplier ?? "") ? "Pick a supplier for the statement."
+  : key === "company-statement" && !account?.trim() ? "Pick an account for the statement."
+  : null;
 
 /** The reports built so far, each with its route (documents.ts). */
 export const BUILT_KEYS = Object.keys(BUILDERS) as ReportKey[];

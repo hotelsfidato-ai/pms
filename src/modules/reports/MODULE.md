@@ -61,6 +61,20 @@ most export CSV.
 | Days of cover | `/reports/stock-cover` | `pages/Store.tsx` | search only |
 | Supplier spend | `/reports/supplier-spend` | `pages/Store.tsx` | search only |
 | Equipment report | `/reports/equipment` | `pages/Store.tsx` | search only |
+| Money owed by age | `/reports/dues-by-age` | `pages/Ledgers.tsx` (`DuesByAgePage`) | search only; `invoice` view (D27-383) |
+| Statement of account | `/reports/company-statement?account=` | `pages/Ledgers.tsx` (`CompanyStatementPage`) | search only; `invoice` view; linked from Company accounts |
+| Commission owed | `/reports/commission` | `pages/Ledgers.tsx` (`CommissionPage`) | search only; `commission` view |
+| GSTR-1 | `/reports/gstr-1` | `pages/Gst.tsx` (`Gstr1Page`) | search only; `report`; the JSON file `report` export |
+| Input tax credit | `/reports/input-tax-credit` | `pages/Gst.tsx` | search only; `invoice` approve (the supplier dues' four) |
+| GST on advances | `/reports/gst-advances` | `pages/Gst.tsx` | search only; `invoice` view |
+
+**D27-383 (items 2-4)**: `builders/cityLedger.ts` (`duesByAge`, `companyStatement`, on the City
+ledger's own `cityLedgerMoves`, so their totals ARE its closing balances), `builders/commission.ts`
+(D17-84: the site's figure, else the booking's stamped %, on room revenue before GST, else "-"),
+`builders/gst.ts` (`gstr1Data` - the one source of the GSTR-1 screen and of
+`GET /:code/reports/gstr-1.json`, the GST offline tool's JSON 3.2.2, refused while anything on its
+"To put right" list stands; input tax credit from the Store's receipts; GST on advances, CGST Act
+s.13(2)). The decisions taken and the CA's questions: this folder's `CHANGELOG.md`, 6 November.
 
 **The Store and equipment reports (phase 3A; D27-238, D27-240)** are built in
 `api/src/modules/reports/builders/stock.ts` and `equipment.ts`, from the

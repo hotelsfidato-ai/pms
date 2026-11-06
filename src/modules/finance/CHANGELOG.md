@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-06 · Company accounts links to the statement and the ageing (D27-383, by the reports helper)
+
+**Shipped.** `pages/Billing.tsx` (Company accounts): a **Statement** link beside each account
+(`/reports/company-statement?account=`) and, under the table, **Money owed by age**. Both reports are the
+City ledger's own figures, built in reports (its CHANGELOG, 6 November). The server's front door exports
+`sacOf` (`invoices.ts`) for the GSTR-1 file, so a line's HSN/SAC is one rule. Nothing about bills, invoices
+or payments changed. Manual: A4.8, Figure A4-23.
+
+---
+
 ## 2026-11-05 · Settings' "Discounts" is "Room discounts" (the owner's D27-395)
 
 **Shipped.** `money.settings.ts`, `pages/money/Discounts.tsx` and the setup steps say **Room discounts**. The page adds: "The restaurant's discounts are Promotions, in Point of sale → Menu." The owner had added two 20% discounts here for a restaurant bill, and the Till never reads this list. Nothing about room discounts changed (10% by hand, D27-36). The whole entry is in the POS CHANGELOG, as is the restaurant's limit, which is gone.

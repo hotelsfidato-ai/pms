@@ -1,4 +1,10 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
+
+/** The GSTR-1 file for a month (D27-383): the GST offline tool's JSON, made on
+    the server from the GSTR-1 screen's own figures. Resolves to the file's name;
+    a refusal throws with the server's sentences. */
+export const downloadGstr1 = (hotelId: string, month: string) =>
+  downloadFile(`/api/hotels/${hotelId}/reports/gstr-1.json?month=${month}`);
 
 /* ══════════════════════════════════════════════════════════════════
    A REPORT, AS ONE OBJECT — the web's copy of the contract
@@ -72,7 +78,11 @@ export type ReportKey =
   /* TDS deducted from suppliers, and one supplier's statement (D27-372). */
   | "tds" | "supplier-statement"
   /* The petty cash book (D27-370). */
-  | "petty-cash";
+  | "petty-cash"
+  /* Money owed by age, a statement of account, commission owed (D27-383 items 2, 3). */
+  | "dues-by-age" | "company-statement" | "commission"
+  /* GSTR-1, input tax credit, GST on advances (D27-383 item 4). */
+  | "gstr-1" | "input-tax-credit" | "gst-advances";
 
 export interface ReportDoc {
   /* ⚠ Kept identical to the server's copy, as the note at the top of both
@@ -97,6 +107,8 @@ export interface ReportQuery {
   ignoreZero?: boolean;
   /** Supplier statement: the supplier's id (D27-372). */
   supplier?: string;
+  /** Statement of account: the account as the City ledger names it (D27-383). */
+  account?: string;
 }
 
 /**
@@ -116,6 +128,7 @@ export async function getReport(
   if (query.from) params.set("from", query.from);
   if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
   if (query.supplier) params.set("supplier", query.supplier);
+  if (query.account) params.set("account", query.account);
   const qs = params.toString();
   try {
     return await api<ReportDoc>(
