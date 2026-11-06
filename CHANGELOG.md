@@ -81,8 +81,11 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - The Bar items' category changed for the recording and put back: md5 of `stock_items` equal before and after.
   Backup `.local/backups/fidato-before-a9-recording-31oct.dump`.
 
-**Left open:** copying A9 to `D:\fidato\final videos\A9 Stores and purchasing`, on the owner's yes; the old finals are
-still there. `marks.mjs a11` was run for one picture, so A11's arrows need checking when it is remade. The book's A9.14
+**Copied on 6 November, under D27-396 ("build all, don't ask"):** all 19 files are in `D:\fidato\final videos\A9
+Stores and purchasing`, each compared byte for byte; the 11 old finals are in `.local\old-finals\A9 Stores and
+purchasing 14 October`.
+
+**Left open:** `marks.mjs a11` was run for one picture, so A11's arrows need checking when it is remade. The book's A9.14
 has no video, as before. `C:\videos\RESUME.md` (31 October) has how to record A9 again.
 
 **Commits:** `25a553e1` (C:\videos)

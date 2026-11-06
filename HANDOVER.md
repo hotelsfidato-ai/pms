@@ -818,6 +818,19 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **6 November: BUILD ALL, DON'T ASK (D27-396).** The owner: "don't ask me permission, build all of them and I will
+> take a look at it". Every video and every pending item is built without a yes first; push, deploy, live writes,
+> money and the owner's own steps stay theirs. Rules for helpers: `.local/build-all/RULES.md`. A9 is in the final folder.
+> - **Wave 1, running:** safety (two-step sign-in in our own API, off by default; the server-side reset lock for SHI
+>   and AMR; staging and standby steps as documents; migrations 257-259), accounts (dues by age, company statements,
+>   OTA commission, GSTR-1, input tax credit, GST on advances; 260-262), restaurant (outside table bookings, service
+>   charge off by default and tips, coupons, profit per dish; 263-265). Each in its own copy, database and ports.
+> - **Videos, one chapter at a time:** A7 first (no planned feature touches it), then A3, A1, A12, A13, A14; the
+>   chapters the features change wait for their wave.
+> - **Then:** wave 2 (emailed and scheduled reports, guest care, stock expiry and bill-to-order, rooming lists,
+>   allotments, waitlist, the small faults), wave 3 (exports everywhere, group-wide reports and rates, importing an
+>   old system), wave 4 (UPI QR on the bill; payment links and payroll as plans, since they cost money).
+>
 > **5 November, 16:18: release 19 is LIVE (see section 2).** Next: the owner's A8 at AMRT. Shimla's GM has to
 > close 1-4 Nov, one at a time. S6 and R1 are done, so nothing is waiting on them.
 >
