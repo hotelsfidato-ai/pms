@@ -127,6 +127,31 @@ begin
     (select min(s)::text from app.table_slots(rest, date '2026-11-02') s));
   update hotels set timezone = 'Asia/Kolkata' where id = h;
 
+  -- ---------- on the night, and outside diners ("table bookings for outside diners") ----------
+  update table_bookings set status = 'arrived', arrived_at = now() where table_bookings.id = bid;
+  select b.status into v from app.guest_table_bookings_mine('tbk-link', 'tbk-unlock') b where b.id = bid;
+  perform test.ok('table bookings', 'the guest''s page reads an arrived table as confirmed', v = 'confirmed', v);
+
+  perform test.allows('table bookings', 'an outside diner''s booking: a name and a phone, no stay',
+    format($q$insert into table_bookings (hotel_id, outlet_id, diner_name, diner_phone, party, at, status)
+              values (%L, %L, 'Walk-in Mehta', '9876543210', 4, now() + interval '2 hours', 'confirmed')$q$, h, rest));
+  perform test.raises('table bookings', 'an outside diner has a phone',
+    format($q$insert into table_bookings (hotel_id, outlet_id, diner_name, party, at, status)
+              values (%L, %L, 'No Phone', 2, now(), 'confirmed')$q$, h, rest), '23514');
+  perform test.raises('table bookings', 'a booking is somebody''s: a stay or a named diner',
+    format($q$insert into table_bookings (hotel_id, outlet_id, party, at, status)
+              values (%L, %L, 2, now(), 'confirmed')$q$, h, rest), '23514');
+  perform test.raises('table bookings', 'never both a stay and an outside diner',
+    format($q$insert into table_bookings (hotel_id, outlet_id, reservation_id, diner_name, diner_phone, party, at)
+              values (%L, %L, %L, 'Both', '9876543210', 2, now())$q$, h, rest, stay), '23514');
+  perform test.raises('table bookings', 'an outside diner''s booking is never a request waiting',
+    format($q$insert into table_bookings (hotel_id, outlet_id, diner_name, diner_phone, party, at)
+              values (%L, %L, 'Waiting', '9876543210', 2, now())$q$, h, rest), '23514');
+  perform test.raises('table bookings', 'seated names its table and the bill it opened',
+    format($q$update table_bookings set status = 'seated' where id = %L$q$, bid), '23514');
+  perform test.raises('table bookings', 'a status nobody defined is refused',
+    format($q$update table_bookings set status = 'eaten' where id = %L$q$, bid), '23514');
+
   -- ---------- and the fixtures go ----------
   delete from table_bookings where hotel_id in (h, other);
   delete from guest_unlocks where link_id in (link, link_booked);

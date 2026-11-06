@@ -1178,31 +1178,34 @@ export default function TerminalPage() {
                       Charge to a room
                     </button>
                     {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
-                    {/* The voluntary service charge, where the GM set a rate (264). */}
-                    {(order.serviceChargeOffered != null || order.serviceChargePct != null) && (
-                      <button type="button" onClick={serviceCharge}
-                        disabled={busy || order.lines.filter((l) => !l.voided).length === 0}
-                        className={cn(OUTLINE, "w-full h-12 text-base font-medium disabled:opacity-40")}>
-                        {order.serviceChargePct != null
-                          ? `Take off the service charge (${order.serviceChargePct}%)`
-                          : `Service charge ${order.serviceChargeOffered}%, if the guest agrees`}
+                    {/* One row, so the bill above keeps its room: the voluntary
+                        service charge where the GM set a rate (264), a coupon
+                        (265: the owner, an Admin or the GM, as a promotion,
+                        D27-352) and a tip for the staff, taken the same way
+                        as the bill (264). */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(order.serviceChargeOffered != null || order.serviceChargePct != null) ? (
+                        <button type="button" onClick={serviceCharge}
+                          disabled={busy || order.lines.filter((l) => !l.voided).length === 0}
+                          className={cn(OUTLINE, "h-12 px-2 text-sm font-medium leading-tight disabled:opacity-40")}>
+                          {order.serviceChargePct != null
+                            ? `Take off service ${order.serviceChargePct}%`
+                            : `Service charge ${order.serviceChargeOffered}%?`}
+                        </button>
+                      ) : <span />}
+                      <button type="button" onClick={coupon}
+                        title={mayNc ? undefined : "A coupon is applied by the GM, the owner or an Admin."}
+                        disabled={busy || !mayNc || order.lines.filter((l) => !l.voided).length === 0}
+                        className={cn(OUTLINE, "h-12 px-2 text-sm font-medium leading-tight disabled:opacity-40")}>
+                        {order.couponCode ? `Coupon ${order.couponCode}` : "Coupon"}
                       </button>
-                    )}
-                    {/* A coupon (265): the owner, an administrator or the GM, as a promotion (D27-352). */}
-                    <button type="button" onClick={coupon}
-                      disabled={busy || !mayNc || order.lines.filter((l) => !l.voided).length === 0}
-                      className={cn(OUTLINE, "w-full h-12 text-base font-medium disabled:opacity-40")}>
-                      {order.couponCode ? `Coupon ${order.couponCode} - change it` : "Coupon"}
-                    </button>
+                      <input id="terminal-tip" aria-label="Tip for the staff" value={tip} inputMode="decimal"
+                        onChange={(e) => setTip(e.target.value)}
+                        placeholder="Tip ₹" className={cn(FIELD, "h-12 px-3 text-base tabular")} />
+                    </div>
                     {!mayNc && (
                       <p className="text-2xs text-grey-600">A coupon is applied by the GM, the owner or an Admin.</p>
                     )}
-                    {/* A TIP (264): money for the staff, taken the same way as the bill. */}
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="terminal-tip" className="text-base text-grey-600 shrink-0">Tip for the staff</label>
-                      <input id="terminal-tip" value={tip} inputMode="decimal" onChange={(e) => setTip(e.target.value)}
-                        placeholder="₹ none" className={cn(FIELD, "h-12 px-3 text-base tabular w-32")} />
-                    </div>
                     <div className="grid grid-cols-3 gap-2">
                       {METHODS.map((m) => (
                         <button

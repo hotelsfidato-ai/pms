@@ -19,14 +19,14 @@ import { getDishProfit, type DishProfit } from "@/modules/pos/data/till";
    ══════════════════════════════════════════════════════════════════ */
 
 const dash = (n: number | null) => (n === null ? "-" : moneyPrecise(n));
-const firstOfMonth = BUSINESS_DATE.slice(0, 8) + "01";
 
 type Dish = DishProfit["dishes"][number];
 type Sold = DishProfit["sold"][number];
 
 export function DishProfitTab({ hotelId }: { hotelId: string }) {
-  const [from, setFrom] = useState(firstOfMonth);
-  const [to, setTo] = useState(BUSINESS_DATE);
+  /* The business date is set at sign-in, so it is read here, never at import. */
+  const [from, setFrom] = useState(() => BUSINESS_DATE.slice(0, 8) + "01");
+  const [to, setTo] = useState(() => BUSINESS_DATE);
   const q = useQuery({
     queryKey: ["dish-profit", hotelId, from, to],
     queryFn: () => getDishProfit(hotelId, from, to),

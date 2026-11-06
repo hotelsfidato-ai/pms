@@ -1552,9 +1552,8 @@ function OrderPanel({
               {/* The rate, not just the money. A guest querying the bill
                   next month needs the statement that was actually made. */}
               <Row
-                label={order.discountType === "percent"
-                  ? `Discount ${order.discountValue}%`
-                  : "Discount"}
+                label={`${order.couponCode ? `Coupon ${order.couponCode}` : "Discount"}${
+                  order.discountType === "percent" ? ` ${order.discountValue}%` : ""}`}
                 value={`-${money(order.discount)}`}
               />
               {!order.serviceCharge && <Row label="Taxable" value={money(order.taxable)} />}

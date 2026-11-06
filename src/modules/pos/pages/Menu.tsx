@@ -318,7 +318,8 @@ function Promotions({ hotelId }: { hotelId: string }) {
               On the Till's Discount they come first, so it is the same
               concession every time and the month-end report counts what it
               cost. The GM, the owner or an Admin can also type any amount off
-              by hand, with a reason.
+              by hand, with a reason. A coupon is a promotion the guest brings
+              as a code, good between two days, on so many bills, above a least bill.
             </p>
           </div>
 
