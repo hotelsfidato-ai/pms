@@ -818,6 +818,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **6 November, 20:15: D27-397, AFTER CHECK-IN (this chat, not the build-all waves).** The owner: the GM undoes a
+> check-in, cancels or voids an in-house guest, and changes its arrival date, rate, room type and payment method;
+> the front desk asks and the GM approves; a switch in Front desk rules, on. **Migrations 266-268 are taken by it.**
+> One Opus helper builds it from `.local/build-all/after-check-in.md`. Also: Shimla's Night audit was not broken: its
+> screen kept the 19:39 answer (drawer open) after the drawer closed at 19:42; fixed on cp6 at e605ac81 ("night-audit"
+> is re-checked on opening). Until release 20, reload the screen.
+>
 > **6 November: BUILD ALL, DON'T ASK (D27-396).** The owner: "don't ask me permission, build all of them and I will
 > take a look at it". Every video and every pending item is built without a yes first; push, deploy, live writes,
 > money and the owner's own steps stay theirs. Rules for helpers: `.local/build-all/RULES.md`. A9 is in the final folder.
