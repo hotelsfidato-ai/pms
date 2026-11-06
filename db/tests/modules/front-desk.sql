@@ -430,3 +430,139 @@ begin
   delete from hotels where id = h;
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+-- =============================================================================
+-- AFTER CHECK-IN (the owner's D27-397): the switch, the front desk's request
+-- to the GM, and an in-house guest's arrival moved by the owner, an Admin or
+-- the GM - never later than the business date, never into a closed day, and
+-- not once a Night audit has charged a night. The routes' half is
+-- api/test/modules/front-desk/afterCheckIn.test.ts. A property of its own.
+-- =============================================================================
+do $$
+declare
+  h uuid; t uuid; g uuid; r101 uuid; res uuid; fol uuid; gm uuid; desk uuid; req uuid; ap uuid;
+  msg text; d date;
+  try_amend constant text :=
+    'select app.amend_stay(%L, %L, date %L, date ''2026-08-28'', 1::smallint, 0::smallint, null)';
+begin
+  h := app.provision_property_unchecked('FDA','After Check-in Test','Nowhere');
+  update hotels set business_date = date '2026-08-25' where id = h;
+  perform app.bulk_create_rooms(h, 'STD', 1::smallint, 101, 103);
+  select id into t from room_types where hotel_id = h and code = 'STD';
+  select id into r101 from rooms where hotel_id = h and number = '101';
+  insert into guests (full_name) values ('After check-in fixture guest') returning id into g;
+  insert into staff (email, full_name) values ('fda-gm@fidato.in', 'FDA GM') returning id into gm;
+  insert into staff (email, full_name) values ('fda-desk@fidato.in', 'FDA Desk') returning id into desk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (gm, h, 'gm'), (desk, h, 'front_desk');
+
+  -- ---------- the switch and the rule ---------------------------------------
+  perform test.ok('after check-in', 'the switch is on at a new hotel',
+    (select gm_may_undo_check_in from hotels where id = h));
+  perform test.ok('after check-in', 'and at every hotel there is',
+    not exists (select 1 from hotels where not gm_may_undo_check_in));
+  perform test.ok('after check-in', 'a new hotel gets the GM''s rule for the front desk''s requests, the owner and an Admin too',
+    exists (select 1 from approval_rules where hotel_id = h and kind = 'stay_request' and is_active
+              and approver_role = 'gm' and also_decided_by @> array['owner', 'admin']));
+  perform test.ok('after check-in', 'a test hotel copies the switch, and keeps the requests with its trade',
+    exists (select 1 from app.test_hotel_hotels_columns() where column_name = 'gm_may_undo_check_in' and copied)
+      and exists (select 1 from app.test_hotel_classes() where table_name = 'stay_requests' and class = 'trading'));
+
+  -- ---------- a guest in house ----------------------------------------------
+  insert into reservations (hotel_id, reference, guest_id, room_type_id,
+                            check_in, check_out, agreed_rate, status)
+  values (h, 'FDA-IN', g, t, date '2026-08-25', date '2026-08-28', 2000, 'checked_in')
+  returning id into res;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (h, res, r101, date '2026-08-25', date '2026-08-28', 'arrival');
+
+  -- ---------- the front desk's request: one of a kind per stay waiting ------
+  insert into stay_requests (hotel_id, reservation_id, kind, summary, reason, requested_by)
+  values (h, res, 'undo_check_in', 'Undo the check-in', 'Wrong guest', desk) returning id into req;
+  ap := app.request_approval(h, 'stay_request', 'stay_requests', req, 'Undo. Why: wrong guest', null, desk);
+  perform test.ok('after check-in', 'the request reaches the GM''s inbox as a stay_request', ap is not null
+    and exists (select 1 from approvals where id = ap and approver_role = 'gm' and status = 'pending'));
+  begin
+    insert into stay_requests (hotel_id, reservation_id, kind, summary, reason, requested_by)
+    values (h, res, 'undo_check_in', 'Undo the check-in', 'Again', desk);
+    msg := 'none';
+  exception when unique_violation then msg := 'refused';
+  end;
+  perform test.ok('after check-in', 'a second request of the same kind waiting on the stay is refused', msg = 'refused', msg);
+  insert into stay_requests (hotel_id, reservation_id, kind, summary, reason, requested_by)
+  values (h, res, 'rate', 'Change the rate', 'Corporate', desk);
+  perform test.ok('after check-in', 'another kind may wait beside it', true);
+  update stay_requests set status = 'rejected', decided_by = gm, decided_at = now(), decision_note = 'No'
+   where id = req;
+  insert into stay_requests (hotel_id, reservation_id, kind, summary, reason, requested_by)
+  values (h, res, 'undo_check_in', 'Undo the check-in', 'Asked again', desk);
+  perform test.ok('after check-in', 'once decided, the same kind may be asked again', true);
+  begin
+    update stay_requests set status = 'approved', decided_by = desk, decided_at = now()
+     where reservation_id = res and kind = 'rate';
+    msg := 'none';
+  exception when check_violation then msg := 'refused';
+  end;
+  perform test.ok('after check-in', 'nobody decides their own request', msg = 'refused', msg);
+
+  -- ---------- the arrival of a guest in house -------------------------------
+  perform set_config('app.user_id', desk::text, true);
+  begin execute format(try_amend, h, res, '2026-08-24'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'the front desk: the arrival is a fact, as before',
+    msg like 'they arrived on 2026-08-25%', msg);
+
+  perform set_config('app.user_id', gm::text, true);
+  begin execute format(try_amend, h, res, '2026-08-26'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'the GM: never later than the business date',
+    msg like '%later than the business date%', msg);
+
+  begin execute format(try_amend, h, res, '2026-08-24'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  select from_date into d from room_assignments where reservation_id = res and released_at is null;
+  perform test.ok('after check-in', 'the GM moves it to a day no Night audit has closed, and the room hold moves with it',
+    msg = 'none' and (select check_in from reservations where id = res) = date '2026-08-24'
+      and d = date '2026-08-24', msg || ' / held from ' || coalesce(d::text, '-'));
+
+  insert into night_audit_runs (hotel_id, business_date, status, completed_at)
+  values (h, date '2026-08-24', 'completed', now());
+  update room_assignments set from_date = date '2026-08-25' where reservation_id = res;
+  update reservations set check_in = date '2026-08-25' where id = res;
+  begin execute format(try_amend, h, res, '2026-08-23'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'never into a closed day: it would be a night never charged',
+    msg like 'the night of 2026-08-24 is closed by a Night audit%', msg);
+
+  update reservations set check_in = date '2026-08-24' where id = res;
+  update room_assignments set from_date = date '2026-08-24' where reservation_id = res;
+  begin execute format(try_amend, h, res, '2026-08-25'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'booked yesterday, came today: the GM moves the arrival to the business date',
+    msg = 'none' and (select check_in from reservations where id = res) = date '2026-08-25', msg);
+
+  insert into folios (hotel_id, reservation_id, status) values (h, res, 'open') returning id into fol;
+  insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category, description,
+                              amount, tax_rate, tax_amount, source_type)
+  values (h, fol, res, date '2026-08-25', 'room', 'Room 101 · 1 night', 2000, 0, 0, 'night_audit');
+  begin execute format(try_amend, h, res, '2026-08-24'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'not once a Night audit has charged a night of the stay',
+    msg like 'a Night audit has charged a night%', msg);
+
+  perform set_config('app.user_id', '', true);
+  begin execute format(try_amend, h, res, '2026-08-24'); msg := 'none';
+  exception when others then msg := sqlerrm; end;
+  perform test.ok('after check-in', 'and nobody signed in is nobody of the three', msg like 'they arrived on%', msg);
+
+  alter table folio_postings disable trigger folio_postings_append_only;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  alter table folio_postings enable trigger folio_postings_append_only;
+  delete from staff where id in (gm, desk);
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
+  perform test.ok('after check-in', 'the fixture does not outlive the test',
+    not exists (select 1 from hotels where code = 'FDA'));
+end $$;
