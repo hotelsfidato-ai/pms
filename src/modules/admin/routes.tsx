@@ -12,6 +12,7 @@ import {
   UsersPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
 import { SETUP_PAGE } from "@/modules/admin/setup/steps";
+import BackfillPage from "@/modules/admin/backfill/BackfillPage";
 
 /* /h/:code/setup is the setup's address with the hotel in it (the bell's
    reminder and "Back to setup" use it). The page itself is a Settings page,
@@ -142,6 +143,16 @@ export const routes = (
       element={
         <RequireAccess path="/settings" resource="setting">
           <PropertyScope /><SetupForHotel />
+        </RequireAccess>
+      }
+    />
+    {/* D27-398: Backfill data for the Accountant, who reads it and has no
+        Settings (nav.ts). The same page; the server says it is read-only. */}
+    <Route
+      path="/h/:code/backfill"
+      element={
+        <RequireAccess path="/h/:code/backfill" resource="invoice">
+          <PropertyScope /><BackfillPage />
         </RequireAccess>
       }
     />

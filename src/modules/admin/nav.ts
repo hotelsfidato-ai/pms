@@ -1,5 +1,5 @@
-import { Hotel, UserCog, Settings, Plug, Terminal, Activity } from "lucide-react";
-import { can } from "@/lib/permissions";
+import { Hotel, UserCog, Settings, Plug, Terminal, Activity, CalendarClock } from "lucide-react";
+import { can, canAccess } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* Administration's menu entries — Across properties, and Administration
@@ -38,6 +38,14 @@ export const nav: ServiceNavEntry[] = [
     label: "Console", to: "/admin/console", icon: Terminal,
     resource: "hotel", devOnly: true,
     canSee: (role) => can(role, "create", "hotel") },
+  /* D27-398: Backfill data is a Settings page (backfill.settings.ts). The
+     Accountant reads it and has no Settings, so reads it here, from Find a
+     screen: whoever reads it (`invoice` approve, as the server's read rule)
+     and cannot open Settings. */
+  { section: "finance", order: 90, listed: false,
+    label: "Backfilled records", to: "/h/:code/backfill", icon: CalendarClock, resource: "invoice",
+    keywords: ["backfill", "before go live", "past days", "paper bills"],
+    canSee: (role) => can(role, "approve", "invoice") && !canAccess(role, "setting") },
   /* D27-91: what the server is doing, for the owner and an administrator -
      exactly the roles that hold `role`, as the server asks (roleGate.ts). */
   { section: "system", order: 25,

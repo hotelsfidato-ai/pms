@@ -390,6 +390,23 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(html, "a figure is text, never markup").toContain("Money &lt;taken&gt;");
   });
 
+  /* D27-398: a backfilled stay's bill and thank-you - the hotel's own paper
+     bill by its number, never called a tax invoice; by email only. */
+  it("writes a backfilled stay's thank-you with the hotel's bill number, never a tax invoice (D27-398)", () => {
+    const body = message({ channel: "email", kind: "backfill-bill", data: {
+      guestName: "Asha Test", hotelName: "Test Hotel", billNumber: "H-0042", arrival: "1 Nov 2026",
+      departure: "3 Nov 2026", room: "101", roomCharges: "INR 6,000.00", gst: "INR 720.00",
+      otherCharges: "-", total: "INR 6,720.00", paid: "INR 6,720.00 by Cash" } });
+    const [mail] = run(withMailbox(), "Read the message", { body });
+    expect(mail!.json).toMatchObject({ stop: false, email: true, to: "asha@example.com",
+      subject: "Thank you for staying at Test Hotel" });
+    const words = `${mail!.json["subject"]}\n${mail!.json["text"]}`;
+    expect(words).toContain("Your bill from the hotel: H-0042.");
+    expect(words).toContain("Total: INR 6,720.00");
+    expect(words.toLowerCase()).not.toContain("tax invoice");
+    expect(whatsapp({ kind: "backfill-bill" }), "no WhatsApp template for it").toMatchObject({ stop: true, statusCode: 422 });
+  });
+
   it("marks a day's reports sent again after a cancel as Corrected, in the subject and at the top (D27-390)", () => {
     const pdf = { name: "Night-audit-report-5EL-2026-10-02.pdf", contentType: "application/pdf",
       base64: Buffer.from("%PDF-1.4 made up").toString("base64") };

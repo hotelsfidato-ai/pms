@@ -140,6 +140,12 @@ const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
    administrator - `role` view is exactly those two in the matrix, as for
    System health. The database asks the same (app.undoes_night_audits). */
 const UNDO_DAY = grant("role", "view", "Cancelling a night audit");
+/* Backfill data (the owner's D27-398): entered, corrected and removed by the
+   owner, an administrator and the GM - `approve` on a booking is exactly those
+   three; read also by the accountant - `approve` on an invoice is exactly those
+   four. The database asks the same (app.manages_hotel, app.reads_backfill). */
+const BACKFILL = grant("reservation", "approve", "Entering what happened before the hotel's first day");
+const BACKFILL_READ = grant("invoice", "approve", "Reading what happened before the hotel's first day");
 /* Editing a charge and changing a stay's rate: the same three (D27-157). */
 const EDIT_BILL = grant("reservation", "approve", "Editing a charge on a bill");
 const PAYMENT = grant("payment", "create", "Taking a payment");
@@ -373,6 +379,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
+  /* Backfill data (D27-398). */
+  [`POST ${H}/backfill/:kind`]: BACKFILL,
+  [`PUT ${H}/backfill/:kind/:id`]: BACKFILL,
+  [`POST ${H}/backfill/:kind/:id/remove`]: BACKFILL,
   /* The Accountant, the GM, the owner and an Admin (D27-382): who may export. */
   [`PUT ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
@@ -1036,6 +1046,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/commissioning`]: SETUP,
   /* D27-311: the wizard is the owner's, an administrator's and the GM's - `setting`. */
   [`GET ${H}/setup`]: see("setting", "the hotel's setup steps"),
+  /* Backfill data (D27-398): the owner, an administrator, the GM and the accountant. */
+  [`GET ${H}/backfill`]: BACKFILL_READ,
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),

@@ -39,6 +39,10 @@ const KINDS: Record<string, string> = {
   work_orders: "Work order", channel_bookings: "Booking-site booking",
   crs_bookings: "CRS booking", table_bookings: "Table booking",
   credit_limit_allowances: "Over the credit limit",
+  /* D27-398: Settings → Backfill data. A guest's name, phone, email, ID and
+     visa there are masked by PERSONAL below, as anywhere. */
+  backfill_stays: "Backfilled stay", backfill_restaurant_bills: "Backfilled restaurant bill",
+  backfill_cash: "Backfilled cash",
 };
 const kindOf = (table: string) =>
   KINDS[table] ?? table.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());

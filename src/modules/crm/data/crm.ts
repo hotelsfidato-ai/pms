@@ -156,7 +156,8 @@ export interface Guest360 {
   stays: Array<{
     id: string; hotelCode: string; hotelName: string; reference: string;
     checkIn: string; checkOut: string; status: string;
-    roomType: string | null; source: string | null; charged: number;
+    /* Null only on a backfilled stay with no figure typed (D27-398): a dash. */
+    roomType: string | null; source: string | null; charged: number | null;
   }>;
   sent: Array<{ at: string; channel: string; kind: string; status: string; hotelName: string }>;
   noOffers: Array<{ id: string; kind: "phone" | "email"; value: string; at: string }>;

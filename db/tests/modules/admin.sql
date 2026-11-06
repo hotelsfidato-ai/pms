@@ -1546,3 +1546,234 @@ begin
   select 'reset lock', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
     from jsonb_array_elements(res) x;
 end $$;
+
+
+-- =============================================================================
+-- BACKFILL DATA (the owner's D27-398; migration "backfill data")
+-- =============================================================================
+-- Only days before the hotel's first live day, one room a night, a reason for
+-- every correction, a removed record kept and frozen, nobody but the owner,
+-- an Admin and the GM writing, and the Accountant reading. Built and undone.
+-- =============================================================================
+do $$
+declare
+  res jsonb := '[]';
+  h uuid; other uuid; rt uuid; ort uuid; r101 uuid; r102 uuid; elsewhere uuid;
+  gm uuid; clerk uuid; acct uuid; owner uuid; g uuid; foreign_g uuid;
+  first_day date; today date; s1 uuid; s2 uuid; v text; n int;
+begin
+  begin
+    h     := app.provision_property_unchecked('BFL', 'Backfill Test', 'Nowhere');
+    other := app.provision_property_unchecked('BFM', 'Backfill Other', 'Nowhere');
+    select id into rt from room_types where hotel_id = h and code = 'STD';
+    select id into ort from room_types where hotel_id = other and code = 'STD';
+    insert into rooms (hotel_id, room_type_id, number) values (h, rt, '101') returning id into r101;
+    insert into rooms (hotel_id, room_type_id, number) values (h, rt, '102') returning id into r102;
+    insert into rooms (hotel_id, room_type_id, number) values (other, ort, '101') returning id into elsewhere;
+    today := (select (now() at time zone timezone)::date from hotels where id = h);
+    first_day := today - 10;
+    update hotels set business_date = first_day where id = h;
+    select id into owner from staff where email = 'owner@fidato.in';
+    insert into staff (email, full_name) values ('bfl-gm@fidato.in', 'Backfill GM') returning id into gm;
+    insert into staff (email, full_name) values ('bfl-clerk@fidato.in', 'Backfill Clerk') returning id into clerk;
+    insert into staff (email, full_name) values ('bfl-acct@fidato.in', 'Backfill Accountant') returning id into acct;
+    insert into staff_hotels (staff_id, hotel_id, role)
+    values (gm, h, 'gm'), (clerk, h, 'front_desk'), (acct, h, 'finance');
+    insert into guests (full_name, phone) values ('Backfill Guest', '9000000398') returning id into g;
+    insert into guests (full_name, nationality) values ('Backfill Visitor', 'GB') returning id into foreign_g;
+    perform set_config('app.hotel_code', 'BFL', true);
+
+    -- ---------- the first day: one rule ----------
+    res := res || jsonb_build_object('n', 'the first day is the day the hotel was put on',
+      'ok', app.backfill_first_day(h) = first_day, 'd', app.backfill_first_day(h)::text);
+    insert into night_audit_runs (hotel_id, business_date, status) values (h, first_day - 3, 'failed');
+    res := res || jsonb_build_object('n', 'or an earlier night audit''s day, whatever became of the run',
+      'ok', app.backfill_first_day(h) = first_day - 3, 'd', app.backfill_first_day(h)::text);
+    delete from night_audit_runs where hotel_id = h;
+
+    -- ---------- the date rule, in words ----------
+    res := res || jsonb_build_object('n', 'a stay that left by the first day is allowed',
+      'ok', app.backfill_refusal(h, first_day - 2, first_day) is null,
+      'd', app.backfill_refusal(h, first_day - 2, first_day));
+    res := res || jsonb_build_object('n', 'a day on or after the first day is a live day',
+      'ok', app.backfill_refusal(h, first_day, first_day) like 'Only days before the hotel''s first day, %',
+      'd', app.backfill_refusal(h, first_day, first_day));
+    res := res || jsonb_build_object('n', 'a stay still in on the first day is refused',
+      'ok', app.backfill_refusal(h, first_day - 1, first_day + 1) like 'A backfilled stay ends by the hotel''s first day,%',
+      'd', app.backfill_refusal(h, first_day - 1, first_day + 1));
+    update hotels set business_date = today + 5 where id = h;
+    res := res || jsonb_build_object('n', 'never a future date, even before a first day still to come',
+      'ok', app.backfill_refusal(h, today + 1, today + 2) = 'A date in the future is never backfilled.',
+      'd', app.backfill_refusal(h, today + 1, today + 2));
+    update hotels set business_date = first_day where id = h;
+
+    -- ---------- the GM writes, as the application ----------
+    perform set_config('app.user_id', gm::text, true);
+    set local role pms_app;
+    insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id,
+                                arrival, departure, rate)
+    values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', r101,
+            first_day - 4, first_day - 2, 3000)
+    returning id into s1;
+    reset role;
+    res := res || jsonb_build_object('n', 'the GM adds a stay, and the database names who',
+      'ok', (select entered_by from backfill_stays where id = s1) = gm);
+    res := res || jsonb_build_object('n', 'a figure not typed stays empty, never a zero',
+      'ok', (select room_charges is null and gst is null and paid is null from backfill_stays where id = s1));
+
+    v := null;
+    set local role pms_app;
+    begin
+      insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id, arrival, departure)
+      values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', r101, first_day - 3, first_day - 1);
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'two stays in one room on one night are refused',
+      'ok', v = '23P01', 'd', v);
+
+    v := null;
+    set local role pms_app;
+    begin
+      insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id, arrival, departure)
+      values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', r102, first_day - 1, first_day + 1);
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'the table asks the date rule itself',
+      'ok', v like '23514: A backfilled stay ends by the hotel''s first day,%', 'd', v);
+
+    v := null;
+    set local role pms_app;
+    begin
+      insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id, arrival, departure)
+      values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', elsewhere, first_day - 4, first_day - 2);
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a room of another hotel is refused',
+      'ok', v = '23514: That room is not one of this hotel''s.', 'd', v);
+
+    v := null;
+    set local role pms_app;
+    begin
+      insert into backfill_stays (hotel_id, guest_id, guest_name, nationality, id_type, id_number, room_id,
+                                  arrival, departure)
+      values (h, foreign_g, 'Backfill Visitor', 'GB', 'passport', 'K1234567', r102, first_day - 4, first_day - 2);
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a foreign guest needs a visa or OCI number (Form III)',
+      'ok', v like '23514:%backfill_stays_foreign_papers%', 'd', v);
+
+    -- ---------- a correction needs its reason; nothing is deleted ----------
+    v := null;
+    set local role pms_app;
+    begin
+      update backfill_stays set rate = 3200 where id = s1;
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a correction without a reason is refused',
+      'ok', v = '23514: A correction needs its reason.', 'd', v);
+
+    set local role pms_app;
+    update backfill_stays set rate = 3200, change_reason = 'The rate on the paper bill' where id = s1;
+    reset role;
+    res := res || jsonb_build_object('n', 'with one it is made, and the audit log has it',
+      'ok', (select rate = 3200 and changed_by = gm from backfill_stays where id = s1)
+            and exists (select 1 from audit_log where table_name = 'backfill_stays' and row_id = s1::text
+                          and action = 'UPDATE' and after ->> 'change_reason' = 'The rate on the paper bill'));
+
+    v := null;
+    set local role pms_app;
+    begin
+      delete from backfill_stays where id = s1;
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a record is never deleted',
+      'ok', v = '42501' and exists (select 1 from backfill_stays where id = s1), 'd', v);
+
+    -- ---------- the front desk, and the Accountant ----------
+    perform set_config('app.user_id', clerk::text, true);
+    set local role pms_app;
+    select count(*) into n from backfill_stays;
+    v := null;
+    begin
+      insert into backfill_cash (hotel_id, cash_date, direction, amount, purpose, person)
+      values (h, first_day - 1, 'in', 500, 'Advance', 'A guest');
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'reception neither reads nor writes the register',
+      'ok', n = 0 and v = '42501', 'd', n || ' ' || coalesce(v, '-'));
+
+    perform set_config('app.user_id', acct::text, true);
+    set local role pms_app;
+    select count(*) into n from backfill_stays;
+    v := null;
+    begin
+      update backfill_stays set rate = 1, change_reason = 'x' where id = s1;
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'the Accountant reads and changes nothing',
+      'ok', n = 1 and (select rate from backfill_stays where id = s1) = 3200, 'd', n || ' ' || coalesce(v, '-'));
+
+    -- ---------- removed: kept, frozen, and the room free again ----------
+    perform set_config('app.user_id', gm::text, true);
+    set local role pms_app;
+    update backfill_stays set removed_at = now(), removed_reason = 'Entered twice' where id = s1;
+    insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id, arrival, departure)
+    values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', r101, first_day - 4, first_day - 2)
+    returning id into s2;
+    v := null;
+    begin
+      update backfill_stays set removed_at = null, removed_reason = null, change_reason = 'Back' where id = s1;
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'a removed stay is kept, with who and why, and frees its room',
+      'ok', (select removed_by = gm and removed_reason = 'Entered twice' from backfill_stays where id = s1)
+            and s2 is not null);
+    res := res || jsonb_build_object('n', 'and is never changed again',
+      'ok', v like '23514: A removed record stays on the record%', 'd', v);
+
+    -- ---------- the cash line and its day ----------
+    set local role pms_app;
+    v := null;
+    begin
+      insert into backfill_cash (hotel_id, cash_date, direction, amount, purpose, person)
+      values (h, first_day, 'out', 500, 'Plumber', 'Ramesh');
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'cash on the first day is a live day''s',
+      'ok', v like '23514: Only days before the hotel''s first day,%', 'd', v);
+
+    -- ---------- a test hotel's trade; the reset keeps the guest ----------
+    res := res || jsonb_build_object('n', 'the three are a test hotel''s trade',
+      'ok', (select count(*) from app.test_hotel_classes() c
+              where c.table_name in ('backfill_stays', 'backfill_restaurant_bills', 'backfill_cash')
+                and c.class = 'trading') = 3);
+    res := res || jsonb_build_object('n', 'the full reset keeps a guest with a backfilled stay',
+      'ok', not (g = any (coalesce(owner_reset.orphans(other), '{}'))));
+
+    -- ---------- Guest 360 ----------
+    perform set_config('app.user_id', owner::text, true);
+    res := res || jsonb_build_object('n', 'Guest 360 lists the backfilled stay, not the removed one, with no zero',
+      'ok', (select count(*) from jsonb_array_elements(app.guest_360(g) -> 'stays') x
+              where x ->> 'status' = 'backfilled') = 1
+            and (app.guest_360(g) -> 'stays' -> 0 -> 'charged') = 'null'::jsonb,
+      'd', (app.guest_360(g) -> 'stays')::text);
+
+    raise exception using errcode = 'BF001', message = 'undo';
+  exception when sqlstate 'BF001' then
+    null;
+  end;
+
+  insert into test.results (suite, name, passed, detail)
+  select 'backfill data', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
+    from jsonb_array_elements(res) x;
+end $$;

@@ -98,6 +98,8 @@ type StayRow = Guest360["stays"][number];
 const STAY_WORD: Record<string, string> = {
   confirmed: "Due in", checked_in: "In house", checked_out: "Checked out",
   cancelled: "Cancelled", no_show: "No show", void: "Void", tentative: "Waiting for the hotel",
+  /* A stay from before the hotel's first day, from Settings → Backfill data (D27-398). */
+  backfilled: "Backfilled",
 };
 
 const STAY_COLUMNS: Column<StayRow>[] = [
@@ -109,7 +111,7 @@ const STAY_COLUMNS: Column<StayRow>[] = [
   { key: "source", header: "Booked via", hideBelow: "lg", cell: (s) => s.source ?? DASH },
   /* The desk's words, not the column's (QA GU-7: "checked in"). */
   { key: "status", header: "Status", cell: (s) => STAY_WORD[s.status] ?? s.status.replace("_", " ") },
-  { key: "charged", header: "Charged", numeric: true, cell: (s) => <span className="tabular">{money(s.charged)}</span> },
+  { key: "charged", header: "Charged", numeric: true, cell: (s) => <span className="tabular">{s.charged === null ? DASH : money(s.charged)}</span> },
 ];
 
 export function Guest360Page() {
