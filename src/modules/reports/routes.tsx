@@ -9,7 +9,9 @@ import {
 } from "@/modules/reports/pages/Statistics";
 import {
   CityLedgerPage, NoShowPage, LodgingTaxPage, SupplierDuesPage, PettyCashPage, TdsPage, SupplierStatementPage,
+  DuesByAgePage, CompanyStatementPage, CommissionPage,
 } from "@/modules/reports/pages/Ledgers";
+import { Gstr1Page, InputTaxCreditPage, GstAdvancesPage } from "@/modules/reports/pages/Gst";
 import VoidsPage from "@/modules/reports/pages/Voids";
 import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
 import {
@@ -69,6 +71,14 @@ export const routes = (
     {/* D27-372: TDS by section and supplier, and one supplier's statement - the same four. */}
     <Route path="/reports/tds" element={<RequireAccess path="/reports/tds" resource="invoice"><TdsPage /></RequireAccess>} />
     <Route path="/reports/supplier-statement" element={<RequireAccess path="/reports/supplier-statement" resource="invoice"><SupplierStatementPage /></RequireAccess>} />
+    {/* D27-383: money owed by age and a statement (Company accounts' readers), commission
+        owed (whoever holds `commission`), and GST - each guarded by its own menu entry. */}
+    <Route path="/reports/dues-by-age" element={<RequireAccess path="/reports/dues-by-age" resource="invoice"><DuesByAgePage /></RequireAccess>} />
+    <Route path="/reports/company-statement" element={<RequireAccess path="/reports/company-statement" resource="invoice"><CompanyStatementPage /></RequireAccess>} />
+    <Route path="/reports/commission" element={<RequireAccess path="/reports/commission" resource="commission"><CommissionPage /></RequireAccess>} />
+    <Route path="/reports/gstr-1" element={<RequireAccess path="/reports/gstr-1" resource="report"><Gstr1Page /></RequireAccess>} />
+    <Route path="/reports/input-tax-credit" element={<RequireAccess path="/reports/input-tax-credit" resource="invoice"><InputTaxCreditPage /></RequireAccess>} />
+    <Route path="/reports/gst-advances" element={<RequireAccess path="/reports/gst-advances" resource="invoice"><GstAdvancesPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );

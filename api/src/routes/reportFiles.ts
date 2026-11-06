@@ -35,12 +35,16 @@ export const REPORT_EXPORTERS: readonly string[] = [
 /* Money owed, which the screen's own read asks `invoice` view of (roleGate
    MONEY_REPORT; the owner's D27-147: not the revenue manager). The file
    asks the same, so the download is no way round the screen. */
-const MONEY_REPORTS: readonly string[] = ["city-ledger", "petty-cash"];
+const MONEY_REPORTS: readonly string[] = [
+  "city-ledger", "petty-cash", "dues-by-age", "company-statement", "gst-advances"];
 
 /* What we owe suppliers (the owner's D27-370): the accountant, the GM, the
    owner and an administrator - who hold `approve` on `invoice`, as the
-   screen's own read asks (roleGate SUPPLIER_DUES). */
-const DUES_REPORTS: readonly string[] = ["supplier-dues", "tds", "supplier-statement"];
+   screen's own read asks (roleGate SUPPLIER_DUES). The GST on their bills too. */
+const DUES_REPORTS: readonly string[] = ["supplier-dues", "tds", "supplier-statement", "input-tax-credit"];
+
+/* Commission owed (D27-383): the screen asks `commission` view, so does the file. */
+const COMMISSION_REPORTS: readonly string[] = ["commission"];
 
 /* The Store and equipment reports (phase 3A; the owner's D27-240): read by
    their own readers (roleGate STORE_REPORTS), downloaded by those of them
@@ -86,7 +90,7 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
   if (q["from"] !== undefined && !ISO_DATE.test(q["from"])) {
     return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
   }
-  const missing = paramsProblem(key, q["supplier"]);
+  const missing = paramsProblem(key, q["supplier"], q["account"]);
   if (missing) return c.json({ error: missing }, 400);
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -105,6 +109,8 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
       [hotel.id, isStoreReport(key) ? STORE_EXPORTERS
         : DUES_REPORTS.includes(key)
           ? REPORT_EXPORTERS.filter((r) => can(r as Role, "approve", "invoice"))
+        : COMMISSION_REPORTS.includes(key)
+          ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "commission"))
         : MONEY_REPORTS.includes(key)
           ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "invoice"))
           : REPORT_EXPORTERS]);
@@ -117,6 +123,9 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
           : isStoreReport(key)
           ? "Downloading the store's reports is for the owner, an administrator, the general manager, "
             + "the Inventory Manager or the accountant. Ask one of them."
+          : COMMISSION_REPORTS.includes(key)
+          ? "Downloading the commission owed is for the owner, an administrator, the general manager, "
+            + "the revenue manager or the accountant. Ask one of them."
           : MONEY_REPORTS.includes(key)
           ? "Downloading this report is for the owner, an administrator, the general manager, "
             + "the hotel manager or the accountant. Ask one of them."
@@ -132,6 +141,7 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
       ...(q["from"] ? { from: q["from"] } : {}),
       ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
       ...(q["supplier"] ? { supplier: q["supplier"] } : {}),
+      ...(q["account"] ? { account: q["account"] } : {}),
     };
     if (await switchedOff(client, hotel.id, key)) return { status: 403 as const, error: BAR_STOCK_OFF };
     /* A builder that fails is a fault, not "no such report": it is left to

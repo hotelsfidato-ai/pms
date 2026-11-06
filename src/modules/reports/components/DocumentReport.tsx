@@ -31,6 +31,7 @@ function fileQuery(query: ReportQuery): string {
   if (query.from) params.set("from", query.from);
   if (query.ignoreZero !== undefined) params.set("ignoreZero", query.ignoreZero ? "1" : "0");
   if (query.supplier) params.set("supplier", query.supplier);
+  if (query.account) params.set("account", query.account);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
