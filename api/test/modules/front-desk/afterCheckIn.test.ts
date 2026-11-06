@@ -256,6 +256,22 @@ describe("undo check-in", () => {
     expect(lines.filter((l) => l.live)).toEqual([expect.objectContaining({ source: "check_in", amount: "2000.00" })]);
   });
 
+  /* Found on the screen: a walk-in's whole stay, posted on arrival with no
+     source (D17-33), slipped past "not the check-in's own night" - a null is
+     neither - and the undo went through with ₹7,085 on the bill. */
+  it("is refused for a room line that is not the check-in's own - a walk-in's whole stay - and so is the void", async () => {
+    const other = await inHouse("117");
+    const [f] = await sql<{ id: string }>("select id::text from folios where reservation_id = $1 limit 1", [other]);
+    await sql(`insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category, description,
+                                           amount, tax_rate, tax_amount)
+               values ($1, $2, $3, date '2026-08-26', 'room', 'Room 117 · 2 nights', 4000, 5, 200)`,
+      [hotelId, f!.id, other]);
+    expect(await said(await undo(gm, other))).toBe(
+      "Room 117 · 2 nights (₹4,200.00) is still on the bill. Reverse it on the bill first; payments stay on the bill as an advance.");
+    expect(await said(await call(gm, `/stays/${other}/void`, "POST", { reason: "Twice" }))).toMatch(/That is a cancellation, not a void/);
+    expect((await stay(other)).status).toBe("checked_in");
+  });
+
   it("is refused once the Night audit has closed the arrival day", async () => {
     expect(await said(await undo(gm, closedStay)))
       .toBe("The arrival day, 25 Aug, has been closed by a Night audit, so the check-in stays. Check the guest out instead.");

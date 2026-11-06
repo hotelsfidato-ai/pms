@@ -3510,6 +3510,7 @@ declare
   v_hotel uuid; v_staff uuid; v_type uuid; v_small uuid;
   v_101 uuid; v_102 uuid; v_guest uuid; v_res uuid; v_other uuid; v_folio uuid;
   n int; before_n int; after_n int; v_room text; d date;
+  v_was text := current_setting('app.user_id', true);
 begin
   select id into v_staff from staff limit 1;
 
@@ -3621,11 +3622,16 @@ begin
     after_n = 2, 'got ' || after_n);
 
   -- ---------- arrival is a fact once it has happened ----------
+  -- ...for anybody but the owner, an Admin or the GM (D27-397, 266: the
+  -- front desk's half and the three's are db/tests/modules/front-desk.sql).
+  -- Nobody signed in is none of them.
   update reservations set status = 'checked_in' where id = v_res;
+  perform set_config('app.user_id', '', true);
   perform test.raises('amend stay','a checked-in arrival cannot move',
     format($q$select app.amend_stay(%L,%L,date '2026-08-11',date '2026-08-14',
                                     2::smallint,0::smallint,%L)$q$,
            v_hotel, v_res, v_staff), 'P0001');
+  perform set_config('app.user_id', coalesce(v_was, ''), true);
 
   -- ---------- occupancy ----------
   perform test.raises('amend stay','more people than the room sleeps is refused',

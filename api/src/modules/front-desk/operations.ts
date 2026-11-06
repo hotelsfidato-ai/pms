@@ -1707,7 +1707,7 @@ export async function voidBooking(
          join folios f on f.id = p.folio_id
         where f.reservation_id = $1
           and coalesce(p.source_type, '') <> 'check_in_undo'
-          and not (p.category = 'room' and p.source_type = 'check_in'
+          and not (p.category = 'room' and p.source_type is not distinct from 'check_in'
                    and ($2 or exists (select 1 from folio_postings u
                                        where u.reverses_id = p.id and u.source_type = 'check_in_undo')))`,
       [stayId, inHouse],

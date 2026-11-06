@@ -118,7 +118,7 @@ export async function undoProblem(client: Client, hotelId: string, stayId: strin
             and fp.category not in ('payment', 'refund')
             and fp.reverses_id is null
             and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)
-            and not (fp.category = 'room' and fp.source_type = 'check_in')
+            and not (fp.category = 'room' and fp.source_type is not distinct from 'check_in')
           order by fp.id
           limit 1) c on true
       where r.hotel_id = $1 and r.id = $2`, [hotelId, stayId]);
