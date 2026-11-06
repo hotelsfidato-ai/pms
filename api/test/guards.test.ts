@@ -205,8 +205,11 @@ describe("void is not cancel", () => {
     expect(((await res.json()) as { reason: string }).reason).toMatch(/why/i);
   });
 
+  /* A stay that is over. A guest IN HOUSE is voided by the owner, an Admin
+     or the GM since D27-397 - the check-in undone first, with its refusals
+     (front-desk/afterCheckIn.test.ts) - so this asks a departed one. */
   it("refuses to void a stay that already happened", async () => {
-    const b = await bookingWith("GUARD-2", "checked_in");
+    const b = await bookingWith("GUARD-2", "checked_out");
     const res = await post(`/5EL/stays/${b.id}/void`, { reason: "oops" });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason)

@@ -39,6 +39,8 @@ project, still goes in the root `CHANGELOG.md`.
 
 **Proved.** See the commits and the report: `api/test/modules/front-desk/afterCheckIn.test.ts` 35/35 (fails first on each refusal and right: without the code the routes do not exist), db `after check-in` 17/17 and the suite's amend test now naming who it refuses, web `afterCheckIn.test.tsx` 10/10 and finance `paymentMethod.test.tsx` 2/2. Screens opened in the browser pane at 1280: the GM's and reception's menus on a guest in house, Undo the check-in (done on a comp guest: confirmed, room 206 vacant and dirty), the refusal sent back at ask time, Change room type (Deluxe rooms only), the Bill tab's wallet button and its dialog, Ask the GM to change the rate then Approvals' card approved (₹3,200, both nights corrected), Front desk rules' card and switch (off: Undo, Cancel and Void grey with their reasons), Change dates' Arrival open for the GM.
 
+**Gates, this copy, each by its exit code.** `npx tsc -b --force` 0 (and the API's `tsc --noEmit` 0). `npx vitest run` 1552 passed, 1 failed, exit 1: `src/test/migrationNumbers.test.ts` only, because 257-265 are other helpers' and not in this copy. `cd api && npm test` 3077 passed, 2 failed, exit 1: `guards.test.ts`'s "refuses to void a stay that already happened" asked an in-house stay, which the owner may now void (D27-397) - it now asks a departed one - and `suAvailability.test.ts` timed out at 20 s under load; the two files alone, a scratch database: 57 passed, exit 0. `db/tests/run.sh`: all 1909 assertions passed, exit 0.
+
 ---
 
 ## 2026-11-02 · Walk-ins opens on the last 90 days, like All bookings (the owner, 2 November)
