@@ -28,10 +28,10 @@ export function readQuery(
 ): { error: string } | { asOn: string | undefined; rest: Omit<ReportParams, "asOn"> } {
   const asOn = q["asOn"] === undefined ? undefined : isoDateParam(q["asOn"]);
   if (asOn === null) return { error: "The date must be written YYYY-MM-DD." };
-  if (q["month"] !== undefined && !/^d{4}-(0[1-9]|1[0-2])$/.test(q["month"])) {
+  if (q["month"] !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(q["month"])) {
     return { error: "The month must be written YYYY-MM." };
   }
-  if (q["year"] !== undefined && !/^d{4}$/.test(q["year"])) return { error: "The year must be four digits." };
+  if (q["year"] !== undefined && !/^\d{4}$/.test(q["year"])) return { error: "The year must be four digits." };
   const from = q["from"] === undefined ? undefined : isoDateParam(q["from"]);
   if (from === null) return { error: "The first date must be written YYYY-MM-DD." };
   const missing = paramsProblem(key, q["supplier"], q["account"]);
