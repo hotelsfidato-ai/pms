@@ -143,8 +143,8 @@ GET   /:code/table-bookings?date=        waiting first, then that day (the hotel
 POST  /:code/table-bookings/:id/confirm  { tableId? } - only while requested; roleGate TABLE_ANSWER
 POST  /:code/table-bookings/:id/decline  { reason } - required, the guest reads it; TABLE_ANSWER
 POST  /:code/table-bookings              263: somebody not staying { name, phone, party 1-20, date, time,
-                                         tableId? | sectionId?, note? }, confirmed as taken; TABLE_BOOK
-POST  /:code/table-bookings/:id/arrive   confirmed -> arrived; TABLE_BOOK
+                                         tableId? | sectionId?, note? }, confirmed as taken; TABLE_ANSWER
+POST  /:code/table-bookings/:id/arrive   confirmed -> arrived; TABLE_ANSWER
 POST  /:code/table-bookings/:id/seat     { tableId }: confirmed or arrived -> seated; opens the table's bill
                                          through till.ts's openOrderFor (covers = party, the diner's name)
 POST  /:code/table-bookings/:id/no-show  confirmed, once its time has come -> no_show

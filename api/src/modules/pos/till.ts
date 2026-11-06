@@ -3366,7 +3366,7 @@ till.post("/:code/till/orders/:id/promotion", async (c) => {
           for update`,
       [hotelId, promoCode]);
     if (!promo[0]) {
-      return refuse(`There is no promotion or coupon with the code ${promoCode}.`);
+      return refuse(`There is no promotion with the code ${promoCode}.`);
     }
     const p = promo[0];
     if (!p.is_active) {

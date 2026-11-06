@@ -365,7 +365,7 @@ describe("a coupon", () => {
     const b = await bill("coupon dates", [tikka, manchurian]);
     expect(await reason(await apply(who.gm, b.id, "RXSOON"))).toBe(`${TAG} RXSOON starts on 1 Jan 2099.`);
     expect(await reason(await apply(who.gm, b.id, "RXOLD"))).toBe(`${TAG} RXOLD ended on 31 Jan 2020.`);
-    expect(await reason(await apply(who.gm, b.id, "RXNONE"))).toBe("There is no promotion or coupon with the code RXNONE.");
+    expect(await reason(await apply(who.gm, b.id, "RXNONE"))).toBe("There is no promotion with the code RXNONE.");
     const small = await bill("coupon small");
     expect(await reason(await apply(who.gm, small.id, "RXBIG")))
       .toBe(`${TAG} RXBIG is for a bill of at least ₹600; this one is ₹320.`);

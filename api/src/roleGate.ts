@@ -223,13 +223,12 @@ const MENU = grant("menu", "edit", "Changing the menu");
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
 /* Table booking (D27-224): a guest's request is answered by whoever may ring
-   an order; the restaurant's booking hours are Restaurant setup's. */
+   an order; the restaurant's booking hours are Restaurant setup's. An outside
+   diner's booking and every booking on the night - arrived, seated (which
+   opens the table's bill), a no-show, cancelled (263) - are the same people's,
+   under the same rule (the Roles screen names its words). */
 const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos", "bar"]);
 const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
-/* An outside diner's booking, and every booking on the night - arrived,
-   seated (which opens the table's bill), a no-show, cancelled (263): the same
-   people, who also ring the order up. */
-const TABLE_BOOK = grant("payment", "create", "Taking or seating a table booking", ["pos", "bar"]);
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
    owner, an administrator, the GM and the kitchen manager. Printing: whoever
    is signed in on the kitchen or POS PC - the till, the chef, the kitchen
@@ -527,11 +526,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/table-bookings/:id/confirm`]: TABLE_ANSWER,
   [`POST ${H}/table-bookings/:id/decline`]: TABLE_ANSWER,
   [`PUT ${H}/table-bookings/hours`]: TABLE_HOURS,
-  [`POST ${H}/table-bookings`]: TABLE_BOOK,
-  [`POST ${H}/table-bookings/:id/arrive`]: TABLE_BOOK,
-  [`POST ${H}/table-bookings/:id/seat`]: TABLE_BOOK,
-  [`POST ${H}/table-bookings/:id/no-show`]: TABLE_BOOK,
-  [`POST ${H}/table-bookings/:id/cancel`]: TABLE_BOOK,
+  [`POST ${H}/table-bookings`]: TABLE_ANSWER,  // 263: an outside diner, and the night's acts below
+  [`POST ${H}/table-bookings/:id/arrive`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/seat`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/no-show`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/cancel`]: TABLE_ANSWER,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */

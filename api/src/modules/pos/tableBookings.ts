@@ -31,8 +31,8 @@ import { openOrderFor } from "./till.ts";
      GET   /:code/table-bookings/hours        each restaurant's lunch and dinner hours
      PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }
 
-   WHO: everything but the hours is the till's people (roleGate TABLE_ANSWER,
-   TABLE_BOOK: whoever may ring an order); the hours are Restaurant setup's
+   WHO: everything but the hours is the till's people (roleGate TABLE_ANSWER:
+   whoever may ring an order); the hours are Restaurant setup's
    (TABLE_HOURS: the owner, an administrator or the GM). The rows are this
    hotel's by row security, and the database checks the table is too. Every
    refusal comes before the first write (MEMORY 243).
