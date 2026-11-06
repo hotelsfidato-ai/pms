@@ -436,4 +436,59 @@ export const SHOTS = [
       { n: 4, at: "css:[data-company-on-list]", side: "bottom" },
     ],
   },
+
+  /* ── D27-397: after check-in. A guest of the demo in house, Omkar Shinde;
+     nothing is saved - the windows are opened, filled and closed. ──────── */
+  {
+    id: "A2-33", title: "More options on a guest in house, for the GM", as: "General Manager",
+    path: "/h/5EL/reservations", steps: [...OPEN("Omkar Shinde"), { click: "text:More options" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Undo check-in", side: "left" },
+      { n: 2, at: "text:Change room type", side: "left" },
+      { n: 3, at: "text:Change rate", side: "left" },
+      { n: 4, at: "text:Cancel this booking", side: "left" },
+      { n: 5, at: "text:Void this booking", side: "left" },
+    ],
+  },
+  {
+    id: "A2-34", title: "Undo the check-in", as: "General Manager",
+    steps: [{ click: "text:Undo check-in" }, { waitFor: "text:Undo the check-in" },
+      SET("Why", "Checked in the wrong booking"), { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:The room stays theirs and is sent for cleaning", side: "left" },
+      { n: 2, at: "css:[role=dialog] textarea", side: "left" },
+      { n: 3, at: "text:Undo check-in", side: "bottom" },
+    ],
+  },
+  {
+    id: "A2-35", title: "Change room type", as: "General Manager",
+    steps: [{ key: "Escape" }, { wait: 400 }, { click: "text:More options" }, { wait: 500 },
+      { click: "text:Change room type" }, { waitFor: "text:They move to a room of another type" }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:They move to a room of another type", side: "left" },
+      { n: 2, at: "css:[role=dialog] select", nth: 0, side: "left" },
+      { n: 3, at: "css:[role=dialog] select", nth: 1, side: "left" },
+    ],
+  },
+  {
+    id: "A2-36", title: "More options on a guest in house, for reception", as: "Reception",
+    path: "/h/5EL/reservations", steps: [...OPEN("Omkar Shinde"), { click: "text:More options" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Ask the GM to undo the check-in", side: "left" },
+      { n: 2, at: "text:Change room type", side: "left" },
+      { n: 3, at: "text:Ask the GM to change the rate", side: "left" },
+      { n: 4, at: "text:Ask the GM to cancel this booking", side: "left" },
+      { n: 5, at: "text:Ask the GM to void this booking", side: "left" },
+    ],
+  },
+  {
+    id: "A2-37", title: "Ask the GM", as: "Reception",
+    steps: [{ click: "text:Ask the GM to undo the check-in" }, { waitFor: "text:Nothing changes until the GM approves it." },
+      SET("Why", "Checked in the wrong booking"), { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:Nothing changes until the GM approves it.", side: "left" },
+      { n: 2, at: "css:[role=dialog] textarea", side: "left" },
+      { n: 3, at: "text:Send to the GM", side: "bottom" },
+    ],
+  },
 ];

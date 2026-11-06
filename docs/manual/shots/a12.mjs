@@ -229,4 +229,18 @@ export const SHOTS = [
       { n: 3, at: "text:Add a person", side: "left" },
     ],
   },
+
+  /* ── D27-397: the front desk's request after check-in. Before the run,
+     reception asks the GM to change a guest's rate (More options, Ask the GM
+     to change the rate); the card is shown, never decided. ────────────── */
+  {
+    id: "A12-17", title: "Approvals: Front desk, sent to you", as: "General Manager",
+    path: "/h/5EL/approvals", steps: [{ waitFor: "text:Front desk: sent to you", ms: 15000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Front desk: sent to you", side: "right" },
+      { n: 2, at: "text:Change the rate to", side: "left" },
+      { n: 3, at: "text:Approve", side: "bottom" },
+      { n: 4, at: "text:Refuse", side: "bottom" },
+    ],
+  },
 ];

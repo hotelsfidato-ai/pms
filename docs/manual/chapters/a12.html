@@ -51,6 +51,7 @@
       <tr><td>Equipment leaving the store</td><td>Equipment goes out of a store to a room, the kitchen or the restaurant.</td><td>The Inventory Manager; when they are away, the owner, an administrator or the GM.</td></tr>
       <tr><td>Equipment being retired</td><td>A tagged item is retired by somebody who may not approve it, such as the Hotel Manager.</td><td>The same as above.</td></tr>
       <tr><td>Restaurant: sent to you</td><td>A waiter or cashier sends what only the GM may do: take off a dish the kitchen has, a discount, an NC bill, or void a paid bill (A8.7). Approving does it.</td><td>The general manager, the owner or an administrator.</td></tr>
+      <tr><td>Front desk: sent to you</td><td>Reception asks, after check-in, what only the GM may do: undo the check-in, cancel or void the booking, change the arrival date or the rate, or how a payment was taken (A2.9). Approving does it.</td><td>The general manager, the owner or an administrator.</td></tr>
     </tbody>
   </table>
   <ul>
@@ -62,7 +63,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, with no amount above which the owner must: <span class="d">D18-4</span>, confirming <span class="d">D17-35</span>. Who may ask is a setting per hotel, changed without a new release: <span class="d">D18-2</span>. Every cash expense needs a yes from the GM or the owner, never an administrator, never one's own: <span class="d">D27-239</span>, <span class="d">D27-242</span>. Equipment waits for the Inventory Manager, with the owner, an administrator or the GM instead: the owner, 16 September. A waiter's or cashier's strike, discount, NC or void sent to the GM, the owner or an administrator, approving does it, with the bell and Approvals at the top of the menu: <span class="d">D27-363</span>. Who decides is kept as a rule for each hotel, and a request keeps the rule it was raised under: a rule changed later never moves a request already waiting.</p>
+    <p>The GM approves every purchase, with no amount above which the owner must: <span class="d">D18-4</span>, confirming <span class="d">D17-35</span>. Who may ask is a setting per hotel, changed without a new release: <span class="d">D18-2</span>. Every cash expense needs a yes from the GM or the owner, never an administrator, never one's own: <span class="d">D27-239</span>, <span class="d">D27-242</span>. Equipment waits for the Inventory Manager, with the owner, an administrator or the GM instead: the owner, 16 September. A waiter's or cashier's strike, discount, NC or void sent to the GM, the owner or an administrator, approving does it, with the bell and Approvals at the top of the menu: <span class="d">D27-363</span>. The front desk's, after check-in, the same way: <span class="d">D27-397</span>. Who decides is kept as a rule for each hotel, and a request keeps the rule it was raised under: a rule changed later never moves a request already waiting.</p>
   </div>
 
   <!-- A12.3 -->
@@ -75,6 +76,14 @@
     <img src="img/A12-16.png" alt="Approvals at the top of the GM's menu, and a card Restaurant: sent to you, NC, the bill free: ₹672.00 - Table 7, Why: The owner's guests, asked by a waiter">
     <figcaption><b>Figure A12-16.</b> A request from the restaurant.</figcaption>
     <ol class="callouts"><li>Approvals, at the top of the menu</li><li>Sent by the restaurant</li><li>What exactly</li><li>The waiter's reason</li></ol>
+  </figure>
+
+  <p>A request from the front desk is the same: <span class="ui">Front desk: sent to you</span>, what exactly and for whom, such as <span class="msg">“Change the rate to ₹3,000.00 a night - Omkar Shinde, room 203, FH-2608-4859”</span>, and the clerk's reason. <span class="ui">Approve</span> does it as you, with every check of the guest's menu asked again: if one refuses (a day closed since, a charge put on the bill), the message says why and the request goes on waiting.</p>
+
+  <figure class="shot" id="fig-A12-17">
+    <img src="img/A12-17.png" alt="Approvals: a card Front desk: sent to you, Change the rate to ₹3,000.00 a night - Omkar Shinde, room 203, Why: Corporate rate agreed, asked by Test Reception, Approve and Refuse">
+    <figcaption><b>Figure A12-17.</b> A request from the front desk.</figcaption>
+    <ol class="callouts"><li>Sent by the front desk</li><li>What exactly, and for whom</li><li>Approve: it is done</li><li>Refuse: with a note</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A12-02">

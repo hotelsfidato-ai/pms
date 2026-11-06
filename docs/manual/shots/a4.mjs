@@ -359,4 +359,23 @@ export const SHOTS = [
       { n: 3, at: "text:Record", nth: 1, side: "top" },
     ],
   },
+
+  /* ── D27-397: how a payment was taken. Tanvi Bhide of the demo (her id on this
+     database), in house, with a payment on her bill; the window is filled and never saved. ──── */
+  {
+    id: "A4-23", title: "Change how it was paid", as: "General Manager",
+    path: "/h/5EL/in-house?res=d0adb9bd-f4f9-4ffa-8e84-a61e74411755",
+    steps: [
+      { click: "text:Settle and check out" }, { waitFor: "css:[data-bill-closing]", ms: SLOW }, { wait: 3000 },
+      { waitFor: "label:Change how it was paid", ms: 10000 },
+      { scroll: "label:Change how it was paid" }, { wait: 400 },
+      { click: "label:Change how it was paid" }, { waitFor: "text:How it was really paid" }, { wait: 600 },
+    ],
+    marks: [
+      { n: 1, at: "text:The payment is reversed and the same amount is taken again", side: "left" },
+      { n: 2, at: "css:[role=dialog] select", side: "left" },
+      { n: 3, at: "css:[role=dialog] textarea", side: "left" },
+      { n: 4, at: "text:Change it", side: "bottom" },
+    ],
+  },
 ];

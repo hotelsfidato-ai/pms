@@ -8,6 +8,27 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-06 · How a payment was taken, changed with a reason; Change rate in house from the guest's menu (the owner's D27-397)
+
+**Asked for.** The owner, 6 November: after check-in, change "the rate or methods or things in general" - the GM directly, the front desk with the GM's approval. **"Methods" is the payment method: the owner's own answer (D27-397, 6 November)**, as the coordinator confirmed - cash typed instead of UPI is the common mistake.
+
+**Shipped.** `POST /:code/stays/:id/payments/:postingId/method` { method, reason } and `changePaymentMethod` (`postings.ts`, on the front door): the payment reversed with the reason, and the same amount received again, the same day, on the same bill, the new way - "Received - UPI (was Cash)" - in the name of whoever took it, its `source_type` 'method_change' and `source_id` the old payment's id, so the two are linked. The owner, an Admin or the GM (roleGate, `reservation approve`); the front desk asks the GM (front-desk's `/requests`, kind payment_method), and the GM's approval comes here. `reverseFolioCharge` takes an optional source ('check_in_undo', for front desk's undo). `changeStayRate` on the front door for the GM's approval of a rate request. The Bill tab (`FolioPanel.tsx`): a wallet button on each payment line, "Change how it was paid" (or "Ask the GM to change how it was paid"), grey with its reason on a closed day. Manual A4.6 (Change rate on a guest in house, from the menu) and A4.7 (To change how a payment was taken, Figure A4-23).
+
+Finance had no way to correct how a payment was taken: a manager reversed it and took it again, two acts nothing tied together. The restaurant's tender change (`pos/tenderChanges.ts`) is the till's, for a restaurant bill, so it is not used here.
+
+**Refused, in a sentence:** no reason; a payment reversed, or a reversal; a day closed by the Night audit; a transfer to the city ledger, and "Bill to company" as the new way (neither is money taken); the same way again; cash in a drawer counted and closed (the taker's shift over the moment it was taken).
+
+**Decided under D27-396:**
+- The new line is in the name of the person who took the payment, not the GM's, so a drawer still open counts the cash where the money is (`app.cashier_expected_cash` counts by who posted it).
+- Changed TO cash, the taker's drawer must be open now - otherwise the cash would sit in nobody's drawer - and the drawer that covered the original must not be closed: the brief names only cash in a closed drawer; this is the same rule the other way.
+- To cash, the cash limit (s.269ST) and the PAN over ₹1,00,000 (Rule 159) are asked as Settle asks them, and REFUSED rather than asked ("reverse it and take it again in cash with the PAN"): the stricter reading, for the CA.
+- To cash, the round-off to the rupee is kept as Settle keeps it (D27-317); from cash, the new line has none.
+- Never a refund and never another amount: there is no amount in the request.
+
+**Proved.** `api/test/modules/front-desk/afterCheckIn.test.ts`: the front desk refused (403), no reason, the same way, Bill to company, a closed day, a closed drawer, to cash with no drawer open; approved, the three lines (old struck, the reversal with the reason, the new one the same amount and day, in the desk's name, method cash). Web `paymentMethod.test.tsx` 2/2: the GM's dialog (no Bill to company), off on a closed day; the front desk sends the request. On the screen: Tanvi Bhide's ₹500 Cash changed to UPI - the bill reads Cash struck, the reversal by Test GM with the reason, "Received - UPI (was Cash)" by Test Reception, Received ₹500.
+
+---
+
 ## 2026-11-05 · Settings' "Discounts" is "Room discounts" (the owner's D27-395)
 
 **Shipped.** `money.settings.ts`, `pages/money/Discounts.tsx` and the setup steps say **Room discounts**. The page adds: "The restaurant's discounts are Promotions, in Point of sale → Menu." The owner had added two 20% discounts here for a restaurant bill, and the Till never reads this list. Nothing about room discounts changed (10% by hand, D27-36). The whole entry is in the POS CHANGELOG, as is the restaurant's limit, which is gone.

@@ -106,7 +106,10 @@ and `cashier.ts`)
 | POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054); a checked-in guest moved from tonight or earlier is refused a room somebody is still in (`stillIn`, D24-15). With a new rate (`agreedRate`) on the arrival day, tonight's night - posted at check-in - is put right to it by finance's `editFolioCharge`, reason "Room move: …", before `app.move_room` writes (D27-205). **The desk may do this through the move**, though it edits no other charge; the corrected line keeps the first room's number in its words |
 | PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055; 176: a day use is a stay too). A day use stays a day use and a stay stays a stay (D27-229): the rate is a day's or a night's, so turning one into the other is refused in words |
 | POST | `/:code/stays/:id/unassign` | take the room back (`app.unassign_room`, 054) |
-| POST | `/:code/stays/:id/void` | void a booking entered by mistake (042) |
+| POST | `/:code/stays/:id/void` | void a booking entered by mistake (042); a guest in house by the owner, an Admin or the GM (switch on), the check-in undone first (D27-397, `voidBooking`) |
+| POST | `/:code/stays/:id/undo-check-in` | back to confirmed, arriving, with a `reason` (D27-397, `afterCheckIn.ts`): the owner and an Admin always, the GM while Front desk rules' "The GM may undo a check-in" is on (266); refused while a charge stands, once Form C is filed, once a Night audit closed the arrival day |
+| POST | `/:code/stays/:id/cancel-in-house` | the undo, then reservations' `cancelBooking`, one transaction; `dryRun` writes nothing (D27-397) |
+| POST | `/:code/stays/:id/requests` | the front desk asks the GM: undo_check_in, cancel, void, arrival, rate, payment_method (`stay_requests`, approval kind `stay_request`, 266); the GM's approval does it (`performStayRequest`, through the front door) |
 
 **`api/src/modules/front-desk/stayExtras.ts`** (was `api/src/routes/stayExtras.ts`)
 

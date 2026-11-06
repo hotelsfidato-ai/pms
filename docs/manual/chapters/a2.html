@@ -492,18 +492,20 @@
       <tr><td>Confirm the booking</td><td>Only on a booking waiting for the hotel (A2.7).</td></tr>
       <tr><td>Change dates or guests</td><td>New arrival or departure, adults, children. Not on a stay that is over.</td></tr>
       <tr><td>View voucher</td><td>The voucher to look at, print or save. Sends nothing. Only for a confirmed booking still to arrive.</td></tr>
+      <tr><td>Undo check-in</td><td>On a guest in the house: back to confirmed, arriving. The owner, an Admin, or the GM while Front desk rules allow it (A2.9). Reception sees <span class="ui">Ask the GM to undo the check-in</span>.</td></tr>
       <tr><td>Move to another room</td><td>Once the guest is in the house. Before that, change the room with Assign room on the Calendar.</td></tr>
+      <tr><td>Change room type</td><td>On a guest in the house: a move to a room of another type, and the booking becomes that type (A2.8, below).</td></tr>
       <tr><td>Exchange with another guest</td><td>Two guests in the house swap rooms.</td></tr>
       <tr><td>What this booking includes</td><td>The extras on the booking.</td></tr>
-      <tr><td>Change rate</td><td>The owner, an Admin or the GM, on a confirmed booking before check-in.</td></tr>
-      <tr><td>Cancel this booking, Void this booking</td><td>In red, at the end (A2.9).</td></tr>
+      <tr><td>Change rate</td><td>The owner, an Admin or the GM, on a confirmed booking or a guest in the house (A4.6). Reception, on a guest in the house: <span class="ui">Ask the GM to change the rate</span>.</td></tr>
+      <tr><td>Cancel this booking, Void this booking</td><td>In red, at the end (A2.9). On a guest in the house, reception sees <span class="ui">Ask the GM to cancel this booking</span> and <span class="ui">Ask the GM to void this booking</span>.</td></tr>
     </tbody>
   </table>
 
   <h3>To change the dates or the number of guests</h3>
   <ol class="steps">
     <li>More options, <span class="ui">Change dates or guests</span>. The window is called <span class="msg">“Amend A2 Test Sharma”</span> and says the stay as it is.</li>
-    <li>Change <span class="ui">Arrival</span>, <span class="ui">Departure</span>, <span class="ui">Adults</span> or <span class="ui">Children</span>. Once the guest has arrived, the arrival cannot change.</li>
+    <li>Change <span class="ui">Arrival</span>, <span class="ui">Departure</span>, <span class="ui">Adults</span> or <span class="ui">Children</span>. Once the guest has arrived, only the owner, an Admin or the GM can change the arrival: <span class="msg">“They have arrived: no later than today, and never a closed day.”</span> Reception reads <span class="msg">“They have already arrived. The GM may change it.”</span> and has <span class="ui">Ask the GM to change the arrival date</span> under the fields.</li>
     <li>Read the line under them: <span class="msg">“2 → 3 nights · ₹11,097 of room charges at ₹3,699 a night”</span>.</li>
     <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Stay amended”</span> and the change: <span class="msg">“A2 Test Sharma: 2 nights becomes 3.”</span></li>
   </ol>
@@ -551,6 +553,19 @@
       <li>New rate per night: optional</li>
       <li>Take them out of the room without assigning another (further down the window, below what this picture shows)</li>
       <li>Move</li>
+    </ol>
+  </figure>
+
+  <h3>To change the room type of a guest in the house</h3>
+  <p>For a guest in a room, the room type is the type of the room they are in. So More options, <span class="ui">Change room type</span>, opens the move with only the rooms of the other types to choose from, and <span class="ui">Upgrade</span> chosen. Choose the room, the night, why, and a new rate if the price changes, then <span class="ui">Move</span>. From tonight the booking is the new type: the stay panel, the rooms left to sell and the reports count it there. A plain <span class="ui">Move to another room</span> into another type keeps the type booked, as an upgrade at check-in does.</p>
+
+  <figure class="shot" id="fig-A2-35">
+    <img src="img/A2-35.png" alt="Change room type: Omkar Shinde is in 203, a Superior; To which room lists the Deluxe rooms; From which night; Why: Upgrade">
+    <figcaption><b>Figure A2-35.</b> Change room type: the rooms of the other types.</figcaption>
+    <ol class="callouts">
+      <li>The room and type they are in now, and what the move does</li>
+      <li>To which room: only rooms of another type</li>
+      <li>Why: Upgrade to begin with</li>
     </ol>
   </figure>
 
@@ -623,10 +638,88 @@
     <li>Tap <span class="ui">Void</span>. The message says it <span class="msg">“is on the record as never having happened.”</span> It holds no room from then on.</li>
   </ol>
 
+  <h3>A guest who has arrived: undo the check-in, cancel or void</h3>
+  <p>A check-in that should not have happened (the wrong booking, a guest who left at once) is undone, cancelled or voided by the owner, an Admin, or the GM while <span class="ui">The GM may undo a check-in</span> is on in Front desk rules (A17.11; on at every hotel to begin with). The guest's More options then has <span class="ui">Undo check-in</span>, and <span class="ui">Cancel this booking</span> and <span class="ui">Void this booking</span> work on a guest in the house.</p>
+
+  <figure class="shot" id="fig-A2-33">
+    <img src="img/A2-33.png" alt="More options on Omkar Shinde, in house, for the GM: Undo check-in, Change room type, Change rate, Cancel this booking and Void this booking">
+    <figcaption><b>Figure A2-33.</b> More options on a guest in the house, for the GM.</figcaption>
+    <ol class="callouts">
+      <li>Undo check-in</li>
+      <li>Change room type</li>
+      <li>Change rate</li>
+      <li>Cancel this booking: the check-in is undone first</li>
+      <li>Void this booking: the check-in is undone first</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li>More options, <span class="ui">Undo check-in</span>. The window <span class="ui">Undo the check-in</span> says the booking goes back to confirmed, arriving.</li>
+    <li>Type <span class="ui">Why</span>. It is kept on the booking, with your name and the time, in the Audit log.</li>
+    <li>Tap <span class="ui">Undo check-in</span>. The message says <span class="msg">“Check-in undone”</span>: the booking is arriving again and its room is to be cleaned.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-34">
+    <img src="img/A2-34.png" alt="Undo the check-in: what it does, Why: Checked in the wrong booking, Keep it and Undo check-in">
+    <figcaption><b>Figure A2-34.</b> Undo the check-in (shown here, not done).</figcaption>
+    <ol class="callouts">
+      <li>What the undo does</li>
+      <li>Why: it must be filled in</li>
+      <li>Undo check-in</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>The room</b> stays the booking's, vacant and sent for cleaning: the guest may have had the key. A key card cut for it stops.</li>
+    <li><b>The first night</b> the check-in charged comes off the bill by itself, and is charged again if they check in again. <b>Payments</b> stay on the bill as an advance.</li>
+    <li><b>Any other charge</b> on the bill (a night of a walk-in's stay, an early check-in, a restaurant bill charged to the room, laundry) has to be reversed on the bill first: <span class="msg">“Laundry (₹300.00) is still on the bill. Reverse it on the bill first; payments stay on the bill as an advance.”</span></li>
+    <li><b>Form C</b>: once a foreign guest's Form C has been submitted to the FRRO, the check-in stays, because the PMS cannot take back a report to the FRRO. Not yet submitted, it is simply no longer due, and the Form III screen no longer lists it.</li>
+    <li><b>A closed day</b>: once a Night audit has closed the arrival day, the check-in stays. Check the guest out instead.</li>
+    <li><b>Cancel</b> on a guest in the house undoes the check-in and cancels in one go: the window says so, and the booking's terms decide the charge as before; the owner, an Admin or the GM may waive it. <b>Void</b> does the same and is still refused once anything else is on the bill, payments included: cancel it instead. If either is refused, nothing of the undo happens.</li>
+  </ul>
+
+  <h3>Reception asks the GM</h3>
+  <p>For reception (and anybody else who may change a booking but not do these), More options on a guest in the house shows <span class="ui">Ask the GM to undo the check-in</span>, <span class="ui">Ask the GM to cancel this booking</span>, <span class="ui">Ask the GM to void this booking</span> and <span class="ui">Ask the GM to change the rate</span>; Change dates has <span class="ui">Ask the GM to change the arrival date</span>, and the bill <span class="ui">Ask the GM to change how it was paid</span> (A4.7).</p>
+
+  <figure class="shot" id="fig-A2-36">
+    <img src="img/A2-36.png" alt="More options on Omkar Shinde, in house, for reception: Ask the GM to undo the check-in, Change room type, Ask the GM to change the rate, Ask the GM to cancel this booking, Ask the GM to void this booking">
+    <figcaption><b>Figure A2-36.</b> More options on a guest in the house, for reception.</figcaption>
+    <ol class="callouts">
+      <li>Ask the GM to undo the check-in</li>
+      <li>Change room type: reception moves guests, as before</li>
+      <li>Ask the GM to change the rate</li>
+      <li>Ask the GM to cancel this booking</li>
+      <li>Ask the GM to void this booking</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li>Pick the <span class="ui">Ask the GM to …</span> line. The window says <span class="msg">“Nothing changes until the GM approves it.”</span></li>
+    <li>Fill in what it asks (the new arrival, the new rate, how it was paid) and <span class="ui">Why</span>.</li>
+    <li>Tap <span class="ui">Send to the GM</span>. The message says <span class="msg">“Sent to the GM”</span>: it waits in the GM's Approvals and bell (A12.3). Approved, it is done, with every check asked again then.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-37">
+    <img src="img/A2-37.png" alt="Ask the GM to undo the check-in: Nothing changes until the GM approves it, Why, Send to the GM">
+    <figcaption><b>Figure A2-37.</b> Ask the GM (shown here, not sent).</figcaption>
+    <ol class="callouts">
+      <li>Nothing changes until the GM approves it</li>
+      <li>Why: the GM reads it before approving</li>
+      <li>Send to the GM</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A request that would be refused anyway is not sent: the message says why, such as a charge still on the bill.</li>
+    <li>One of each kind may wait for a stay at a time: <span class="msg">“This is already with the GM.”</span></li>
+    <li>With nobody set to approve them at the hotel: <span class="msg">“Nobody is set to approve these at this hotel. Call the GM.”</span></li>
+    <li>With <span class="ui">The GM may undo a check-in</span> off, nobody but the owner and an Admin undoes, cancels or voids a guest in the house, and reception cannot ask: <span class="msg">“They have arrived, and undoing a check-in is off at this hotel. Check them out instead.”</span> The rate, the arrival and how a payment was taken are not that switch's.</li>
+  </ul>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>Cancel and Void are only for a booking that has not arrived. A guest in the house is checked out instead (A5): <span class="msg">“They have arrived. Check them out instead.”</span></li>
+      <li>Cancel and Void on a guest in the house are for the owner, an Admin and the GM (above); anybody else checks the guest out (A5) or asks the GM.</li>
       <li>A booking with money on its bill cannot be voided: the system refuses and says why. Cancel it, so the terms apply.</li>
       <li>A guest who has not arrived by the night audit becomes a no-show. Check in or cancel your arrivals before it runs.</li>
     </ul>
@@ -634,7 +727,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Cancelled and void mean opposite things to a report: a cancellation happened and measures demand; a void never happened, and counting it would inflate the figures the hotel sets its policy from. The terms are copied onto each booking when it is made, so a booking keeps the terms it was sold under even if the hotel changes them later. A waiting booking is cancelled with no charge: <span class="d">D27-64</span>.</p>
+    <p>Cancelled and void mean opposite things to a report: a cancellation happened and measures demand; a void never happened, and counting it would inflate the figures the hotel sets its policy from. The terms are copied onto each booking when it is made, so a booking keeps the terms it was sold under even if the hotel changes them later. A waiting booking is cancelled with no charge: <span class="d">D27-64</span>. After check-in, the GM has no lock and reception asks the GM, with a switch in the settings: <span class="d">D27-397</span>.</p>
   </div>
 
   <!-- A2.10 -->

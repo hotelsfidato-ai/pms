@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    381 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    388 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -1886,18 +1886,20 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Confirm the booking</td><td>Only on a booking waiting for the hotel (A2.7).</td></tr>
       <tr><td>Change dates or guests</td><td>New arrival or departure, adults, children. Not on a stay that is over.</td></tr>
       <tr><td>View voucher</td><td>The voucher to look at, print or save. Sends nothing. Only for a confirmed booking still to arrive.</td></tr>
+      <tr><td>Undo check-in</td><td>On a guest in the house: back to confirmed, arriving. The owner, an Admin, or the GM while Front desk rules allow it (A2.9). Reception sees <span class="ui">Ask the GM to undo the check-in</span>.</td></tr>
       <tr><td>Move to another room</td><td>Once the guest is in the house. Before that, change the room with Assign room on the Calendar.</td></tr>
+      <tr><td>Change room type</td><td>On a guest in the house: a move to a room of another type, and the booking becomes that type (A2.8, below).</td></tr>
       <tr><td>Exchange with another guest</td><td>Two guests in the house swap rooms.</td></tr>
       <tr><td>What this booking includes</td><td>The extras on the booking.</td></tr>
-      <tr><td>Change rate</td><td>The owner, an Admin or the GM, on a confirmed booking before check-in.</td></tr>
-      <tr><td>Cancel this booking, Void this booking</td><td>In red, at the end (A2.9).</td></tr>
+      <tr><td>Change rate</td><td>The owner, an Admin or the GM, on a confirmed booking or a guest in the house (A4.6). Reception, on a guest in the house: <span class="ui">Ask the GM to change the rate</span>.</td></tr>
+      <tr><td>Cancel this booking, Void this booking</td><td>In red, at the end (A2.9). On a guest in the house, reception sees <span class="ui">Ask the GM to cancel this booking</span> and <span class="ui">Ask the GM to void this booking</span>.</td></tr>
     </tbody>
   </table>
 
   <h3>To change the dates or the number of guests</h3>
   <ol class="steps">
     <li>More options, <span class="ui">Change dates or guests</span>. The window is called <span class="msg">“Amend A2 Test Sharma”</span> and says the stay as it is.</li>
-    <li>Change <span class="ui">Arrival</span>, <span class="ui">Departure</span>, <span class="ui">Adults</span> or <span class="ui">Children</span>. Once the guest has arrived, the arrival cannot change.</li>
+    <li>Change <span class="ui">Arrival</span>, <span class="ui">Departure</span>, <span class="ui">Adults</span> or <span class="ui">Children</span>. Once the guest has arrived, only the owner, an Admin or the GM can change the arrival: <span class="msg">“They have arrived: no later than today, and never a closed day.”</span> Reception reads <span class="msg">“They have already arrived. The GM may change it.”</span> and has <span class="ui">Ask the GM to change the arrival date</span> under the fields.</li>
     <li>Read the line under them: <span class="msg">“2 → 3 nights · ₹11,097 of room charges at ₹3,699 a night”</span>.</li>
     <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Stay amended”</span> and the change: <span class="msg">“A2 Test Sharma: 2 nights becomes 3.”</span></li>
   </ol>
@@ -1945,6 +1947,19 @@ figure.shot.phone img { max-width: 72mm; }
       <li>New rate per night: optional</li>
       <li>Take them out of the room without assigning another (further down the window, below what this picture shows)</li>
       <li>Move</li>
+    </ol>
+  </figure>
+
+  <h3>To change the room type of a guest in the house</h3>
+  <p>For a guest in a room, the room type is the type of the room they are in. So More options, <span class="ui">Change room type</span>, opens the move with only the rooms of the other types to choose from, and <span class="ui">Upgrade</span> chosen. Choose the room, the night, why, and a new rate if the price changes, then <span class="ui">Move</span>. From tonight the booking is the new type: the stay panel, the rooms left to sell and the reports count it there. A plain <span class="ui">Move to another room</span> into another type keeps the type booked, as an upgrade at check-in does.</p>
+
+  <figure class="shot" id="fig-A2-35">
+    <img src="img/A2-35.png" alt="Change room type: Omkar Shinde is in 203, a Superior; To which room lists the Deluxe rooms; From which night; Why: Upgrade">
+    <figcaption><b>Figure A2-35.</b> Change room type: the rooms of the other types.</figcaption>
+    <ol class="callouts">
+      <li>The room and type they are in now, and what the move does</li>
+      <li>To which room: only rooms of another type</li>
+      <li>Why: Upgrade to begin with</li>
     </ol>
   </figure>
 
@@ -2017,10 +2032,88 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Tap <span class="ui">Void</span>. The message says it <span class="msg">“is on the record as never having happened.”</span> It holds no room from then on.</li>
   </ol>
 
+  <h3>A guest who has arrived: undo the check-in, cancel or void</h3>
+  <p>A check-in that should not have happened (the wrong booking, a guest who left at once) is undone, cancelled or voided by the owner, an Admin, or the GM while <span class="ui">The GM may undo a check-in</span> is on in Front desk rules (A17.11; on at every hotel to begin with). The guest's More options then has <span class="ui">Undo check-in</span>, and <span class="ui">Cancel this booking</span> and <span class="ui">Void this booking</span> work on a guest in the house.</p>
+
+  <figure class="shot" id="fig-A2-33">
+    <img src="img/A2-33.png" alt="More options on Omkar Shinde, in house, for the GM: Undo check-in, Change room type, Change rate, Cancel this booking and Void this booking">
+    <figcaption><b>Figure A2-33.</b> More options on a guest in the house, for the GM.</figcaption>
+    <ol class="callouts">
+      <li>Undo check-in</li>
+      <li>Change room type</li>
+      <li>Change rate</li>
+      <li>Cancel this booking: the check-in is undone first</li>
+      <li>Void this booking: the check-in is undone first</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li>More options, <span class="ui">Undo check-in</span>. The window <span class="ui">Undo the check-in</span> says the booking goes back to confirmed, arriving.</li>
+    <li>Type <span class="ui">Why</span>. It is kept on the booking, with your name and the time, in the Audit log.</li>
+    <li>Tap <span class="ui">Undo check-in</span>. The message says <span class="msg">“Check-in undone”</span>: the booking is arriving again and its room is to be cleaned.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-34">
+    <img src="img/A2-34.png" alt="Undo the check-in: what it does, Why: Checked in the wrong booking, Keep it and Undo check-in">
+    <figcaption><b>Figure A2-34.</b> Undo the check-in (shown here, not done).</figcaption>
+    <ol class="callouts">
+      <li>What the undo does</li>
+      <li>Why: it must be filled in</li>
+      <li>Undo check-in</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>The room</b> stays the booking's, vacant and sent for cleaning: the guest may have had the key. A key card cut for it stops.</li>
+    <li><b>The first night</b> the check-in charged comes off the bill by itself, and is charged again if they check in again. <b>Payments</b> stay on the bill as an advance.</li>
+    <li><b>Any other charge</b> on the bill (a night of a walk-in's stay, an early check-in, a restaurant bill charged to the room, laundry) has to be reversed on the bill first: <span class="msg">“Laundry (₹300.00) is still on the bill. Reverse it on the bill first; payments stay on the bill as an advance.”</span></li>
+    <li><b>Form C</b>: once a foreign guest's Form C has been submitted to the FRRO, the check-in stays, because the PMS cannot take back a report to the FRRO. Not yet submitted, it is simply no longer due, and the Form III screen no longer lists it.</li>
+    <li><b>A closed day</b>: once a Night audit has closed the arrival day, the check-in stays. Check the guest out instead.</li>
+    <li><b>Cancel</b> on a guest in the house undoes the check-in and cancels in one go: the window says so, and the booking's terms decide the charge as before; the owner, an Admin or the GM may waive it. <b>Void</b> does the same and is still refused once anything else is on the bill, payments included: cancel it instead. If either is refused, nothing of the undo happens.</li>
+  </ul>
+
+  <h3>Reception asks the GM</h3>
+  <p>For reception (and anybody else who may change a booking but not do these), More options on a guest in the house shows <span class="ui">Ask the GM to undo the check-in</span>, <span class="ui">Ask the GM to cancel this booking</span>, <span class="ui">Ask the GM to void this booking</span> and <span class="ui">Ask the GM to change the rate</span>; Change dates has <span class="ui">Ask the GM to change the arrival date</span>, and the bill <span class="ui">Ask the GM to change how it was paid</span> (A4.7).</p>
+
+  <figure class="shot" id="fig-A2-36">
+    <img src="img/A2-36.png" alt="More options on Omkar Shinde, in house, for reception: Ask the GM to undo the check-in, Change room type, Ask the GM to change the rate, Ask the GM to cancel this booking, Ask the GM to void this booking">
+    <figcaption><b>Figure A2-36.</b> More options on a guest in the house, for reception.</figcaption>
+    <ol class="callouts">
+      <li>Ask the GM to undo the check-in</li>
+      <li>Change room type: reception moves guests, as before</li>
+      <li>Ask the GM to change the rate</li>
+      <li>Ask the GM to cancel this booking</li>
+      <li>Ask the GM to void this booking</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li>Pick the <span class="ui">Ask the GM to …</span> line. The window says <span class="msg">“Nothing changes until the GM approves it.”</span></li>
+    <li>Fill in what it asks (the new arrival, the new rate, how it was paid) and <span class="ui">Why</span>.</li>
+    <li>Tap <span class="ui">Send to the GM</span>. The message says <span class="msg">“Sent to the GM”</span>: it waits in the GM's Approvals and bell (A12.3). Approved, it is done, with every check asked again then.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-37">
+    <img src="img/A2-37.png" alt="Ask the GM to undo the check-in: Nothing changes until the GM approves it, Why, Send to the GM">
+    <figcaption><b>Figure A2-37.</b> Ask the GM (shown here, not sent).</figcaption>
+    <ol class="callouts">
+      <li>Nothing changes until the GM approves it</li>
+      <li>Why: the GM reads it before approving</li>
+      <li>Send to the GM</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A request that would be refused anyway is not sent: the message says why, such as a charge still on the bill.</li>
+    <li>One of each kind may wait for a stay at a time: <span class="msg">“This is already with the GM.”</span></li>
+    <li>With nobody set to approve them at the hotel: <span class="msg">“Nobody is set to approve these at this hotel. Call the GM.”</span></li>
+    <li>With <span class="ui">The GM may undo a check-in</span> off, nobody but the owner and an Admin undoes, cancels or voids a guest in the house, and reception cannot ask: <span class="msg">“They have arrived, and undoing a check-in is off at this hotel. Check them out instead.”</span> The rate, the arrival and how a payment was taken are not that switch's.</li>
+  </ul>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>Cancel and Void are only for a booking that has not arrived. A guest in the house is checked out instead (A5): <span class="msg">“They have arrived. Check them out instead.”</span></li>
+      <li>Cancel and Void on a guest in the house are for the owner, an Admin and the GM (above); anybody else checks the guest out (A5) or asks the GM.</li>
       <li>A booking with money on its bill cannot be voided: the system refuses and says why. Cancel it, so the terms apply.</li>
       <li>A guest who has not arrived by the night audit becomes a no-show. Check in or cancel your arrivals before it runs.</li>
     </ul>
@@ -2028,7 +2121,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Cancelled and void mean opposite things to a report: a cancellation happened and measures demand; a void never happened, and counting it would inflate the figures the hotel sets its policy from. The terms are copied onto each booking when it is made, so a booking keeps the terms it was sold under even if the hotel changes them later. A waiting booking is cancelled with no charge: <span class="d">D27-64</span>.</p>
+    <p>Cancelled and void mean opposite things to a report: a cancellation happened and measures demand; a void never happened, and counting it would inflate the figures the hotel sets its policy from. The terms are copied onto each booking when it is made, so a booking keeps the terms it was sold under even if the hotel changes them later. A waiting booking is cancelled with no charge: <span class="d">D27-64</span>. After check-in, the GM has no lock and reception asks the GM, with a switch in the settings: <span class="d">D27-397</span>.</p>
   </div>
 
   <!-- A2.10 -->
@@ -2979,7 +3072,7 @@ figure.shot.phone img { max-width: 72mm; }
     <ul>
       <li><b>All or nothing.</b> If one charged night cannot be corrected, nothing changes and the message names that night.</li>
       <li>Only a booking still to come or a guest in the house changes rate. After check-out, a bill is corrected on Closed days or by a credit note.</li>
-      <li>Before check-in, the same window opens from the guest panel's <span class="ui">More options</span>, <span class="ui">Change rate</span>: it changes only the agreed rate, since nothing is charged yet.</li>
+      <li>Before check-in, the same window opens from the guest panel's <span class="ui">More options</span>, <span class="ui">Change rate</span>: it changes only the agreed rate, since nothing is charged yet. On a guest in the house it opens there too. Reception sees <span class="ui">Ask the GM to change the rate</span> (A2.9).</li>
     </ul>
   </div>
 
@@ -3031,6 +3124,30 @@ figure.shot.phone img { max-width: 72mm; }
       <li>One press is one payment. A wrong payment is reversed only by the owner, an administrator, the GM or the accountant (A4.4).</li>
     </ul>
   </div>
+
+  <h3>To change how a payment was taken</h3>
+  <p>Cash typed when the guest paid by UPI is the common mistake. Each payment line has a wallet button, <span class="ui">Change how it was paid</span>, for the owner, an administrator and the GM. Reception's says <span class="ui">Ask the GM to change how it was paid</span> and sends it to the GM (A2.9).</p>
+  <ol class="steps">
+    <li>Click the wallet button on the payment line.</li>
+    <li>Choose <span class="ui">How it was really paid</span>. Bill to company is not offered: it is not a way of paying.</li>
+    <li>Type <span class="ui">Why</span> and click <span class="ui">Change it</span>. The payment is reversed with the reason, and the same amount is received again, the same day, the new way: <span class="msg">“Received - UPI (was Cash)”</span>, in the name of whoever took it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-23">
+    <img src="img/A4-23.png" alt="Change how it was paid: what it does, How it was really paid, Why, Keep it and Change it">
+    <figcaption><b>Figure A4-23.</b> Change how it was paid (shown here, not saved).</figcaption>
+    <ol class="callouts">
+      <li>What it does: never a refund, never another amount</li>
+      <li>How it was really paid</li>
+      <li>Why: kept on the reversed line</li>
+      <li>Change it</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Refused on a day the Night audit has closed (the button is grey and says so), and for cash in a drawer already counted and closed: put the difference right on today's drawer.</li>
+    <li>Changed to cash, the person who took it must have their drawer open, so the cash is counted there. Over ₹1,00,000 in cash needs the PAN: reverse it and take it again in cash with the PAN.</li>
+  </ul>
 
   <div class="box why">
     <h4>Why it works this way</h4>
@@ -8141,6 +8258,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Equipment leaving the store</td><td>Equipment goes out of a store to a room, the kitchen or the restaurant.</td><td>The Inventory Manager; when they are away, the owner, an administrator or the GM.</td></tr>
       <tr><td>Equipment being retired</td><td>A tagged item is retired by somebody who may not approve it, such as the Hotel Manager.</td><td>The same as above.</td></tr>
       <tr><td>Restaurant: sent to you</td><td>A waiter or cashier sends what only the GM may do: take off a dish the kitchen has, a discount, an NC bill, or void a paid bill (A8.7). Approving does it.</td><td>The general manager, the owner or an administrator.</td></tr>
+      <tr><td>Front desk: sent to you</td><td>Reception asks, after check-in, what only the GM may do: undo the check-in, cancel or void the booking, change the arrival date or the rate, or how a payment was taken (A2.9). Approving does it.</td><td>The general manager, the owner or an administrator.</td></tr>
     </tbody>
   </table>
   <ul>
@@ -8152,7 +8270,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, with no amount above which the owner must: <span class="d">D18-4</span>, confirming <span class="d">D17-35</span>. Who may ask is a setting per hotel, changed without a new release: <span class="d">D18-2</span>. Every cash expense needs a yes from the GM or the owner, never an administrator, never one's own: <span class="d">D27-239</span>, <span class="d">D27-242</span>. Equipment waits for the Inventory Manager, with the owner, an administrator or the GM instead: the owner, 16 September. A waiter's or cashier's strike, discount, NC or void sent to the GM, the owner or an administrator, approving does it, with the bell and Approvals at the top of the menu: <span class="d">D27-363</span>. Who decides is kept as a rule for each hotel, and a request keeps the rule it was raised under: a rule changed later never moves a request already waiting.</p>
+    <p>The GM approves every purchase, with no amount above which the owner must: <span class="d">D18-4</span>, confirming <span class="d">D17-35</span>. Who may ask is a setting per hotel, changed without a new release: <span class="d">D18-2</span>. Every cash expense needs a yes from the GM or the owner, never an administrator, never one's own: <span class="d">D27-239</span>, <span class="d">D27-242</span>. Equipment waits for the Inventory Manager, with the owner, an administrator or the GM instead: the owner, 16 September. A waiter's or cashier's strike, discount, NC or void sent to the GM, the owner or an administrator, approving does it, with the bell and Approvals at the top of the menu: <span class="d">D27-363</span>. The front desk's, after check-in, the same way: <span class="d">D27-397</span>. Who decides is kept as a rule for each hotel, and a request keeps the rule it was raised under: a rule changed later never moves a request already waiting.</p>
   </div>
 
   <!-- A12.3 -->
@@ -8165,6 +8283,14 @@ figure.shot.phone img { max-width: 72mm; }
     <img src="img/A12-16.png" alt="Approvals at the top of the GM's menu, and a card Restaurant: sent to you, NC, the bill free: ₹672.00 - Table 7, Why: The owner's guests, asked by a waiter">
     <figcaption><b>Figure A12-16.</b> A request from the restaurant.</figcaption>
     <ol class="callouts"><li>Approvals, at the top of the menu</li><li>Sent by the restaurant</li><li>What exactly</li><li>The waiter's reason</li></ol>
+  </figure>
+
+  <p>A request from the front desk is the same: <span class="ui">Front desk: sent to you</span>, what exactly and for whom, such as <span class="msg">“Change the rate to ₹3,000.00 a night - Omkar Shinde, room 203, FH-2608-4859”</span>, and the clerk's reason. <span class="ui">Approve</span> does it as you, with every check of the guest's menu asked again: if one refuses (a day closed since, a charge put on the bill), the message says why and the request goes on waiting.</p>
+
+  <figure class="shot" id="fig-A12-17">
+    <img src="img/A12-17.png" alt="Approvals: a card Front desk: sent to you, Change the rate to ₹3,000.00 a night - Omkar Shinde, room 203, Why: Corporate rate agreed, asked by Test Reception, Approve and Refuse">
+    <figcaption><b>Figure A12-17.</b> A request from the front desk.</figcaption>
+    <ol class="callouts"><li>Sent by the front desk</li><li>What exactly, and for whom</li><li>Approve: it is done</li><li>Refuse: with a note</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A12-02">
@@ -10881,12 +11007,14 @@ figure.shot.phone img { max-width: 72mm; }
       <li>The desk may overbook</li>
       <li>Weekend: shaded on the Calendar and Rates; no price reads it</li>
       <li>ID starts on: for a guest of the hotel's nationality</li>
+      <li>The GM may undo a check-in</li>
     </ol>
   </figure>
   <ul>
     <li>An advance is never asked of a company's booking, a room the group's host pays for, or a booking prepaid on a booking site.</li>
     <li>With <span class="ui">The desk may overbook</span> off, a booking (or a group) past a full house is refused.</li>
     <li><span class="ui">Nationality</span>: two letters, IN for India. <span class="ui">Title</span>: what a new guest's title starts on.</li>
+    <li><span class="ui">The GM may undo a check-in</span> (on at every hotel to begin with): the GM may undo a check-in and cancel or void a guest in the house, and reception asks the GM to (A2.9). Off, a guest who has arrived is checked out instead, for the GM and reception alike. The owner and an Admin always may. The card above reads <span class="ui">GM may undo a check-in</span>: Yes or No.</li>
   </ul>
 
   <h3>Front desk rules</h3>

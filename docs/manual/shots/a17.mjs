@@ -445,6 +445,7 @@ export const SHOTS = [
       { n: 2, at: "text:The desk may overbook", side: "right" },
       { n: 3, at: "text:Shaded on the Calendar and Rates. No price reads it.", side: "right" },
       { n: 4, at: "css:[role=dialog] select", nth: 1, side: "left" },
+      { n: 5, at: "text:The GM may undo a check-in", side: "left" },
     ],
   },
   {
