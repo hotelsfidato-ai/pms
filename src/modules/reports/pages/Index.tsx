@@ -5,7 +5,8 @@ import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
   FileSpreadsheet, Plane, ScrollText, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck,
-  Hourglass, Gauge, Truck, Refrigerator, Wine, HandCoins, Ban, type LucideIcon,
+  Hourglass, Gauge, Truck, Refrigerator, Wine, HandCoins, Ban, Clock, FileText, Percent, FileJson,
+  ShoppingCart, PiggyBank, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -97,6 +98,25 @@ const GROUPS: Group[] = [
         path: "/reports/city-ledger",
         description: "Bills transferred to a company or booking site, account by account.",
       },
+      /* D27-383: what accountants ask for first, and what the sites will bill. */
+      {
+        title: "Money owed by age",
+        icon: Clock,
+        path: "/reports/dues-by-age",
+        description: "What each company, agent and booking site owes, in 0-30, 31-60, 61-90 and over 90 days.",
+      },
+      {
+        title: "Statement of account",
+        icon: FileText,
+        path: "/reports/company-statement",
+        description: "One company's or site's bills, payments and balance for the days chosen, to send to them.",
+      },
+      {
+        title: "Commission owed",
+        icon: Percent,
+        path: "/reports/commission",
+        description: "Commission on the stays from booking sites and agents that checked out, booking by booking.",
+      },
       {
         title: "No show",
         icon: UserX,
@@ -157,6 +177,25 @@ const GROUPS: Group[] = [
         icon: FileSpreadsheet,
         path: "/reports/gst-sales",
         description: "Invoice-level GSTR-1 extract, credit notes as their own rows.",
+      },
+      /* D27-383 item 4. */
+      {
+        title: "GSTR-1",
+        icon: FileJson,
+        path: "/reports/gstr-1",
+        description: "The month's return table by table - B2B, B2C, credit notes, HSN, documents - and its file for the GST portal.",
+      },
+      {
+        title: "Input tax credit",
+        icon: ShoppingCart,
+        path: "/reports/input-tax-credit",
+        description: "The GST on the month's deliveries, as recorded: what was marked claimable and what was not.",
+      },
+      {
+        title: "GST on advances",
+        icon: PiggyBank,
+        path: "/reports/gst-advances",
+        description: "GST on money taken before a tax invoice: received, given back and adjusted, for GSTR-1 Table 11.",
       },
       {
         title: "Form III register",

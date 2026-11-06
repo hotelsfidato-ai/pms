@@ -107,7 +107,11 @@ export type ReportKey =
   /* TDS deducted from suppliers, and one supplier's statement (D27-372). */
   | "tds" | "supplier-statement"
   /* The petty cash book (D27-370). */
-  | "petty-cash";
+  | "petty-cash"
+  /* Money owed by age, a statement of account, commission owed (D27-383 items 2, 3). */
+  | "dues-by-age" | "company-statement" | "commission"
+  /* GSTR-1, input tax credit, GST on advances (D27-383 item 4). */
+  | "gstr-1" | "input-tax-credit" | "gst-advances";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -135,6 +139,12 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "tds",
   "supplier-statement",
   "petty-cash",
+  "dues-by-age",
+  "company-statement",
+  "commission",
+  "gstr-1",
+  "input-tax-credit",
+  "gst-advances",
 ];
 
 /** The Store and equipment reports (phase 3A): read by D27-240's readers,
@@ -157,6 +167,8 @@ export interface ReportParams {
   ignoreZero?: boolean;
   /** Supplier statement: the supplier's id (D27-372). */
   supplier?: string;
+  /** Statement of account: the account as the City ledger names it (D27-383). */
+  account?: string;
 }
 
 export interface ReportDoc {

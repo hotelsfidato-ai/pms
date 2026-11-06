@@ -18,11 +18,11 @@
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
       <tr><td>Bar stock</td><td>The bar manager (the Bar role), GM, owner, Admin</td><td>The bar's day like the paper register - what came, what was sold (NIPs, 30, 60 and 90 ml), what is left - and the closing count; the bar's bills as printed; what each drink takes (A9.11).</td></tr>
       <tr><td>Kitchen stock</td><td>Chef, kitchen manager (to read)</td><td>The kitchen store's day - what came, what the KOTs used, what was wasted and why, what is left, the closing count - and each dish's recipe. The same as Inventory's Restaurant tab (A9.11).</td></tr>
-      <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
+      <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today, promotions and coupons; for the owner, an Admin and the GM, <span class="ui">Profit per dish</span>.</td></tr>
       <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
-      <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
+      <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline. A table for somebody not staying. On the night: arrived, seated, a no-show, cancelled (A8.2).</td></tr>
       <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
-      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, a parcel's packing charge, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
+      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, a parcel's packing charge, the voluntary service charge, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
     </tbody>
   </table>
   <p>At the top of Tables, the Till, the Terminal and the Kitchen, one line for each kind of KOT says whether it is printing, for example <span class="msg">“Kitchen KOTs: Kitchen PC - online”</span>. When it is not printing, the line is red and says why (A8.4).</p>
@@ -123,7 +123,7 @@
     <li>The screen says what happens and that <span class="msg">“This cannot be undone.”</span> Tap <span class="ui">Join</span>.</li>
     <li>That table's dishes, KOTs and covers are now on this bill (this bill keeps its own waiter). Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it. On Tables, that table reads <b>Joined to AC3</b> until this bill is settled, as the party may still be sitting there; then it is free.</li>
   </ol>
-  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked is refused from two hours before the booking; earlier in the day it can be used.</p>
+  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table booked for today (by a hotel guest or anybody else, A8.2 below) is refused from two hours before the booking; earlier in the day it can be used.</p>
 
   <figure class="shot" id="fig-A8-47">
     <img src="img/A8-47.png" alt="The Till: Move AC3 to another table, the bill and its KOTs go with it, and the free tables of the section to choose from">
@@ -135,6 +135,32 @@
     <img src="img/A8-48.png" alt="The Till: Join AC4 to AC3? AC4's dishes and KOTs come onto the bill and AC4 becomes free. This cannot be undone. Cancel and Join">
     <figcaption><b>Figure A8-48.</b> Joining another table: said before it is done.</figcaption>
     <ol class="callouts"><li>This cannot be undone</li><li>Join</li></ol>
+  </figure>
+
+  <h3>A table booked: outside diners, and on the night</h3>
+  <p><span class="ui">Table bookings</span> lists the hotel guests' requests (they ask from their own page: confirm or decline each one) and every booking of the day. Somebody who is not staying is booked here, by whoever takes the call. Anybody who takes orders does it.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">New booking</span>.</li>
+    <li>Type the <span class="ui">Name</span>, the <span class="ui">Phone</span> (so the restaurant can call them), how many <span class="ui">People</span> (1 to 20; more is a banquet function), the <span class="ui">Day</span> and the <span class="ui">Time</span>. If you know it, choose the <span class="ui">Table</span>; or the <span class="ui">Area</span> they would like (A/C, Non A/C). A <span class="ui">Note</span> if there is one.</li>
+    <li>Tap <span class="ui">Book the table</span>. It is confirmed as you take it, and listed on its day.</li>
+  </ol>
+  <figure class="shot" id="fig-A8-50">
+    <img src="img/A8-50.png" alt="A table for somebody not staying: Name Meera Iyer, Phone 98765 43210, People 3, the day, Time 21:00, Table not yet, Area A/C, Note Window please, and Book the table">
+    <figcaption><b>Figure A8-50.</b> A table for somebody not staying.</figcaption>
+    <ol class="callouts"><li>A phone is needed</li><li>The time they come</li><li>The area, when there is no table yet</li><li>Book the table</li></ol>
+  </figure>
+  <p>On the night, each booking has its buttons:</p>
+  <ul>
+    <li><span class="ui">Arrived</span>: they are here, waiting for their table.</li>
+    <li><span class="ui">Seat</span>: choose a free table. Its bill opens with the party as its covers and the diner's name on it, exactly as if a waiter had opened the table on Tables; take the order there. A table with a bill on it is refused.</li>
+    <li><span class="ui">No-show</span>: only once the booked time has come; before it, it says <span class="msg">“They are booked for 20:30: a no-show is marked once that time has come.”</span> An arrived booking is never a no-show.</li>
+    <li><span class="ui">Cancel booking</span>: with the reason if they gave one.</li>
+  </ul>
+  <p><span class="ui">Day</span> at the top shows another day's bookings; <span class="ui">Back to today</span> returns. A hotel guest's page keeps saying <b>Confirmed</b> for a table that is arrived, seated or a no-show.</p>
+  <figure class="shot" id="fig-A8-51">
+    <img src="img/A8-51.png" alt="Table bookings for today: Rohan Mehta not staying, Seated at table N3 with bill 20261106-1 open on Tables; Meera Iyer not staying, Confirmed at 21:00 in A/C, with Seat, Arrived, No-show and Cancel booking">
+    <figcaption><b>Figure A8-51.</b> The day's bookings, on the night.</figcaption>
+    <ol class="callouts"><li>The day shown</li><li>Somebody not staying, by name and phone</li><li>Seat: opens the table's bill</li><li>No-show, once the time has come</li></ol>
   </figure>
 
   <div class="box watch">
@@ -413,8 +439,10 @@
       <tr><td>×</td><td>Strike the line. It stays on the record, struck through.</td></tr>
       <tr><td>Send to the kitchen</td><td>Sends every dish not yet sent, as Send does on the pad.</td></tr>
       <tr><td>KOTs sent: Reprint</td><td>At the foot of an open order: prints that KOT again at the computer that printed it, marked REPRINT (A8.4).</td></tr>
-      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason, up to the whole bill: no 10% limit since <span class="d">D27-395</span>. A promotion (Point of sale → Menu → Promotions) is the one the restaurant gives again and again, by name, at the top of the window. A waiter, the bar and the cashier do not see it: they <b>Ask for a discount</b>, and the GM approves.</td></tr>
+      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason, up to the whole bill: no 10% limit since <span class="d">D27-395</span>. A promotion (Point of sale → Menu → Promotions) is the one the restaurant gives again and again, by name, at the top of the window. A <b>coupon</b> the guest brings is typed in <span class="ui">Coupon code</span> at the top, then <span class="ui">Apply coupon</span> (below). A waiter, the bar and the cashier do not see it: they <b>Ask for a discount</b>, and the GM approves.</td></tr>
       <tr><td>Round off</td><td>Rounds the total to the rupee. <span class="ui">Undo round off</span> takes it back.</td></tr>
+      <tr><td>Service charge 5%, if the guest agrees</td><td>Only where the GM set a rate (A8.10). It asks first, and goes on only when you tap <span class="ui">The guest agreed</span>. The bill then has <b>Service charge 5% (voluntary)</b>, with its GST. <span class="ui">Take off the service charge</span> removes it (below).</td></tr>
+      <tr><td>Tip for the staff</td><td>Type the tip, then tap <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>: it is taken the same way as the bill, but it is not part of it (below).</td></tr>
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
       <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
       <tr><td>Part - pay two ways</td><td>Split the payment: each way with its amount. For cash, type the <span class="ui">Cash given</span> and the change is shown. <span class="ui">Settle</span> appears only when the parts add up.</td></tr>
@@ -447,6 +475,33 @@
     <img src="img/A8-17.png" alt="A settled bill on the Till with Print the bill">
     <figcaption><b>Figure A8-17.</b> A paid bill: Print the bill.</figcaption>
     <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
+  </figure>
+
+  <h3>The voluntary service charge, and tips</h3>
+  <p>By law a restaurant may not add a service charge by itself or by default; a guest pays one only if they agree, and the bill must say it is voluntary (the Consumer Protection guidelines of 4 July 2022). So it is <b>off</b> unless the GM sets a rate on Restaurant setup (A8.10), and even then it goes on a bill only when you ask the guest and they say yes.</p>
+  <ol class="steps">
+    <li>Ask the guest. If they agree, tap <span class="ui">Service charge 5%, if the guest agrees</span>, then <span class="ui">The guest agreed</span>.</li>
+    <li>The bill shows <b>Service charge 5% (voluntary)</b> under the net (after any discount or coupon), and the tax grows with it: GST is charged on a service charge as on the food. Alcohol under VAT takes none.</li>
+    <li>Changed their mind? Tap <span class="ui">Take off the service charge</span> while the bill is open. A paid bill keeps it as it was paid.</li>
+  </ol>
+  <p>A <b>tip</b> is money for the staff: not a sale and not taxed. Type it in <span class="ui">Tip for the staff</span>, then take the payment with <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>: the tip is taken the same way. It is written on the paid bill and the printed bill as <span class="msg">“Tip for the staff 100.00 by cash - not part of the bill”</span>; the GRAND TOTAL and the payment are the bill alone. A bill charged to a room or a function, split two ways or on the owner's allowance takes no tip, and a tip of more than the bill is refused as a slip of the finger. A cash tip is in the drawer until it is handed out, so the count expects it (A8.9).</p>
+  <figure class="shot" id="fig-A8-52">
+    <img src="img/A8-52.png" alt="The Till: Net ₹1,220, Service charge 5% (voluntary) ₹61, Taxable, Tax and Total ₹1,351; Take off the service charge (5%); Tip for the staff 50, with cash, card or UPI below">
+    <figcaption><b>Figure A8-52.</b> The voluntary service charge on a bill, and a tip about to be taken.</figcaption>
+    <ol class="callouts"><li>The service charge the guest agreed to, said as voluntary</li><li>Take it off again, while the bill is open</li><li>The tip, taken with Cash, Card or UPI</li></ol>
+  </figure>
+
+  <h3>A coupon</h3>
+  <p>A coupon is a promotion the guest brings as a code (Menu, Promotions, A8.11), good between two days, on so many bills, above a least bill. The GM, the owner or an Admin applies it, as a promotion.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Discount</span>. Type the guest's code in <span class="ui">Coupon code</span> and tap <span class="ui">Apply coupon</span>. On the Terminal, tap <span class="ui">Coupon</span>.</li>
+    <li>The bill shows <b>Coupon DIWALI10 10%</b> and the amount off, before tax. The use is the bill itself.</li>
+  </ol>
+  <p>It is refused in a sentence before its first day (<span class="msg">“Diwali coupon starts on 1 Dec 2026.”</span>), after its last, once it has been used on its number of bills, under its least bill, and when it would take off more than the bill. A bill closed unpaid gives its use back. If a dish is struck so the bill falls under the coupon's least bill, payment is refused until the coupon is taken off (Discount, <span class="ui">Remove</span>) or more is added.</p>
+  <figure class="shot" id="fig-A8-53">
+    <img src="img/A8-53.png" alt="Discount this bill: Coupon code DIWALI10 and Apply coupon above the percentage and amount boxes">
+    <figcaption><b>Figure A8-53.</b> A coupon the guest brings.</figcaption>
+    <ol class="callouts"><li>The guest's code</li><li>Apply coupon: its dates, uses and least bill are checked</li></ol>
   </figure>
 
   <h3>Printing a bill from an earlier day</h3>
@@ -597,7 +652,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason: <span class="d">D27-351</span>. Its prices and Bill total on the screen and the paper, ₹0 to pay and no tax lines, its value at menu prices shown as NC everywhere and never in sales, tax or the money taken: <span class="d">D27-394</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. Complimentary counting the NC bills: <span class="d">D27-365</span> (its screen without prices, until <span class="d">D27-394</span>). The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason: <span class="d">D27-351</span>. Its prices and Bill total on the screen and the paper, ₹0 to pay and no tax lines, its value at menu prices shown as NC everywhere and never in sales, tax or the money taken: <span class="d">D27-394</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. Complimentary counting the NC bills: <span class="d">D27-365</span> (its screen without prices, until <span class="d">D27-394</span>). The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>. A table for somebody not staying, the voluntary service charge and tips, coupons and profit per dish: <span class="d">D27-383</span>, built under <span class="d">D27-396</span> (the service charge by the CCPA's guidelines of 4 July 2022, taxed as part of the supply; none on alcohol; a coupon applied by the same three as a promotion).</p>
   </div>
 
   <!-- A8.8 -->
@@ -616,6 +671,7 @@
     <li>Under the dishes, the open order's <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span>: it prints again at the computer that printed it (A8.4).</li>
     <li><b>Room-service orders waiting</b>: a checked-in guest's order from their own page. <span class="ui">Accept</span> makes it a room-service order for their room and sends it to the kitchen; <span class="ui">Decline</span> asks a reason, which the guest reads. It is charged to the room at delivery.</li>
     <li>Payment and printing work as on the Till, <span class="ui">No charge (NC)</span> included.</li>
+    <li>One row above Cash, Card and UPI: <span class="ui">Service charge 5%?</span> (where the GM set a rate, only when the guest agrees), <span class="ui">Coupon</span> (the GM, the owner or an Admin) and <span class="ui">Tip ₹</span>, taken with the payment (A8.7).</li>
   </ul>
 
   <!-- A8.9 -->
@@ -671,7 +727,7 @@
   <h3>At the end of the shift: count the drawer</h3>
   <ol class="steps">
     <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">Count the drawer</span>, type how many of each note and coin come out of the tin.</li>
-    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7).</li>
+    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus the <span class="ui">Cash tips</span>, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7). Cash tips handed to the staff from the tin are recorded as money out, with the reason.</li>
     <li>If they differ, a yellow box says <span class="msg">“Short by ₹217”</span> or over, and how much of it is a paid-out waiting for a yes.</li>
     <li>Tap <span class="ui">Save the count - ₹3,140</span>.</li>
   </ol>
@@ -686,6 +742,13 @@
     <img src="img/A8-30.png" alt="The count typed, the Save the count button, and The sum with Expected, Counted and Short by">
     <figcaption><b>Figure A8-30.</b> The count, and what the drawer should hold.</figcaption>
     <ol class="callouts"><li>Save the count</li><li>Expected: what the drawer should hold</li></ol>
+  </figure>
+
+  <p>On the <span class="ui">Overview</span>, <span class="ui">Service charge and tips</span> shows the day's voluntary service charge (how many bills, and how much; it is already in the money above, with its GST) and the tips by cash, card and UPI, with their total: <b>Tips for the staff (not in sales)</b>. The night audit (A7) and its report show the same two, the service charge under Charges and the tips under Tips.</p>
+  <figure class="shot" id="fig-A8-54">
+    <img src="img/A8-54.png" alt="Close restaurant day, Overview: Service charge and tips - Service charge (voluntary), 1 bill ₹83.00; Tips by Cash ₹100.00; Tips for the staff (not in sales) ₹100.00">
+    <figcaption><b>Figure A8-54.</b> The day's service charge and tips.</figcaption>
+    <ol class="callouts"><li>The service charge the guests agreed to</li><li>The tips: the staff's, not a sale</li></ol>
   </figure>
 
   <h3>Close the day</h3>
@@ -741,6 +804,9 @@
 
   <h3>A parcel's packing charge</h3>
   <p>Under <span class="ui">Parcels</span>, type the <span class="ui">Packing charge, ₹</span> and tap <span class="ui">Save</span>. It goes on each parcel's bill once, with its first KOT, taxed as the food (A8.2). Left blank, a parcel has no packing charge; nothing is put in for you. The owner, an Admin and the GM set it.</p>
+
+  <h3>The voluntary service charge</h3>
+  <p>Under <span class="ui">Service charge</span>, type the <span class="ui">Service charge, %</span> (above 0, at most 20) and tap <span class="ui">Save</span>. It never goes on a bill by itself: it lets the Till and the Terminal offer it, and the cashier puts it on a bill only when the guest agrees (A8.7). Left blank, the default, the restaurant has none and nothing is offered. A bill that has it keeps the rate it was ticked at. The owner, an Admin and the GM set it.</p>
 
   <h3>The KOT section</h3>
   <figure class="shot" id="fig-A8-20">
@@ -838,7 +904,15 @@
     <li><b>Sides</b>: groups of options linked dish by dish, with how many a guest may choose.</li>
     <li><b>Take off</b> a dish until a time (“out of paneer”): the pad shows it, and refuses it, until then.</li>
     <li><b>Recipes</b> (what each dish, size, side and add-on takes from the kitchen store) are not kept here: they are in <span class="ui">Inventory</span>, <span class="ui">Restaurant</span>, <span class="ui">Recipes</span> (A9.11). A dish with no recipe sells as before and takes nothing.</li>
+    <li><b>Promotions and coupons</b>: <span class="ui">Add a promotion</span>: a code, a name, a percentage or an amount off. Tick <span class="ui">A coupon the guest brings</span> to give it <span class="ui">From</span> and <span class="ui">Until</span> days, how many <span class="ui">Bills it may go on</span> and a <span class="ui">Least bill, ₹</span> (blank: no limit, any bill). A coupon is never a button on the Till: it is typed from the guest's code (A8.7). The list shows each coupon's days and how many of its uses are gone. A coupon cannot take off more than its least bill.</li>
   </ul>
+  <h3>Profit per dish</h3>
+  <p>The owner, an Admin and the GM have a third tab, <span class="ui">Profit per dish</span>. A dish's <b>cost</b> is its recipe (A9.11) at each Store item's average cost today; its <b>margin</b> is the menu price less that cost, and the margin %. A dish sold by size is a row for each size. A dish with <b>no recipe</b>, or with an ingredient nobody has priced yet (<b>an ingredient has no cost</b>), shows a dash, never a zero: it has no cost yet. Under it, <span class="ui">What was sold</span>: for the days chosen, the dishes on paid bills, how many, their sales at the price sold (before the bill's discount), their cost and margin, with the total margin of the dishes that have a cost and what was sold of those that have none. NC, voided and unpaid bills are not sales.</p>
+  <figure class="shot" id="fig-A8-55">
+    <img src="img/A8-55.png" alt="Menu, Profit per dish: each dish with its menu price, cost, margin and margin %; Paneer Tikka ₹320.00, cost ₹66.00, margin ₹254.00, 79.4%; dishes with no recipe show a dash">
+    <figcaption><b>Figure A8-55.</b> Profit per dish.</figcaption>
+    <ol class="callouts"><li>The cost: the recipe at the average cost</li><li>The margin %</li><li>No recipe: a dash, never a zero</li></ol>
+  </figure>
   <figure class="shot" id="fig-A8-49">
     <img src="img/A8-49.png" alt="The Menu as the GM, the Starters: Bhaaji Pau's variation line Oil ₹300.00 (MRP -) · Butter ₹400.00 (MRP -), Chicken 65 with MRP -, Paneer Tikka with MRP ₹350.00, Papad Masala and Veg Manchurian with MRP -">
     <figcaption><b>Figure A8-49.</b> A dish's MRP on the Menu: a figure once typed, a dash until then.</figcaption>

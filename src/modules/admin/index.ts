@@ -12,6 +12,9 @@ export { useGroupSettings, type GroupSettings } from "./data/groupSettings";
 /* D27-245: the signed-in person's "set a longer password" prompt, mounted
    once by the app shell. */
 export { PasswordDue } from "./components/PasswordDue";
+/* D27-396: two-step sign-in - the code screen after a right password (App.tsx)
+   and the account menu's own dialog (AccountMenu.tsx). */
+export { TwoStepGate, TwoStepDialog } from "./components/TwoStep";
 /* D27-311, "Set up this hotel": the top bar's "Back to setup" bar (any
    screen opened with ?setup=<step>), the Dashboard's "Still to do" list, and
    the address of the setup (the bell's reminders link to it). */

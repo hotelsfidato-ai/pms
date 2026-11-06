@@ -955,6 +955,7 @@ admin.get("/admin/staff", async (c) => {
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
       can_sign_in: boolean; home_screen: string; test_only: boolean;
       may_edit: boolean; may_switch: boolean; may_password: boolean;
+      two_step: boolean | null; may_two_step_off: boolean;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
          clerk sees themselves and the colleagues they share a property
@@ -987,7 +988,10 @@ admin.get("/admin/staff", async (c) => {
               app.manages_person(s.id)    as may_edit,
               /* Never your own row: the deactivate route refuses it (D24-19). */
               (app.may_switch_person(s.id) and s.id <> app.current_user_id()) as may_switch,
-              app.may_set_password(s.id)  as may_password
+              app.may_set_password(s.id)  as may_password,
+              /* D27-396: two-step on - told to whoever may switch it off. */
+              app.has_two_step(s.id)      as two_step,
+              app.may_see_sign_ins(s.id)  as may_two_step_off
          from staff s
         order by s.is_group_admin desc, s.full_name`,
     );
@@ -1021,6 +1025,8 @@ admin.get("/admin/staff", async (c) => {
         mayEdit: r.may_edit,
         maySwitch: r.may_switch,
         maySetPassword: r.may_password,
+        twoStepOn: r.two_step === true,
+        mayTwoStepOff: r.may_two_step_off && r.two_step === true,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {
           const [code, role, testOf] = pair.split(":");
           return { code: code!, role: role!, testOf: testOf || null };

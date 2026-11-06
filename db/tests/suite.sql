@@ -3622,7 +3622,7 @@ begin
     after_n = 2, 'got ' || after_n);
 
   -- ---------- arrival is a fact once it has happened ----------
-  -- ...for anybody but the owner, an Admin or the GM (D27-397, 266: the
+  -- ...for anybody but the owner, an Admin or the GM (D27-397, 262: the
   -- front desk's half and the three's are db/tests/modules/front-desk.sql).
   -- Nobody signed in is none of them.
   update reservations set status = 'checked_in' where id = v_res;

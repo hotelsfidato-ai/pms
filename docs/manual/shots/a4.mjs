@@ -378,4 +378,16 @@ export const SHOTS = [
       { n: 4, at: "text:Change it", side: "bottom" },
     ],
   },
+
+  /* D27-383: Company accounts' Statement and Money owed by age. Read only; taken
+     where companies, an agent and a booking site were sent bills. */
+  {
+    id: "A4-24", title: "Company accounts: each account's statement, and money owed by age", as: "Accountant",
+    path: "/h/5EL/city-ledger", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Statement", ms: SLOW }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Statement", nth: 0, side: "left" },
+      { n: 2, at: "text:Money owed by age", side: "top" },
+      { n: 3, at: "text:Record payment", side: "left" },
+    ],
+  },
 ];

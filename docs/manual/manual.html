@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    388 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    405 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -269,7 +269,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li class="here"><span class="c">A10</span><a class="t" href="#a10">Guests and guest messages</a><span class="state">In this book</span>
       <span class="s">A10.1 The Guests &amp;amp; CRM screens · A10.2 Guests · A10.3 A guest's record: the marks on a booking, and Edit guest · A10.4 Companies and agents · A10.5 Guest 360: one guest, every hotel · A10.6 The same person twice · A10.7 What goes out to guests · A10.8 The Guest messages screen · A10.9 When a message did not go · A10.10 Reviews · A10.11 In short</span></li>
     <li class="here"><span class="c">A11</span><a class="t" href="#a11">Reports</a><span class="state">In this book</span>
-      <span class="s">A11.1 Finding a report · A11.2 Every report works the same way · A11.3 The Manager report · A11.4 The Night audit report · A11.5 Occupancy and statistics: the month and the year · A11.6 Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash · A11.7 Statutory: Lodging tax, GST sales register, Form III register · A11.8 Accounting export: the month for the accountant · A11.9 The Store and equipment reports · A11.10 In short: which report answers which question</span></li>
+      <span class="s">A11.1 Finding a report · A11.2 Every report works the same way · A11.3 The Manager report · A11.4 The Night audit report · A11.5 Occupancy and statistics: the month and the year · A11.6 Money owed: City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash · A11.7 Statutory: Lodging tax, GST sales register, GSTR-1, Input tax credit, GST on advances, Form III register · A11.8 Accounting export: the month for the accountant · A11.9 The Store and equipment reports · A11.10 In short: which report answers which question</span></li>
     <li class="here"><span class="c">A12</span><a class="t" href="#a12">Approvals, cash expenses, notifications</a><span class="state">In this book</span>
       <span class="s">A12.1 The System part of the menu · A12.2 Who approves what · A12.3 Approving or refusing · A12.4 A request that is not yours to decide · A12.5 What was decided, and by whom · A12.6 When you asked: reading the answer · A12.7 Cash expenses · A12.8 The bell · A12.9 The Notifications screen · A12.10 In short</span></li>
     <li class="here"><span class="c">A13</span><a class="t" href="#a13">Banquets, spa and laundry</a><span class="state">In this book</span>
@@ -381,11 +381,61 @@ figure.shot.phone img { max-width: 72mm; }
     </ul>
   </div>
 
+  <h3>Two-step sign-in: a code from your phone as well</h3>
+  <p>With two-step sign-in on, signing in takes your password <b>and</b> a 6-digit code from an authenticator app on your phone (Google Authenticator or Microsoft Authenticator, both free). Somebody who learns your password still cannot get in without your phone. Anybody may switch it on for themselves. The owner may also make it required for the owner, Admins, GMs and Accountants (A17.13); then the system asks you to set it up before anything else.</p>
+
+  <h4>To set it up</h4>
+  <ol class="steps">
+    <li>Put Google Authenticator or Microsoft Authenticator on your phone, from the phone's app store.</li>
+    <li>In the system, click your name at the top right, then <span class="ui">Two-step sign-in</span>, then <span class="ui">Set it up</span>.</li>
+    <li>In the app, add an account and scan the square code on the screen. If the phone cannot scan it, choose “enter a setup key” in the app and type the key shown under the code.</li>
+    <li>Type the 6 digits the app now shows in <span class="ui">Code from the app</span> and click <span class="ui">Go on</span>.</li>
+    <li>Ten <b>recovery codes</b> appear. Each one lets you in once if your phone is lost or not with you. Write them down or print them, keep them away from the phone, and click <span class="ui">I have kept them</span>. They are never shown again.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A0-15">
+    <img src="img/A0-15.png" alt="Two-step sign-in being set up: the authenticator app's square code, the setup key under it, and the box for the 6-digit code">
+    <figcaption><b>Figure A0-15.</b> Setting up two-step sign-in from the account menu.</figcaption>
+    <ol class="callouts"><li>Scan this with the app</li><li>Or type this key</li><li>The 6 digits the app shows</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A0-16">
+    <img src="img/A0-16.png" alt="Two-step sign-in is on: ten recovery codes, Copy them and I have kept them">
+    <figcaption><b>Figure A0-16.</b> The ten recovery codes, shown once.</figcaption>
+    <ol class="callouts"><li>The recovery codes</li><li>I have kept them</li></ol>
+  </figure>
+
+  <h4>To sign in with it</h4>
+  <ol class="steps">
+    <li>Sign in with your email and password as always.</li>
+    <li>The <span class="ui">Two-step sign-in</span> page opens. Open the app on your phone and type the 6 digits it shows for this account.</li>
+    <li>Click <span class="ui">Go on</span>. Your first screen opens.</li>
+  </ol>
+  <p>Without the phone, click <span class="ui">Use a recovery code instead</span> and type one of your ten. Each works once. The code is asked once per sign-in on each device, not on every screen.</p>
+
+  <figure class="shot" id="fig-A0-17">
+    <img src="img/A0-17.png" alt="The Two-step sign-in page after the password: Code from the app, Go on, Use a recovery code instead, Sign out">
+    <figcaption><b>Figure A0-17.</b> The code, after the password.</figcaption>
+    <ol class="callouts"><li>Code from the app</li><li>Go on</li><li>Use a recovery code instead</li><li>Sign out</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><span class="msg">“That code is not right. The app shows a new one every 30 seconds: type the one showing now.”</span> Type the code showing now. A code already used is not taken again; wait for the next one.</li>
+      <li><span class="msg">“Five wrong codes in a quarter of an hour...”</span> Wait 15 minutes, then try again. Every code typed is kept on record.</li>
+      <li><b>Lost your phone and your recovery codes?</b> The owner, or an Admin at your hotel, switches two-step sign-in off for you on the People screen (A16.6), with a reason. Then you set it up again on your new phone.</li>
+      <li><span class="msg">“Your role needs two-step sign-in. Set it up to go on.”</span> The owner made it required for your role. The page shows the same three steps as above; nothing else opens until it is done.</li>
+      <li>Your account menu's <span class="ui">Two-step sign-in</span> says whether it is on for you and how many recovery codes are left.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>Longer passwords for the people who reach the most: <span class="d">D27-243</span> (10 characters for the owner, Admin and GM, 8 for others) and <span class="d">D27-245</span> (a person given one of those roles sets a 10-character password at their next sign-in).
        Clearing the computer at sign-out was one of the four security fixes the owner asked for before the release: <span class="d">D27-88</span>.
-       Unsent work stays under the name of the person who did it, because the bill and the ledger never forget who made an entry (the owner, 28 September).</p>
+       Unsent work stays under the name of the person who did it, because the bill and the ledger never forget who made an entry (the owner, 28 September).
+       Two-step sign-in is the safety work the owner put before every feature, <span class="d">D27-384</span>; built in our own system, because Firebase's needs a paid plan, and off until the owner requires it, so switching it on locks nobody out: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A0.2 -->
@@ -3166,6 +3216,17 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Settle each bill on its own (A4.7). For the company's, choose it under <span class="ui">Which bill</span> and the Method <span class="ui">Bill to company</span>: <span class="msg">“Transfers to the city ledger”</span>. The amount goes to the company's account.</li>
   </ol>
   <p>When the company pays, record it on <b>Company accounts</b>: <span class="ui">Record payment</span>, then <span class="ui">Who paid</span>, <span class="ui">Amount received</span>, <span class="ui">Received on</span>, <span class="ui">How</span> (bank transfer, cheque, UPI or card, never cash), <span class="ui">Reference</span> (the bank's UTR or the cheque's number), and an optional <span class="ui">Note</span>.</p>
+  <p>Beside each account on Company accounts, <span class="ui">Statement</span> opens its statement of account - the bills sent, the payments and the balance for the days chosen, to print or send as a PDF or Excel file. Under the table, <span class="ui">Money owed by age</span> shows how old each account's balance is (A11.6).</p>
+
+  <figure class="shot" id="fig-A4-24">
+    <img src="img/A4-24.png" alt="Company accounts: each account with its Statement link, the Money owed by age link under the table, and Record payment">
+    <figcaption><b>Figure A4-24.</b> Company accounts: each account's statement, and money owed by age.</figcaption>
+    <ol class="callouts">
+      <li>Statement: this account's statement of account</li>
+      <li>Money owed by age: how old each balance is</li>
+      <li>Record payment: when a company pays</li>
+    </ol>
+  </figure>
 
   <figure class="shot" id="fig-A4-12">
     <div class="shot-plan">
@@ -4914,11 +4975,11 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
       <tr><td>Bar stock</td><td>The bar manager (the Bar role), GM, owner, Admin</td><td>The bar's day like the paper register - what came, what was sold (NIPs, 30, 60 and 90 ml), what is left - and the closing count; the bar's bills as printed; what each drink takes (A9.11).</td></tr>
       <tr><td>Kitchen stock</td><td>Chef, kitchen manager (to read)</td><td>The kitchen store's day - what came, what the KOTs used, what was wasted and why, what is left, the closing count - and each dish's recipe. The same as Inventory's Restaurant tab (A9.11).</td></tr>
-      <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
+      <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today, promotions and coupons; for the owner, an Admin and the GM, <span class="ui">Profit per dish</span>.</td></tr>
       <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
-      <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
+      <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline. A table for somebody not staying. On the night: arrived, seated, a no-show, cancelled (A8.2).</td></tr>
       <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
-      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, a parcel's packing charge, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
+      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, a parcel's packing charge, the voluntary service charge, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
     </tbody>
   </table>
   <p>At the top of Tables, the Till, the Terminal and the Kitchen, one line for each kind of KOT says whether it is printing, for example <span class="msg">“Kitchen KOTs: Kitchen PC - online”</span>. When it is not printing, the line is red and says why (A8.4).</p>
@@ -5019,7 +5080,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>The screen says what happens and that <span class="msg">“This cannot be undone.”</span> Tap <span class="ui">Join</span>.</li>
     <li>That table's dishes, KOTs and covers are now on this bill (this bill keeps its own waiter). Its own bill is closed as <b>joined</b>: it is not a sale, not a void and not closed unpaid, and no report counts it. On Tables, that table reads <b>Joined to AC3</b> until this bill is settled, as the party may still be sitting there; then it is free.</li>
   </ol>
-  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table a hotel guest has booked is refused from two hours before the booking; earlier in the day it can be used.</p>
+  <p>A move or a join stays inside one restaurant. A bill that is held, on a function's bill, discounted or rounded off, or with something waiting at a printer or a request waiting for the GM, is refused with a sentence that says why. A table still showing a paid bill must be cleared first, and a table booked for today (by a hotel guest or anybody else, A8.2 below) is refused from two hours before the booking; earlier in the day it can be used.</p>
 
   <figure class="shot" id="fig-A8-47">
     <img src="img/A8-47.png" alt="The Till: Move AC3 to another table, the bill and its KOTs go with it, and the free tables of the section to choose from">
@@ -5031,6 +5092,32 @@ figure.shot.phone img { max-width: 72mm; }
     <img src="img/A8-48.png" alt="The Till: Join AC4 to AC3? AC4's dishes and KOTs come onto the bill and AC4 becomes free. This cannot be undone. Cancel and Join">
     <figcaption><b>Figure A8-48.</b> Joining another table: said before it is done.</figcaption>
     <ol class="callouts"><li>This cannot be undone</li><li>Join</li></ol>
+  </figure>
+
+  <h3>A table booked: outside diners, and on the night</h3>
+  <p><span class="ui">Table bookings</span> lists the hotel guests' requests (they ask from their own page: confirm or decline each one) and every booking of the day. Somebody who is not staying is booked here, by whoever takes the call. Anybody who takes orders does it.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">New booking</span>.</li>
+    <li>Type the <span class="ui">Name</span>, the <span class="ui">Phone</span> (so the restaurant can call them), how many <span class="ui">People</span> (1 to 20; more is a banquet function), the <span class="ui">Day</span> and the <span class="ui">Time</span>. If you know it, choose the <span class="ui">Table</span>; or the <span class="ui">Area</span> they would like (A/C, Non A/C). A <span class="ui">Note</span> if there is one.</li>
+    <li>Tap <span class="ui">Book the table</span>. It is confirmed as you take it, and listed on its day.</li>
+  </ol>
+  <figure class="shot" id="fig-A8-50">
+    <img src="img/A8-50.png" alt="A table for somebody not staying: Name Meera Iyer, Phone 98765 43210, People 3, the day, Time 21:00, Table not yet, Area A/C, Note Window please, and Book the table">
+    <figcaption><b>Figure A8-50.</b> A table for somebody not staying.</figcaption>
+    <ol class="callouts"><li>A phone is needed</li><li>The time they come</li><li>The area, when there is no table yet</li><li>Book the table</li></ol>
+  </figure>
+  <p>On the night, each booking has its buttons:</p>
+  <ul>
+    <li><span class="ui">Arrived</span>: they are here, waiting for their table.</li>
+    <li><span class="ui">Seat</span>: choose a free table. Its bill opens with the party as its covers and the diner's name on it, exactly as if a waiter had opened the table on Tables; take the order there. A table with a bill on it is refused.</li>
+    <li><span class="ui">No-show</span>: only once the booked time has come; before it, it says <span class="msg">“They are booked for 20:30: a no-show is marked once that time has come.”</span> An arrived booking is never a no-show.</li>
+    <li><span class="ui">Cancel booking</span>: with the reason if they gave one.</li>
+  </ul>
+  <p><span class="ui">Day</span> at the top shows another day's bookings; <span class="ui">Back to today</span> returns. A hotel guest's page keeps saying <b>Confirmed</b> for a table that is arrived, seated or a no-show.</p>
+  <figure class="shot" id="fig-A8-51">
+    <img src="img/A8-51.png" alt="Table bookings for today: Rohan Mehta not staying, Seated at table N3 with bill 20261106-1 open on Tables; Meera Iyer not staying, Confirmed at 21:00 in A/C, with Seat, Arrived, No-show and Cancel booking">
+    <figcaption><b>Figure A8-51.</b> The day's bookings, on the night.</figcaption>
+    <ol class="callouts"><li>The day shown</li><li>Somebody not staying, by name and phone</li><li>Seat: opens the table's bill</li><li>No-show, once the time has come</li></ol>
   </figure>
 
   <div class="box watch">
@@ -5309,8 +5396,10 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>×</td><td>Strike the line. It stays on the record, struck through.</td></tr>
       <tr><td>Send to the kitchen</td><td>Sends every dish not yet sent, as Send does on the pad.</td></tr>
       <tr><td>KOTs sent: Reprint</td><td>At the foot of an open order: prints that KOT again at the computer that printed it, marked REPRINT (A8.4).</td></tr>
-      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason, up to the whole bill: no 10% limit since <span class="d">D27-395</span>. A promotion (Point of sale → Menu → Promotions) is the one the restaurant gives again and again, by name, at the top of the window. A waiter, the bar and the cashier do not see it: they <b>Ask for a discount</b>, and the GM approves.</td></tr>
+      <tr><td>Discount</td><td>The GM, the owner or an Admin only (<span class="d">D27-352</span>): a percentage or a fixed amount, always with a reason, up to the whole bill: no 10% limit since <span class="d">D27-395</span>. A promotion (Point of sale → Menu → Promotions) is the one the restaurant gives again and again, by name, at the top of the window. A <b>coupon</b> the guest brings is typed in <span class="ui">Coupon code</span> at the top, then <span class="ui">Apply coupon</span> (below). A waiter, the bar and the cashier do not see it: they <b>Ask for a discount</b>, and the GM approves.</td></tr>
       <tr><td>Round off</td><td>Rounds the total to the rupee. <span class="ui">Undo round off</span> takes it back.</td></tr>
+      <tr><td>Service charge 5%, if the guest agrees</td><td>Only where the GM set a rate (A8.10). It asks first, and goes on only when you tap <span class="ui">The guest agreed</span>. The bill then has <b>Service charge 5% (voluntary)</b>, with its GST. <span class="ui">Take off the service charge</span> removes it (below).</td></tr>
+      <tr><td>Tip for the staff</td><td>Type the tip, then tap <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>: it is taken the same way as the bill, but it is not part of it (below).</td></tr>
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
       <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
       <tr><td>Part - pay two ways</td><td>Split the payment: each way with its amount. For cash, type the <span class="ui">Cash given</span> and the change is shown. <span class="ui">Settle</span> appears only when the parts add up.</td></tr>
@@ -5343,6 +5432,33 @@ figure.shot.phone img { max-width: 72mm; }
     <img src="img/A8-17.png" alt="A settled bill on the Till with Print the bill">
     <figcaption><b>Figure A8-17.</b> A paid bill: Print the bill.</figcaption>
     <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
+  </figure>
+
+  <h3>The voluntary service charge, and tips</h3>
+  <p>By law a restaurant may not add a service charge by itself or by default; a guest pays one only if they agree, and the bill must say it is voluntary (the Consumer Protection guidelines of 4 July 2022). So it is <b>off</b> unless the GM sets a rate on Restaurant setup (A8.10), and even then it goes on a bill only when you ask the guest and they say yes.</p>
+  <ol class="steps">
+    <li>Ask the guest. If they agree, tap <span class="ui">Service charge 5%, if the guest agrees</span>, then <span class="ui">The guest agreed</span>.</li>
+    <li>The bill shows <b>Service charge 5% (voluntary)</b> under the net (after any discount or coupon), and the tax grows with it: GST is charged on a service charge as on the food. Alcohol under VAT takes none.</li>
+    <li>Changed their mind? Tap <span class="ui">Take off the service charge</span> while the bill is open. A paid bill keeps it as it was paid.</li>
+  </ol>
+  <p>A <b>tip</b> is money for the staff: not a sale and not taxed. Type it in <span class="ui">Tip for the staff</span>, then take the payment with <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>: the tip is taken the same way. It is written on the paid bill and the printed bill as <span class="msg">“Tip for the staff 100.00 by cash - not part of the bill”</span>; the GRAND TOTAL and the payment are the bill alone. A bill charged to a room or a function, split two ways or on the owner's allowance takes no tip, and a tip of more than the bill is refused as a slip of the finger. A cash tip is in the drawer until it is handed out, so the count expects it (A8.9).</p>
+  <figure class="shot" id="fig-A8-52">
+    <img src="img/A8-52.png" alt="The Till: Net ₹1,220, Service charge 5% (voluntary) ₹61, Taxable, Tax and Total ₹1,351; Take off the service charge (5%); Tip for the staff 50, with cash, card or UPI below">
+    <figcaption><b>Figure A8-52.</b> The voluntary service charge on a bill, and a tip about to be taken.</figcaption>
+    <ol class="callouts"><li>The service charge the guest agreed to, said as voluntary</li><li>Take it off again, while the bill is open</li><li>The tip, taken with Cash, Card or UPI</li></ol>
+  </figure>
+
+  <h3>A coupon</h3>
+  <p>A coupon is a promotion the guest brings as a code (Menu, Promotions, A8.11), good between two days, on so many bills, above a least bill. The GM, the owner or an Admin applies it, as a promotion.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Discount</span>. Type the guest's code in <span class="ui">Coupon code</span> and tap <span class="ui">Apply coupon</span>. On the Terminal, tap <span class="ui">Coupon</span>.</li>
+    <li>The bill shows <b>Coupon DIWALI10 10%</b> and the amount off, before tax. The use is the bill itself.</li>
+  </ol>
+  <p>It is refused in a sentence before its first day (<span class="msg">“Diwali coupon starts on 1 Dec 2026.”</span>), after its last, once it has been used on its number of bills, under its least bill, and when it would take off more than the bill. A bill closed unpaid gives its use back. If a dish is struck so the bill falls under the coupon's least bill, payment is refused until the coupon is taken off (Discount, <span class="ui">Remove</span>) or more is added.</p>
+  <figure class="shot" id="fig-A8-53">
+    <img src="img/A8-53.png" alt="Discount this bill: Coupon code DIWALI10 and Apply coupon above the percentage and amount boxes">
+    <figcaption><b>Figure A8-53.</b> A coupon the guest brings.</figcaption>
+    <ol class="callouts"><li>The guest's code</li><li>Apply coupon: its dates, uses and least bill are checked</li></ol>
   </figure>
 
   <h3>Printing a bill from an earlier day</h3>
@@ -5493,7 +5609,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason: <span class="d">D27-351</span>. Its prices and Bill total on the screen and the paper, ₹0 to pay and no tax lines, its value at menu prices shown as NC everywhere and never in sales, tax or the money taken: <span class="d">D27-394</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. Complimentary counting the NC bills: <span class="d">D27-365</span> (its screen without prices, until <span class="d">D27-394</span>). The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason: <span class="d">D27-351</span>. Its prices and Bill total on the screen and the paper, ₹0 to pay and no tax lines, its value at menu prices shown as NC everywhere and never in sales, tax or the money taken: <span class="d">D27-394</span>. A waiter or cashier sends the GM a strike of a sent dish, a discount, an NC or a void, approving does it; a paid bill's cash, card or UPI changed before the night audit by the GM, the owner or an Admin, with a reason: <span class="d">D27-363</span>. Complimentary counting the NC bills: <span class="d">D27-365</span> (its screen without prices, until <span class="d">D27-394</span>). The owner's allowance, its two figures the owner's or an Admin's to type, the rest paid at the till, GST as a sale, settled by the GM, the owner or an Admin: <span class="d">D27-355</span>, <span class="d">D27-366</span>. The taxes in Restaurant setup too, the same card as Settings: <span class="d">D27-368</span>. A table for somebody not staying, the voluntary service charge and tips, coupons and profit per dish: <span class="d">D27-383</span>, built under <span class="d">D27-396</span> (the service charge by the CCPA's guidelines of 4 July 2022, taxed as part of the supply; none on alcohol; a coupon applied by the same three as a promotion).</p>
   </div>
 
   <!-- A8.8 -->
@@ -5512,6 +5628,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Under the dishes, the open order's <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span>: it prints again at the computer that printed it (A8.4).</li>
     <li><b>Room-service orders waiting</b>: a checked-in guest's order from their own page. <span class="ui">Accept</span> makes it a room-service order for their room and sends it to the kitchen; <span class="ui">Decline</span> asks a reason, which the guest reads. It is charged to the room at delivery.</li>
     <li>Payment and printing work as on the Till, <span class="ui">No charge (NC)</span> included.</li>
+    <li>One row above Cash, Card and UPI: <span class="ui">Service charge 5%?</span> (where the GM set a rate, only when the guest agrees), <span class="ui">Coupon</span> (the GM, the owner or an Admin) and <span class="ui">Tip ₹</span>, taken with the payment (A8.7).</li>
   </ul>
 
   <!-- A8.9 -->
@@ -5567,7 +5684,7 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>At the end of the shift: count the drawer</h3>
   <ol class="steps">
     <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">Count the drawer</span>, type how many of each note and coin come out of the tin.</li>
-    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7).</li>
+    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus the <span class="ui">Cash tips</span>, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7). Cash tips handed to the staff from the tin are recorded as money out, with the reason.</li>
     <li>If they differ, a yellow box says <span class="msg">“Short by ₹217”</span> or over, and how much of it is a paid-out waiting for a yes.</li>
     <li>Tap <span class="ui">Save the count - ₹3,140</span>.</li>
   </ol>
@@ -5582,6 +5699,13 @@ figure.shot.phone img { max-width: 72mm; }
     <img src="img/A8-30.png" alt="The count typed, the Save the count button, and The sum with Expected, Counted and Short by">
     <figcaption><b>Figure A8-30.</b> The count, and what the drawer should hold.</figcaption>
     <ol class="callouts"><li>Save the count</li><li>Expected: what the drawer should hold</li></ol>
+  </figure>
+
+  <p>On the <span class="ui">Overview</span>, <span class="ui">Service charge and tips</span> shows the day's voluntary service charge (how many bills, and how much; it is already in the money above, with its GST) and the tips by cash, card and UPI, with their total: <b>Tips for the staff (not in sales)</b>. The night audit (A7) and its report show the same two, the service charge under Charges and the tips under Tips.</p>
+  <figure class="shot" id="fig-A8-54">
+    <img src="img/A8-54.png" alt="Close restaurant day, Overview: Service charge and tips - Service charge (voluntary), 1 bill ₹83.00; Tips by Cash ₹100.00; Tips for the staff (not in sales) ₹100.00">
+    <figcaption><b>Figure A8-54.</b> The day's service charge and tips.</figcaption>
+    <ol class="callouts"><li>The service charge the guests agreed to</li><li>The tips: the staff's, not a sale</li></ol>
   </figure>
 
   <h3>Close the day</h3>
@@ -5637,6 +5761,9 @@ figure.shot.phone img { max-width: 72mm; }
 
   <h3>A parcel's packing charge</h3>
   <p>Under <span class="ui">Parcels</span>, type the <span class="ui">Packing charge, ₹</span> and tap <span class="ui">Save</span>. It goes on each parcel's bill once, with its first KOT, taxed as the food (A8.2). Left blank, a parcel has no packing charge; nothing is put in for you. The owner, an Admin and the GM set it.</p>
+
+  <h3>The voluntary service charge</h3>
+  <p>Under <span class="ui">Service charge</span>, type the <span class="ui">Service charge, %</span> (above 0, at most 20) and tap <span class="ui">Save</span>. It never goes on a bill by itself: it lets the Till and the Terminal offer it, and the cashier puts it on a bill only when the guest agrees (A8.7). Left blank, the default, the restaurant has none and nothing is offered. A bill that has it keeps the rate it was ticked at. The owner, an Admin and the GM set it.</p>
 
   <h3>The KOT section</h3>
   <figure class="shot" id="fig-A8-20">
@@ -5734,7 +5861,15 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>Sides</b>: groups of options linked dish by dish, with how many a guest may choose.</li>
     <li><b>Take off</b> a dish until a time (“out of paneer”): the pad shows it, and refuses it, until then.</li>
     <li><b>Recipes</b> (what each dish, size, side and add-on takes from the kitchen store) are not kept here: they are in <span class="ui">Inventory</span>, <span class="ui">Restaurant</span>, <span class="ui">Recipes</span> (A9.11). A dish with no recipe sells as before and takes nothing.</li>
+    <li><b>Promotions and coupons</b>: <span class="ui">Add a promotion</span>: a code, a name, a percentage or an amount off. Tick <span class="ui">A coupon the guest brings</span> to give it <span class="ui">From</span> and <span class="ui">Until</span> days, how many <span class="ui">Bills it may go on</span> and a <span class="ui">Least bill, ₹</span> (blank: no limit, any bill). A coupon is never a button on the Till: it is typed from the guest's code (A8.7). The list shows each coupon's days and how many of its uses are gone. A coupon cannot take off more than its least bill.</li>
   </ul>
+  <h3>Profit per dish</h3>
+  <p>The owner, an Admin and the GM have a third tab, <span class="ui">Profit per dish</span>. A dish's <b>cost</b> is its recipe (A9.11) at each Store item's average cost today; its <b>margin</b> is the menu price less that cost, and the margin %. A dish sold by size is a row for each size. A dish with <b>no recipe</b>, or with an ingredient nobody has priced yet (<b>an ingredient has no cost</b>), shows a dash, never a zero: it has no cost yet. Under it, <span class="ui">What was sold</span>: for the days chosen, the dishes on paid bills, how many, their sales at the price sold (before the bill's discount), their cost and margin, with the total margin of the dishes that have a cost and what was sold of those that have none. NC, voided and unpaid bills are not sales.</p>
+  <figure class="shot" id="fig-A8-55">
+    <img src="img/A8-55.png" alt="Menu, Profit per dish: each dish with its menu price, cost, margin and margin %; Paneer Tikka ₹320.00, cost ₹66.00, margin ₹254.00, 79.4%; dishes with no recipe show a dash">
+    <figcaption><b>Figure A8-55.</b> Profit per dish.</figcaption>
+    <ol class="callouts"><li>The cost: the recipe at the average cost</li><li>The margin %</li><li>No recipe: a dash, never a zero</li></ol>
+  </figure>
   <figure class="shot" id="fig-A8-49">
     <img src="img/A8-49.png" alt="The Menu as the GM, the Starters: Bhaaji Pau's variation line Oil ₹300.00 (MRP -) · Butter ₹400.00 (MRP -), Chicken 65 with MRP -, Paneer Tikka with MRP ₹350.00, Papad Masala and Veg Manchurian with MRP -">
     <figcaption><b>Figure A8-49.</b> A dish's MRP on the Menu: a figure once typed, a dash until then.</figcaption>
@@ -7799,6 +7934,38 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
   <p>The switch is on when the report opens. Turn it off to see every account, even those with nothing on them. The switch itself is never printed.</p>
 
+  <h3>Money owed by age</h3>
+  <p><span class="ui">Money owed by age</span> (<code>/reports/dues-by-age</code>, or the link under the table on Company accounts) is what each company, travel agent and booking site owed on a date, by how old each bill is: <b>0-30 days</b>, <b>31-60 days</b>, <b>61-90 days</b> and <b>Over 90 days</b> since the bill was sent to the account (settled <span class="ui">Bill to company</span>). Each kind of account has its own band - Companies, Travel agents, Booking sites - with its total, and <b>Total owed</b> is at the foot. Change the date above it to see another day.</p>
+
+  <figure class="shot" id="fig-A11-32">
+    <img src="img/A11-32.png" alt="Money owed by age: the date, the Companies band, the 0-30 days and Paid ahead columns, and Total owed">
+    <figcaption><b>Figure A11-32.</b> Money owed by age.</figcaption>
+    <ol class="callouts">
+      <li>Owed on: the date the money owed is counted on</li>
+      <li>A band for each kind of account: Companies, Travel agents, Booking sites</li>
+      <li>The age of what is left of each bill, in days since it was sent</li>
+      <li>Paid ahead: what an account paid beyond its bills, below zero</li>
+      <li>Total owed: the City ledger's Closing Balance on that date</li>
+    </ol>
+  </figure>
+  <p>An account's payment is recorded against the account, not one bill, so it pays the oldest bill first. <b>Credit days</b> are the company's own, from its record; a dash where none is set.</p>
+
+  <h3>Statement of account</h3>
+  <p><span class="ui">Statement of account</span> (<code>/reports/company-statement</code>, or <span class="ui">Statement</span> beside an account on Company accounts, A4.8) is one company's, agent's or booking site's account for the days chosen, to send to them: the <b>Opening balance</b>, then each bill sent (the booking, the guest and the bill's tax invoice), each payment received and each payment reversed, by date, with the <b>Balance</b> after it, and the <b>Closing balance</b>. Pick the account and the From and To dates. <span class="ui">PDF</span> and <span class="ui">Excel</span> make the file to send.</p>
+
+  <figure class="shot" id="fig-A11-33">
+    <img src="img/A11-33.png" alt="Statement of account for a company: the account picker, the opening balance, bills sent with their invoices, a payment received, the closing balance and the credit notes section">
+    <figcaption><b>Figure A11-33.</b> A statement of account.</figcaption>
+    <ol class="callouts">
+      <li>The account, then the From and To dates</li>
+      <li>Opening balance: what was owed before the first day</li>
+      <li>A payment the account made, by the day it reached the hotel</li>
+      <li>Closing balance: the same as Company accounts and the City ledger</li>
+      <li>Credit notes on the account's bills: listed, not counted</li>
+    </ol>
+  </figure>
+  <p>A credit note cancels a tax invoice; it does not change what the account owes. What it owes changes when the bill sent to it is corrected (its <span class="ui">Bill to company</span> reversed and settled again), so the statement lists a credit note in its own part, with the invoice it cancels, and the balance does not move.</p>
+
   <h3>No show</h3>
   <p><span class="ui">No show</span> (<code>/reports/no-show</code>) lists the bookings marked no-show that were due to arrive on the business date: booking, guest, room type, arrival, departure, pax, source and rate. On a day when everybody came, it still prints and says <span class="msg">“Nobody failed to arrive on this day.”</span> (Figure A11-22).</p>
 
@@ -7852,7 +8019,8 @@ figure.shot.phone img { max-width: 72mm; }
       <li>A dash for a category is an expense recorded before categories began (27 October 2026).</li>
       <li>A receipt that was reversed is not money the cashier holds, so it is not counted - the same rule as the Manager report.</li>
       <li>“not on record” is never filled in with a name: naming somebody would be worse than the gap.</li>
-      <li>The Revenue Manager does not see City ledger, Guest ledger, Cashier shift or Petty cash.</li>
+      <li>The Revenue Manager does not see City ledger, Money owed by age, Statement of account, Guest ledger, Cashier shift or Petty cash.</li>
+      <li>Commission is counted on the room revenue before GST because no booking source or contract names another amount; the group's CA confirms that, and the booking sites' GST on their commission and the TCS or TDS they keep are not on it.</li>
     </ul>
   </div>
 
@@ -7873,13 +8041,28 @@ figure.shot.phone img { max-width: 72mm; }
   <p>The <span class="ui">Supplier statement</span> (<code>/reports/supplier-statement</code>, or <span class="ui">Statement</span> beside a supplier on Supplier dues) is one supplier's ledger for the days chosen: the opening balance, then each bill, payment, TDS, credit note and reversal by date with the balance after it, and the closing balance. Pick the supplier and the From and To dates.</p>
   <p><span class="ui">TDS on suppliers</span> (<code>/reports/tds</code>) lists the TDS deducted on supplier payments for the days chosen, by section (194C, 194Q, 194J, 194I) and supplier: the figures for the quarterly TDS return (26Q). Both are read by the Accountant, the GM, the owner and an Admin, and download as PDF, Excel and CSV (<span class="d">D27-372</span>).</p>
 
+  <h3>Commission owed</h3>
+  <p><span class="ui">Commission owed</span> (<code>/reports/commission</code>) is the commission on the stays from booking sites and agents that checked out in the days chosen (from the 1st of the month to the business date when it opens), booking by booking, under each site or agent with its total. For each booking: the arrival and departure, the <b>Room revenue before GST</b>, the <b>Rate %</b> on record when the booking was taken (the source's on Settings, Money, Commission, or the agent's contract), the <b>Site's figure</b> when the booking site sent its own, and the <b>Commission</b>.</p>
+
+  <figure class="shot" id="fig-A11-34">
+    <img src="img/A11-34.png" alt="Commission owed: From and To, a band per booking site and agent, Site's figure and Rate % columns, and the note of bookings with no commission on record">
+    <figcaption><b>Figure A11-34.</b> Commission owed.</figcaption>
+    <ol class="callouts">
+      <li>The days the stays checked out in</li>
+      <li>Site's figure: what the booking site said it keeps; used first</li>
+      <li>Rate %: else this rate on the room revenue</li>
+      <li>A booking with no rate on record: a dash, not counted</li>
+    </ol>
+  </figure>
+  <p>The commission is the site's own figure when it sent one; otherwise the rate times the room revenue; otherwise a dash - never a zero and never a rate made up. A stay counts in the days it checked out in, whole. Nothing here is a payment: paying a booking site is not recorded in this system, so the Manager report's <b>Outstanding Commission</b> still shows "-". The Owner, an Admin, the GM, the Revenue Manager, the Accountant and the Viewer read it; not Reception or the Hotel Manager.</p>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The city ledger's Debit is the bills transferred to the account: <span class="d">D17-74</span>. Company payments are recorded on Company accounts and counted by the day they reached the hotel: <span class="d">D27-242</span>. Money owed and money taken are not the revenue manager's: <span class="d">D27-147</span>.</p>
+    <p>The city ledger's Debit is the bills transferred to the account: <span class="d">D17-74</span>. Company payments are recorded on Company accounts and counted by the day they reached the hotel: <span class="d">D27-242</span>. Money owed and money taken are not the revenue manager's: <span class="d">D27-147</span>. One figure for a company everywhere, so Money owed by age and the Statement of account are the City ledger's own: <span class="d">D27-127</span>. Commission is the site's figure, else the rate on record, else a dash: <span class="d">D17-84</span>; Outstanding Commission stays "-" while no payout is recorded: <span class="d">D17-75</span>, <span class="d">D27-259</span>. All three were asked for in <span class="d">D27-383</span>.</p>
   </div>
 
   <!-- A11.7 -->
-  <h2 id="a11-7"><span class="n">A11.7</span>Statutory: Lodging tax, GST sales register, Form III register</h2>
+  <h2 id="a11-7"><span class="n">A11.7</span>Statutory: Lodging tax, GST sales register, GSTR-1, Input tax credit, GST on advances, Form III register</h2>
   <p>These are filed with the government, not just read. This system files nothing: they are what the accountant, or whoever files, works from.</p>
 
   <h3>Lodging tax</h3>
@@ -7915,6 +8098,68 @@ figure.shot.phone img { max-width: 72mm; }
   <p>An invoice is listed on the business day it belongs to, not the moment it was printed. A credit note says which invoice it credits.</p>
   <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column, and <span class="ui">Type</span> says <b>B2B</b>. A dash under GSTIN is an unregistered recipient, and Type says <b>B2C</b>. A credit note has the type of the invoice it credits. The CSV carries the same Type column: <span class="d">D27-372</span>.</p>
 
+  <h3>GSTR-1, and its file for the GST portal</h3>
+  <p><span class="ui">GSTR-1</span> (<code>/reports/gstr-1</code>) is the month's GSTR-1 for this property's GSTIN, table by table, from the tax invoices and credit notes issued in the month (by their business date) and the restaurant's bills paid at the outlet. Choose the <span class="ui">Month</span> above it.</p>
+  <ul>
+    <li><b>4A - B2B</b>: each invoice to a registered recipient (a GSTIN on it), one line for each rate on it: the taxable value, CGST and SGST.</li>
+    <li><b>5 - B2C large</b>: always empty for a hotel, and it says why: B2C large is an invoice to another state over ₹1,00,000, and a hotel's supply is always in its own state.</li>
+    <li><b>7 - B2C small</b>: by rate, everything sold to an unregistered guest - invoices without a GSTIN, less their credit notes, and the restaurant's bills.</li>
+    <li><b>9B - Credit notes</b>: each credit note to a registered recipient, with the invoice it cancels.</li>
+    <li><b>12 - HSN/SAC summary</b>, B2B and B2C apart, by code and rate.</li>
+    <li><b>13 - Documents issued</b>: the first and last number, how many, how many cancelled, of the tax invoices, the credit notes and the restaurant's bills.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-35">
+    <img src="img/A11-35.png" alt="GSTR-1: the month, the GSTR-1 file (JSON) button, the 4A B2B table and the B2C large note">
+    <figcaption><b>Figure A11-35.</b> GSTR-1: the month, table by table.</figcaption>
+    <ol class="callouts">
+      <li>The month</li>
+      <li>GSTR-1 file (JSON): the file for the GST offline tool or the portal</li>
+      <li>4A - B2B: each invoice to a registered business, by rate</li>
+      <li>5 - B2C large: never for a hotel, and why</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A11-36">
+    <img src="img/A11-36.png" alt="GSTR-1 further down: B2C small by rate, the HSN/SAC summaries for B2B and B2C, and the documents issued">
+    <figcaption><b>Figure A11-36.</b> GSTR-1: B2C small, the HSN summary and the documents.</figcaption>
+    <ol class="callouts"><li>7 - B2C small, by rate</li><li>12 - HSN/SAC, B2B</li><li>12 - HSN/SAC, B2C</li><li>13 - Documents issued</li></ol>
+  </figure>
+
+  <h3>To make the GSTR-1 file</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">GSTR-1</span> and choose the <span class="ui">Month</span>.</li>
+    <li>Read the tables. If a part headed <b>To put right before the file is made</b> is at the top, put each line right first - an HSN/SAC not set for a kind (Settings, Taxes), or an invoice whose bill no longer adds up to it.</li>
+    <li>Click <span class="ui">GSTR-1 file (JSON)</span>. The file is saved: <span class="msg">“GSTR-1 file saved”</span>, named for the property, the GSTIN and the month.</li>
+    <li>Give it to whoever files: they open it in the GST offline tool (or upload it on the portal), check it there, and file.</li>
+  </ol>
+  <p>If anything still needs putting right, the file is not made and the message says what: <span class="msg">“The GSTR-1 file was not made.”</span> and the reasons. The file is for those who may download reports: the Owner, an Admin, the GM, the Hotel Manager, the Revenue Manager and the Accountant.</p>
+
+  <h3>Input tax credit</h3>
+  <p><span class="ui">Input tax credit</span> (<code>/reports/input-tax-credit</code>) is the GST on the month's deliveries to the Store (A9), as it was recorded when each was received: <b>GST marked claimable</b>, then <b>GST marked not claimable</b>, each delivery with its supplier, the supplier's GSTIN when it is on the supplier's record (Places and suppliers), the item, its reference, the value before GST, the rate and the GST. CGST and SGST when the supplier's GSTIN is in this state, IGST when it is in another, a dash when no GSTIN is on record. Deliveries that recorded no GST are counted in the notes, not listed. It is read by the Owner, an Admin, the GM and the Accountant.</p>
+
+  <figure class="shot" id="fig-A11-37">
+    <img src="img/A11-37.png" alt="Input tax credit: GST marked claimable with supplier GSTIN, CGST, SGST and IGST, then GST marked not claimable">
+    <figcaption><b>Figure A11-37.</b> Input tax credit.</figcaption>
+    <ol class="callouts"><li>GST marked claimable</li><li>The supplier's GSTIN, from its record</li><li>IGST: a supplier in another state</li><li>GST marked not claimable</li></ol>
+  </figure>
+
+  <h3>GST on advances</h3>
+  <p><span class="ui">GST on advances</span> (<code>/reports/gst-advances</code>) is the GST on money taken on a bill before its tax invoice - an advance, on which GST falls due in the month it is received. For the month chosen:</p>
+  <ul>
+    <li><b>By rate, for GSTR-1 Table 11</b>: <b>11A - Advances received</b>, <b>Given back before an invoice</b>, and <b>11B - Advances adjusted</b>, each by rate: the taxable value, CGST and SGST.</li>
+    <li><b>Advances received this month, no tax invoice by its end</b>: each booking, the amount, and the tax inside it.</li>
+    <li><b>Given back this month before an invoice</b>: a refund of an advance.</li>
+    <li><b>Advances of earlier months, adjusted against invoices issued this month</b>: each with its invoice.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-38">
+    <img src="img/A11-38.png" alt="GST on advances: 11A received and 11B adjusted by rate, then the bookings received this month and the advances adjusted against this month's invoices">
+    <figcaption><b>Figure A11-38.</b> GST on advances.</figcaption>
+    <ol class="callouts"><li>11A: advances received, by rate</li><li>11B: advances adjusted, by rate</li><li>Each advance received this month</li><li>Each earlier advance, with the invoice it is adjusted against</li></ol>
+  </figure>
+  <p>Money received and invoiced in the same month is not an advance in GSTR-1 and is not here. An advance includes its tax. "Bill to company" is not money received. The rate is the room's GST rule at the booking's rate; where no rate is known when the money is paid (a function, a group's bill, a free room) it is 18%. It is read by the people who read Company accounts. This report changes nothing about how a tax invoice is made.</p>
+
   <h3>Form III register</h3>
   <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date, each foreign adult in a room on a row of their own: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>
 
@@ -7935,12 +8180,13 @@ figure.shot.phone img { max-width: 72mm; }
       <li><b>Nothing here is filed by itself.</b> The Form III register is the record of what was filed on the portal; the portal numbers are typed on the <span class="ui">Form III</span> screen (Finance part of the menu).</li>
       <li>The Form III register is for the Owner, Admin, General Manager, Hotel Manager and Reception only: it shows passports. The Accountant does not see it.</li>
       <li>Lodging tax counts the bills issued. A stay still in house is not on it yet (compare the Accounting export, A11.8).</li>
+      <li><b>For the group's CA to confirm</b> before the first GSTR-1 is filed from this system: that credit notes share the tax invoice numbers (so Table 13's ranges overlap); that a cancelled invoice is not counted as cancelled in Table 13; whether a deposit is an advance, and how money given back before an invoice is reported; and that input tax credit is claimed only as GSTR-2B shows it. The marked-claimable column is what the person receiving chose, not a ruling.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Lodging tax reads the room rent less its discount, and the group's accountant confirms before anything is filed: <span class="d">D17-99</span>. No rate in the CGST and SGST headings: <span class="d">D24-23</span>. Alcohol and its VAT kept off the sheet: <span class="d">D22-45</span>. Passports only for the people who check guests in: <span class="d">D25-38</span>; not the Accountant: <span class="d">D27-122</span>.</p>
+    <p>Lodging tax reads the room rent less its discount, and the group's accountant confirms before anything is filed: <span class="d">D17-99</span>. No rate in the CGST and SGST headings: <span class="d">D24-23</span>. GSTR-1, input tax credit and GST on advances: <span class="d">D27-383</span>; the file follows the GST offline tool's JSON (version 3.2.2), and an advance for a service is taxed when received (CGST Act section 13(2); the exemption of Notification 66/2017 is for goods). Alcohol and its VAT kept off the sheet: <span class="d">D22-45</span>. Passports only for the people who check guests in: <span class="d">D25-38</span>; not the Accountant: <span class="d">D27-122</span>.</p>
   </div>
 
   <!-- A11.8 -->
@@ -8192,12 +8438,18 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>How full were we, day by day?</td><td>Monthly occupancy; Monthly statistics</td><td>A11.5</td></tr>
       <tr><td>The year, month by month</td><td>Yearly statistics</td><td>A11.5</td></tr>
       <tr><td>What do companies and booking sites owe?</td><td>City ledger</td><td>A11.6</td></tr>
+      <tr><td>How old is what they owe?</td><td>Money owed by age</td><td>A11.6</td></tr>
+      <tr><td>One company's bills and payments, to send to them</td><td>Statement of account</td><td>A11.6</td></tr>
+      <tr><td>What commission do the booking sites and agents get for this month's stays?</td><td>Commission owed</td><td>A11.6</td></tr>
       <tr><td>Who did not come?</td><td>No show</td><td>A11.6</td></tr>
       <tr><td>Which guests' bills moved, and what is left on them?</td><td>Guest ledger</td><td>A11.6</td></tr>
       <tr><td>What did each cashier take today?</td><td>Cashier shift</td><td>A11.6</td></tr>
       <tr><td>What was paid out of the tins and drawers, and for what?</td><td>Petty cash</td><td>A11.6</td></tr>
       <tr><td>The month's check-out bills and their tax</td><td>Lodging tax</td><td>A11.7</td></tr>
       <tr><td>Every invoice and credit note, for GSTR-1</td><td>GST sales register</td><td>A11.7</td></tr>
+      <tr><td>The month's GSTR-1, and its file for the portal</td><td>GSTR-1</td><td>A11.7</td></tr>
+      <tr><td>The GST paid on what we bought</td><td>Input tax credit</td><td>A11.7</td></tr>
+      <tr><td>The GST due on money taken before an invoice</td><td>GST on advances</td><td>A11.7</td></tr>
       <tr><td>Which foreign guests are filed with the FRRO?</td><td>Form III register</td><td>A11.7</td></tr>
       <tr><td>The month as a file for the accountant</td><td>Accounting export</td><td>A11.8</td></tr>
       <tr><td>What is in the stores, and what has it cost?</td><td>Store reports, starting with Closing stock</td><td>A11.9</td></tr>
@@ -9928,6 +10180,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>Every property</b>: <span class="msg">“A group administrator reaches every property, including ones added later. Property grants do not apply to them.”</span> This screen cannot make one.</li>
     <li>Each property chip reads the code and the role there: <span class="msg">“5EL · Reception”</span>. A test hotel's chip carries <b>TEST</b>.</li>
     <li><span class="msg">“No password yet”</span> in red: <span class="msg">“No sign-in account yet - they cannot get in at all. Set a password and they can.”</span></li>
+    <li><b>Two-step on</b> in green: they sign in with a code from their phone as well (A0.1). Only the owner, and an Admin for the people at their hotel, see it, with <span class="ui">Two-step off</span> beside it for a lost phone: it asks why, the reason goes into the audit log, and they set it up again (A17.13).</li>
     <li>You see a button only where you may use it. A GM leaves the hotel's Owner and Admin alone, and nobody takes away their own access or switches themselves off.</li>
   </ul>
 
@@ -11157,19 +11410,30 @@ figure.shot.phone img { max-width: 72mm; }
   </ul>
 
   <figure class="shot" id="fig-A17-46">
-    <img src="img/A17-46.png" alt="Signing in: the rules for passwords and sign-ins, read only">
-    <figcaption><b>Figure A17-46.</b> Signing in: the rules, read only.</figcaption>
+    <img src="img/A17-46.png" alt="Signing in: the rules for passwords and sign-ins, and the Two-step sign-in card with its Required switch">
+    <figcaption><b>Figure A17-46.</b> Signing in: the rules, and whether two-step sign-in is required.</figcaption>
+    <ol class="callouts"><li>The rules, read only</li><li>Required for the owner, Admins, GMs and Accountants</li></ol>
   </figure>
   <ul>
     <li>A password is at least 10 characters for the owner, an Admin and a GM, and at least 8 for everybody else.</li>
     <li>Somebody given the owner's, an Admin's or a GM's role with a shorter password sets a new one at their next sign-in.</li>
     <li>Each sign-in is kept for 90 days: when, and on what device. The owner and an Admin see it under <span class="ui">Sign-ins and devices</span>.</li>
-    <li>Two-step sign-in, for the owner, Admins and GMs, comes after this release.</li>
+    <li>Two-step sign-in (a code from a phone app as well as the password, A0.1): anybody may set it up from their account menu.</li>
   </ul>
+
+  <h3>To require two-step sign-in</h3>
+  <ol class="steps">
+    <li>Set up your own first: your name at the top right, <span class="ui">Two-step sign-in</span> (A0.1). The switch refuses until yours is on, so it cannot lock you out.</li>
+    <li>Open Settings, <span class="ui">Signing in</span>.</li>
+    <li>Switch on <span class="ui">Required for the owner, Admins, GMs and Accountants</span>.</li>
+  </ol>
+  <p>From then on, each of them sets it up the next time they open the system, before anything else; everybody else is not asked. It starts <b>off</b>. Only the owner or an Admin may change it; the GM sees it greyed, with <span class="msg">“The owner or an Admin changes this.”</span> Every change is in the audit log.</p>
+  <p>A lost phone: on <span class="ui">People</span> (A16.6) the person shows <span class="ui">Two-step on</span>; the owner, or an Admin at their hotel, clicks <span class="ui">Two-step off</span>, types why, and clicks <span class="ui">Switch it off</span>. The reason goes into the audit log, and the person sets it up again on their new phone.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>; the Signing in page names it so: <span class="d">D27-308</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.</p>
+    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>; the Signing in page names it so: <span class="d">D27-308</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.
+       Two-step sign-in, off until required, the four roles, and the owner or an Admin switching somebody's off with a reason: <span class="d">D27-384</span>, <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A17.14 -->

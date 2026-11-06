@@ -438,7 +438,7 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
     defaultTitle?: string | null;
     /** D27-338: the night audit opens at this time; the owner's and an admin's. */
     nightAuditOpensAt?: string;
-    /** D27-397: the GM may undo a check-in (266). */
+    /** D27-397: the GM may undo a check-in (262). */
     gmMayUndoCheckIn?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);

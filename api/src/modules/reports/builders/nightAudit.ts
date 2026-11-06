@@ -682,11 +682,14 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
        rate breakdown would count a bill's round-off once per tax rate. */
     client.query<{
       outlet: string; net: string; discount: string; tax: string; round_off: string;
+      service: string; tips: string;
     }>(
       `with by_rate as (
          select o.outlet_id,
                 coalesce(sum(r.rate_net), 0) as net,
                 coalesce(sum(r.discount), 0) as discount,
+                /* The voluntary service charge, inside each rate's taxable (pos 264). */
+                coalesce(sum(r.taxable - r.rate_net + r.discount), 0) as service,
                 coalesce(sum(r.tax), 0)      as tax
            from pos_orders o
            cross join lateral app.pos_order_by_rate(o.id) r
@@ -694,11 +697,14 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
           group by o.outlet_id
        ),
        by_order as (
-         select o.outlet_id, coalesce(sum(o.round_off), 0) as round_off
+         select o.outlet_id, coalesce(sum(o.round_off), 0) as round_off,
+                /* Tips for the staff (pos 264): no sale, so outside Total. */
+                coalesce(sum(o.tip), 0) as tips
            from pos_orders o where ${settled} group by o.outlet_id
        )
        select ou.name as outlet, by_rate.net::text, by_rate.discount::text,
-              by_rate.tax::text, by_order.round_off::text
+              by_rate.tax::text, by_order.round_off::text,
+              by_rate.service::text, by_order.tips::text
          from by_rate
          join by_order on by_order.outlet_id = by_rate.outlet_id
          join pos_outlets ou on ou.id = by_rate.outlet_id
@@ -718,6 +724,7 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
     const discount = round2(Number(t.discount));
     const tax = round2(Number(t.tax));
     const roundOff = round2(Number(t.round_off));
+    const service = round2(Number(t.service));
     const paid = tenders.filter((x) => x.outlet === t.outlet);
     /* The owner's allowance (D27-366) is settled on account, as a room or a function is: not takings. */
     const onAccount = (m: string) => m === "room" || m === "function" || m === "allowance";
@@ -728,14 +735,15 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
     summary.push(row({
       outlet: t.outlet,
       sales: net,
-      /* Service charges, item discounts and tips are not recorded here. */
-      charges: null,
+      /* The voluntary service charge (pos 264); item discounts are not
+         recorded here. Tips are the staff's, outside Total. */
+      charges: service,
       tax,
       itemDiscount: null,
       orderDiscount: -discount,
       roundOff,
-      tips: null,
-      total: round2(net - discount + tax + roundOff),
+      tips: round2(Number(t.tips)),
+      total: round2(net - discount + service + tax + roundOff),
       payments: takings,
       posting,
     }));
@@ -743,9 +751,9 @@ async function posDay(client: Client, hotelId: string, asOn: string) {
   if (summary.length) {
     const sum = (k: string) => round2(summary.reduce((s, r) => s + Number(r.cells[k] ?? 0), 0));
     summary.push(total({
-      outlet: "Total", sales: sum("sales"), charges: null, tax: sum("tax"),
+      outlet: "Total", sales: sum("sales"), charges: sum("charges"), tax: sum("tax"),
       itemDiscount: null, orderDiscount: sum("orderDiscount"), roundOff: sum("roundOff"),
-      tips: null, total: sum("total"), payments: sum("payments"), posting: sum("posting"),
+      tips: sum("tips"), total: sum("total"), payments: sum("payments"), posting: sum("posting"),
     }));
   }
 

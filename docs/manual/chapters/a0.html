@@ -58,11 +58,61 @@
     </ul>
   </div>
 
+  <h3>Two-step sign-in: a code from your phone as well</h3>
+  <p>With two-step sign-in on, signing in takes your password <b>and</b> a 6-digit code from an authenticator app on your phone (Google Authenticator or Microsoft Authenticator, both free). Somebody who learns your password still cannot get in without your phone. Anybody may switch it on for themselves. The owner may also make it required for the owner, Admins, GMs and Accountants (A17.13); then the system asks you to set it up before anything else.</p>
+
+  <h4>To set it up</h4>
+  <ol class="steps">
+    <li>Put Google Authenticator or Microsoft Authenticator on your phone, from the phone's app store.</li>
+    <li>In the system, click your name at the top right, then <span class="ui">Two-step sign-in</span>, then <span class="ui">Set it up</span>.</li>
+    <li>In the app, add an account and scan the square code on the screen. If the phone cannot scan it, choose “enter a setup key” in the app and type the key shown under the code.</li>
+    <li>Type the 6 digits the app now shows in <span class="ui">Code from the app</span> and click <span class="ui">Go on</span>.</li>
+    <li>Ten <b>recovery codes</b> appear. Each one lets you in once if your phone is lost or not with you. Write them down or print them, keep them away from the phone, and click <span class="ui">I have kept them</span>. They are never shown again.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A0-15">
+    <img src="img/A0-15.png" alt="Two-step sign-in being set up: the authenticator app's square code, the setup key under it, and the box for the 6-digit code">
+    <figcaption><b>Figure A0-15.</b> Setting up two-step sign-in from the account menu.</figcaption>
+    <ol class="callouts"><li>Scan this with the app</li><li>Or type this key</li><li>The 6 digits the app shows</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A0-16">
+    <img src="img/A0-16.png" alt="Two-step sign-in is on: ten recovery codes, Copy them and I have kept them">
+    <figcaption><b>Figure A0-16.</b> The ten recovery codes, shown once.</figcaption>
+    <ol class="callouts"><li>The recovery codes</li><li>I have kept them</li></ol>
+  </figure>
+
+  <h4>To sign in with it</h4>
+  <ol class="steps">
+    <li>Sign in with your email and password as always.</li>
+    <li>The <span class="ui">Two-step sign-in</span> page opens. Open the app on your phone and type the 6 digits it shows for this account.</li>
+    <li>Click <span class="ui">Go on</span>. Your first screen opens.</li>
+  </ol>
+  <p>Without the phone, click <span class="ui">Use a recovery code instead</span> and type one of your ten. Each works once. The code is asked once per sign-in on each device, not on every screen.</p>
+
+  <figure class="shot" id="fig-A0-17">
+    <img src="img/A0-17.png" alt="The Two-step sign-in page after the password: Code from the app, Go on, Use a recovery code instead, Sign out">
+    <figcaption><b>Figure A0-17.</b> The code, after the password.</figcaption>
+    <ol class="callouts"><li>Code from the app</li><li>Go on</li><li>Use a recovery code instead</li><li>Sign out</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><span class="msg">“That code is not right. The app shows a new one every 30 seconds: type the one showing now.”</span> Type the code showing now. A code already used is not taken again; wait for the next one.</li>
+      <li><span class="msg">“Five wrong codes in a quarter of an hour...”</span> Wait 15 minutes, then try again. Every code typed is kept on record.</li>
+      <li><b>Lost your phone and your recovery codes?</b> The owner, or an Admin at your hotel, switches two-step sign-in off for you on the People screen (A16.6), with a reason. Then you set it up again on your new phone.</li>
+      <li><span class="msg">“Your role needs two-step sign-in. Set it up to go on.”</span> The owner made it required for your role. The page shows the same three steps as above; nothing else opens until it is done.</li>
+      <li>Your account menu's <span class="ui">Two-step sign-in</span> says whether it is on for you and how many recovery codes are left.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>Longer passwords for the people who reach the most: <span class="d">D27-243</span> (10 characters for the owner, Admin and GM, 8 for others) and <span class="d">D27-245</span> (a person given one of those roles sets a 10-character password at their next sign-in).
        Clearing the computer at sign-out was one of the four security fixes the owner asked for before the release: <span class="d">D27-88</span>.
-       Unsent work stays under the name of the person who did it, because the bill and the ledger never forget who made an entry (the owner, 28 September).</p>
+       Unsent work stays under the name of the person who did it, because the bill and the ledger never forget who made an entry (the owner, 28 September).
+       Two-step sign-in is the safety work the owner put before every feature, <span class="d">D27-384</span>; built in our own system, because Firebase's needs a paid plan, and off until the owner requires it, so switching it on locks nobody out: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A0.2 -->

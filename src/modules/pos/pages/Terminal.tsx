@@ -12,7 +12,7 @@ import { useUi } from "@/lib/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, sendToGm, STRIKES_SENT, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, sendToGm, STRIKES_SENT, setOrderHeader, setServiceCharge, applyPromotion, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -101,6 +101,8 @@ export default function TerminalPage() {
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
   const [cashId, setCashId] = useState<CashId>({});
+  /* A tip for the staff, taken with a cash, card or UPI payment (260). */
+  const [tip, setTip] = useState("");
   /* A sixteen-item demo menu fits on a screen. A real card does not, and
      scrolling for "Jeera Rice" while a table waits is how a waiter ends
      up writing on paper instead. */
@@ -324,7 +326,8 @@ export default function TerminalPage() {
     if (!orderId) return;
     setBusy(true);
     const res = await settleOrder(hotelId, orderId, method,
-      method === "room" ? room : undefined, folioId, cashId);
+      method === "room" ? room : undefined, folioId, cashId,
+      method === "room" || method === "function" ? null : Number(tip) || null);
     setBusy(false);
 
     if (!res.ok) {
@@ -337,7 +340,7 @@ export default function TerminalPage() {
       res.guest ? `Charged to ${res.guest}`
         : method === "function" ? `On ${res.order.eventTitle ?? "the function"}'s bill`
           : undefined);
-    setOrderId(null); setSettling(false); setRoom(""); setCashId({});
+    setOrderId(null); setSettling(false); setRoom(""); setCashId({}); setTip("");
     refresh();
     return res;
   };
@@ -407,6 +410,53 @@ export default function TerminalPage() {
         setSettling(false);
         refresh();
         void bill.print(orderId);
+        return undefined;
+      },
+    });
+  };
+
+  /* THE VOLUNTARY SERVICE CHARGE (264; CCPA, 4 July 2022): never by
+     default - offered only where the GM set a rate, and put on only once
+     the waiter says the guest agreed. */
+  const serviceCharge = () => {
+    const o = current.data;
+    if (!orderId || !o) return;
+    if (o.serviceChargePct != null) {
+      void setServiceCharge(hotelId, orderId, false).then((res) => {
+        if (!res.ok) return toast.error("Not changed", res.reason);
+        refresh();
+      });
+      return;
+    }
+    setAsk({
+      title: `Add a voluntary service charge of ${o.serviceChargeOffered}%?`,
+      body: "Only if the guest agrees to pay it. By law it is never added by default, and the bill "
+        + "says it is voluntary. GST is charged on it with the food.",
+      confirm: "The guest agreed",
+      onConfirm: async () => {
+        const res = await setServiceCharge(hotelId, orderId, true);
+        if (!res.ok) return { refused: res.reason };
+        refresh();
+        return undefined;
+      },
+    });
+  };
+
+  /* A COUPON (261): the code the guest brings, applied as a promotion is -
+     by the owner, an administrator or the GM (D27-352); its dates, uses and
+     least bill are the server's to check. */
+  const coupon = () => {
+    if (!orderId) return;
+    setAsk({
+      title: "A coupon on this bill",
+      body: "Type the code the guest brought. It comes off the dishes before tax.",
+      field: { label: "Coupon code", required: true },
+      confirm: "Apply coupon",
+      onConfirm: async (code) => {
+        const res = await applyPromotion(hotelId, orderId, code.trim().toUpperCase());
+        if (!res.ok) return { refused: res.reason };
+        toast.success("Coupon applied");
+        refresh();
         return undefined;
       },
     });
@@ -987,6 +1037,19 @@ export default function TerminalPage() {
               </ul>
 
               <div className="border-t border-grey-200 p-4 shrink-0 space-y-3">
+                {/* The coupon and the voluntary service charge on it (260, 261). */}
+                {order.status !== "no_charge" && order.discount > 0 && (
+                  <div className="flex items-baseline justify-between text-sm text-grey-600">
+                    <span>{order.couponCode ? `Coupon ${order.couponCode}` : "Discount"}</span>
+                    <span className="tabular">-{moneyPrecise(order.discount)}</span>
+                  </div>
+                )}
+                {order.status !== "no_charge" && Boolean(order.serviceCharge) && (
+                  <div className="flex items-baseline justify-between text-sm text-grey-600">
+                    <span>Service charge {order.serviceChargePct}% (voluntary)</span>
+                    <span className="tabular">{moneyPrecise(order.serviceCharge ?? 0)}</span>
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between">
                   <span className="text-base text-grey-600">Total</span>
                   <span className="text-xl font-semibold tabular text-ink-900">
@@ -1005,6 +1068,7 @@ export default function TerminalPage() {
                         ? order.paymentMethod === "function"
                           ? `On ${order.eventTitle ?? "the function"}'s bill.`
                           : `Paid by ${order.paymentMethod}.`
+                            + (order.tip ? ` Tip for the staff ${moneyPrecise(order.tip)} (${order.tipMethod}), not part of the bill.` : "")
                         : `Closed unpaid - ${order.abandonedReason}`}
                     </p>
                     {(order.status === "settled" || order.status === "void" || order.status === "no_charge") && (
@@ -1114,6 +1178,34 @@ export default function TerminalPage() {
                       Charge to a room
                     </button>
                     {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
+                    {/* One row, so the bill above keeps its room: the voluntary
+                        service charge where the GM set a rate (260), a coupon
+                        (265: the owner, an Admin or the GM, as a promotion,
+                        D27-352) and a tip for the staff, taken the same way
+                        as the bill (260). */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {(order.serviceChargeOffered != null || order.serviceChargePct != null) ? (
+                        <button type="button" onClick={serviceCharge}
+                          disabled={busy || order.lines.filter((l) => !l.voided).length === 0}
+                          className={cn(OUTLINE, "h-12 px-2 text-sm font-medium leading-tight disabled:opacity-40")}>
+                          {order.serviceChargePct != null
+                            ? `Take off service ${order.serviceChargePct}%`
+                            : `Service charge ${order.serviceChargeOffered}%?`}
+                        </button>
+                      ) : <span />}
+                      <button type="button" onClick={coupon}
+                        title={mayNc ? undefined : "A coupon is applied by the GM, the owner or an Admin."}
+                        disabled={busy || !mayNc || order.lines.filter((l) => !l.voided).length === 0}
+                        className={cn(OUTLINE, "h-12 px-2 text-sm font-medium leading-tight disabled:opacity-40")}>
+                        {order.couponCode ? `Coupon ${order.couponCode}` : "Coupon"}
+                      </button>
+                      <input id="terminal-tip" aria-label="Tip for the staff" value={tip} inputMode="decimal"
+                        onChange={(e) => setTip(e.target.value)}
+                        placeholder="Tip ₹" className={cn(FIELD, "h-12 px-3 text-base tabular")} />
+                    </div>
+                    {!mayNc && (
+                      <p className="text-2xs text-grey-600">A coupon is applied by the GM, the owner or an Admin.</p>
+                    )}
                     <div className="grid grid-cols-3 gap-2">
                       {METHODS.map((m) => (
                         <button

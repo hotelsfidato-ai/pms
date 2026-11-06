@@ -18,27 +18,61 @@ export interface TableBooking {
   time: string;
   party: number;
   note: string | null;
-  status: "requested" | "confirmed" | "declined" | "cancelled";
-  /** A decline's reason, which the guest reads. */
+  /** On the night (259): arrived, seated at a table (its bill opened), a no-show. */
+  status: "requested" | "confirmed" | "declined" | "cancelled" | "arrived" | "seated" | "no_show";
+  /** A decline's reason, which the guest reads; a cancellation's, if one was given. */
   answer: string | null;
   table: { id: string; label: string } | null;
   outlet: string;
+  /** The hotel guest's name, or the outside diner's. */
   guest: string;
-  reference: string;
+  /** Null for an outside diner, who has no stay. */
+  reference: string | null;
   room: string | null;
   answeredBy: string | null;
+  /** Somebody not staying (259), with their own phone. Optional: an answer
+      from before it has no such keys. */
+  outside?: boolean;
+  phone?: string | null;
+  /** The area asked for, when no table is named. */
+  section?: { id: string; name: string } | null;
+  /** When they arrived, HH:MM on the hotel's clock. */
+  arrivedAt?: string | null;
+  /** The bill seating it opened. */
+  order?: { id: string; orderNo: string } | null;
 }
 
 export interface TableBookingList {
   /** The hotel's today, "YYYY-MM-DD". */
   today: string;
   bookings: TableBooking[];
-  /** The restaurant's tables, for Confirm's picker. */
-  tables: { id: string; label: string }[];
+  /** The restaurant's tables, for Confirm's and Seat's pickers. */
+  tables: { id: string; label: string; section?: string | null }[];
+  /** Its areas, for a booking with no table yet. */
+  sections?: { id: string; name: string }[];
 }
 
-export const getTableBookings = (hotelId: string) =>
-  api<TableBookingList>(`/api/hotels/${hotelId}/table-bookings`);
+/** Waiting first, then the chosen day (the hotel's today) and after. */
+export const getTableBookings = (hotelId: string, date?: string) =>
+  api<TableBookingList>(`/api/hotels/${hotelId}/table-bookings${date ? `?date=${date}` : ""}`);
+
+export interface OutsideBooking {
+  name: string; phone: string; party: number; date: string; time: string;
+  tableId?: string | null; sectionId?: string | null; note?: string;
+}
+/** A table for somebody not staying (259): confirmed as it is taken. */
+export const bookOutsideDiner = (hotelId: string, input: OutsideBooking): Promise<AdminResult> =>
+  write(`/api/hotels/${hotelId}/table-bookings`, input);
+
+/** On the night: arrived, seated at a table (which opens its bill), a no-show, cancelled. */
+export const markArrived = (hotelId: string, id: string): Promise<AdminResult> =>
+  write(`/api/hotels/${hotelId}/table-bookings/${id}/arrive`, {});
+export const seatBooking = (hotelId: string, id: string, tableId: string): Promise<AdminResult> =>
+  write(`/api/hotels/${hotelId}/table-bookings/${id}/seat`, { tableId });
+export const markNoShow = (hotelId: string, id: string): Promise<AdminResult> =>
+  write(`/api/hotels/${hotelId}/table-bookings/${id}/no-show`, {});
+export const cancelBooking = (hotelId: string, id: string, reason: string): Promise<AdminResult> =>
+  write(`/api/hotels/${hotelId}/table-bookings/${id}/cancel`, { reason });
 
 export const confirmTableBooking = (hotelId: string, id: string, tableId: string | null): Promise<AdminResult> =>
   write(`/api/hotels/${hotelId}/table-bookings/${id}/confirm`, { tableId });

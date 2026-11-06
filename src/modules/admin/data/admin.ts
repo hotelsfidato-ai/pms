@@ -72,6 +72,9 @@ export interface AdminStaff {
   mayEdit: boolean;
   maySwitch: boolean;
   maySetPassword: boolean;
+  /** Two-step sign-in on (D27-396) - told only to whoever may switch it off. */
+  twoStepOn?: boolean;
+  mayTwoStepOff?: boolean;
   access: { code: string; role: string }[];
 }
 
@@ -529,3 +532,29 @@ export const listSignIns = (staffId: string) =>
 /** Sign out the device of one sign-in (D27-255). The password still works. */
 export const signOutDevice = (signInId: string): Promise<AdminResult<{ ok: true }>> =>
   write(`/api/admin/sign-ins/${signInId}/sign-out`, {});
+
+/* ── Two-step sign-in (D27-396) ─────────────────────────────────── */
+
+/** Where the signed-in person stands: off, passed for this sign-in, a code
+    owed, or setting it up owed (their role needs it). */
+export interface TwoStep {
+  state: "off" | "passed" | "code" | "setup";
+  on: boolean;
+  recoveryLeft: number | null;
+  /** The group's setting: required for the owner, Admins, GMs and Accountants. */
+  required: boolean;
+}
+export const getTwoStep = () => api<TwoStep>("/api/me/two-step");
+/** A new key for the authenticator app, as text and as a QR code's link. */
+export const startTwoStep = (): Promise<AdminResult<{ key: string; uri: string }>> =>
+  write("/api/me/two-step/setup", {});
+/** A code from the app, or a recovery code. The first right one turns it on
+    and hands back ten recovery codes, once. */
+export const sendTwoStepCode = (
+  code: string,
+): Promise<AdminResult<{ recoveryLeft: number; recoveryCodes?: string[] }>> =>
+  write("/api/me/two-step", { code });
+export const switchTwoStepOff = (staffId: string, reason: string): Promise<AdminResult<{ ok: true }>> =>
+  write(`/api/admin/staff/${staffId}/two-step/off`, { reason });
+export const setTwoStepRequired = (required: boolean): Promise<AdminResult<{ required: boolean }>> =>
+  put("/api/admin/two-step-required", { required });

@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None.
+### REP-21 · The GST sales register leaves out the restaurant's bills paid at the outlet
+
+**Found** — 6 November 2026, building GSTR-1 (D27-383). `GET /reports/gst-sales` reads `invoices` only, so
+a restaurant bill settled at the outlet (cash, card, UPI; not to a room or a function) is in no GST report -
+only in the Manager report's POS lines and the day book. The new GSTR-1 counts them in B2C small, through
+`app.pos_order_by_tax`, by rate. **Not fixed:** whether the register should list each restaurant bill (it is
+"invoice-level") is the owner's and the CA's; the GSTR-1 screen is the place they are counted today.
 
 ## Fixed
 

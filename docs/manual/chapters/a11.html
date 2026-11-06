@@ -352,6 +352,38 @@
   </figure>
   <p>The switch is on when the report opens. Turn it off to see every account, even those with nothing on them. The switch itself is never printed.</p>
 
+  <h3>Money owed by age</h3>
+  <p><span class="ui">Money owed by age</span> (<code>/reports/dues-by-age</code>, or the link under the table on Company accounts) is what each company, travel agent and booking site owed on a date, by how old each bill is: <b>0-30 days</b>, <b>31-60 days</b>, <b>61-90 days</b> and <b>Over 90 days</b> since the bill was sent to the account (settled <span class="ui">Bill to company</span>). Each kind of account has its own band - Companies, Travel agents, Booking sites - with its total, and <b>Total owed</b> is at the foot. Change the date above it to see another day.</p>
+
+  <figure class="shot" id="fig-A11-32">
+    <img src="img/A11-32.png" alt="Money owed by age: the date, the Companies band, the 0-30 days and Paid ahead columns, and Total owed">
+    <figcaption><b>Figure A11-32.</b> Money owed by age.</figcaption>
+    <ol class="callouts">
+      <li>Owed on: the date the money owed is counted on</li>
+      <li>A band for each kind of account: Companies, Travel agents, Booking sites</li>
+      <li>The age of what is left of each bill, in days since it was sent</li>
+      <li>Paid ahead: what an account paid beyond its bills, below zero</li>
+      <li>Total owed: the City ledger's Closing Balance on that date</li>
+    </ol>
+  </figure>
+  <p>An account's payment is recorded against the account, not one bill, so it pays the oldest bill first. <b>Credit days</b> are the company's own, from its record; a dash where none is set.</p>
+
+  <h3>Statement of account</h3>
+  <p><span class="ui">Statement of account</span> (<code>/reports/company-statement</code>, or <span class="ui">Statement</span> beside an account on Company accounts, A4.8) is one company's, agent's or booking site's account for the days chosen, to send to them: the <b>Opening balance</b>, then each bill sent (the booking, the guest and the bill's tax invoice), each payment received and each payment reversed, by date, with the <b>Balance</b> after it, and the <b>Closing balance</b>. Pick the account and the From and To dates. <span class="ui">PDF</span> and <span class="ui">Excel</span> make the file to send.</p>
+
+  <figure class="shot" id="fig-A11-33">
+    <img src="img/A11-33.png" alt="Statement of account for a company: the account picker, the opening balance, bills sent with their invoices, a payment received, the closing balance and the credit notes section">
+    <figcaption><b>Figure A11-33.</b> A statement of account.</figcaption>
+    <ol class="callouts">
+      <li>The account, then the From and To dates</li>
+      <li>Opening balance: what was owed before the first day</li>
+      <li>A payment the account made, by the day it reached the hotel</li>
+      <li>Closing balance: the same as Company accounts and the City ledger</li>
+      <li>Credit notes on the account's bills: listed, not counted</li>
+    </ol>
+  </figure>
+  <p>A credit note cancels a tax invoice; it does not change what the account owes. What it owes changes when the bill sent to it is corrected (its <span class="ui">Bill to company</span> reversed and settled again), so the statement lists a credit note in its own part, with the invoice it cancels, and the balance does not move.</p>
+
   <h3>No show</h3>
   <p><span class="ui">No show</span> (<code>/reports/no-show</code>) lists the bookings marked no-show that were due to arrive on the business date: booking, guest, room type, arrival, departure, pax, source and rate. On a day when everybody came, it still prints and says <span class="msg">“Nobody failed to arrive on this day.”</span> (Figure A11-22).</p>
 
@@ -405,7 +437,8 @@
       <li>A dash for a category is an expense recorded before categories began (27 October 2026).</li>
       <li>A receipt that was reversed is not money the cashier holds, so it is not counted - the same rule as the Manager report.</li>
       <li>“not on record” is never filled in with a name: naming somebody would be worse than the gap.</li>
-      <li>The Revenue Manager does not see City ledger, Guest ledger, Cashier shift or Petty cash.</li>
+      <li>The Revenue Manager does not see City ledger, Money owed by age, Statement of account, Guest ledger, Cashier shift or Petty cash.</li>
+      <li>Commission is counted on the room revenue before GST because no booking source or contract names another amount; the group's CA confirms that, and the booking sites' GST on their commission and the TCS or TDS they keep are not on it.</li>
     </ul>
   </div>
 
@@ -426,13 +459,28 @@
   <p>The <span class="ui">Supplier statement</span> (<code>/reports/supplier-statement</code>, or <span class="ui">Statement</span> beside a supplier on Supplier dues) is one supplier's ledger for the days chosen: the opening balance, then each bill, payment, TDS, credit note and reversal by date with the balance after it, and the closing balance. Pick the supplier and the From and To dates.</p>
   <p><span class="ui">TDS on suppliers</span> (<code>/reports/tds</code>) lists the TDS deducted on supplier payments for the days chosen, by section (194C, 194Q, 194J, 194I) and supplier: the figures for the quarterly TDS return (26Q). Both are read by the Accountant, the GM, the owner and an Admin, and download as PDF, Excel and CSV (<span class="d">D27-372</span>).</p>
 
+  <h3>Commission owed</h3>
+  <p><span class="ui">Commission owed</span> (<code>/reports/commission</code>) is the commission on the stays from booking sites and agents that checked out in the days chosen (from the 1st of the month to the business date when it opens), booking by booking, under each site or agent with its total. For each booking: the arrival and departure, the <b>Room revenue before GST</b>, the <b>Rate %</b> on record when the booking was taken (the source's on Settings, Money, Commission, or the agent's contract), the <b>Site's figure</b> when the booking site sent its own, and the <b>Commission</b>.</p>
+
+  <figure class="shot" id="fig-A11-34">
+    <img src="img/A11-34.png" alt="Commission owed: From and To, a band per booking site and agent, Site's figure and Rate % columns, and the note of bookings with no commission on record">
+    <figcaption><b>Figure A11-34.</b> Commission owed.</figcaption>
+    <ol class="callouts">
+      <li>The days the stays checked out in</li>
+      <li>Site's figure: what the booking site said it keeps; used first</li>
+      <li>Rate %: else this rate on the room revenue</li>
+      <li>A booking with no rate on record: a dash, not counted</li>
+    </ol>
+  </figure>
+  <p>The commission is the site's own figure when it sent one; otherwise the rate times the room revenue; otherwise a dash - never a zero and never a rate made up. A stay counts in the days it checked out in, whole. Nothing here is a payment: paying a booking site is not recorded in this system, so the Manager report's <b>Outstanding Commission</b> still shows "-". The Owner, an Admin, the GM, the Revenue Manager, the Accountant and the Viewer read it; not Reception or the Hotel Manager.</p>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The city ledger's Debit is the bills transferred to the account: <span class="d">D17-74</span>. Company payments are recorded on Company accounts and counted by the day they reached the hotel: <span class="d">D27-242</span>. Money owed and money taken are not the revenue manager's: <span class="d">D27-147</span>.</p>
+    <p>The city ledger's Debit is the bills transferred to the account: <span class="d">D17-74</span>. Company payments are recorded on Company accounts and counted by the day they reached the hotel: <span class="d">D27-242</span>. Money owed and money taken are not the revenue manager's: <span class="d">D27-147</span>. One figure for a company everywhere, so Money owed by age and the Statement of account are the City ledger's own: <span class="d">D27-127</span>. Commission is the site's figure, else the rate on record, else a dash: <span class="d">D17-84</span>; Outstanding Commission stays "-" while no payout is recorded: <span class="d">D17-75</span>, <span class="d">D27-259</span>. All three were asked for in <span class="d">D27-383</span>.</p>
   </div>
 
   <!-- A11.7 -->
-  <h2 id="a11-7"><span class="n">A11.7</span>Statutory: Lodging tax, GST sales register, Form III register</h2>
+  <h2 id="a11-7"><span class="n">A11.7</span>Statutory: Lodging tax, GST sales register, GSTR-1, Input tax credit, GST on advances, Form III register</h2>
   <p>These are filed with the government, not just read. This system files nothing: they are what the accountant, or whoever files, works from.</p>
 
   <h3>Lodging tax</h3>
@@ -468,6 +516,68 @@
   <p>An invoice is listed on the business day it belongs to, not the moment it was printed. A credit note says which invoice it credits.</p>
   <p>An invoice made out to a registered business - a company billed, or the guest's own company with the GSTIN typed on the booking (A2.2) - has its name under Recipient and its GSTIN in the GSTIN column, and <span class="ui">Type</span> says <b>B2B</b>. A dash under GSTIN is an unregistered recipient, and Type says <b>B2C</b>. A credit note has the type of the invoice it credits. The CSV carries the same Type column: <span class="d">D27-372</span>.</p>
 
+  <h3>GSTR-1, and its file for the GST portal</h3>
+  <p><span class="ui">GSTR-1</span> (<code>/reports/gstr-1</code>) is the month's GSTR-1 for this property's GSTIN, table by table, from the tax invoices and credit notes issued in the month (by their business date) and the restaurant's bills paid at the outlet. Choose the <span class="ui">Month</span> above it.</p>
+  <ul>
+    <li><b>4A - B2B</b>: each invoice to a registered recipient (a GSTIN on it), one line for each rate on it: the taxable value, CGST and SGST.</li>
+    <li><b>5 - B2C large</b>: always empty for a hotel, and it says why: B2C large is an invoice to another state over ₹1,00,000, and a hotel's supply is always in its own state.</li>
+    <li><b>7 - B2C small</b>: by rate, everything sold to an unregistered guest - invoices without a GSTIN, less their credit notes, and the restaurant's bills.</li>
+    <li><b>9B - Credit notes</b>: each credit note to a registered recipient, with the invoice it cancels.</li>
+    <li><b>12 - HSN/SAC summary</b>, B2B and B2C apart, by code and rate.</li>
+    <li><b>13 - Documents issued</b>: the first and last number, how many, how many cancelled, of the tax invoices, the credit notes and the restaurant's bills.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-35">
+    <img src="img/A11-35.png" alt="GSTR-1: the month, the GSTR-1 file (JSON) button, the 4A B2B table and the B2C large note">
+    <figcaption><b>Figure A11-35.</b> GSTR-1: the month, table by table.</figcaption>
+    <ol class="callouts">
+      <li>The month</li>
+      <li>GSTR-1 file (JSON): the file for the GST offline tool or the portal</li>
+      <li>4A - B2B: each invoice to a registered business, by rate</li>
+      <li>5 - B2C large: never for a hotel, and why</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A11-36">
+    <img src="img/A11-36.png" alt="GSTR-1 further down: B2C small by rate, the HSN/SAC summaries for B2B and B2C, and the documents issued">
+    <figcaption><b>Figure A11-36.</b> GSTR-1: B2C small, the HSN summary and the documents.</figcaption>
+    <ol class="callouts"><li>7 - B2C small, by rate</li><li>12 - HSN/SAC, B2B</li><li>12 - HSN/SAC, B2C</li><li>13 - Documents issued</li></ol>
+  </figure>
+
+  <h3>To make the GSTR-1 file</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">GSTR-1</span> and choose the <span class="ui">Month</span>.</li>
+    <li>Read the tables. If a part headed <b>To put right before the file is made</b> is at the top, put each line right first - an HSN/SAC not set for a kind (Settings, Taxes), or an invoice whose bill no longer adds up to it.</li>
+    <li>Click <span class="ui">GSTR-1 file (JSON)</span>. The file is saved: <span class="msg">“GSTR-1 file saved”</span>, named for the property, the GSTIN and the month.</li>
+    <li>Give it to whoever files: they open it in the GST offline tool (or upload it on the portal), check it there, and file.</li>
+  </ol>
+  <p>If anything still needs putting right, the file is not made and the message says what: <span class="msg">“The GSTR-1 file was not made.”</span> and the reasons. The file is for those who may download reports: the Owner, an Admin, the GM, the Hotel Manager, the Revenue Manager and the Accountant.</p>
+
+  <h3>Input tax credit</h3>
+  <p><span class="ui">Input tax credit</span> (<code>/reports/input-tax-credit</code>) is the GST on the month's deliveries to the Store (A9), as it was recorded when each was received: <b>GST marked claimable</b>, then <b>GST marked not claimable</b>, each delivery with its supplier, the supplier's GSTIN when it is on the supplier's record (Places and suppliers), the item, its reference, the value before GST, the rate and the GST. CGST and SGST when the supplier's GSTIN is in this state, IGST when it is in another, a dash when no GSTIN is on record. Deliveries that recorded no GST are counted in the notes, not listed. It is read by the Owner, an Admin, the GM and the Accountant.</p>
+
+  <figure class="shot" id="fig-A11-37">
+    <img src="img/A11-37.png" alt="Input tax credit: GST marked claimable with supplier GSTIN, CGST, SGST and IGST, then GST marked not claimable">
+    <figcaption><b>Figure A11-37.</b> Input tax credit.</figcaption>
+    <ol class="callouts"><li>GST marked claimable</li><li>The supplier's GSTIN, from its record</li><li>IGST: a supplier in another state</li><li>GST marked not claimable</li></ol>
+  </figure>
+
+  <h3>GST on advances</h3>
+  <p><span class="ui">GST on advances</span> (<code>/reports/gst-advances</code>) is the GST on money taken on a bill before its tax invoice - an advance, on which GST falls due in the month it is received. For the month chosen:</p>
+  <ul>
+    <li><b>By rate, for GSTR-1 Table 11</b>: <b>11A - Advances received</b>, <b>Given back before an invoice</b>, and <b>11B - Advances adjusted</b>, each by rate: the taxable value, CGST and SGST.</li>
+    <li><b>Advances received this month, no tax invoice by its end</b>: each booking, the amount, and the tax inside it.</li>
+    <li><b>Given back this month before an invoice</b>: a refund of an advance.</li>
+    <li><b>Advances of earlier months, adjusted against invoices issued this month</b>: each with its invoice.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A11-38">
+    <img src="img/A11-38.png" alt="GST on advances: 11A received and 11B adjusted by rate, then the bookings received this month and the advances adjusted against this month's invoices">
+    <figcaption><b>Figure A11-38.</b> GST on advances.</figcaption>
+    <ol class="callouts"><li>11A: advances received, by rate</li><li>11B: advances adjusted, by rate</li><li>Each advance received this month</li><li>Each earlier advance, with the invoice it is adjusted against</li></ol>
+  </figure>
+  <p>Money received and invoiced in the same month is not an advance in GSTR-1 and is not here. An advance includes its tax. "Bill to company" is not money received. The rate is the room's GST rule at the booking's rate; where no rate is known when the money is paid (a function, a group's bill, a free room) it is 18%. It is read by the people who read Company accounts. This report changes nothing about how a tax invoice is made.</p>
+
   <h3>Form III register</h3>
   <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date, each foreign adult in a room on a row of their own: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>
 
@@ -488,12 +598,13 @@
       <li><b>Nothing here is filed by itself.</b> The Form III register is the record of what was filed on the portal; the portal numbers are typed on the <span class="ui">Form III</span> screen (Finance part of the menu).</li>
       <li>The Form III register is for the Owner, Admin, General Manager, Hotel Manager and Reception only: it shows passports. The Accountant does not see it.</li>
       <li>Lodging tax counts the bills issued. A stay still in house is not on it yet (compare the Accounting export, A11.8).</li>
+      <li><b>For the group's CA to confirm</b> before the first GSTR-1 is filed from this system: that credit notes share the tax invoice numbers (so Table 13's ranges overlap); that a cancelled invoice is not counted as cancelled in Table 13; whether a deposit is an advance, and how money given back before an invoice is reported; and that input tax credit is claimed only as GSTR-2B shows it. The marked-claimable column is what the person receiving chose, not a ruling.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Lodging tax reads the room rent less its discount, and the group's accountant confirms before anything is filed: <span class="d">D17-99</span>. No rate in the CGST and SGST headings: <span class="d">D24-23</span>. Alcohol and its VAT kept off the sheet: <span class="d">D22-45</span>. Passports only for the people who check guests in: <span class="d">D25-38</span>; not the Accountant: <span class="d">D27-122</span>.</p>
+    <p>Lodging tax reads the room rent less its discount, and the group's accountant confirms before anything is filed: <span class="d">D17-99</span>. No rate in the CGST and SGST headings: <span class="d">D24-23</span>. GSTR-1, input tax credit and GST on advances: <span class="d">D27-383</span>; the file follows the GST offline tool's JSON (version 3.2.2), and an advance for a service is taxed when received (CGST Act section 13(2); the exemption of Notification 66/2017 is for goods). Alcohol and its VAT kept off the sheet: <span class="d">D22-45</span>. Passports only for the people who check guests in: <span class="d">D25-38</span>; not the Accountant: <span class="d">D27-122</span>.</p>
   </div>
 
   <!-- A11.8 -->
@@ -745,12 +856,18 @@
       <tr><td>How full were we, day by day?</td><td>Monthly occupancy; Monthly statistics</td><td>A11.5</td></tr>
       <tr><td>The year, month by month</td><td>Yearly statistics</td><td>A11.5</td></tr>
       <tr><td>What do companies and booking sites owe?</td><td>City ledger</td><td>A11.6</td></tr>
+      <tr><td>How old is what they owe?</td><td>Money owed by age</td><td>A11.6</td></tr>
+      <tr><td>One company's bills and payments, to send to them</td><td>Statement of account</td><td>A11.6</td></tr>
+      <tr><td>What commission do the booking sites and agents get for this month's stays?</td><td>Commission owed</td><td>A11.6</td></tr>
       <tr><td>Who did not come?</td><td>No show</td><td>A11.6</td></tr>
       <tr><td>Which guests' bills moved, and what is left on them?</td><td>Guest ledger</td><td>A11.6</td></tr>
       <tr><td>What did each cashier take today?</td><td>Cashier shift</td><td>A11.6</td></tr>
       <tr><td>What was paid out of the tins and drawers, and for what?</td><td>Petty cash</td><td>A11.6</td></tr>
       <tr><td>The month's check-out bills and their tax</td><td>Lodging tax</td><td>A11.7</td></tr>
       <tr><td>Every invoice and credit note, for GSTR-1</td><td>GST sales register</td><td>A11.7</td></tr>
+      <tr><td>The month's GSTR-1, and its file for the portal</td><td>GSTR-1</td><td>A11.7</td></tr>
+      <tr><td>The GST paid on what we bought</td><td>Input tax credit</td><td>A11.7</td></tr>
+      <tr><td>The GST due on money taken before an invoice</td><td>GST on advances</td><td>A11.7</td></tr>
       <tr><td>Which foreign guests are filed with the FRRO?</td><td>Form III register</td><td>A11.7</td></tr>
       <tr><td>The month as a file for the accountant</td><td>Accounting export</td><td>A11.8</td></tr>
       <tr><td>What is in the stores, and what has it cost?</td><td>Store reports, starting with Closing stock</td><td>A11.9</td></tr>

@@ -3,7 +3,7 @@ import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   AFTER CHECK-IN (the owner's D27-397, 6 November; migration 266)
+   AFTER CHECK-IN (the owner's D27-397, 6 November; migration 262)
 
    The GM undoes a check-in, cancels or voids a guest in house, and moves
    an in-house arrival; the owner and an Admin always may; the front desk

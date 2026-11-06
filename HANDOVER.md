@@ -834,6 +834,12 @@ npx vitest run          197 passed, 13 files
 >   charge off by default and tips, coupons, profit per dish; 263-265). Each in its own copy, database and ports.
 > - **Videos, one chapter at a time:** A7 first (no planned feature touches it), then A3, A1, A12, A13, A14; the
 >   chapters the features change wait for their wave.
+> - **STOPPED 6 Nov evening at the usage limit; all helpers stopped, nothing lost.** Merged: accounts (c12c58af,
+>   copy recycled; full gates NOT yet run on it). A7 remade and in the final folder (ed3c7b70). Left in their copies,
+>   to resume or finish: safety `worktree-agent-a6e66555171d09f4b` (2 commits, two-step built, not reported),
+>   restaurant `worktree-agent-aef570001100c6349` (4 commits, not reported), report emails
+>   `worktree-agent-a0bf00ca95f207bdb` (no commits yet: start again), A3 video uncommitted in `C:\videos`
+>   (script, voice, words done; 11 MP4s in out\a3, render may be partial: re-run `--stale`, check, commit, copy).
 > - **Then:** wave 2 (emailed and scheduled reports, guest care, stock expiry and bill-to-order, rooming lists,
 >   allotments, waitlist, the small faults), wave 3 (exports everywhere, group-wide reports and rates, importing an
 >   old system), wave 4 (UPI QR on the bill; payment links and payroll as plans, since they cost money).

@@ -93,10 +93,15 @@ export function roleFor(scope: ApiScope, hotelId: string | null): Role {
   return grant.role as Role;
 }
 
-type Status = "starting" | "signed-out" | "signed-in";
+/* "two-step": the password was right and this sign-in still owes the code
+   from the authenticator app, or setting one up (D27-396). App.tsx shows
+   that screen and nothing else; the server refuses everything else anyway. */
+type Status = "starting" | "signed-out" | "signed-in" | "two-step";
 
 interface SessionState {
   status: Status;
+  /** What a "two-step" sign-in owes: a code, or setting the app up. */
+  twoStep: "code" | "setup" | null;
   scope: ApiScope | null;
   /** Every property this person may READ. */
   hotels: ApiHotel[];
@@ -134,6 +139,7 @@ interface SessionState {
 
 export const useSession = create<SessionState>()((set, get) => ({
   status: "starting",
+  twoStep: null,
   scope: null,
   hotels: [],
   hotelId: null,
@@ -198,7 +204,7 @@ export const useSession = create<SessionState>()((set, get) => ({
     forgetSession();
     await queryPersister.removeClient();
     set({
-      status: "signed-out", scope: null, hotels: [], hotelId: null, error: null,
+      status: "signed-out", twoStep: null, scope: null, hotels: [], hotelId: null, error: null,
       notice: kept === 0 ? null
         : `${kept === 1 ? "1 change is" : `${kept} changes are`} kept on this computer `
           + "and will be sent when you sign in here again.",
@@ -394,7 +400,22 @@ function loadOrRecall(
 
 /** Reads identity and scope from Postgres. The one source for both. */
 async function load(set: (partial: Partial<SessionState>) => void) {
-  const { scope, hotels } = await getSession();
+  let session: Awaited<ReturnType<typeof getSession>>;
+  try {
+    session = await getSession();
+  } catch (error) {
+    /* D27-396: refused because this sign-in owes its second step. Not a
+       sign-out - the person stays signed in, on the code screen. Read by
+       shape: the error's body is what the server said (api.ts). */
+    const e = error as { status?: number; body?: { twoStep?: unknown } };
+    const owed = e.body?.twoStep;
+    if (e.status === 403 && (owed === "code" || owed === "setup")) {
+      set({ status: "two-step", twoStep: owed, busy: false, error: null });
+      return;
+    }
+    throw error;
+  }
+  const { scope, hotels } = session;
 
   /* Which property to open in. A group admin has no grants, so fall
      back to the first readable one rather than showing an empty shell. */
@@ -414,7 +435,7 @@ async function load(set: (partial: Partial<SessionState>) => void) {
      rather than on a sign-in form that cannot be completed. */
   remember(scope, hotels);
 
-  set({ status: "signed-in", scope, hotels, hotelId: first, busy: false, error: null });
+  set({ status: "signed-in", twoStep: null, scope, hotels, hotelId: first, busy: false, error: null });
 }
 
 /* ── Selectors ───────────────────────────────────────────────────── */

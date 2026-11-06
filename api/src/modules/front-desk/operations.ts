@@ -1525,7 +1525,7 @@ operations.patch("/:code/stays/:id", async (c) => {
 
 /** Change dates or guests, as the person signed in: the PATCH, and a front
     desk's request to move an in-house arrival once the GM approves it
-    (D27-397) - app.amend_stay asks who (266). */
+    (D27-397) - app.amend_stay asks who (262). */
 export async function amendBooking(
   client: Client, session: Session, hotelId: string, stayId: string, input: StayAmend,
 ) {

@@ -70,6 +70,9 @@ export { takeFolioPayment, postFolioCharge, reverseFolioCharge, editFolioCharge 
 export { changeStayRate, changePaymentMethod } from "./postings.ts";
 export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice, invoiceFacts } from "./invoices.ts";
+/* A line's HSN/SAC as its invoice was issued, opened for the GSTR-1 file
+   (reports, D27-383 item 4): one rule, never a copy. */
+export { sacOf } from "./invoices.ts";
 /* The stay as the documents print it (D27-344): the registration card too. */
 export { stayFacts } from "./invoices.ts";
 export type { InvoiceRecipient, InvoiceFacts } from "./invoices.ts";

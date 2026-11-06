@@ -15,7 +15,43 @@
 // taken off this browser's queue before the connection comes back, so the demo
 // is not changed by the picture.
 //
+// Two-step sign-in (A0-15 to A0-17, D27-396) is set up for Reception in the
+// run itself, the code worked out from the key on the screen as the phone's app
+// would, and switched off again by the owner at the end (A0-17b), so every
+// other chapter's Reception signs in as before. Take the three together.
+//
 // Taken by: CDP_PORT=9349 node docs/manual/tools/shoot.mjs a0 [ids...]
+// (a copy with its own API port: API=http://localhost:<port> as well)
+
+/** The API the local website talks to: the two-step pictures set things up through it. */
+const API = process.env.API ?? "http://localhost:8787";
+
+/** The owner switches Reception's two-step sign-in off (it may not be on: then it says so). */
+const DESK_TWO_STEP_OFF = {
+  eval: `fetch("${API}/api/admin/staff", { headers: { "x-dev-staff-id": "dev-owner" } }).then((r) => r.json())
+    .then(({ staff }) => fetch("${API}/api/admin/staff/" + staff.find((p) => p.email === "desk@fidato.in").id
+      + "/two-step/off", { method: "POST", headers: { "x-dev-staff-id": "dev-owner", "content-type": "application/json" },
+      body: JSON.stringify({ reason: "The manual's pictures" }) })).then((r) => r.status)`,
+};
+
+/** Types the code the phone's app would show now (RFC 6238), from the key on the screen. */
+const TYPE_TWO_STEP_CODE = {
+  eval: `(async () => {
+    const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    const key = document.querySelector("[data-two-step-key]").textContent.replace(/ /g, "");
+    let bits = 0, value = 0; const bytes = [];
+    for (const ch of key) { value = (value << 5) | B32.indexOf(ch); bits += 5;
+      if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+    const k = await crypto.subtle.importKey("raw", new Uint8Array(bytes), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+    const step = new DataView(new ArrayBuffer(8)); step.setBigUint64(0, BigInt(Math.floor(Date.now() / 30000)));
+    const h = new Uint8Array(await crypto.subtle.sign("HMAC", k, step.buffer));
+    const o = h[19] & 15;
+    const code = String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1000000).padStart(6, "0");
+    const input = document.querySelector("input[autocomplete=one-time-code]");
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, code);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return code; })()`,
+};
 
 /** Waits (up to 45 s) until no grey loading block is left on the page. */
 const LOADED = {
@@ -103,6 +139,42 @@ export const SHOTS = [
       { n: 4, at: "text:Trouble signing in?", side: "bottom" },
     ],
   },
+
+  /* ── A0.1 Two-step sign-in (D27-396): set up, its codes, the code page ── */
+  {
+    id: "A0-15", title: "Setting up two-step sign-in", as: "Reception", path: "/",
+    steps: [DESK_TWO_STEP_OFF, { eval: "location.reload()" }, { wait: 2500 }, { settle: true }, LOADED,
+      { click: "label:Account and property" }, { waitFor: "text:Two-step sign-in" },
+      { click: "text:Two-step sign-in" }, { click: "text:Set it up" },
+      { waitFor: "css:img[alt='QR code for the authenticator app']", ms: 20000 }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "css:img[alt='QR code for the authenticator app']", side: "left" },
+      { n: 2, at: "css:[data-two-step-key]", side: "bottom" },
+      { n: 3, at: "css:input[autocomplete=one-time-code]", side: "left" },
+    ],
+  },
+  {
+    id: "A0-16", title: "The ten recovery codes",
+    steps: [TYPE_TWO_STEP_CODE, { wait: 300 }, { click: "text:Go on" }, { waitFor: "text:I have kept them", ms: 15000 }],
+    marks: [
+      { n: 1, at: "css:[data-recovery-codes] ol", side: "left" },
+      { n: 2, at: "text:I have kept them", side: "right" },
+    ],
+  },
+  {
+    id: "A0-17", title: "The code, after the password",
+    /* A new sign-in: two-step is now on for Reception, so it asks. */
+    steps: [{ click: "text:I have kept them" }, { wait: 600 }, ...SIGNED_OUT, { click: "text:Reception" },
+      { waitFor: "text:Your password was right.", ms: 20000 }, { eval: "document.activeElement?.blur()" }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "css:input[autocomplete=one-time-code]", side: "right" },
+      { n: 2, at: "text:Go on", side: "right" },
+      { n: 3, at: "text:Use a recovery code instead", side: "right" },
+      { n: 4, at: "text:Sign out", side: "right" },
+    ],
+  },
+  /* No picture: the owner switches Reception's two-step off again. */
+  { id: "A0-17b", title: "Reception as before", as: "Owner", noShot: true, steps: [DESK_TWO_STEP_OFF, { wait: 500 }] },
 
   /* ── A0.2 The Start here card ────────────────────────────────────── */
   {

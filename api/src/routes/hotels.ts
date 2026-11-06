@@ -107,7 +107,7 @@ hotels.get("/", async (c) => {
               id_types_off, status_colours, pos_round_off, kpi_day_use_half, kpi_comp_as_sold,
               /* The tax invoice at check-out (229, D27-344). */
               invoice_at_checkout, invoice_copies,
-              /* D27-397: the GM may undo a check-in (266). */
+              /* D27-397: the GM may undo a check-in (262). */
               gm_may_undo_check_in,
               /* Shaded like a weekend on the Calendar and Rates (192). */
               (select coalesce(json_agg(json_build_object(

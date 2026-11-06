@@ -67,7 +67,7 @@ export function AmendStayFlow({
   /* Once they have arrived, the arrival is a fact. The server refuses a
      change and says so, but a field somebody can type into and then be
      told off for is worse than one they cannot. Except for the owner, an
-     Admin or the GM (D27-397, app.amend_stay 266): no later than today, never
+     Admin or the GM (D27-397, app.amend_stay 262): no later than today, never
      into a closed day; the front desk asks the GM. */
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   const mayMoveArrival = can(useRole(), "approve", "reservation");

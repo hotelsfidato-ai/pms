@@ -10,7 +10,7 @@ import { amendBooking, voidBooking } from "./operations.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    AFTER CHECK-IN: THE GM UNDOES, CANCELS, VOIDS AND CHANGES; THE FRONT
-   DESK ASKS (the owner's D27-397, 6 November; migration 266)
+   DESK ASKS (the owner's D27-397, 6 November; migration 262)
 
    "We need an option where the GM doesn't have the lock, which is there for
    the reception and the front desk, but not for the GM. It's an option in

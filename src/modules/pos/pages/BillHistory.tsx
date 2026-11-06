@@ -92,12 +92,15 @@ export default function BillHistoryPage() {
     /* Figures are bare numbers so Excel can sum them. An NC bill's value is
        its own column (D27-394), so Total still sums only what was paid; a
        blank is not a zero. The bill's own date, 2026-10-27, sorts there. */
+    /* The voluntary service charge is inside Total; the tip is not (260). */
     const csv = toCsv(
-      ["Bill", "Date", "Settled at", "Outlet", "Table", "Guest", "Room", "Phone", "Waiter", "Paid by", "Total", "NC value", "State"],
+      ["Bill", "Date", "Settled at", "Outlet", "Table", "Guest", "Room", "Phone", "Waiter", "Paid by", "Total",
+       "Service charge", "Tip", "NC value", "State"],
       bills.map((b) => [
         b.orderNo, b.businessDate, b.settledAt ?? "", outletName(b.outlet), b.table ?? "", guestOf(b) ?? "",
         b.room ?? "", b.phone ?? "", b.waiter ?? "", b.modes.map((m) => MODE_WORD[m] ?? m).join(", "),
         b.status === "no_charge" ? "" : b.payable.toFixed(2),
+        b.serviceCharge ? b.serviceCharge.toFixed(2) : "", b.tip ? b.tip.toFixed(2) : "",
         b.status === "no_charge" ? b.net.toFixed(2) : "", STATE[b.status]?.words ?? b.status,
       ]),
     );
@@ -127,7 +130,10 @@ export default function BillHistoryPage() {
          bill given free says NC with its value, never a sale (D27-394). */
       key: "total", header: "Total", numeric: true,
       cell: (b) => b.status === "no_charge" ? `NC ${moneyPrecise(b.net)}`
-        : <span className={cn(b.status === "void" && "text-grey-500 line-through")}>{moneyPrecise(b.payable)}</span>,
+        : <span className={cn(b.status === "void" && "text-grey-500 line-through")}>{moneyPrecise(b.payable)}
+            {/* Inside the total: the voluntary service charge; outside it: a tip (260). */}
+            {Boolean(b.serviceCharge) && <span className="block text-2xs text-grey-500">incl. service {moneyPrecise(b.serviceCharge ?? 0)}</span>}
+            {b.tip ? <span className="block text-2xs text-grey-500">+ tip {moneyPrecise(b.tip)}</span> : null}</span>,
     },
     {
       key: "state", header: "State",

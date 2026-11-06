@@ -223,7 +223,10 @@ const MENU = grant("menu", "edit", "Changing the menu");
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
 /* Table booking (D27-224): a guest's request is answered by whoever may ring
-   an order; the restaurant's booking hours are Restaurant setup's. */
+   an order; the restaurant's booking hours are Restaurant setup's. An outside
+   diner's booking and every booking on the night - arrived, seated (which
+   opens the table's bill), a no-show, cancelled (259) - are the same people's,
+   under the same rule (the Roles screen names its words). */
 const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos", "bar"]);
 const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
@@ -466,6 +469,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/promotion`]: DISCOUNT,
   [`POST ${H}/till/orders/:id/discount/clear`]: DISCOUNT,
   [`POST ${H}/till/orders/:id/round-off`]: TILL,
+  /* The voluntary service charge, ticked with the guest's agreement (260). */
+  [`POST ${H}/till/orders/:id/service-charge`]: TILL,
   [`POST ${H}/till/outlet/:outlet/closed`]: TILL,
   [`POST ${H}/till/orders/:id/printed`]: TILL,
   [`POST ${H}/till/orders/:id/clear`]: TILL,
@@ -518,6 +523,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* pos: restaurant setup */
   [`POST ${H}/till/setup/restaurant`]: TILL_SETUP,
   [`POST ${H}/till/setup/packing`]: TILL_SETUP,  // D27-359
+  [`POST ${H}/till/setup/service-charge`]: TILL_SETUP,  // 264
   [`POST ${H}/till/setup/sections`]: TILL_SETUP,
   [`PATCH ${H}/till/setup/sections/:id`]: TILL_SETUP,
   [`POST ${H}/till/setup/sections/:id/off`]: TILL_SETUP,
@@ -527,6 +533,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/table-bookings/:id/confirm`]: TABLE_ANSWER,
   [`POST ${H}/table-bookings/:id/decline`]: TABLE_ANSWER,
   [`PUT ${H}/table-bookings/hours`]: TABLE_HOURS,
+  [`POST ${H}/table-bookings`]: TABLE_ANSWER,  // 263: an outside diner, and the night's acts below
+  [`POST ${H}/table-bookings/:id/arrive`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/seat`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/no-show`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/cancel`]: TABLE_ANSWER,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */
@@ -573,6 +584,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/staff/:id/access`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
   [`DELETE /api/admin/staff/:id/access/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
+  /* D27-396: two-step sign-in - a person's own, and the owner's or an Admin's switches. */
+  [`POST /api/me/two-step/setup`]: SELF,
+  [`POST /api/me/two-step`]: SELF,
+  [`POST /api/admin/staff/:id/two-step/off`]: own("admin/twoStep.ts: app.two_step_off asks app.may_see_sign_ins"),
+  [`PUT /api/admin/two-step-required`]: own("admin/twoStep.ts: app.set_two_step_required, the owner or an Admin"),
 
   /* inventory */
   [`PUT ${H}/room-types/:id/rate`]: PRICE,
@@ -977,6 +993,19 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The petty cash book (D27-370): money paid out, read as Cashier shift is. */
   [`GET ${H}/reports/petty-cash`]: MONEY_REPORT,
   [`GET ${H}/reports/balances-by-source`]: MONEY_REPORT,
+  /* D27-383: money owed by age and a statement of account, read as Company
+     accounts is (D27-145); GST on advances is money taken, the same. */
+  [`GET ${H}/reports/dues-by-age`]: MONEY_REPORT,
+  [`GET ${H}/reports/company-statement`]: MONEY_REPORT,
+  [`GET ${H}/reports/gst-advances`]: MONEY_REPORT,
+  /* Commission owed: whoever holds `commission` - the booking sources' own grant
+     (the revenue manager keeps it, D27-145), not reception. */
+  [`GET ${H}/reports/commission`]: see("commission", "commission owed"),
+  /* GSTR-1, read as the GST sales register it is made from; the file is a download. */
+  [`GET ${H}/reports/gstr-1`]: REPORTS,
+  [`GET ${H}/reports/gstr-1.json`]: grant("report", "export", "Downloading the GSTR-1 file"),
+  /* The GST on purchase bills: the readers of what is owed to suppliers (D27-370). */
+  [`GET ${H}/reports/input-tax-credit`]: SUPPLIER_DUES,
   [`GET ${H}/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("routes/reportFiles.ts: REPORT_EXPORTERS, and `invoice` for the money reports"),
   [`GET ${H}/statistics/daily`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/statistics/period`]: see(["report", "rate"], "occupancy and ADR"),
@@ -1028,6 +1057,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* An earlier day's bill, to print again (20 Oct). */
   [`GET ${H}/till/bills`]: TILL_READ,
+  /* Each dish's cost and margin (D27-383 item 9): the owner, an administrator
+     or the GM - `approve` on a booking is exactly those three; costs are not
+     the kitchen's (D27-141). */
+  [`GET ${H}/till/dish-profit`]: grant("reservation", "approve", "Reading each dish's cost and margin"),
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-setup`]: KOT_READ,
@@ -1113,6 +1146,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.devices_of (195)"),
   /* D27-245: a person's own "set a longer password" check. */
   [`GET /api/me/password`]: SELF,
+  /* D27-396: where the signed-in person stands with two-step sign-in. */
+  [`GET /api/me/two-step`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
   /* D27-243 5.1, D27-245: the hotel's to owner/Admin/GM; scope=group to owner/Admin. */

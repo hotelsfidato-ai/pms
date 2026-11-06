@@ -16,6 +16,19 @@ const PICK_CATEGORY = (c) => `(() => { const s = document.querySelectorAll('[rol
   Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, ${JSON.stringify(c)});
   s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`;
 const TOAST = "css:[role=region] [role=status]";
+/* A dialog's fields by their labels, set as React hears them; a select by its
+   option's words (D27-383 item 9's pictures). */
+const FILL = (pairs) => `(() => { const dlg = document.querySelector('[role=dialog]');
+  for (const [label, value] of ${JSON.stringify(pairs)}) {
+    const l = [...dlg.querySelectorAll('label')].find((x) => x.textContent.replace('*', '').trim() === label);
+    const e = document.getElementById(l.htmlFor);
+    const sel = e.tagName === 'SELECT';
+    const o = sel ? [...e.options].find((x) => x.textContent.trim() === value) : null;
+    if (sel && !o) throw new Error('No ' + value + ' in ' + label + ': ' + [...e.options].map((x) => x.textContent).join(', '));
+    const v = sel ? o.value : value;
+    Object.getOwnPropertyDescriptor(sel ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value').set.call(e, v);
+    e.dispatchEvent(new Event(sel ? 'change' : 'input', { bubbles: true }));
+  } return true; })()`;
 
 export const SHOTS = [
   { id: "A8-00", title: "Clear the virtual printers' paper", noShot: true, path: PRINTERS,
@@ -582,6 +595,90 @@ export const SHOTS = [
       { n: 1, at: "label:MRP of Paneer Tikka", side: "left" },
       { n: 2, at: "label:MRP of Chicken 65", side: "left" },
       { n: 3, at: "text:(MRP", nth: 0, side: "bottom" },
+    ],
+  },
+
+  /* ── D27-383 item 9: outside diners, the voluntary service charge, tips,
+     coupons, profit per dish. Before them the master sets a 5% service
+     charge on Restaurant setup, makes the coupon DIWALI10 (10%, this month,
+     50 bills, from ₹500) on the Menu, types recipes for Paneer Tikka, Paneer
+     Butter Masala and Dal Tadka (one of Dal Tadka's items with no price yet),
+     ticks the service charge on DH-003 and pays DH-001 in cash with a ₹100 tip. */
+  {
+    id: "A8-50", title: "A table for somebody not staying", as: "General Manager",
+    path: "/pos/5EL/table-bookings",
+    steps: [
+      { clickIf: "text:Got it" }, { waitFor: "text:Upcoming", ms: 30000 }, { click: "text:New booking" },
+      { waitFor: "text:A table for somebody not staying", ms: 10000 }, { wait: 800 },
+      { eval: FILL([["Name", "Meera Iyer"], ["Phone", "98765 43210"], ["People", "3"], ["Time", "21:00"],
+                    ["Area", "A/C"], ["Note", "Window, please"]]) },
+      { wait: 500 },
+    ],
+    marks: [
+      { n: 1, at: "text:Phone", side: "top" },
+      { n: 2, at: "text:Time", side: "left" },
+      { n: 3, at: "text:Area", side: "left" },
+      { n: 4, at: "text:Book the table", side: "top" },
+    ],
+  },
+  { id: "A8-50b", title: "Book it", noShot: true, as: "General Manager",
+    steps: [{ click: "text:Book the table" }, { wait: 1500 }] },
+  {
+    id: "A8-51", title: "The day's bookings, on the night", as: "General Manager",
+    path: "/pos/5EL/table-bookings",
+    steps: [{ waitFor: "text:Meera Iyer", ms: 20000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:input[type=date]", side: "right" },
+      { n: 2, at: "text:not staying", nth: 0, side: "top" },
+      { n: 3, at: "text:Seat", nth: 0, side: "bottom" },
+      { n: 4, at: "text:No-show", nth: 0, side: "bottom" },
+    ],
+  },
+  {
+    id: "A8-52", title: "The voluntary service charge, and a tip", as: "General Manager",
+    path: "/pos/5EL/till",
+    steps: [
+      { click: "text:DH-003", nth: 0 }, { waitFor: "text:Service charge 5% (voluntary)", ms: 20000 },
+      { type: ["css:#till-tip", "50"] }, { scroll: "css:#till-tip" }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "text:Service charge 5% (voluntary)", side: "left" },
+      { n: 2, at: "text:Take off the service charge (5%)", side: "left" },
+      { n: 3, at: "css:#till-tip", side: "bottom" },
+    ],
+  },
+  {
+    id: "A8-53", title: "A coupon the guest brings", as: "General Manager",
+    path: "/pos/5EL/till",
+    steps: [
+      { click: "text:DH-004", nth: 0 }, { waitFor: "text:Discount", ms: 20000 }, { click: "text:Discount" },
+      { waitFor: "text:Coupon code", ms: 10000 },
+      { type: ["css:[role=dialog] input[placeholder='DIWALI10']", "DIWALI10"] }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "css:[role=dialog] input[placeholder='DIWALI10']", side: "left" },
+      { n: 2, at: "text:Apply coupon", side: "bottom" },
+    ],
+  },
+  {
+    id: "A8-54", title: "Close restaurant day: the service charge and the tips", as: "General Manager",
+    path: "/pos/5EL/day-end",
+    steps: [{ waitFor: "text:Service charge and tips", ms: 20000 }, { scroll: "text:Service charge and tips" }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "css:[data-day-service]", side: "left" },
+      { n: 2, at: "css:[data-day-tips]", side: "left" },
+    ],
+  },
+  {
+    id: "A8-55", title: "Profit per dish", as: "General Manager",
+    path: "/pos/5EL/menu",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Paneer Tikka", ms: 30000 }, { wait: 1000 },
+            { click: "text:Profit per dish" }, { waitFor: "text:Each dish", ms: 20000 },
+            { waitFor: "text:79.4%", ms: 20000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:₹66.00", nth: 0, side: "left" },
+      { n: 2, at: "text:79.4%", nth: 0, side: "bottom" },
+      { n: 3, at: "text:no recipe", nth: 0, side: "bottom" },
     ],
   },
 ];

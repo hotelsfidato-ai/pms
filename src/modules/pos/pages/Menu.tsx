@@ -3,13 +3,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { UtensilsCrossed, Plus, Upload, TicketPercent, ListPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox, Segmented,
 } from "@/components/ui";
 import { NumberedAddonsTab } from "@/modules/pos/components/NumberedAddonsTab";
+import { DishProfitTab } from "@/modules/pos/components/DishProfitTab";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import { getModules } from "@/data/repositories";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setItemMrp, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
@@ -50,8 +53,11 @@ export default function MenuPage() {
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState<"menu" | "addons" | null>(null);
   /* Two tabs (the owner's D27-289): the dishes as they were, and the
-     numbered Add-ons any dish can take. */
-  const [view, setView] = useState<"dishes" | "addons">("dishes");
+     numbered Add-ons any dish can take - and a third, Profit per dish
+     (D27-383 item 9), for the owner, an Admin and the GM: costs are not
+     the kitchen's (D27-141). */
+  const [view, setView] = useState<"dishes" | "addons" | "profit">("dishes");
+  const seesCosts = can(useRole(), "approve", "reservation");
 
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
@@ -132,10 +138,12 @@ export default function MenuPage() {
         className="mb-5"
         value={view}
         onChange={setView}
-        options={[{ value: "dishes", label: "Dishes" }, { value: "addons", label: "Add-ons" }]}
+        options={[{ value: "dishes", label: "Dishes" }, { value: "addons", label: "Add-ons" },
+          ...(seesCosts ? [{ value: "profit" as const, label: "Profit per dish" }] : [])]}
       />
 
-      {view === "addons" ? <NumberedAddonsTab hotelId={hotelId} /> : (<>
+      {view === "profit" && seesCosts ? <DishProfitTab hotelId={hotelId} />
+        : view === "addons" ? <NumberedAddonsTab hotelId={hotelId} /> : (<>
 
       <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3.5 mb-5">
         <UtensilsCrossed className="size-4 text-grey-400 shrink-0 mt-0.5" />
@@ -310,7 +318,8 @@ function Promotions({ hotelId }: { hotelId: string }) {
               On the Till's Discount they come first, so it is the same
               concession every time and the month-end report counts what it
               cost. The GM, the owner or an Admin can also type any amount off
-              by hand, with a reason.
+              by hand, with a reason. A coupon is a promotion the guest brings
+              as a code, good between two days, on so many bills, above a least bill.
             </p>
           </div>
 
@@ -360,6 +369,14 @@ function Promotions({ hotelId }: { hotelId: string }) {
                         not running
                       </span>
                     )}
+                    {/* A coupon's dates and limits (261). */}
+                    {p.coupon && (
+                      <span className="block text-sm text-grey-600 truncate">
+                        Coupon · {dateShort(p.coupon.from)} to {dateShort(p.coupon.to)}
+                        {p.coupon.maxUses !== null ? ` · ${p.used} of ${p.coupon.maxUses} used` : ""}
+                        {p.coupon.minBill !== null ? ` · bills from ${money(p.coupon.minBill)}` : ""}
+                      </span>
+                    )}
                   </span>
                   <span className="tabular text-base font-medium text-ink-900">
                     {p.kind === "percent" ? `${p.value}%` : money(p.value)}
@@ -406,12 +423,16 @@ function PromotionDialog({
     useState(promotion ? String(promotion.value) : "");
   const [active, setActive] = useState(promotion?.isActive ?? true);
   const [busy, setBusy] = useState(false);
+  /* A COUPON (261): a code the guest brings, with its dates and limits. */
+  const [isCoupon, setIsCoupon] = useState(false);
+  const [limits, setLimits] = useState({ from: "", to: "", maxUses: "", minBill: "" });
+  const limit = (k: keyof typeof limits) => (e: { target: { value: string } }) => setLimits({ ...limits, [k]: e.target.value });
 
   const amount = Number(value);
   const bad = !Number.isFinite(amount) || amount <= 0
     || (kind === "percent" && amount > 100);
   const ready = name.trim().length > 0 && (promotion || code.trim().length > 0)
-    && !bad;
+    && !bad && (!isCoupon || (limits.from !== "" && limits.to !== ""));
 
   const submit = async () => {
     setBusy(true);
@@ -420,7 +441,13 @@ function PromotionDialog({
           { name: name.trim(), value: amount, isActive: active })
       : await addPromotion(hotelId,
           { code: code.trim().toUpperCase(), name: name.trim(),
-            kind, value: amount });
+            kind, value: amount,
+            /* Blank limits are none - never a number nobody typed. */
+            ...(isCoupon ? { coupon: {
+              from: limits.from, to: limits.to,
+              maxUses: limits.maxUses.trim() === "" ? null : Number(limits.maxUses),
+              minBill: limits.minBill.trim() === "" ? null : Number(limits.minBill),
+            } } : {}) });
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(promotion ? `${name.trim()} saved` : `${name.trim()} added`);
@@ -501,6 +528,35 @@ function PromotionDialog({
                      onChange={(e) => setValue(e.target.value)} />
             )}
           </Field>
+
+          {!promotion && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={isCoupon} className="mt-1 size-4"
+                     onChange={(e) => setIsCoupon(e.target.checked)} />
+              <span>
+                <span className="text-base text-ink-900">A coupon the guest brings</span>
+                <span className="block text-sm text-grey-600">
+                  Typed from the guest's code at the Till or the Terminal, on the days you set; never a button.
+                </span>
+              </span>
+            </label>
+          )}
+          {!promotion && isCoupon && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="From" required>
+                {(f) => <Input {...fieldProps(f)} type="date" value={limits.from} onChange={limit("from")} />}
+              </Field>
+              <Field label="Until" required>
+                {(f) => <Input {...fieldProps(f)} type="date" value={limits.to} onChange={limit("to")} />}
+              </Field>
+              <Field label="Bills it may go on" hint="Blank: no limit.">
+                {(f) => <Input {...fieldProps(f)} inputMode="numeric" value={limits.maxUses} onChange={limit("maxUses")} />}
+              </Field>
+              <Field label="Least bill, ₹" hint="Blank: any bill.">
+                {(f) => <Input {...fieldProps(f)} inputMode="decimal" value={limits.minBill} onChange={limit("minBill")} />}
+              </Field>
+            </div>
+          )}
 
           {promotion && (
             <label className="flex items-start gap-3 cursor-pointer">

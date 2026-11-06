@@ -1,5 +1,5 @@
 -- =============================================================================
--- 266 · After check-in: the GM undoes, cancels, voids and changes; the front
+-- 262 · After check-in: the GM undoes, cancels, voids and changes; the front
 --       desk asks (the owner's D27-397, 6 November)
 -- =============================================================================
 -- The owner: "After the check-in ... we can't cancel the booking or settle
@@ -332,7 +332,7 @@ comment on function app.amend_stay is
   'Changes a booking''s dates and party size, resizing the room hold with it; '
   'a day use (out the day it comes) is a stay too (176). '
   'Refuses a departure before a night already charged, a party larger than the room type sleeps, '
-  'and a moved arrival on a guest who has arrived - except for the owner, an Admin or the GM (266, '
+  'and a moved arrival on a guest who has arrived - except for the owner, an Admin or the GM (262, '
   'D27-397): no later than the business date, never into a closed day, and not once a Night audit '
   'has charged a night of the stay. Does not touch agreed_rate.';
 

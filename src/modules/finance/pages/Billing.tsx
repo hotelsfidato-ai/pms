@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { Building2, Wallet, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateLong } from "@/lib/format";
@@ -177,6 +177,13 @@ const LEDGER_COLUMNS: Column<LedgerRow>[] = [
   { key: "debit", header: "Sent to the account", numeric: true, cell: (r) => amount(r.debit) },
   { key: "credit", header: "Received", numeric: true, cell: (r) => amount(r.credit) },
   { key: "closing", header: "Balance", numeric: true, cell: (r) => <span className="tabular font-medium">{money(r.closing)}</span> },
+  /* D27-383: the account's statement, read by the same people as this screen. */
+  { key: "statement", header: "", width: "w-[110px]",
+    cell: (r) => (
+      <Link className="text-sm underline" to={`/reports/company-statement?account=${encodeURIComponent(r.account)}`}>
+        Statement
+      </Link>
+    ) },
 ];
 
 export function PropertyCityLedgerPage() {
@@ -239,6 +246,7 @@ export function PropertyCityLedgerPage() {
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
         The same figures as the City ledger report under Reports. Opening is what was owed
         before {dateLong(PTD_FROM)}; Received is what the account paid, by the day it reached the hotel.
+        How old each balance is: <Link className="underline" to="/reports/dues-by-age">Money owed by age</Link>.
       </p>
       {paid.data && (
         <PaymentsReceived hotelId={hotelId} view={paid.data}

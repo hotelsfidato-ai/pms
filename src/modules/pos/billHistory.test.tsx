@@ -169,12 +169,12 @@ describe("Bill history", () => {
     await vi.waitFor(() => expect(names).toHaveLength(1));
     expect(names).toEqual(["5el-bill-history-2026-08-25-to-2026-08-25.csv"]);
     const lines = (await blobs[0]!.text()).replace(/^﻿/, "").split("\r\n");
-    expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,NC value,State");
-    expect(lines[1]).toBe("20260822-4,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,UPI,336.00,,Paid");
-    expect(lines[2]).toBe("20260822-3,2026-08-22,21:40,Restaurant,T2,,,,Ravi,Cash,336.00,,VOID");
+    expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,Service charge,Tip,NC value,State");
+    expect(lines[1]).toBe("20260822-4,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,UPI,336.00,,,,Paid");
+    expect(lines[2]).toBe("20260822-3,2026-08-22,21:40,Restaurant,T2,,,,Ravi,Cash,336.00,,,,VOID");
     /* Total stays blank, so a sum of it is what was paid; NC value has the menu value (D27-394). */
-    expect(lines[3]).toBe("20260822-2,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,,,320.00,NC");
-    expect(lines[4]).toBe("20260822-1,2026-08-22,21:40,Restaurant,T2,Meera Iyer,204,,Ravi,To a room,336.00,,Paid");
+    expect(lines[3]).toBe("20260822-2,2026-08-22,21:40,Restaurant,T2,Asha Rao,,98765 43210,Ravi,,,,,320.00,NC");
+    expect(lines[4]).toBe("20260822-1,2026-08-22,21:40,Restaurant,T2,Meera Iyer,204,,Ravi,To a room,336.00,,,,Paid");
   });
 
   it("is offered to the managers, the Accountant and Reception only (D27-372)", () => {

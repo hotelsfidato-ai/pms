@@ -24,7 +24,7 @@ export type UndoRight = "yes" | "ask" | "no";
 
 export function undoRightFor(role: Role, rules: DeskRules | undefined): UndoRight {
   if (role === "owner" || role === "admin") return "yes";
-  /* An older server sends no switch: it is on (266 starts it on). */
+  /* An older server sends no switch: it is on (262 starts it on). */
   if (rules?.gmMayUndoCheckIn === false) return "no";
   if (role === "gm") return "yes";
   return can(role, "edit", "reservation") ? "ask" : "no";
