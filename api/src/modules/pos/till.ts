@@ -25,6 +25,7 @@ import { registerPosRequests } from "./posRequests.ts";
 import { registerOwnerAllowance, allowancePlan, setDiscount, maySettleAllowance, SETTLE_REFUSED,
   type AllowancePlan } from "./ownerAllowance.ts";
 import { registerTableMoves } from "./tableMoves.ts";
+import { registerDishProfit } from "./dishProfit.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -124,6 +125,8 @@ registerPosRequests(till, hotelFor);
 registerOwnerAllowance(till, hotelFor);
 /* Moving an order to another table, and joining two tables (D27-370). */
 registerTableMoves(till, hotelFor);
+/* Each dish's cost and margin from its recipe (D27-383 item 9). */
+registerDishProfit(till, hotelFor);
 
 async function receptionGate(
   c: Context<{ Variables: { subject: string } }>,
@@ -1756,6 +1759,9 @@ export async function readOrder(client: Client, orderId: string) {
     voided_by_name: string | null; voided_at: string | null;
     void_reason: string | null; void_reference: string | null;
     nc_by_name: string | null; nc_at: string | null; nc_reason: string | null;
+    service_charge_pct: string | null; service_charge: string;
+    tip: string | null; tip_method: string | null;
+    promotion_code: string | null; is_coupon: boolean | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -1797,7 +1803,11 @@ export async function readOrder(client: Client, orderId: string) {
             o.void_reason, o.void_reference,
             s5.full_name as nc_by_name,
             to_char(o.nc_at at time zone h.timezone, 'HH24:MI') as nc_at,
-            o.nc_reason
+            o.nc_reason,
+            /* The voluntary service charge the guest agreed to, and a tip
+               taken with the payment (264); the coupon's code (265). */
+            o.service_charge_pct::text, app.pos_order_service_charge(o.id)::text as service_charge,
+            o.tip::text, o.tip_method, pr.code as promotion_code, pr.is_coupon
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -1929,6 +1939,15 @@ export async function readOrder(client: Client, orderId: string) {
     ncBy: h.nc_by_name,
     ncAt: h.nc_at,
     ncReason: h.nc_reason,
+    /* A voluntary service charge (264): the rate ticked and its amount before
+       tax, 0 when none. It is inside `taxable`, `tax` and `payable`. */
+    serviceChargePct: h.service_charge_pct === null ? null : Number(h.service_charge_pct),
+    serviceCharge: Number(h.service_charge),
+    /* A tip for the staff taken with the payment (264): outside the bill. */
+    tip: h.tip === null ? null : Number(h.tip),
+    tipMethod: h.tip_method,
+    /* The coupon's code when the discount came from one (265). */
+    couponCode: h.is_coupon ? h.promotion_code : null,
     /* What was sent to the GM about it, and the answer (D27-363). */
     requests: (await client.query<{ id: string; kind: string; line_id: string | null; summary: string; status: string;
       decision_note: string | null; by: string | null }>(
@@ -2172,8 +2191,11 @@ till.get("/:code/till/bills", async (c) => {
       payment_method: string | null; modes: string[]; opened_at: string; lines: string;
       waiter: string | null; customer_name: string | null; customer_phone: string | null;
       settled_at: string | null; stay_guest: string | null; stay_room: string | null;
+      service_charge: string; tip: string | null; tip_method: string | null;
     }>(
       `select o.id::text, o.order_no, ou.code as outlet, o.table_ref,
+              /* The voluntary service charge and the tip (264). */
+              app.pos_order_service_charge(o.id)::text as service_charge, o.tip::text, o.tip_method,
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               (select payable from app.pos_order_total(o.id))::text as payable,
@@ -2234,6 +2256,8 @@ till.get("/:code/till/bills", async (c) => {
         openedAt: r.opened_at, lines: Number(r.lines),
         waiter: r.waiter, guest: r.customer_name, phone: r.customer_phone,
         settledAt: r.settled_at, stayGuest: r.stay_guest, room: r.stay_room,
+        serviceCharge: Number(r.service_charge),
+        tip: r.tip === null ? null : Number(r.tip), tipMethod: r.tip_method,
       })),
       capped: rows.length > cap,
       cap,
@@ -2323,6 +2347,99 @@ async function openingCash(client: Client, outletId: string, date: string): Prom
   return rows[0]!.opening === null ? null : Number(rows[0]!.opening);
 }
 
+/** An open bill, on a table or a parcel - Tables, the Till and the Terminal
+    open one through POST /till/orders, and seating a table booking through
+    this (263). Every refusal comes before the one write. */
+export async function openOrderFor(
+  client: Client, staffId: string, hotelId: string,
+  input: { outlet: string; table?: string | undefined; tableId?: string | undefined;
+           parcel: { name: string; phone: string | null } | null },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const parcelName = input.parcel?.name ?? null;
+  const parcelPhone = input.parcel?.phone ?? null;
+  const { rows: outlet } = await client.query<{
+    id: string; name: string;
+    closed_until: string | null; closed_reason: string | null;
+  }>(
+    `select id::text, name, closed_until::text, closed_reason
+       from pos_outlets
+      where hotel_id = $1 and code = $2 and is_active`,
+    [hotelId, input.outlet.toUpperCase()],
+  );
+  if (!outlet[0]) {
+    return refuse(`No active outlet with code ${input.outlet}.`);
+  }
+
+  /* THE STORE IS SHUT. Not the same as the module being off — that is
+     a configuration change made in settings, and this is a Tuesday
+     when the kitchen stopped serving early.
+
+     Says WHEN it reopens, because a waiter refused with no time has
+     to go and find somebody to ask. */
+  if (outlet[0].closed_until
+      && Date.parse(outlet[0].closed_until) > Date.now()) {
+    const back = new Date(outlet[0].closed_until)
+      .toLocaleString("en-IN", {
+        weekday: "short", hour: "2-digit", minute: "2-digit",
+      });
+    return refuse(
+      `${outlet[0].name} is closed` +
+      `${outlet[0].closed_reason ? ` - ${outlet[0].closed_reason}` : ""}. ` +
+      `Open again ${back}.`);
+  }
+
+  /* The hotel's operating day, resolved here. A waiter opening an
+     order at 00:40 is serving the evening that has not closed yet. */
+  const businessDate = await businessDateFor(client, hotelId);
+  if (await dayClosed(client, outlet[0].id, businessDate)) return refuse(DAY_CLOSED);
+
+  const { rows: no } = await client.query<{ order_no: string }>(
+    `select app.pos_next_order_no($1, $2::date) as order_no`,
+    [hotelId, businessDate],
+  );
+
+  /* A TABLE FROM THE FLOOR, or free text. Both are real: a floor plan
+     does not have to cover everywhere food is served, and "Poolside"
+     is still an answer. When a table IS named, its label is copied
+     into table_ref so a bill reprinted next year reads the same even
+     if the floor has been rearranged since. */
+  let tableId: string | null = null;
+  let tableRef: string | null = input.table?.trim() || null;
+  const named = input.tableId || await tableNamed(client, outlet[0].id, input.table);
+
+  if (named) {
+    const { rows: t } = await client.query<{ id: string; label: string }>(
+      `select t.id::text, t.label from pos_tables t
+         join pos_sections s on s.id = t.section_id
+        where t.id = $1 and s.outlet_id = $2 and t.is_active`,
+      [named, outlet[0].id],
+    );
+    if (!t[0]) return refuse("That table is not in this outlet.");
+    tableId = t[0].id;
+    tableRef = t[0].label;
+
+    /* Named before the unique index gets to it. Two open orders on one
+       table is two bills nobody can tell apart, and the floor would
+       show whichever came back first. */
+    const busy = await runningOn(client, tableId);
+    if (busy) return refuse(`${t[0].label} already has ${busy} running on it.`);
+  }
+
+  const { rows } = await client.query<{ id: string }>(
+    `insert into pos_orders
+       (hotel_id, outlet_id, order_no, table_ref, business_date, opened_by,
+        table_id, order_type, customer_name, customer_phone)
+     values ($1,$2,$3,$4,$5,$6,$7, coalesce($8, 'dine_in'), $9, $10)
+     returning id::text`,
+    [hotelId, outlet[0].id, no[0]!.order_no,
+     parcelName !== null ? `Parcel · ${parcelName}` : tableRef,
+     businessDate, staffId, tableId,
+     parcelName !== null ? "takeaway" : null, parcelName, parcelPhone],
+  );
+
+  return { ok: true as const, id: rows[0]!.id };
+}
+
 till.post("/:code/till/orders", async (c) => {
   /* A PARCEL (the owner's D27-359): the takeaway type, named by the customer
      - required, so two parcels can be told apart - with a phone if given. */
@@ -2343,88 +2460,12 @@ till.post("/:code/till/orders", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    const { rows: outlet } = await client.query<{
-      id: string; name: string;
-      closed_until: string | null; closed_reason: string | null;
-    }>(
-      `select id::text, name, closed_until::text, closed_reason
-         from pos_outlets
-        where hotel_id = $1 and code = $2 and is_active`,
-      [hotelId, input.outlet!.toUpperCase()],
-    );
-    if (!outlet[0]) {
-      return refuse(`No active outlet with code ${input.outlet}.`);
-    }
-
-    /* THE STORE IS SHUT. Not the same as the module being off — that is
-       a configuration change made in settings, and this is a Tuesday
-       when the kitchen stopped serving early.
-
-       Says WHEN it reopens, because a waiter refused with no time has
-       to go and find somebody to ask. */
-    if (outlet[0].closed_until
-        && Date.parse(outlet[0].closed_until) > Date.now()) {
-      const back = new Date(outlet[0].closed_until)
-        .toLocaleString("en-IN", {
-          weekday: "short", hour: "2-digit", minute: "2-digit",
-        });
-      return refuse(
-        `${outlet[0].name} is closed` +
-        `${outlet[0].closed_reason ? ` - ${outlet[0].closed_reason}` : ""}. ` +
-        `Open again ${back}.`);
-    }
-
-    /* The hotel's operating day, resolved here. A waiter opening an
-       order at 00:40 is serving the evening that has not closed yet. */
-    const businessDate = await businessDateFor(client, hotelId);
-    if (await dayClosed(client, outlet[0].id, businessDate)) return refuse(DAY_CLOSED);
-
-    const { rows: no } = await client.query<{ order_no: string }>(
-      `select app.pos_next_order_no($1, $2::date) as order_no`,
-      [hotelId, businessDate],
-    );
-
-    /* A TABLE FROM THE FLOOR, or free text. Both are real: a floor plan
-       does not have to cover everywhere food is served, and "Poolside"
-       is still an answer. When a table IS named, its label is copied
-       into table_ref so a bill reprinted next year reads the same even
-       if the floor has been rearranged since. */
-    let tableId: string | null = null;
-    let tableRef: string | null = input.table?.trim() || null;
-    const named = input.tableId || await tableNamed(client, outlet[0].id, input.table);
-
-    if (named) {
-      const { rows: t } = await client.query<{ id: string; label: string }>(
-        `select t.id::text, t.label from pos_tables t
-           join pos_sections s on s.id = t.section_id
-          where t.id = $1 and s.outlet_id = $2 and t.is_active`,
-        [named, outlet[0].id],
-      );
-      if (!t[0]) return refuse("That table is not in this outlet.");
-      tableId = t[0].id;
-      tableRef = t[0].label;
-
-      /* Named before the unique index gets to it. Two open orders on one
-         table is two bills nobody can tell apart, and the floor would
-         show whichever came back first. */
-      const busy = await runningOn(client, tableId);
-      if (busy) return refuse(`${t[0].label} already has ${busy} running on it.`);
-    }
-
-    const { rows } = await client.query<{ id: string }>(
-      `insert into pos_orders
-         (hotel_id, outlet_id, order_no, table_ref, business_date, opened_by,
-          table_id, order_type, customer_name, customer_phone)
-       values ($1,$2,$3,$4,$5,$6,$7, coalesce($8, 'dine_in'), $9, $10)
-       returning id::text`,
-      [hotelId, outlet[0].id, no[0]!.order_no,
-       parcelName !== null ? `Parcel · ${parcelName}` : tableRef,
-       businessDate, session.staffId, tableId,
-       parcelName !== null ? "takeaway" : null, parcelName, parcelPhone],
-    );
-
-    return { ok: true as const, ...(await readOrder(client, rows[0]!.id))! };
+    const opened = await openOrderFor(client, session.staffId, hotelId, {
+      outlet: input.outlet!, table: input.table, tableId: input.tableId,
+      parcel: parcelName === null ? null : { name: parcelName, phone: parcelPhone },
+    });
+    if (!opened.ok) return opened;
+    return { ok: true as const, ...(await readOrder(client, opened.id))! };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
@@ -3047,6 +3088,33 @@ export async function noChargeBills(
   }));
 }
 
+/** A business day's voluntary service charge and tips (264), for Close
+    restaurant day and the night audit: paid bills only, as every sales
+    figure reads them. The service charge is inside the bills' sales and tax
+    already; the tips are in no sale - money for the staff, by how it came. */
+export async function serviceAndTips(
+  client: Client, hotelId: string, businessDate: string, outletId?: string,
+) {
+  const { rows: [r] } = await client.query<{
+    bills: number; service: string; cash: string; card: string; upi: string;
+  }>(
+    `select count(*) filter (where o.service_charge_pct is not null)::int as bills,
+            coalesce(sum(app.pos_order_service_charge(o.id)) filter (where o.service_charge_pct is not null), 0)::text as service,
+            coalesce(sum(o.tip) filter (where o.tip_method = 'cash'), 0)::text as cash,
+            coalesce(sum(o.tip) filter (where o.tip_method = 'card'), 0)::text as card,
+            coalesce(sum(o.tip) filter (where o.tip_method = 'upi'), 0)::text as upi
+       from pos_orders o
+      where o.hotel_id = $1 and o.business_date = $2::date and o.status = 'settled'
+        and ($3::uuid is null or o.outlet_id = $3::uuid)`,
+    [hotelId, businessDate, outletId ?? null],
+  );
+  const tips = { cash: Number(r!.cash), card: Number(r!.card), upi: Number(r!.upi) };
+  return {
+    serviceCharge: { bills: r!.bills, amount: Number(r!.service) },
+    tips: { ...tips, total: Math.round((tips.cash + tips.card + tips.upi) * 100) / 100 },
+  };
+}
+
 /** The dishes on bills given free (NC) in a window of business days, per
     outlet and dish, with the MRP the GM typed on the Menu (D27-351,
     D27-373) - for the STOCK reports only; no sales figure reads this. A
@@ -3272,27 +3340,34 @@ till.post("/:code/till/orders/:id/promotion", async (c) => {
     if (!hotelId) return null;
     const orderId = c.req.param("id");
 
-    const { rows: order } = await client.query<{ status: string }>(
-      "select status from pos_orders where id = $1 and hotel_id = $2",
+    const { rows: order } = await client.query<{ status: string; business_date: string; promotion_id: string | null }>(
+      `select status, to_char(business_date, 'YYYY-MM-DD') as business_date, promotion_id::text
+         from pos_orders where id = $1 and hotel_id = $2`,
       [orderId, hotelId]);
     if (!order[0]) return refuse("No such order.");
     if (order[0].status !== "open") {
       return refuse(`This order is ${order[0].status} and cannot be changed.`);
     }
 
+    /* Locked (265): two tills taking a coupon's last use wait for each other. */
     const { rows: promo } = await client.query<{
       id: string; name: string; kind: string; value: string;
-      is_active: boolean;
+      is_active: boolean; is_coupon: boolean; valid_from: string | null; valid_to: string | null;
+      max_uses: number | null; min_bill: string | null;
     }>(
-      `select id::text, name, kind, value::text, is_active
+      `select id::text, name, kind, value::text, is_active, is_coupon,
+              to_char(valid_from, 'YYYY-MM-DD') as valid_from, to_char(valid_to, 'YYYY-MM-DD') as valid_to,
+              max_uses, min_bill::text
          from pos_promotions
-        where hotel_id = $1 and lower(trim(code)) = lower(trim($2))`,
+        where hotel_id = $1 and lower(trim(code)) = lower(trim($2))
+          for update`,
       [hotelId, promoCode]);
     if (!promo[0]) {
-      return refuse(`There is no promotion with the code ${promoCode}.`);
+      return refuse(`There is no promotion or coupon with the code ${promoCode}.`);
     }
-    if (!promo[0].is_active) {
-      return refuse(`${promo[0].name} is not running any more.`);
+    const p = promo[0];
+    if (!p.is_active) {
+      return refuse(`${p.name} is not running any more.`);
     }
 
     const { rows: t } = await client.query<{ net: string }>(
@@ -3301,21 +3376,38 @@ till.post("/:code/till/orders/:id/promotion", async (c) => {
       return refuse("There is nothing on this order to discount.");
     }
 
+    /* A COUPON'S LIMITS (265): its dates, its uses, its least bill - said here,
+       and refused again by the database behind this. */
+    const day = order[0].business_date;
+    const said = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    if (p.valid_from && day < p.valid_from) return refuse(`${p.name} starts on ${said(p.valid_from)}.`);
+    if (p.valid_to && day > p.valid_to) return refuse(`${p.name} ended on ${said(p.valid_to)}.`);
+    if (p.max_uses !== null && order[0].promotion_id !== p.id) {
+      const { rows: [u] } = await client.query<{ n: number }>("select app.pos_coupon_uses($1) as n", [p.id]);
+      if (u!.n >= p.max_uses) {
+        return refuse(`${p.name} has been used on ${p.max_uses} ${p.max_uses === 1 ? "bill" : "bills"}, its limit.`);
+      }
+    }
+    if (p.min_bill !== null && Number(t[0]!.net) < Number(p.min_bill)) {
+      return refuse(`${p.name} is for a bill of at least ₹${Number(p.min_bill).toLocaleString("en-IN")}; `
+        + `this one is ₹${Number(t[0]!.net).toLocaleString("en-IN")}.`);
+    }
+
     /* Resolved to money ONCE, here, exactly as a free-hand percentage
        is. A bill printed at 50% off must not change because somebody
        added a line to the order afterwards. */
-    const amount = promo[0].kind === "percent"
+    const amount = p.kind === "percent"
       ? (await client.query<{ amount: string }>(
           "select app.pos_discount_for($1, $2)::text as amount",
-          [orderId, promo[0].value])).rows[0]!.amount
-      : promo[0].value;
+          [orderId, p.value])).rows[0]!.amount
+      : p.value;
 
     if (Number(amount) > Number(t[0]!.net)) {
       /* A ₹500 promotion on a ₹300 bill. The promotion is not wrong —
          this bill is simply smaller than it — and a negative payable
          is not a thing a till may produce. */
       return refuse(
-        `${promo[0].name} takes off more than this bill comes to.`);
+        `${p.name} takes off more than this bill comes to.`);
     }
 
     await client.query(
@@ -3325,8 +3417,7 @@ till.post("/:code/till/orders/:id/promotion", async (c) => {
                  record say the same words without anybody typing them. */
               discount_reason = $4, promotion_id = $5, updated_at = now()
         where id = $6`,
-      [promo[0].kind, promo[0].value, amount, promo[0].name, promo[0].id,
-       orderId]);
+      [p.kind, p.value, amount, p.name, p.id, orderId]);
 
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
@@ -3379,10 +3470,14 @@ till.get("/:code/till/promotions", async (c) => {
     const { rows } = await client.query<{
       id: string; code: string; name: string; kind: string;
       value: string; is_active: boolean; used: string;
+      is_coupon: boolean; valid_from: string | null; valid_to: string | null;
+      max_uses: number | null; min_bill: string | null;
     }>(
+      /* Used: the bills carrying it, but one closed unpaid (265). */
       `select p.id::text, p.code, p.name, p.kind, p.value::text, p.is_active,
-              (select count(*) from pos_orders o
-                where o.promotion_id = p.id)::text as used
+              app.pos_coupon_uses(p.id)::text as used,
+              p.is_coupon, to_char(p.valid_from, 'YYYY-MM-DD') as valid_from,
+              to_char(p.valid_to, 'YYYY-MM-DD') as valid_to, p.max_uses, p.min_bill::text
          from pos_promotions p
         where p.hotel_id = $1
         order by p.is_active desc, lower(p.code)`,
@@ -3395,6 +3490,12 @@ till.get("/:code/till/promotions", async (c) => {
         value: Number(r.value),
         isActive: r.is_active,
         used: Number(r.used),
+        /* A coupon (265): typed from the guest's code, with its limits;
+           null where a limit is not set. */
+        coupon: r.is_coupon ? {
+          from: r.valid_from!, to: r.valid_to!, maxUses: r.max_uses,
+          minBill: r.min_bill === null ? null : Number(r.min_bill),
+        } : null,
       })),
     };
   });
@@ -3402,8 +3503,32 @@ till.get("/:code/till/promotions", async (c) => {
                        : c.json(body);
 });
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A coupon's limits as typed (265): two dates, a use limit and a least bill,
+    the last two optional. A reason, or the values. */
+export function couponProblem(raw: unknown):
+  | { reason: string }
+  | { from: string; to: string; maxUses: number | null; minBill: number | null } {
+  const c = (raw ?? {}) as { from?: unknown; to?: unknown; maxUses?: unknown; minBill?: unknown };
+  const from = typeof c.from === "string" ? c.from : "";
+  const to = typeof c.to === "string" ? c.to : "";
+  if (!DAY.test(from) || !DAY.test(to)) return { reason: "From which day, and until which day, is the coupon good?" };
+  if (from > to) return { reason: "The coupon ends before it starts." };
+  const blank = (v: unknown) => v === undefined || v === null || v === "";
+  const maxUses = blank(c.maxUses) ? null : Number(c.maxUses);
+  if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 100000)) {
+    return { reason: "How many bills may use it: a whole number from 1, or empty for no limit." };
+  }
+  const minBill = blank(c.minBill) ? null : Number(c.minBill);
+  if (minBill !== null && (!Number.isFinite(minBill) || minBill <= 0)) {
+    return { reason: "The least bill is an amount above zero, or empty for none." };
+  }
+  return { from, to, maxUses, minBill };
+}
+
 till.post("/:code/till/promotions", async (c) => {
-  type Body = { code?: string; name?: string; kind?: string; value?: number };
+  type Body = { code?: string; name?: string; kind?: string; value?: number; coupon?: unknown };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const promoCode = input.code?.trim().toUpperCase();
@@ -3429,15 +3554,23 @@ till.post("/:code/till/promotions", async (c) => {
   if (input.kind === "percent" && value > 100) {
     return c.json(refuse("More than 100% is a refund, not a discount."), 409);
   }
+  const coupon = input.coupon === undefined || input.coupon === null ? null : couponProblem(input.coupon);
+  if (coupon && "reason" in coupon) return c.json(refuse(coupon.reason), 409);
+  if (coupon && coupon.minBill !== null && input.kind === "fixed" && value > coupon.minBill) {
+    return c.json(refuse("A coupon cannot take off more than its least bill."), 409);
+  }
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     try {
       const { rows } = await client.query<{ id: string }>(
-        `insert into pos_promotions (hotel_id, code, name, kind, value)
-         values ($1,$2,$3,$4,$5) returning id::text`,
-        [hotelId, promoCode, name, input.kind, value.toFixed(2)]);
+        `insert into pos_promotions (hotel_id, code, name, kind, value,
+                                     is_coupon, valid_from, valid_to, max_uses, min_bill)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id::text`,
+        [hotelId, promoCode, name, input.kind, value.toFixed(2),
+         coupon !== null, coupon?.from ?? null, coupon?.to ?? null,
+         coupon?.maxUses ?? null, coupon?.minBill ?? null]);
       return { ok: true as const, id: rows[0]!.id };
     } catch (e) {
       if ((e as { code?: string }).code === "23505") {
@@ -3540,6 +3673,45 @@ till.post("/:code/till/orders/:id/round-off", async (c) => {
       [adjustment.toFixed(2), orderId],
     );
 
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+
+/* ── A voluntary service charge (264, built under D27-396) ─────────
+   The CCPA's guidelines of 4 July 2022: never added by default. Off unless
+   the restaurant sets a rate on Restaurant setup, and then put on ONE open
+   bill only when the cashier ticks it and says the guest agreed - at the
+   restaurant's rate of that moment. Taken off again the same way. GST
+   follows it (264's header); the bill prints it as voluntary. */
+till.post("/:code/till/orders/:id/service-charge", async (c) => {
+  type Body = { on?: unknown; agreed?: unknown };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  if (typeof input.on !== "boolean") return c.json(refuse("On or off?"), 409);
+  if (input.on && input.agreed !== true) {
+    return c.json(refuse(
+      "A service charge is added only when the guest agrees to pay it: it is voluntary."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const { rows: [o] } = await client.query<{ status: string; pct: string | null }>(
+      `select o.status, ou.service_charge_pct::text as pct
+         from pos_orders o join pos_outlets ou on ou.id = o.outlet_id
+        where o.id = $1 and o.hotel_id = $2 for update of o`, [orderId, hotelId]);
+    if (!o) return refuse("No such order.");
+    if (o.status !== "open") return refuse(`This order is ${o.status} and cannot be changed.`);
+    if (input.on && o.pct === null) {
+      return refuse("This restaurant has no service charge. The GM sets one on Restaurant setup.");
+    }
+    await client.query(
+      "update pos_orders set service_charge_pct = $2, updated_at = now() where id = $1",
+      [orderId, input.on ? o.pct : null]);
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -4418,6 +4590,7 @@ till.get("/:code/till/day-end", async (c) => {
     const voided = await voidedBills(client, hotelId, businessDate, outlet[0].id);
     const noCharge = await noChargeBills(client, hotelId, businessDate, outlet[0].id);
     const modeChanges = await tenderChanges(client, hotelId, businessDate, outlet[0].id);
+    const extras = await serviceAndTips(client, hotelId, businessDate, outlet[0].id);
 
     const denominations = day[0]
       ? (await client.query<{ value: string; count: number }>(
@@ -4456,6 +4629,10 @@ till.get("/:code/till/day-end", async (c) => {
       /* Paid bills whose payment mode was changed (D27-363), and whether
          after the drawer was counted. */
       modeChanges,
+      /* The voluntary service charge (inside `summary`'s takings) and the
+         tips (outside them; a cash tip is in `cash.expected`) - 264. */
+      serviceCharge: extras.serviceCharge,
+      tips: extras.tips,
       movements: movements.map((m) => ({
         id: m.id, kind: m.kind, amount: Number(m.amount),
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
@@ -4784,8 +4961,27 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     rest?: { method?: string; tendered?: number; reference?: string };
     /* D25-40: asked when more than ₹1,00,000 of the bill is cash. */
     pan?: string; form97?: boolean; nonResident?: boolean;
+    /* 264: a tip for the staff, taken the same way as the bill. */
+    tip?: number;
   };
   const input = await c.req.json<SettleBody>().catch(() => ({}) as SettleBody);
+
+  /* A TIP (264, built under D27-396): money for the staff, not a sale and not
+     taxed, written beside the payment and outside its tenders. Taken in cash,
+     by card or by UPI with a bill paid one way; a room or a function bill, a
+     split and the owner's allowance take none. */
+  const tip = input.tip === undefined || input.tip === null ? null : Number(input.tip);
+  if (tip !== null) {
+    if (!Number.isFinite(tip) || tip <= 0 || Math.round(tip * 100) !== tip * 100) {
+      return c.json(refuse("A tip is an amount above zero, in rupees and paise."), 409);
+    }
+    const way = Array.isArray(input.tenders) ? "split" : input.method;
+    if (way !== "cash" && way !== "card" && way !== "upi") {
+      return c.json(refuse(
+        "A tip is taken with a bill paid one way, in cash, by card or by UPI - "
+        + "not with a room, a function, a split or the owner's allowance."), 409);
+    }
+  }
 
   const METHODS = ["room", "cash", "card", "upi"];
 
@@ -4996,6 +5192,21 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       );
     }
 
+    /* A COUPON'S LEAST BILL, asked again (265): a dish struck after it went on
+       can take the bill under it. */
+    const { rows: [coupon] } = await client.query<{ name: string; min_bill: string }>(
+      `select p.name, p.min_bill::text from pos_orders o join pos_promotions p on p.id = o.promotion_id
+        where o.id = $1 and p.min_bill is not null`, [orderId]);
+    if (coupon && net < Number(coupon.min_bill)) {
+      await undo();
+      return refuse(`${coupon.name} is for a bill of at least ₹${Number(coupon.min_bill).toLocaleString("en-IN")}; `
+        + `this one is now ₹${net.toLocaleString("en-IN")}. Take the coupon off, or add to the bill.`);
+    }
+    /* More tip than bill is a slip of the finger, not generosity (D27-396). */
+    if (tip !== null && tip > payable) {
+      return refuse(`A tip of ₹${tip.toLocaleString("en-IN")} is more than the bill. Check the amount.`);
+    }
+
     /* The allowance pays what it can of the bill as it now stands (rounded, as any
        bill here is); the rest, after its % off, is the cash, card or UPI asked for. */
     if (allowance) {
@@ -5059,10 +5270,11 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
             set status='settled', settled_by=$1, settled_at=now(),
                 payment_method=$2, pan=$4, form_97=$5, non_resident=$6,
                 round_off = coalesce($7::numeric, round_off),
-                on_owner_allowance = $8
+                on_owner_allowance = $8,
+                tip = $9::numeric, tip_method = case when $9::numeric is null then null else $2 end
           where id = $3`,
         [session.staffId, method, orderId, kept.pan, kept.form97, kept.nonResident,
-         cashRoundOff, allowance !== null],
+         cashRoundOff, allowance !== null, tip === null ? null : tip.toFixed(2)],
       );
       await writeTenders();
       /* D22-44: paid here, so its alcohol gets its VAT bill now, in this
@@ -6595,8 +6807,10 @@ const ACROSS = 4;
 const LONGEST_RUN = 100;
 
 async function restaurantFor(client: Client, hotelId: string) {
-  const { rows } = await client.query<{ id: string; name: string; packing_charge: string | null }>(
-    `select id::text, name, packing_charge::text from pos_outlets
+  const { rows } = await client.query<{
+    id: string; name: string; packing_charge: string | null; service_charge_pct: string | null;
+  }>(
+    `select id::text, name, packing_charge::text, service_charge_pct::text from pos_outlets
       where hotel_id = $1 and code = $2 and is_active`,
     [hotelId, RESTAURANT],
   );
@@ -6664,7 +6878,9 @@ till.get("/:code/till/setup", async (c) => {
 
     return {
       restaurant: restaurant ? { name: restaurant.name, packingCharge: restaurant.packing_charge === null
-        ? null : Number(restaurant.packing_charge) } : null,
+        ? null : Number(restaurant.packing_charge),
+        /* 264: the voluntary service charge, %; null is none (the default). */
+        serviceChargePct: restaurant.service_charge_pct === null ? null : Number(restaurant.service_charge_pct) } : null,
       sections,
       waiters: w[0]!.n,
     };
@@ -6717,6 +6933,27 @@ till.post("/:code/till/setup/packing", async (c) => {
     const { rowCount } = await client.query(
       "update pos_outlets set packing_charge = $3 where hotel_id = $1 and code = $2",
       [hotelId, RESTAURANT, amount === null ? null : Math.round(amount * 100) / 100]);
+    return rowCount ? { ok: true as const } : refuse("Name the restaurant first.");
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* The voluntary service charge (264): off - null - unless the GM types a rate.
+   It never goes on a bill by itself; the cashier ticks it per bill. */
+till.post("/:code/till/setup/service-charge", async (c) => {
+  const input = await c.req.json<{ percent?: number | null }>().catch(() => ({} as { percent?: number | null }));
+  const pct = input.percent ?? null;
+  if (pct !== null && (typeof pct !== "number" || !Number.isFinite(pct) || pct <= 0 || pct > 20
+      || Math.round(pct * 100) !== pct * 100)) {
+    return c.json(refuse("A service charge is a percentage above 0 and at most 20, or left blank for none."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      "update pos_outlets set service_charge_pct = $3 where hotel_id = $1 and code = $2",
+      [hotelId, RESTAURANT, pct]);
     return rowCount ? { ok: true as const } : refuse("Name the restaurant first.");
   });
   if (!result) return c.json({ error: "No such property." }, 404);

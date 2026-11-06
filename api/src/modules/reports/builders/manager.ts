@@ -453,10 +453,12 @@ async function posFigures(client: Client, hotelId: string, w: Windows) {
     /* By tax as well as rate: alcohol's VAT is one line, never a CGST and
        SGST pair (D21-91). `rate` carries the tax in front of it - "vat:10",
        "gst:5" - so the loop below keeps one key per line it prints. */
-    client.query<{ outlet: string; date: string; rate: string; discount: string; tax: string }>(
+    client.query<{ outlet: string; date: string; rate: string; discount: string; tax: string; service: string }>(
       `select o.outlet_id::text as outlet, to_char(o.business_date, 'YYYY-MM-DD') as date,
               r.tax_scheme || ':' || r.tax_rate::text as rate,
-              sum(r.discount)::text as discount, sum(r.tax)::text as tax
+              sum(r.discount)::text as discount, sum(r.tax)::text as tax,
+              /* The voluntary service charge, inside each rate's taxable (pos 264). */
+              sum(r.taxable - r.rate_net + r.discount)::text as service
          from pos_orders o
          cross join lateral app.pos_order_by_tax(o.id) r
         where ${settled}
@@ -524,10 +526,12 @@ async function posFigures(client: Client, hotelId: string, w: Windows) {
     }
     const discount = three(mine(rates).map((r) => ({ date: r.date, v: Number(r.discount) })));
     summary.push(line("Discount", neg(discount)));
+    const service = three(mine(rates).map((r) => ({ date: r.date, v: Number(r.service) })));
+    if (service.today || service.ptd || service.ytd) summary.push(line("Service charge (voluntary)", service));
     const adjustment = three(mine(offs).map((r) => ({ date: r.date, v: Number(r.round_off) })));
     summary.push(line("Adjustment - Round off", adjustment));
 
-    const withoutTax = sumMoney(...net, neg(discount), adjustment);
+    const withoutTax = sumMoney(...net, neg(discount), service, adjustment);
     const withTax = sumMoney(withoutTax, ...taxes);
     summary.push(sumLine("Total Revenue without Tax", withoutTax));
     summary.push(sumLine("Total Revenue with Tax", withTax));

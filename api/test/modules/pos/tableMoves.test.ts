@@ -203,7 +203,7 @@ describe("A table a hotel guest booked (D27-372)", () => {
       await onDayOf(1);
       let res = await move(owner, o.id, "M10");
       expect(res.status).toBe(409);
-      expect(await reason(res)).toMatch(new RegExp(`^${TAG}M10 is booked by a hotel guest at \\d\\d:\\d\\d\\. Choose another table\\.$`));
+      expect(await reason(res)).toMatch(new RegExp(`^${TAG}M10 is booked for \\d\\d:\\d\\d\\. Choose another table\\.$`));
       await onDayOf(3);
       res = await move(owner, o.id, "M11");
       expect(res.status, await res.clone().text()).toBe(200);
