@@ -1759,7 +1759,7 @@ export async function readOrder(client: Client, orderId: string) {
     voided_by_name: string | null; voided_at: string | null;
     void_reason: string | null; void_reference: string | null;
     nc_by_name: string | null; nc_at: string | null; nc_reason: string | null;
-    service_charge_pct: string | null; service_charge: string;
+    service_charge_pct: string | null; service_charge: string; offered_pct: string | null;
     tip: string | null; tip_method: string | null;
     promotion_code: string | null; is_coupon: boolean | null;
   }>(
@@ -1807,6 +1807,7 @@ export async function readOrder(client: Client, orderId: string) {
             /* The voluntary service charge the guest agreed to, and a tip
                taken with the payment (264); the coupon's code (265). */
             o.service_charge_pct::text, app.pos_order_service_charge(o.id)::text as service_charge,
+            ou.service_charge_pct::text as offered_pct,
             o.tip::text, o.tip_method, pr.code as promotion_code, pr.is_coupon
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
@@ -1943,6 +1944,8 @@ export async function readOrder(client: Client, orderId: string) {
        tax, 0 when none. It is inside `taxable`, `tax` and `payable`. */
     serviceChargePct: h.service_charge_pct === null ? null : Number(h.service_charge_pct),
     serviceCharge: Number(h.service_charge),
+    /* The restaurant's rate, so the Till can offer the tick; null: none. */
+    serviceChargeOffered: h.offered_pct === null ? null : Number(h.offered_pct),
     /* A tip for the staff taken with the payment (264): outside the bill. */
     tip: h.tip === null ? null : Number(h.tip),
     tipMethod: h.tip_method,

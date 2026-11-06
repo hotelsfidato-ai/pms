@@ -24,7 +24,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setServiceCharge, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -784,7 +784,9 @@ function DiscountDialog({
     queryFn: () => listPromotions(hotelId),
     enabled: open && !send,
   });
-  const live = (promos.data?.promotions ?? []).filter((p) => p.isActive);
+  /* A coupon is typed from the guest's code, never a button (265). */
+  const live = (promos.data?.promotions ?? []).filter((p) => p.isActive && !p.coupon);
+  const [coupon, setCoupon] = useState("");
 
   const amount = Number(value);
   const preview = !Number.isFinite(amount) || amount <= 0
@@ -863,6 +865,27 @@ function DiscountDialog({
         }
       >
         <div className="space-y-4">
+          {/* A COUPON (265): the code the guest brings; its dates, uses and
+              least bill are the server's to check, in a sentence. */}
+          {!send && (
+            <div className="space-y-1.5">
+              <div className="flex items-end gap-2">
+                <Field label="Coupon code" className="flex-1">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={coupon} maxLength={12} autoCapitalize="characters"
+                           onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="DIWALI10" />
+                  )}
+                </Field>
+                <Button variant="secondary" size="lg" loading={busy} disabled={!coupon.trim()}
+                        onClick={() => void usePromotion(coupon.trim())}>
+                  Apply coupon
+                </Button>
+              </div>
+              <p className="text-sm text-grey-500">
+                The code the guest brings. Its dates, its uses and its least bill are checked.
+              </p>
+            </div>
+          )}
           {live.length > 0 && (
             <div className="space-y-2">
               <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
@@ -1144,6 +1167,8 @@ function OrderPanel({
   onChanged: () => void;
 }) {
   const [room, setRoom] = useState("");
+  /* A tip for the staff, taken with a cash, card or UPI payment (264). */
+  const [tip, setTip] = useState("");
   const [discounting, setDiscounting] = useState(false);
   /* The owner's allowance: offered once it is set (D27-366). */
   const [onAllowance, setOnAllowance] = useState(false);
@@ -1169,7 +1194,8 @@ function OrderPanel({
   ) => {
     setBusy(true);
     const res = await settleOrder(hotelId, order.id, method,
-      method === "room" ? room : undefined, folioId, cashId);
+      method === "room" ? room : undefined, folioId, cashId,
+      method === "room" || method === "function" ? null : Number(tip) || null);
     setBusy(false);
 
     if (!res.ok) {
@@ -1178,6 +1204,7 @@ function OrderPanel({
       if (method !== "room") toast.error("Not settled", res.reason);
       return res;
     }
+    setTip("");
     toast.success(
       "Settled",
       res.guest ? `${money(order.gross)} to ${res.guest}`
@@ -1211,6 +1238,30 @@ function OrderPanel({
     const res = await setRoundOff(hotelId, order.id, order.roundOff === 0);
     setBusy(false);
     if (!res.ok) return toast.error("Not rounded", res.reason);
+    onChanged();
+  };
+
+  /* THE VOLUNTARY SERVICE CHARGE (264; CCPA, 4 July 2022): never by
+     default - offered only where the GM set a rate, and put on only once
+     the cashier says the guest agreed. Off again with one tap. */
+  const serviceOn = order.serviceChargePct != null;
+  const serviceCharge = () => serviceOn ? void doService(false) : setAsk({
+    title: `Add a voluntary service charge of ${order.serviceChargeOffered}%?`,
+    body: "Only if the guest agrees to pay it. By law it is never added by default, and the bill "
+      + "says it is voluntary. GST is charged on it with the food.",
+    confirm: "The guest agreed",
+    onConfirm: async (): Promise<Reply | undefined> => {
+      const res = await setServiceCharge(hotelId, order.id, true);
+      if (!res.ok) return { refused: res.reason };
+      onChanged();
+      return undefined;
+    },
+  });
+  const doService = async (on: boolean) => {
+    setBusy(true);
+    const res = await setServiceCharge(hotelId, order.id, on);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
     onChanged();
   };
 
@@ -1506,6 +1557,13 @@ function OrderPanel({
                   : "Discount"}
                 value={`-${money(order.discount)}`}
               />
+              {!order.serviceCharge && <Row label="Taxable" value={money(order.taxable)} />}
+            </>
+          )}
+          {/* The voluntary service charge the guest agreed to (264). */}
+          {Boolean(order.serviceCharge) && (
+            <>
+              <Row label={`Service charge ${order.serviceChargePct}% (voluntary)`} value={money(order.serviceCharge ?? 0)} />
               <Row label="Taxable" value={money(order.taxable)} />
             </>
           )}
@@ -1541,6 +1599,7 @@ function OrderPanel({
                   ? `${allowanceWords(order.tenders)}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                   : `Paid by ${order.paymentMethod}${order.paymentMethod === "room" && order.room ? ` (room ${order.room})` : ""}`
                     + `${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
+                    + (order.tip ? ` Tip for the staff ${moneyPrecise(order.tip)} (${METHOD_WORD[order.tipMethod ?? ""] ?? order.tipMethod}), not part of the bill.` : "")
                 : order.status === "joined"
                 ? "Joined to another table: its dishes and KOTs are on that table's bill."
                 : `Closed unpaid - ${order.abandonedReason}`}
@@ -1622,6 +1681,15 @@ function OrderPanel({
                 {order.roundOff !== 0 ? "Undo round off" : "Round off"}
               </Button>
             </div>
+            {/* Offered only where the GM set a rate (264). */}
+            {(order.serviceChargeOffered != null || serviceOn) && (
+              <Button variant="secondary" size="lg" className="w-full" loading={busy}
+                disabled={live.length === 0} onClick={serviceCharge}>
+                {serviceOn
+                  ? `Take off the service charge (${order.serviceChargePct}%)`
+                  : `Service charge ${order.serviceChargeOffered}%, if the guest agrees`}
+              </Button>
+            )}
 
             {onFunction && (
               <>
@@ -1675,6 +1743,15 @@ function OrderPanel({
             </div>
 
             {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
+            {/* A TIP (264): money for the staff, taken the same way as the
+                bill below - not a sale, not taxed, not on the bill's total. */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="till-tip" className="text-sm text-grey-600 shrink-0">Tip for the staff</label>
+              <input id="till-tip" value={tip} inputMode="decimal" disabled={onFunction}
+                onChange={(e) => setTip(e.target.value)} placeholder="₹ none"
+                className="w-28 h-11 px-3 rounded-md border border-grey-300 text-base tabular disabled:bg-grey-50" />
+              <span className="text-xs text-grey-500">with cash, card or UPI below</span>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {METHODS.filter((m) => m.key !== "room").map((m) => (
                 <Button

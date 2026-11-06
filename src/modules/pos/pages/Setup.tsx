@@ -13,7 +13,7 @@ import {
 import { getModules, setModule } from "@/data/repositories";
 import { TaxRulesCard } from "@/modules/finance";
 import {
-  getTillSetup, getMenu, nameRestaurant, setPackingCharge, addSection, renameSection, takeSectionAway,
+  getTillSetup, getMenu, nameRestaurant, setPackingCharge, setServiceChargeRate, addSection, renameSection, takeSectionAway,
   addTables, changeTable, takeTableAway, getOwnerAllowance, setOwnerAllowance,
   type TillSetup, type SetupTable, type MenuCategory,
 } from "@/modules/pos/data/till";
@@ -111,6 +111,7 @@ export default function SetupPage() {
           <ReadyToOpen hotelId={hotelId} setup={setup.data} menu={menu} />
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
           {setup.data.restaurant && <Packing hotelId={hotelId} setup={setup.data} run={run} />}
+          {setup.data.restaurant && <ServiceCharge hotelId={hotelId} setup={setup.data} run={run} />}
           {setup.data.restaurant && <OwnerAllowanceCard hotelId={hotelId} run={run} />}
           {setup.data.restaurant && <Taxes hotelId={hotelId} />}
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
@@ -307,6 +308,43 @@ function Packing({ hotelId, setup, run }: { hotelId: string; setup: TillSetup; r
             </Field>
             <Button type="submit" variant="secondary" loading={busy}
                     disabled={(amount.trim() === "" ? null : Number(amount.trim())) === saved}>
+              Save
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
+    </Section>
+  );
+}
+
+/* ── The voluntary service charge (264) ────────────────────────────
+   The CCPA's guidelines of 4 July 2022: never added by default. A rate
+   here only lets the cashier offer it; it goes on a bill when they tick it
+   with the guest's agreement. Blank, the default: none at all. */
+function ServiceCharge({ hotelId, setup, run }: { hotelId: string; setup: TillSetup; run: Run }) {
+  const saved = setup.restaurant?.serviceChargePct ?? null;
+  const [pct, setPct] = useState(saved === null ? "" : String(saved));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const typed = pct.trim();
+    setBusy(true);
+    await run(setServiceChargeRate(hotelId, typed === "" ? null : Number(typed)),
+      typed === "" ? "No service charge" : "Service charge saved");
+    setBusy(false);
+  };
+  return (
+    <Section title="Service charge"
+      description="Voluntary by law: never added by itself. With a rate here the Till and the Terminal offer it, and it goes on a bill only when the guest agrees. GST is charged on it with the food. Blank: none.">
+      <Card>
+        <CardBody>
+          <form className="flex flex-col sm:flex-row sm:items-end gap-3"
+                onSubmit={(e) => { e.preventDefault(); void save(); }}>
+            <Field label="Service charge, %" className="max-w-xs">
+              {(f) => <Input {...fieldProps(f)} inputMode="decimal" value={pct}
+                             onChange={(e) => setPct(e.target.value)} />}
+            </Field>
+            <Button type="submit" variant="secondary" loading={busy}
+                    disabled={(pct.trim() === "" ? null : Number(pct.trim())) === saved}>
               Save
             </Button>
           </form>

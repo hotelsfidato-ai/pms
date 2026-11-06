@@ -366,6 +366,14 @@ export default function NightAuditPage() {
                           .join(" · ")}
                       </p>
                     )}
+                    {/* pos 264: the voluntary service charge (in the takings) and tips (in no sale). */}
+                    {((result.restaurant.serviceCharge?.bills ?? 0) > 0 || (result.restaurant.tips?.total ?? 0) > 0) && (
+                      <p className="text-2xs text-success-600 mt-0.5">
+                        Service charge (voluntary) {money(result.restaurant.serviceCharge?.amount ?? 0)} on{" "}
+                        {result.restaurant.serviceCharge?.bills ?? 0} bill{result.restaurant.serviceCharge?.bills === 1 ? "" : "s"}
+                        {" · "}tips for the staff {money(result.restaurant.tips?.total ?? 0)}, not in sales
+                      </p>
+                    )}
                     {/* D27-119: food struck after the kitchen had it, and why. */}
                     {(result.restaurant.struck ?? []).map((x, i) => (
                       <p key={i} className="text-2xs text-success-600 mt-0.5">

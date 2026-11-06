@@ -56,9 +56,12 @@ export function BillSlip({ order: o, heading, sample }: {
   const rows: Array<[string, string]> = [
     ["Sub total", fig(o.net)],
     ...(o.discount > 0 ? [[
-      `Discount${o.discountType === "percent" && o.discountValue !== null ? ` ${o.discountValue}%` : ""}`,
+      `${o.couponCode ? `Coupon ${o.couponCode}` : "Discount"}${o.discountType === "percent" && o.discountValue !== null ? ` ${o.discountValue}%` : ""}`,
       fig(-o.discount),
     ] as [string, string]] : []),
+    /* The voluntary service charge the guest agreed to (264): it says so,
+       as the CCPA's guidelines ask; the tax lines below include its GST. */
+    ...(o.serviceCharge ? [[`Service charge ${o.serviceChargePct}% (voluntary)`, fig(o.serviceCharge)] as [string, string]] : []),
     ...taxRows.map(([label, v]): [string, string] => [label, fig(v)]),
     ...(o.roundOff !== 0 ? [["Round off", `${o.roundOff > 0 ? "+" : ""}${fig(o.roundOff)}`] as [string, string]] : []),
   ];
@@ -170,6 +173,12 @@ export function BillSlip({ order: o, heading, sample }: {
                   {o.paymentMethod === "room" && " - charged to the guest's bill"}</>}
           </p>
         )}
+        {/* A tip for the staff (264), taken with the payment: not part of the bill. */}
+        {o.tip ? (
+          <p className="mt-0.5 tabular" data-bill-tip>
+            Tip for the staff {fig(o.tip)} by {o.tipMethod === "upi" ? "UPI" : o.tipMethod} - not part of the bill
+          </p>
+        ) : null}
         {/* D22-44: the alcohol's own VAT bill, issued when this was paid,
             and it names this bill back. */}
         {o.vatBill && (
