@@ -5,6 +5,7 @@ import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import { teamsFor } from "../modules/guest-services/index.ts";
 import { setupReminders, STEP_TITLES } from "../modules/admin/index.ts";
+import { expiryAlerts } from "../modules/stores/index.ts";
 import { allows, WRITE_RULES } from "../roleGate.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
@@ -237,6 +238,27 @@ notifications.get("/:code/notifications", async (c) => {
           body: "Crockery and cutlery is counted every month. On the Store, Count a store, then choose "
             + `${d.place}.`,
           isRead: false, at, link: `/h/${code}/stores`, actionRequired: true,
+        });
+      }
+
+      /* EXPIRY (D27-383 item 11): what is past its use-by and still on a
+         shelf, and what is within the hotel's warning - oldest first, from the
+         Store's own reading. A new day, or a new count, is a new notice. */
+      const { warnDays, today, alerts } = await expiryAlerts(client, hotelId);
+      const day = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", timeZone: "UTC" });
+      const listed = (list: typeof alerts) => list.slice(0, 3)
+        .map((a) => `${a.item} - ${a.store}: ${Math.round(a.quantity * 1000) / 1000} ${a.unit}, use by ${day(a.useBy)}`)
+        .join("; ") + (list.length > 3 ? `; and ${list.length - 3} more` : "") + ".";
+      for (const [expired, list] of [[true, alerts.filter((a) => a.expired)], [false, alerts.filter((a) => !a.expired)]] as const) {
+        if (!list.length) continue;
+        out.push({
+          id: `stock-${expired ? "expired" : "expiring"}-${today}-${list.length}`, hotelId: code, category: "approval",
+          title: expired
+            ? `${list.length} deliver${list.length === 1 ? "y" : "ies"} past the use-by, still on the shelf`
+            : `${list.length} deliver${list.length === 1 ? "y" : "ies"} to use within ${warnDays} day${warnDays === 1 ? "" : "s"}`,
+          body: listed(list) + (expired ? " Take it off with Waste on the Store." : " Use these first."),
+          isRead: false, at, link: `/h/${code}/stores?tile=${expired ? "expired" : "expiring"}`, actionRequired: true,
         });
       }
     }

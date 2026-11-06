@@ -85,6 +85,27 @@ export async function recordCredit(client: Client, row: {
      row.replacesId ?? null]);
 }
 
+/** One way a delivered order's bill differs from the order (D27-383 item 11):
+    more billed than came, a price above the agreed one, a GST rate other than
+    the agreed one. `billed` is the bill's figure; `against` is what came or
+    what was agreed. Money and figures stay strings to the wire. */
+export interface Difference {
+  lineId: string; item: string; unit: string; kind: "quantity" | "price" | "gst"; billed: string; against: string;
+}
+
+/** The json of an order's differences, from app.purchase_differences (270):
+    the one definition, which the payment's trigger reads too. */
+const DIFFERENCES = (order: string) => `coalesce((select json_agg(json_build_object(
+    'lineId', d.line_id, 'item', d.item, 'unit', d.unit, 'kind', d.kind,
+    'billed', d.billed::text, 'against', d.against::text)
+    order by d.line_no, array_position(array['quantity', 'price', 'gst'], d.kind))
+   from app.purchase_differences(${order}) d), '[]')`;
+
+export async function differencesOf(client: Client, requestId: string): Promise<Difference[]> {
+  const { rows } = await client.query<{ d: Difference[] }>(`select ${DIFFERENCES("$1::uuid")} as d`, [requestId]);
+  return rows[0]!.d;
+}
+
 async function hotelFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
     "select id::text from hotels where code = $1", [code.toUpperCase()]);
@@ -128,9 +149,10 @@ supplierDues.get("/:code/purchasing/dues", async (c) => {
       id: string; supplier_id: string | null; supplier: string; bill_no: string; bill_date: string;
       amount: string; due_on: string; owed: string; order_id: string | null; order_ref: string | null;
       bar: boolean; replaces: string | null;
+      differences: Difference[];
       payments: { id: string; paidOn: string; method: string; reference: string | null; amount: string;
                   tdsSection: string | null; tdsRate: string | null; tdsAmount: string | null;
-                  handedOverBy: string | null; recordedBy: string | null;
+                  handedOverBy: string | null; recordedBy: string | null; differencesSeenBy: string | null;
                   reversed: { on: string; reason: string } | null }[];
       notes: { id: string; noteNo: string; noteDate: string; amount: string; issuedBy: string; reason: string;
                reversed: { on: string; reason: string } | null }[];
@@ -141,11 +163,13 @@ supplierDues.get("/:code/purchasing/dues", async (c) => {
               b.purchase_request_id::text as order_id, r.reference as order_ref,
               b.bar_purchase_id is not null as bar,
               (select o.bill_no from supplier_bills o where o.id = b.replaces_id) as replaces,
+              ${DIFFERENCES("b.purchase_request_id")} as differences,
               coalesce((select json_agg(json_build_object(
                   'id', p.id, 'paidOn', to_char(p.paid_on, 'YYYY-MM-DD'), 'method', p.method,
                   'reference', p.reference, 'amount', p.amount::text, 'tdsSection', p.tds_section,
                   'tdsRate', p.tds_rate::text, 'tdsAmount', p.tds_amount::text,
                   'handedOverBy', p.handed_over_by, 'recordedBy', app.colleague_name(p.recorded_by, p.hotel_id),
+                  'differencesSeenBy', app.colleague_name(p.differences_seen_by, p.hotel_id),
                   'reversed', (select json_build_object('on', to_char(x.reversed_on, 'YYYY-MM-DD'), 'reason', x.reason)
                                  from supplier_reversals x where x.payment_id = p.id))
                   order by p.paid_on, p.recorded_at)
@@ -196,10 +220,14 @@ supplierDues.get("/:code/purchasing/dues", async (c) => {
           status: owed === 0 ? "paid" as const : owed < Number(r.amount) ? "part-paid" as const : "unpaid" as const,
           replaces: r.replaces,
           from: r.bar ? { kind: "bar" as const } : { kind: "order" as const, id: r.order_id, reference: r.order_ref },
+          /* Where the bill differs from its order (D27-383 item 11): paying it
+             asks whoever pays to confirm they have seen these. */
+          differences: r.differences,
           payments: r.payments.map((p) => ({
             id: p.id, paidOn: p.paidOn, method: p.method, reference: p.reference, amount: p.amount,
             tds: p.tdsSection ? { section: p.tdsSection, rate: p.tdsRate, amount: p.tdsAmount } : null,
-            handedOverBy: p.handedOverBy, recordedBy: p.recordedBy, reversed: p.reversed,
+            handedOverBy: p.handedOverBy, recordedBy: p.recordedBy, differencesSeenBy: p.differencesSeenBy,
+            reversed: p.reversed,
           })),
           creditNotes: r.notes,
         };
@@ -222,7 +250,9 @@ const SECTIONS = ["194C", "194Q", "194J", "194I"] as const;
 
 supplierDues.post("/:code/purchasing/dues/:id/payment", async (c) => {
   type Body = { amount?: number; method?: string; reference?: string | null; paidOn?: string;
-                handedOverBy?: string; tds?: { section?: string; rate?: number; amount?: number } | null };
+                handedOverBy?: string; tds?: { section?: string; rate?: number; amount?: number } | null;
+                /** "I have seen how this bill differs from its order" (D27-383 item 11). */
+                differencesSeen?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   if (!UUID.test(c.req.param("id"))) return c.json(refuse("No such bill here."), 409);
   if (!isMoney(input.amount)) return c.json(refuse("Type the amount paid to the supplier: more than zero."), 409);
@@ -256,9 +286,10 @@ supplierDues.post("/:code/purchasing/dues/:id/payment", async (c) => {
     if (!hotelId) return null;
     /* ⚠ ABOVE THE FIRST WRITE (MEMORY 243). */
     if (!(await hasRoleAt(client, hotelId, DUES_ROLES))) return forbid(PURCHASING_REFUSED.pay);
-    const { rows } = await client.query<{ bill_date: string; reversed: boolean; owed: string }>(
+    const { rows } = await client.query<{ bill_date: string; reversed: boolean; owed: string; differs: number }>(
       `select to_char(bill_date, 'YYYY-MM-DD') as bill_date, exists (select 1 from supplier_reversals x where x.bill_id = b.id) as reversed,
-              app.supplier_bill_owed(b.id)::text as owed
+              app.supplier_bill_owed(b.id)::text as owed,
+              (select count(*)::int from app.purchase_differences(b.purchase_request_id)) as differs
          from supplier_bills b where b.hotel_id = $1 and b.id = $2`, [hotelId, c.req.param("id")]);
     const bill = rows[0];
     if (!bill) return refuse("No such bill here.");
@@ -268,13 +299,22 @@ supplierDues.post("/:code/purchasing/dues/:id/payment", async (c) => {
     if (settles > owed) return refuse(`That is more than is left on the bill: ${rupees(owed)}, the TDS included.`);
     if (paidOn > await hotelToday(client, hotelId)) return refuse("A payment is not dated in the future.");
     if (paidOn < bill.bill_date) return refuse("A payment is not dated before the bill it pays.");
+    /* THE BILL DIFFERS FROM ITS ORDER (D27-383 item 11): never refused, but
+       paid only by somebody who says they have seen it - their name is kept
+       on the payment. 270's trigger refuses the same. */
+    if (bill.differs > 0 && input.differencesSeen !== true) {
+      return refuse(`This bill differs from its order in ${bill.differs === 1 ? "one place" : `${bill.differs} places`}. `
+        + "Confirm you have seen the differences, then record the payment.");
+    }
 
     await client.query(
       `insert into supplier_payments
-         (hotel_id, bill_id, paid_on, method, reference, amount, handed_over_by, tds_section, tds_rate, tds_amount, recorded_by)
-       values ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11)`,
+         (hotel_id, bill_id, paid_on, method, reference, amount, handed_over_by, tds_section, tds_rate, tds_amount,
+          recorded_by, differences_seen_by)
+       values ($1, $2, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [hotelId, c.req.param("id"), paidOn, input.method, reference, input.amount, handedOverBy,
-       tds?.section ?? null, tds?.rate ?? null, tds?.amount ?? null, session.staffId]);
+       tds?.section ?? null, tds?.rate ?? null, tds?.amount ?? null, session.staffId,
+       bill.differs > 0 ? session.staffId : null]);
     return { ok: true as const, owed: (owed - settles).toFixed(2) };
   }).catch(dbRefusal);
   if (!result) return c.json({ error: "No such property." }, 404);

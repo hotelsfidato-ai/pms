@@ -9,9 +9,14 @@ import type { StockItem, StoreSummary } from "@/modules/stores/data/stores";
    ══════════════════════════════════════════════════════════════════ */
 
 export type Tile =
+  | "expired" | "expiring"
   | "below" | "runOut" | "received" | "issued" | "wasted" | "awaiting" | "notValued" | "notCounted";
 
 export const TILES: { key: Tile; label: string; job: boolean }[] = [
+  /* D27-383 item 11: past the use-by and still on a shelf; within the
+     hotel's warning. Read from the server's reading, never worked out here. */
+  { key: "expired", label: "Expired", job: true },
+  { key: "expiring", label: "Expiring soon", job: true },
   { key: "below", label: "Below level", job: true },
   { key: "runOut", label: "Run out", job: true },
   { key: "received", label: "Received today", job: false },
@@ -34,6 +39,8 @@ export function inTile(tile: Tile, i: StockItem, picked: StoreSummary | null, to
   const heldAt = Object.entries(i.byStore)
     .filter(([p, n]) => n > 0 && (!picked || p === picked.id)).map(([p]) => p);
   switch (tile) {
+    case "expired": return i.expiry.some((e) => e.expired && (!picked || e.storeId === picked.id));
+    case "expiring": return i.expiry.some((e) => !e.expired && (!picked || e.storeId === picked.id));
     case "below": return picked ? i.lowIn.includes(picked.id) : i.low;
     /* Had some, holds none. */
     case "runOut": return picked

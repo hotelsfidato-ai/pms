@@ -36,7 +36,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     cylinder: false, empties: 0, emptiesByStore: {}, cylindersOnDeposit: null,
     depositPerCylinder: null, depositHeld: null, inUse: null,
     lastMovement: null, movements: 0, isActive: true,
-    crockery: false, heldIn: [], today: {}, lastCounted: {}, onOrder: {}, ...over,
+    crockery: false, heldIn: [], today: {}, lastCounted: {}, onOrder: {}, expiry: [], ...over,
   });
   /* The three stores every hotel has (104), the Main store first. */
   const stores = [
@@ -49,7 +49,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      const day = { businessDate: "2026-08-25", people: [], inUse: [] };
+      const day = { businessDate: "2026-08-25", people: [], inUse: [], expiry: { warnDays: 7, today: "2026-08-25" } };
       if (control.store === "empty") return { stores, items: [], outlets, ...day };
       return {
         stores,

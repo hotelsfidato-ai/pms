@@ -589,3 +589,30 @@ begin
   perform test.ok('kitchen stock', 'a test hotel copies recipes as setup',
     exists (select 1 from app.test_hotel_classes() c where c.table_name = 'recipe_lines' and c.class = 'setup'));
 end $$;
+
+
+-- =============================================================================
+-- EXPIRY WARNING (the owner's D27-383, item 11)
+-- =============================================================================
+-- How many days before its use-by a delivery is flagged: the hotel's own
+-- figure, 7 to start, 1 to 90. What is left of each delivery is the server's
+-- reading (api/test/modules/stores/expiry.test.ts); only the setting is here.
+-- =============================================================================
+do $$
+declare h uuid;
+begin
+  h := app.provision_property_unchecked('PEX', 'Expiry Test', 'Nowhere');
+  perform test.ok('expiry warning', 'a new hotel warns 7 days before a use-by',
+    (select expiry_warn_days from hotels where id = h) = 7);
+  perform test.raises('expiry warning', 'not 0 days',
+    format('update hotels set expiry_warn_days = 0 where id = %L', h), '23514');
+  perform test.raises('expiry warning', 'not more than 90 days',
+    format('update hotels set expiry_warn_days = 91 where id = %L', h), '23514');
+  perform test.raises('expiry warning', 'never blank',
+    format('update hotels set expiry_warn_days = null where id = %L', h), '23502');
+  update hotels set expiry_warn_days = 30 where id = h;
+  perform test.ok('expiry warning', 'the hotel''s own figure is kept',
+    (select expiry_warn_days from hotels where id = h) = 30);
+  perform test.ok('expiry warning', 'the app may set it',
+    has_column_privilege('pms_app', 'hotels', 'expiry_warn_days', 'UPDATE'));
+end $$;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { FileDown, Truck, Send, Ban, IndianRupee } from "lucide-react";
+import { FileDown, Truck, Send, Ban, IndianRupee, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
@@ -11,9 +11,9 @@ import {
   StatusPill, IconChip, Checkbox, toast,
 } from "@/components/ui";
 import {
-  getPurchasing, getPurchaseRequest, priceLine, sendOrder, cancelRequest,
-  recordDelivery, downloadOrder, getPurchaseApproval, decidePurchase, suggestedDue,
-  type PurchaseLine, type PurchaseApproval,
+  getPurchasing, getPurchaseRequest, priceLine, setLineGst, sendOrder, cancelRequest,
+  recordDelivery, downloadOrder, getPurchaseApproval, decidePurchase, suggestedDue, differenceText,
+  type PurchaseLine, type PurchaseApproval, type BillDifference,
 } from "@/modules/purchasing/data/purchasing";
 import { STATE_WORDS } from "@/modules/purchasing/pages/Purchasing";
 
@@ -85,6 +85,7 @@ export default function PurchaseRequestPage() {
   const r = q.data?.request;
   const lines = q.data?.lines ?? [];
   const credit = q.data?.credit ?? null;
+  const differences = q.data?.differences ?? [];
   const mayAct = list.data?.me.mayRaise === true;
 
   const body = (() => {
@@ -174,14 +175,21 @@ export default function PurchaseRequestPage() {
                 <p className="mt-1" data-credit>
                   On credit: bill {credit.billNo} of {dateShort(credit.billDate)}, {rupees(credit.amount)},
                   {" "}due {dateShort(credit.dueOn)}
-                  {credit.paidOn ? ` - paid on ${dateShort(credit.paidOn)}.` : " - not paid yet."}
+                  {Number(credit.owed) === 0 ? " - paid."
+                    : Number(credit.owed) < Number(credit.amount) ? ` - ${rupees(credit.owed)} left to pay.`
+                    : " - not paid yet."}
                 </p>
               )}
             </CardBody>
           </Card>
         )}
 
-        {/* The table scrolls inside its card on a phone: six columns and a
+        {/* THE BILL AGAINST THE ORDER (D27-383 item 11): every difference,
+            flagged and never refused, for the Accountant or the GM to decide
+            before the bill is paid. */}
+        {differences.length > 0 && <Differences list={differences} />}
+
+        {/* The table scrolls inside its card on a phone: nine columns and a
             price box do not fit 390px, and the page never scrolls sideways
             (the Breathing Room Rule). The head is DESIGN.md's table head. */}
         <Card className="overflow-x-auto">
@@ -191,9 +199,12 @@ export default function PurchaseRequestPage() {
                 <th className="h-10 px-4 text-left">Item</th>
                 <th className="h-10 px-4 text-right">Ordered</th>
                 <th className="h-10 px-4 text-right">Agreed price</th>
+                <th className="h-10 px-4 text-right">GST %</th>
                 <th className="h-10 px-4 text-right">Amount</th>
                 <th className="h-10 px-4 text-right">Came</th>
+                <th className="h-10 px-4 text-right">Billed</th>
                 <th className="h-10 px-4 text-right">Cost</th>
+                <th className="h-10 px-4 text-right">GST on bill</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-grey-100">
@@ -203,6 +214,7 @@ export default function PurchaseRequestPage() {
                   code={code}
                   requestId={id}
                   line={l}
+                  differs={differences.filter((d) => d.lineId === l.id).map((d) => d.kind)}
                   mayPrice={mayAct && r.state !== "ordered" && r.state !== "received"
                     && r.state !== "cancelled"}
                   onSaved={refresh}
@@ -210,6 +222,10 @@ export default function PurchaseRequestPage() {
               ))}
             </tbody>
           </table>
+          {/* The GST rates since 22 September 2025, as the delivery offers them. */}
+          <datalist id="order-gst-rates">
+            {[0, 5, 18, 40].map((v) => <option key={v} value={v} />)}
+          </datalist>
         </Card>
 
         {/* THE WARM TILE WHILE THERE IS SOMETHING TO DO (D27-82): the order
@@ -337,13 +353,38 @@ function Fact({ label, value }: { label: string; value: string }) {
    it back to "not agreed", which is a dash and an order that waits.
    ═══════════════════════════════════════════════════════════════════ */
 function LineRow({
-  code, requestId, line, mayPrice, onSaved,
+  code, requestId, line, differs, mayPrice, onSaved,
 }: {
   code: string; requestId: string; line: PurchaseLine;
+  /** The ways this line's bill differs from the order (D27-383 item 11). */
+  differs: BillDifference["kind"][];
   mayPrice: boolean; onSaved: () => void;
 }) {
   const [price, setPrice] = useState(line.unitPrice ?? "");
+  const [gst, setGst] = useState(line.agreedGstRate === null ? "" : String(Number(line.agreedGstRate)));
   const [saving, setSaving] = useState(false);
+  /* A figure the bill got wrong is red, as its line in the list above. */
+  const flag = (kind: BillDifference["kind"], none: boolean) =>
+    cn("px-4 py-3 text-right tabular-nums", differs.includes(kind) ? "text-brand-red-700 font-semibold"
+      : none && "text-grey-500");
+  const percent = (v: string | null) => (v === null ? "-" : `${Number(v)}%`);
+
+  /* The order's GST rate (D27-383 item 11): blank is none agreed - a dash,
+     and the bill's GST is not compared. */
+  const saveGst = async () => {
+    const t = gst.trim();
+    const was = line.agreedGstRate === null ? "" : String(Number(line.agreedGstRate));
+    if (t === was) return;
+    if (t !== "" && (!Number.isFinite(Number(t)) || Number(t) < 0 || Number(t) > 100)) {
+      toast.error("A GST rate is from 0 to 100 per cent, or nothing at all.");
+      return;
+    }
+    setSaving(true);
+    const out = await setLineGst(code, requestId, line.id, t === "" ? null : Number(t));
+    setSaving(false);
+    if (!out.ok) { toast.error(out.reason); return; }
+    onSaved();
+  };
 
   const amount =
     line.unitPrice === null ? null
@@ -403,12 +444,50 @@ function LineRow({
           rupees(line.unitPrice)
         )}
       </td>
+      <td className={cn("px-4 py-3 text-right tabular-nums", !mayPrice && line.agreedGstRate === null && "text-grey-500")}>
+        {mayPrice ? (
+          <Input
+            aria-label={`GST rate agreed for ${line.item}, per cent`}
+            inputMode="decimal" list="order-gst-rates"
+            className="w-[72px] text-right"
+            value={gst}
+            disabled={saving}
+            onChange={(e) => setGst(e.target.value)}
+            onBlur={() => void saveGst()}
+            placeholder="-"
+          />
+        ) : percent(line.agreedGstRate)}
+      </td>
       <td className={cn("px-4 py-3 text-right tabular-nums", amount === null && "text-grey-500")}>
         {amount === null ? "-" : money(amount)}
       </td>
       <td className={cn("px-4 py-3 text-right tabular-nums", line.receivedQuantity === null && "text-grey-500")}>{figure(line.receivedQuantity)}</td>
-      <td className={cn("px-4 py-3 text-right tabular-nums", line.receivedUnitCost === null && "text-grey-500")}>{rupees(line.receivedUnitCost)}</td>
+      <td className={flag("quantity", line.billedQuantity === null)}>{figure(line.billedQuantity)}</td>
+      <td className={flag("price", line.receivedUnitCost === null)}>{rupees(line.receivedUnitCost)}</td>
+      <td className={flag("gst", line.billGstRate === null)}>{percent(line.billGstRate)}</td>
     </tr>
+  );
+}
+
+/* ── Where the bill differs from the order (D27-383 item 11) ───────── */
+function Differences({ list }: { list: BillDifference[] }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg px-4 py-3.5 text-sm bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 text-ink-900"
+         data-differences="">
+      <IconChip tone="yellow"><AlertTriangle /></IconChip>
+      <div className="min-w-0">
+        <p className="font-semibold">
+          The supplier's bill differs from the order in {list.length === 1 ? "one place" : `${list.length} places`}
+        </p>
+        <ul className="mt-1 space-y-0.5 tabular">
+          {list.map((d) => <li key={`${d.lineId}-${d.kind}`}>{differenceText(d)}</li>)}
+        </ul>
+        <p className="mt-1 text-grey-600">
+          Nothing is refused: the Accountant or the GM decides. Paying this bill asks them to confirm they have
+          seen these, and keeps their name.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -512,6 +591,9 @@ function DeliveryDialog({
   /* On credit (D27-370): the supplier's bill, as printed, and when it is due. */
   const [onCredit, setOnCredit] = useState(false);
   const [bill, setBill] = useState({ billNo: "", billDate: new Date().toLocaleDateString("en-CA"), amount: "", dueOn: "" });
+  /* On credit, what the bill charges for on each line (D27-383 item 11):
+     typed from the bill, never filled in - 0 is an answer, blank is not. */
+  const [billed, setBilled] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -554,6 +636,12 @@ function DeliveryDialog({
       if (!bill.billDate) return setProblem("Pick the date on the supplier's bill.");
       if (!(Number(bill.amount) > 0)) return setProblem("Type the bill's amount, as printed on it: more than zero.");
       if (!bill.dueOn) return setProblem("Pick the date the bill is due.");
+      for (const l of lines) {
+        const b = billed[l.id]?.trim() ?? "";
+        if (b === "" || !Number.isFinite(Number(b)) || Number(b) < 0) {
+          return setProblem(`How much of the ${l.item} does the bill charge for? Type it as printed; not on the bill is 0.`);
+        }
+      }
     }
 
     setSaving(true);
@@ -566,6 +654,7 @@ function DeliveryDialog({
         receivedUnitCost: (cost[l.id]?.trim() ?? "") === "" ? null : Number(cost[l.id]),
         ...gstOf(l.id),
         ...(useBy[l.id] ? { expiresOn: useBy[l.id] } : {}),
+        ...(onCredit ? { billedQuantity: Number(billed[l.id]) } : {}),
       })),
     });
     setSaving(false);
@@ -573,10 +662,14 @@ function DeliveryDialog({
     onDone();
     onClose();
     toast.success(
-      out.received.length === 0
+      (out.received.length === 0
         ? `Recorded. Nothing came, and that is on the order.`
         : `${out.received.length === 1 ? "One item" : `${out.received.length} items`} `
-          + `received into ${store}.`);
+          + `received into ${store}.`)
+      + (out.differences > 0
+        ? ` The bill differs from the order in ${out.differences === 1 ? "one place" : `${out.differences} places`}: `
+          + "flagged on the order for the Accountant or GM."
+        : ""));
   };
 
   return (
@@ -610,6 +703,7 @@ function DeliveryDialog({
                   <th className="h-10 text-left">Item</th>
                   <th className="h-10 text-right">Ordered</th>
                   <th className="h-10 text-right">Came</th>
+                  {onCredit && <th className="h-10 text-right">On the bill</th>}
                   <th className="h-10 text-right">Cost each</th>
                   <th className="h-10 text-right">GST %</th>
                   <th className="h-10 text-right">GST amount</th>
@@ -631,6 +725,18 @@ function DeliveryDialog({
                         onChange={(e) => setCame((all) => ({ ...all, [l.id]: e.target.value }))}
                       />
                     </td>
+                    {onCredit && (
+                      <td className="py-2 pl-2">
+                        <Input
+                          aria-label={`How much of the ${l.item} the bill charges for`}
+                          inputMode="decimal"
+                          className="w-[100px] text-right"
+                          value={billed[l.id] ?? ""}
+                          onChange={(e) => setBilled((all) => ({ ...all, [l.id]: e.target.value }))}
+                          placeholder="-"
+                        />
+                      </td>
+                    )}
                     <td className="py-2 pl-2">
                       <Input
                         aria-label={`What the ${l.item} cost each`}
@@ -731,6 +837,11 @@ function DeliveryDialog({
                 {(p) => <Input {...fieldProps(p)} type="date" value={bill.dueOn}
                   onChange={(e) => setBill((b) => ({ ...b, dueOn: e.target.value }))} />}
               </Field>
+              <p className="text-sm text-grey-600 sm:col-span-4">
+                Type each line's <b className="font-medium text-ink-900">On the bill</b> as printed. The bill is held
+                against what came, the agreed price and the order's GST; any difference is flagged for the Accountant
+                or GM before it is paid. Nothing is refused.
+              </p>
             </div>
           )}
 

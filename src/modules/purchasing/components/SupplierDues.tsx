@@ -8,7 +8,7 @@ import {
   Field, fieldProps, Input, NativeSelect, Checkbox, toast,
 } from "@/components/ui";
 import {
-  getSupplierDues, paySupplierDue, addSupplierCreditNote, reverseSupplierEntry, suggestedDue,
+  getSupplierDues, paySupplierDue, addSupplierCreditNote, reverseSupplierEntry, suggestedDue, differenceText,
   type PayMethod, type SupplierDue, type SupplierDues as Dues, type TdsSection,
 } from "@/modules/purchasing/data/purchasing";
 
@@ -102,7 +102,8 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
                       text: `Paid ${money(Number(p.amount))} on ${dateShort(p.paidOn)} by ${METHODS.find((m) => m.value === p.method)?.label ?? p.method}`
                         + (p.reference ? ` (${p.reference})` : "")
                         + (p.tds ? ` · TDS ${p.tds.section} ${p.tds.rate}%: ${money(Number(p.tds.amount))}` : "")
-                        + (p.handedOverBy ? ` · handed over by ${p.handedOverBy}` : ""),
+                        + (p.handedOverBy ? ` · handed over by ${p.handedOverBy}` : "")
+                        + (p.differencesSeenBy ? ` · differences from the order seen by ${p.differencesSeenBy}` : ""),
                     })),
                     ...b.creditNotes.map((n) => ({
                       key: n.id, reversed: false, rev: { kind: "credit-note" as const, id: n.id, what: `credit note ${n.noteNo}` },
@@ -119,6 +120,12 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
                             : <Link className="underline" to={`/h/${hotelId}/purchasing/${b.from.id}`}>{b.from.reference}</Link>}
                           {b.replaces ? ` · replaces ${b.replaces}` : ""}
                         </span>
+                        {/* THE BILL AGAINST ITS ORDER (D27-383 item 11). */}
+                        {b.differences.length > 0 && (
+                          <span className="block text-xs font-medium text-brand-red-700" data-bill-differs="">
+                            Differs from the order: {b.differences.map(differenceText).join("; ")}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2 tabular">{dateShort(b.billDate)}</td>
                       <td className={overdue ? "py-2 tabular text-brand-red-700 font-medium" : "py-2 tabular"}
@@ -197,11 +204,16 @@ function PayDialog({ hotelId, bill, today, onClose }: {
   const [section, setSection] = useState<TdsSection | "">("");
   const [rate, setRate] = useState("");
   const [tdsAmount, setTdsAmount] = useState("");
+  /* D27-383 item 11: a bill that differs from its order is paid only by
+     somebody who says they have seen how; the server keeps their name. */
+  const differs = bill.differences.length > 0;
+  const [seen, setSeen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const submit = async () => {
     setProblem(null);
+    if (differs && !seen) return setProblem("Tick that you have seen how this bill differs from its order, then record the payment.");
     if (!(Number(amount) > 0)) return setProblem("Type the amount paid to the supplier: more than zero.");
     if (!method) return setProblem("How was it paid? Cash, cheque, bank or UPI.");
     if (method !== "cash" && !reference.trim()) return setProblem("Type the cheque, UTR or UPI reference.");
@@ -213,6 +225,7 @@ function PayDialog({ hotelId, bill, today, onClose }: {
     const out = await paySupplierDue(hotelId, bill.id, {
       amount: Number(amount), method, reference: reference.trim() || null, paidOn, handedOverBy: handedOverBy.trim(),
       tds: withTds ? { section: section as TdsSection, rate: Number(rate), amount: Number(tdsAmount) } : null,
+      ...(differs ? { differencesSeen: seen } : {}),
     });
     setSaving(false);
     if (!out.ok) return setProblem(out.reason);
@@ -237,6 +250,17 @@ function PayDialog({ hotelId, bill, today, onClose }: {
             {bill.supplier}: {money(Number(bill.owed))} left of {money(Number(bill.amount))}. Pay all of it or a part.
             Nothing changes in a cash drawer.
           </p>
+          {differs && (
+            <div className="rounded-lg bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100 px-4 py-3 space-y-2"
+                 data-pay-differences="">
+              <p className="text-sm font-semibold text-ink-900">This bill differs from its order</p>
+              <ul className="text-sm text-ink-900 space-y-0.5 tabular">
+                {bill.differences.map((d) => <li key={`${d.lineId}-${d.kind}`}>{differenceText(d)}</li>)}
+              </ul>
+              <Checkbox checked={seen} onCheckedChange={setSeen}
+                label="I have seen these differences, and this bill is to be paid as it is" />
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Amount paid">
               {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />}

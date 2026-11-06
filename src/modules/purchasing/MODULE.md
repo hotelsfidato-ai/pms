@@ -88,6 +88,17 @@ receipt through `receiveIntoStore`. Checked by the Store's own
 
 ---
 
+## The bill held against the order (D27-383 item 11, 7 November; migration 270)
+
+An order line may carry the **GST rate agreed** (`agreed_gst_rate`), typed with the price while the
+order can still change. A delivery on credit asks, per line, what the bill **charges for**
+(`billed_quantity`, required, 0 an answer). `app.purchase_differences(order)` is the one definition of a
+difference: more billed than came, a cost each above the agreed price (both before GST), a GST rate
+other than the agreed one; a missing figure is never one. The order shows them (a yellow box, the
+figures in red), Supplier dues marks the bill, and a payment of such a bill needs `differencesSeen`:
+the payer's id is kept in `supplier_payments.differences_seen_by`, and a trigger refuses the payment
+without it. Nothing is refused at delivery. Bar bills have no order and are never flagged.
+
 ## What it does NOT do, on purpose
 
 Said on screen where somebody would look for them:

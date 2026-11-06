@@ -33,8 +33,13 @@ vi.mock("@/modules/purchasing/data/purchasing", async (importOriginal) => ({
       bill({ id: "s2", supplierId: "sup-ak", supplier: "Akkalkot Traders", billNo: "AT-802", billDate: "2026-10-20",
         amount: "900.50", owed: "500.50", paid: "400.00", status: "part-paid", dueOn: "2026-11-19",
         from: { kind: "order", id: "o2", reference: "PO-5EL-2610-0004" },
+        /* The bill against its order (D27-383 item 11): two differences, the first payment confirmed. */
+        differences: [
+          { lineId: "l1", item: "Basmati rice", unit: "kg", kind: "quantity", billed: "12.000", against: "10.000" },
+          { lineId: "l1", item: "Basmati rice", unit: "kg", kind: "price", billed: "95.00", against: "90.00" },
+        ],
         payments: [{ id: "p1", paidOn: "2026-10-22", method: "cash", reference: null, amount: "400.00", tds: null,
-          handedOverBy: "Ravi", recordedBy: "Test Accountant", reversed: false }] }),
+          handedOverBy: "Ravi", recordedBy: "Test Accountant", reversed: false, differencesSeenBy: "Test Accountant" }] }),
       bill({ id: "s3", supplierId: "sup-bw", supplier: "Bharat Wines", billNo: "B-312", billDate: "2026-10-21",
         amount: "8000.00", dueOn: "2026-11-20", from: { kind: "bar" } }),
     ],
@@ -49,7 +54,7 @@ vi.mock("@/modules/purchasing/data/purchasing", async (importOriginal) => ({
 
 function bill(b: Record<string, unknown>) {
   return { owed: b["amount"], paid: "0.00", tds: "0.00", credited: "0.00", status: "unpaid", replaces: null,
-           payments: [], creditNotes: [], ...b };
+           differences: [], payments: [], creditNotes: [], ...b };
 }
 
 function as(role: Role) {
@@ -114,6 +119,35 @@ describe("Purchasing · Supplier dues (D27-370)", () => {
     await vi.waitFor(() => expect(paid.calls).toEqual([
       { id: "s1", amount: 3069, method: "cheque", reference: "CHQ 004512", paidOn: "2026-10-27", handedOverBy: "Suresh",
         tds: { section: "194C", rate: 1, amount: 31 } }]));
+  });
+
+  it("a bill that differs from its order is flagged, and paying it asks the payer to confirm (D27-383 item 11)", async () => {
+    as("finance");
+    open();
+    await screen.findByText(/Owed to suppliers/);
+    expect(document.querySelector("[data-bill='AT-802'] [data-bill-differs]")!.textContent).toBe(
+      "Differs from the order: Basmati rice: billed 12 kg, 10 kg came; Basmati rice: ₹95.00 a kg on the bill, ₹90.00 agreed");
+    expect(document.querySelector("[data-bill='AT-771'] [data-bill-differs]"), "a bill like its order: no flag").toBeNull();
+    expect(screen.getByText(/handed over by Ravi · differences from the order seen by Test Accountant$/)).toBeTruthy();
+
+    paid.calls.length = 0;
+    const row = document.querySelector("[data-bill='AT-802']") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Record payment" }));
+    const dialog = await screen.findByRole("dialog");
+    expect([...dialog.querySelectorAll("[data-pay-differences] li")].map((l) => l.textContent)).toEqual([
+      "Basmati rice: billed 12 kg, 10 kg came", "Basmati rice: ₹95.00 a kg on the bill, ₹90.00 agreed"]);
+    fireEvent.change(within(dialog).getByLabelText("How"), { target: { value: "cash" } });
+    fireEvent.change(within(dialog).getByLabelText(/Handed over by/), { target: { value: "Suresh" } });
+    const pay = () => fireEvent.click(within(dialog).getByRole("button", { name: "Record payment" }));
+    pay();
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toBe("Tick that you have seen how this bill differs from its order, then record the payment.");
+    expect(paid.calls, "not sent").toEqual([]);
+    fireEvent.click(within(dialog).getByRole("checkbox",
+      { name: "I have seen these differences, and this bill is to be paid as it is" }));
+    pay();
+    await vi.waitFor(() => expect(paid.calls).toEqual([{ id: "s2", amount: 500.5, method: "cash", reference: null,
+      paidOn: "2026-10-27", handedOverBy: "Suresh", tds: null, differencesSeen: true }]));
   });
 
   it("a credit note on a bill, and a payment reversed with a reason (D27-372)", async () => {

@@ -39,3 +39,6 @@ export { barStore, barDrinks, addBarDrink } from "./stores.ts";
 /* A delivery's GST and expiry, checked one way for both doors in (D27-238):
    Purchasing asks it for every line before its first write. */
 export { deliveryFactsProblem } from "./stores.ts";
+/* What is near or past its use-by and still on a shelf (D27-383 item 11): the
+   bell reads it, for whoever corrects the Store's counts. */
+export { expiryAlerts, type ExpiryAlert } from "./expiry.ts";

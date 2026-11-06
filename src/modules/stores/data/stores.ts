@@ -45,6 +45,9 @@ export interface StoreList {
   outlets: { id: string; name: string }[];
   /** The hotel's business date: "today" for the tiles (D27-242). */
   businessDate: string;
+  /** How many days before its use-by a delivery is flagged (D27-383 item 11),
+      and the property's calendar day it counts from. */
+  expiry: { warnDays: number; today: string };
   /** Who may be named as having broken something: the people rostered here.
       Empty for anybody who does not record a breakage. */
   people: { id: string; name: string }[];
@@ -121,6 +124,21 @@ export interface StockItem {
   lastCounted: Record<string, string>;
   /** On an order sent and not yet delivered, by store id (Purchasing). */
   onOrder: Record<string, number>;
+  /** Each delivery still on a shelf whose use-by is past, or within the
+      hotel's warning (D27-383 item 11), oldest first. Worked out on the
+      server, first expiring first out; an item with no use-by has none. */
+  expiry: ExpiryLot[];
+}
+
+export interface ExpiryLot {
+  storeId: string;
+  /** What is left of that delivery in that store. */
+  quantity: number;
+  useBy: string;
+  /** The business day it was received. */
+  receivedOn: string;
+  /** The use-by is before today. */
+  expired: boolean;
 }
 
 export interface StockMovement {
@@ -168,7 +186,9 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    first". The screen tells failed from empty now, the way the till (POS-4)
    and Rooms do. */
 export async function getStore(hotelId: string): Promise<StoreList> {
-  if (!hotelId) return { stores: [], items: [], outlets: [], businessDate: "", people: [], inUse: [] };
+  if (!hotelId) {
+    return { stores: [], items: [], outlets: [], businessDate: "", people: [], inUse: [], expiry: { warnDays: 7, today: "" } };
+  }
   return api<StoreList>(`/api/hotels/${hotelId}/stores`);
 }
 
@@ -251,6 +271,11 @@ export async function setStockItem(
   },
 ): Promise<Result> {
   return call(`/api/hotels/${hotelId}/stores/items/${itemId}`, "PATCH", input);
+}
+
+/** How many days before its use-by a delivery is flagged, 1 to 90 (D27-383 item 11). */
+export async function setExpiryWarning(hotelId: string, days: number): Promise<Result> {
+  return call(`/api/hotels/${hotelId}/stores/expiry-warning`, "PUT", { days });
 }
 
 /** One line of a count: what the sheet showed as the book, and what was

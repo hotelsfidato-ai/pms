@@ -37,7 +37,7 @@ vi.mock("@/modules/purchasing/data/barBills", async (importOriginal) => ({
     id: "b-1", supplier: "Amit Traders", billNo: "A-1020", billDate: "2026-10-20", tpNo: "TP 88123",
     handling: 120, tcs: 95.5, total: 10215.5,
     recordedBy: "Store Keeper", recordedAt: "20 Oct, 18:05", photoId: null,
-    credit: { dueOn: "2026-11-04", paidOn: null },
+    credit: { dueOn: "2026-11-04", owed: "10215.50" },
     lines: [{ item: "Imperial Blue 180 ml", unit: "bottle", sizeMl: 180, mrp: 190, perCase: 48, cases: 1,
               bottles: 12, ratePerCase: 8000, amount: 10000 }],
   }],

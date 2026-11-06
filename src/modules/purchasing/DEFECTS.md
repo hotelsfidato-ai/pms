@@ -20,6 +20,18 @@ Nothing open (25 October audit).
 
 ## Fixed — the solution is here; do not work it out again
 
+### PUR-4 · A bill on credit always read "not paid yet", paid or not — FIXED 7 November
+
+**Found** — 7 November, building the bill against the order (D27-383 item 11): the delivered order's line
+"On credit: bill ... due ..." read `credit.paidOn`, and so did the bar bill's. Migration 249 (D27-372,
+part payments) replaced the bill's one payment date with what is left (`owed`), and both reads were left
+on a field the server no longer sends, so every bill said "not paid yet". The web types still declared
+`paidOn`, so nothing failed.
+**Fixed** — both read `owed`: "- paid." at nothing left, "- ₹X left to pay." part-paid, "- not paid yet."
+untouched (`pages/PurchaseRequest.tsx`, `components/BarBills.tsx`, the two types in `data/`).
+**Held by** `purchasing.test.tsx`, the flagged order's "₹1,100 left to pay" (seen failing on the old read).
+**Rule** — when a server field is replaced, search the web for every reader of the old name, types included.
+
 ### PUR-3 · The Approvals screen linked a purchase request to an address that does not exist — FIXED 26 September
 
 **Found** — 26 September, writing PUR-2's test (the five-tests session, D25-27).

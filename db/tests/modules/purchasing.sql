@@ -452,3 +452,72 @@ begin
     exists (select 1 from app.test_hotel_classes() c
              where c.table_name = 'supplier_bills' and c.class = 'trading'));
 end $$;
+
+
+-- =============================================================================
+-- THE BILL MATCHED TO THE ORDER (the owner's D27-383, item 11)
+-- =============================================================================
+-- app.purchase_differences is the one definition: more billed than came, a
+-- price above the agreed one, a GST rate other than the agreed one - and a
+-- missing figure is never a difference. Paying a bill with one is refused
+-- unless whoever records the payment is named as having seen them.
+-- =============================================================================
+do $$
+declare h uuid; v_staff uuid; v_store uuid; v_rice uuid; v_oil uuid; v_req uuid; v_bill uuid; n int; v text;
+  pay constant text := $q$insert into supplier_payments
+      (hotel_id, bill_id, paid_on, method, amount, handed_over_by, recorded_by, differences_seen_by)
+    values (%L, %L, current_date, 'cash', 100, 'Ravi', %L, %s)$q$;
+begin
+  h := app.provision_property_unchecked('PBM', 'Bill Match Test', 'Nowhere');
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  select id into v_store from locations where hotel_id = h and name = 'Main store';
+  insert into stock_items (hotel_id, name, unit) values (h, 'Basmati rice', 'kg') returning id into v_rice;
+  insert into stock_items (hotel_id, name, unit) values (h, 'Sunflower oil', 'litre') returning id into v_oil;
+  insert into purchase_requests (hotel_id, reference, store_id, reason, requested_by)
+  values (h, app.next_purchase_reference(h), v_store, 'Bill match', v_staff) returning id into v_req;
+  -- Rice: 50 ordered at 62, GST 5 agreed. Oil: 10 at 140, no GST agreed.
+  insert into purchase_request_lines (hotel_id, request_id, line_no, item_id, quantity, unit_price, agreed_gst_rate)
+  values (h, v_req, 1, v_rice, 50, 62, 5), (h, v_req, 2, v_oil, 10, 140, null);
+
+  perform test.ok('bill matched to the order', 'nothing delivered, nothing differs',
+    not exists (select 1 from app.purchase_differences(v_req)));
+  perform test.raises('bill matched to the order', 'an agreed GST rate is 0 to 100',
+    format('update purchase_request_lines set agreed_gst_rate = 101 where request_id = %L', v_req), '23514');
+  perform test.raises('bill matched to the order', 'a billed quantity is zero or more',
+    format('update purchase_request_lines set billed_quantity = -1 where request_id = %L', v_req), '23514');
+
+  -- Delivered as the order agreed: the same quantity, price and rate.
+  update purchase_request_lines set received_quantity = 50, billed_quantity = 50, received_unit_cost = 62,
+         gst_rate = 5, gst_amount = 155, gst_claimable = true where request_id = v_req and line_no = 1;
+  -- Oil: billed less than came, cheaper, GST on the bill but none agreed.
+  update purchase_request_lines set received_quantity = 10, billed_quantity = 9, received_unit_cost = 135,
+         gst_rate = 18, gst_amount = 218.70, gst_claimable = true where request_id = v_req and line_no = 2;
+  perform test.ok('bill matched to the order', 'a bill like its order: no difference; less, cheaper or no agreed GST is none',
+    not exists (select 1 from app.purchase_differences(v_req)),
+    (select string_agg(kind, ',') from app.purchase_differences(v_req)));
+
+  update purchase_request_lines set billed_quantity = 52, received_unit_cost = 64.50, gst_rate = 18, gst_amount = 602
+   where request_id = v_req and line_no = 1;
+  select string_agg(format('%s %s %s', kind, billed, against), ', ') into v from app.purchase_differences(v_req);
+  perform test.ok('bill matched to the order', 'more billed than came, a price above the agreed one, another GST rate',
+    v = 'quantity 52.000 50.000, price 64.50 62.00, gst 18.00 5.00', v);
+  update purchase_request_lines set billed_quantity = null, received_unit_cost = null where request_id = v_req and line_no = 1;
+  select count(*) into n from app.purchase_differences(v_req);
+  perform test.ok('bill matched to the order', 'a missing figure is never a difference (only the GST still differs)', n = 1, n::text);
+
+  insert into supplier_bills (hotel_id, purchase_request_id, supplier, bill_no, bill_date, amount, due_on, recorded_by)
+  values (h, v_req, 'Akkalkot Traders', 'AT-77', current_date, 5000, current_date + 30, v_staff) returning id into v_bill;
+  perform test.raises('bill matched to the order', 'a bill that differs is not paid unless the payer has seen how',
+    format(pay, h, v_bill, v_staff, 'null'), '23514');
+  perform test.raises('bill matched to the order', 'and the one who saw them is the one paying',
+    format(pay, h, v_bill, v_staff, quote_literal((select id from staff where email <> 'owner@fidato.in' limit 1))), '23514');
+  execute format(pay, h, v_bill, v_staff, quote_literal(v_staff));
+  perform test.ok('bill matched to the order', 'seen, it is paid, with their name on the payment',
+    exists (select 1 from supplier_payments where bill_id = v_bill and differences_seen_by = v_staff));
+  update purchase_request_lines set gst_rate = 5, gst_amount = 155 where request_id = v_req and line_no = 1;
+  execute format(pay, h, v_bill, v_staff, 'null');
+  perform test.ok('bill matched to the order', 'a bill like its order is paid as before',
+    (select count(*) from supplier_payments where bill_id = v_bill) = 2);
+  perform test.ok('bill matched to the order', 'the app may read the differences',
+    has_function_privilege('pms_app', 'app.purchase_differences(uuid)', 'EXECUTE'));
+end $$;

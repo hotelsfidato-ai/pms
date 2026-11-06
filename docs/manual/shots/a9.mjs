@@ -148,8 +148,10 @@ export const SHOTS = [
       { n: 5, at: MAIN, side: "top" },
     ],
   },
-  { id: "A9-05b", title: "Receive it; and the cylinders and the cups", noShot: true, as: IM,
+  { id: "A9-05b", title: "Receive it (use by in three days, D27-383 item 11); and the cylinders and the cups", noShot: true, as: IM,
     steps: [
+      { eval: "(() => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith('Use by')); const i = document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10)); i.dispatchEvent(new Event('input', { bubbles: true })); })()" },
+      { wait: 300 },
       { click: MAIN }, { waitFor: TOAST, ms: 10000 }, { wait: 1200 },
       /* Four full cylinders; the supplier took no empties back (a first delivery). */
       { click: "text:Receive", nth: 1 }, { waitFor: "text:Receive - A9 Test LPG cylinder 19 kg" },
@@ -187,6 +189,17 @@ export const SHOTS = [
       { n: 3, at: "text:Worth", nth: 0, side: "top" },
       { n: 4, at: "text:More", nth: 0, side: "top" },
       { n: 5, at: "css:[data-store-line]", nth: 0, side: "bottom" },
+    ],
+  },
+  /* D27-383 item 11: the rice's delivery is used by in three days. */
+  {
+    id: "A9-50", title: "Expiring soon: what to use first", as: IM,
+    path: "/h/5EL/stores?tile=expiring",
+    steps: [{ waitFor: "css:[data-expiry-line]", ms: 15000 }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "css:[data-store-tile=expired]", side: "bottom" },
+      { n: 2, at: "text:Change the warning", side: "bottom" },
+      { n: 3, at: "css:[data-expiry-line]", nth: 0, side: "bottom" },
     ],
   },
   {
@@ -448,6 +461,9 @@ export const SHOTS = [
     steps: [
       { type: ["label:Agreed price for A9 Test Basmati rice", "82"] },
       { click: "text:What it is for" }, { wait: 1500 },
+      /* D27-383 item 11: the order's GST rate, which the bill is held against. */
+      { type: ["label:GST rate agreed for A9 Test Basmati rice, per cent", "5"] },
+      { click: "text:What it is for" }, { wait: 1500 },
     ] },
   {
     id: "A9-24", title: "The general manager decides on the request", as: "General Manager",
@@ -520,14 +536,16 @@ export const SHOTS = [
     id: "A9-45", title: "A delivery on credit", as: IM,
     steps: [
       { click: "css:[role=dialog] button[role=checkbox]" }, { waitFor: "text:Due on" },
-      { eval: "(() => { const set = (t, v) => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith(t)); const i = document.getElementById(l.htmlFor); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, v); i.dispatchEvent(new Event('input', { bubbles: true })); }; set('Bill number', 'A9 Test KB-401'); set('Amount, as printed', '2152.50'); set('Due on', new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)); })()" },
+      /* D27-383 item 11: the bill charges for 26 at 85 - one more than came, above the 82 agreed. */
+      { eval: "(() => { const put = (i, v) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, v); i.dispatchEvent(new Event('input', { bubbles: true })); }; const set = (t, v) => { const l = [...document.querySelectorAll('[role=dialog] label')].find((e) => e.textContent.trim().startsWith(t)); put(document.getElementById(l.htmlFor), v); }; set('Bill number', 'A9 Test KB-401'); set('Amount, as printed', '2320.50'); set('Due on', new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)); put(document.querySelector('[aria-label=\"How much of the A9 Test Basmati rice the bill charges for\"]'), '26'); put(document.querySelector('[aria-label=\"What the A9 Test Basmati rice cost each\"]'), '85'); })()" },
       { wait: 500 },
     ],
     marks: [
       { n: 1, at: "text:On credit - the supplier's bill is paid later", side: "left" },
-      { n: 2, at: "text:Bill number", side: "top" },
-      { n: 3, at: "text:Amount, as printed", side: "top" },
-      { n: 4, at: "text:Due on", side: "top" },
+      { n: 2, at: "label:How much of the A9 Test Basmati rice the bill charges for", side: "bottom" },
+      { n: 3, at: "text:Bill number", side: "top" },
+      { n: 4, at: "text:Amount, as printed", side: "top" },
+      { n: 5, at: "text:Due on", side: "top" },
     ],
   },
   { id: "A9-28b", title: "Record it", noShot: true, as: IM,
@@ -538,8 +556,10 @@ export const SHOTS = [
     steps: [{ click: "text:A9 Test: the rice is down to two days", nth: 0 }, { waitFor: "text:received by" }],
     marks: [
       { n: 1, at: "text:Delivered", nth: 0, side: "bottom" },
-      { n: 2, at: "text:received by", side: "bottom" },
-      { n: 3, at: "css:thead th:nth-child(5)", side: "top" },
+      { n: 2, at: "text:received by", side: "right" },
+      { n: 3, at: "css:[data-differences]", side: "right" },
+      { n: 4, at: "css:thead th:nth-child(6)", side: "top" },
+      { n: 5, at: "css:thead th:nth-child(7)", side: "top" },
     ],
   },
   {
@@ -766,6 +786,7 @@ export const SHOTS = [
       { n: 2, at: "css:[data-dues-total]", side: "right" },
       { n: 3, at: "css:[data-supplier-total]", nth: 0, side: "left" },
       { n: 4, at: "text:Record payment", nth: 0, side: "left" },
+      { n: 5, at: "css:[data-bill-differs]", nth: 0, side: "bottom" },
     ],
   },
   {
@@ -782,6 +803,7 @@ export const SHOTS = [
       { n: 3, at: "text:Amount paid", side: "top" },
       { n: 4, at: "text:TDS deducted", side: "left" },
       { n: 5, at: MAIN, side: "top" },
+      { n: 6, at: "text:I have seen these differences, and this bill is to be paid as it is", side: "left" },
     ],
   },
   /* Not paid in the pictures: the bill stays on the dues for the report (A11-25). */
