@@ -55,23 +55,27 @@ export function preferenceWords(p: Preferences, smokingOffered: boolean, part: P
 /** The property's live stays with a preference, one request for every mark
     on a screen (shared by its query key). */
 function useStayPreferences(hotelId: string) {
-  return useQuery({
+  const q = useQuery({
     queryKey: ["guest-preferences", hotelId],
     queryFn: () => listPreferences(hotelId),
     staleTime: 60_000,
     retry: false,
     enabled: Boolean(hotelId),
   });
+  /* It sits on other services' screens (the till, housekeeping): an answer
+     not of this shape is no preferences, never a broken screen. */
+  const stays = Array.isArray(q.data?.stays) ? q.data.stays : [];
+  return { stays, smokingOffered: q.data?.smokingOffered === true };
 }
 
 /** The small mark: red "Allergy", else "Preferences" with the words as its
     title. Nothing when the guest has none. */
 export function PreferenceMark({ hotelId, guestId }: { hotelId: string; guestId?: string | undefined }) {
   const list = useStayPreferences(hotelId);
-  const found = guestId ? list.data?.stays.find((s) => s.guestId === guestId) : undefined;
+  const found = guestId ? list.stays.find((s) => s.guestId === guestId) : undefined;
   if (!found) return null;
   const p = found.preferences;
-  const words = preferenceWords(p, list.data!.smokingOffered);
+  const words = preferenceWords(p, list.smokingOffered);
   if (!p.allergies && words.length === 0) return null;
   const title = [p.allergies && `Allergy: ${p.allergies}`, ...words].filter(Boolean).join(" · ");
   return (
@@ -90,11 +94,11 @@ export function RoomPreferences({ hotelId, room, who }: {
 }) {
   const list = useStayPreferences(hotelId);
   const key = room?.trim().toUpperCase();
-  const found = key ? list.data?.stays.find((s) =>
+  const found = key ? list.stays.find((s) =>
     s.room?.toUpperCase() === key && (who === "arriving" ? s.arriving : s.inHouse)) : undefined;
   if (!found) return null;
   const p = found.preferences;
-  const words = preferenceWords(p, list.data!.smokingOffered, who === "arriving" ? "room" : "food");
+  const words = preferenceWords(p, list.smokingOffered, who === "arriving" ? "room" : "food");
   if (!p.allergies && words.length === 0) return null;
   return (
     <p className="text-sm text-grey-600 mt-1" data-room-preferences={key}>
