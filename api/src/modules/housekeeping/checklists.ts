@@ -163,7 +163,7 @@ checklists.post("/:code/housekeeping/checklist-runs", async (c) => {
   const room = String(input.room ?? "").trim().toUpperCase();
   if (!room) return c.json(refuse("Which room?"), 409);
   if (!JOBS.includes(input.job as never)) return c.json(refuse("Which job is it?"), 409);
-  const results = (input.results ?? []).map((r) => ({
+  const results = (Array.isArray(input.results) ? input.results : []).map((r) => ({
     item: String(r?.item ?? ""), ok: r?.ok === true, note: String(r?.note ?? "").trim(),
   }));
 

@@ -211,7 +211,7 @@ minibar.post("/:code/minibar/records", async (c) => {
     room?: string; lines?: { itemId?: string; quantity?: number }[]; disputed?: boolean;
   };
   const room = String(input.room ?? "").trim().toUpperCase();
-  const asked = (input.lines ?? []).filter((l) => l && Number(l.quantity) !== 0);
+  const asked = (Array.isArray(input.lines) ? input.lines : []).filter((l) => l && Number(l.quantity) !== 0);
   if (!room) return c.json(refuse("Which room?"), 409);
   if (asked.length === 0) return c.json(refuse("Nothing was taken? Say how many of each item."), 409);
   if (asked.some((l) => !UUID.test(l.itemId ?? "")
