@@ -48,6 +48,16 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **7 November, 18:52 IST: RELEASE 21 IS LIVE (e77c41a8), with all of release 20.** The owner typed A0-A7; I checked
+> them by reading only.
+> - The server's code is on e77c41a8. The site loads `index-CCfjHX6L.js`.
+> - Health is ok, and the API restarted at 18:52 with no restarts since. Its 17 log lines since then hold no errors.
+> - The database has 257-266: two-step sign-in, after check-in, scheduled reports, expiry warning, bill matching,
+>   and the three Backfill tables with RLS on and the one-room-a-night rule. Backfill is empty.
+> - The server's only untracked file is `api/.db-password`, as before.
+> - `release-r20` and `release-r21` are recycled, junctions out first.
+> - A8 at AMRT, including release 20's checks, is the owner's to do.
+
 > **5 November, 16:18 IST: RELEASE 19 IS LIVE (7c2401ca).** The owner typed A1-A7; I checked them by reading only.
 > - GitHub `main` and the server's code are on 7c2401ca. The site loads `index-huO71TJZ.js`.
 > - Health is ok, and the API restarted at 16:18. Its log has no errors since.
@@ -818,7 +828,7 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **7 November, evening: RELEASE 21 READY, the owner's to type.** `release/r21` = **e77c41a8** (copy
+> **7 November, evening: RELEASE 21, NOW LIVE (§ 2, checked 18:52 onwards; both release copies recycled).** `release/r21` = **e77c41a8** (copy
 > `.claude/worktrees/release-r21`). It contains release 20, so if the owner has not started 20 they can run 21 instead.
 > It adds Backfill data (D27-398, migration 266) and the build-all chat's report emails (263), stock expiry (264) and
 > bill matching (265). Website `index-CCfjHX6L.js` (release.mjs ran once). Steps are in `.local/release-21-steps.md`.
