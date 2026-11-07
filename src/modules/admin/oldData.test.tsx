@@ -63,8 +63,10 @@ describe("who reaches it", () => {
   });
 
   it("says the server's refusal in its words", async () => {
-    vi.spyOn(apiModule, "api").mockRejectedValue(new ApiError(403, "Forbidden",
-      { ok: false, reason: "Bringing in an old system's guests and bookings is for the owner or an administrator. Ask one of them." }));
+    /* As src/lib/api.ts builds it: the message IS the server's reason (its
+       body is dropped under vitest, root MEMORY's "ApiError has two shapes"). */
+    const reason = "Bringing in an old system's guests and bookings is for the owner or an administrator. Ask one of them.";
+    vi.spyOn(apiModule, "api").mockRejectedValue(new ApiError(403, reason, { ok: false, reason }));
     show();
     expect(await screen.findByText(/is for the owner or an administrator/)).toBeTruthy();
     expect(screen.queryByText("Choose the file")).toBeNull();
@@ -91,7 +93,7 @@ describe("the page", () => {
     const live = (await screen.findAllByText("ids-reservations.csv")).map((e) => e.closest("tr")).find(Boolean)!;
     expect(within(live).getByText("Group Owner")).toBeTruthy();
     expect(within(live).getByText("6")).toBeTruthy();
-    expect(within(live).getByRole("button", { name: "2" })).toBeTruthy();
+    expect(within(live).getByRole("button", { name: "2 rows refused: see them" })).toBeTruthy();
     expect(within(live).getByText("2 guests, 1 booking, 1 past stay, 1 advance")).toBeTruthy();
     expect(within(live).getByRole("button", { name: /Undo/ })).toBeTruthy();
     const gone = screen.getAllByText("ids-guests.csv").map((e) => e.closest("tr")).find(Boolean)!;

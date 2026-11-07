@@ -173,7 +173,7 @@ export default function OldDataPage() {
     { key: "in", header: "Rows in", numeric: true, cell: (d) => <span className="tabular">{d.rowsIn}</span> },
     { key: "refused", header: "Refused", numeric: true, cell: (d) => d.rowsRefused === 0
       ? <span className="tabular">0</span>
-      : <Button variant="link" onClick={() => setRefusedOf(d)}>{d.rowsRefused}</Button> },
+      : <Button variant="link" aria-label={`${d.rowsRefused} rows refused: see them`} onClick={() => setRefusedOf(d)}>{d.rowsRefused}</Button> },
     { key: "brought", header: "Brought in", hideBelow: "lg", cell: (d) => (
       <span className="text-sm">{[d.guests && many(d.guests, "guest"), d.filled && `${d.filled} filled in`,
         d.bookings && many(d.bookings, "booking"), d.stays && many(d.stays, "past stay"),

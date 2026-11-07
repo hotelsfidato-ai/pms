@@ -575,12 +575,13 @@ export const SHOTS = [
     id: "A17-60", title: "Bring in old data: a guests file, checked", as: "Owner", size: "tall",
     path: "/settings/property/old-data",
     steps: [{ waitFor: "text:Brought in here" }, LOADED, { type: ["css:input[maxlength='60']", "IDS"] },
-            { eval: OLD_FILE("guests") }, { waitFor: "text:Every row, before anything is saved" }, LOADED, { wait: 400 }],
+            { eval: OLD_FILE("guests") }, { waitFor: "text:Every row, before anything is saved" }, LOADED,
+            { scroll: "text:Every row, before anything is saved" }, { wait: 400 }],
     marks: [
-      { n: 1, at: "text:What the file holds", side: "right" },
-      { n: 2, at: "text:The file's columns", side: "right" },
-      { n: 3, at: "text:Check again", side: "bottom" },
-      { n: 4, at: "css:select[aria-label^='Row ']", side: "left" },
+      { n: 1, at: "text:The file's columns", side: "right" },
+      { n: 2, at: "text:Check again", side: "bottom" },
+      { n: 3, at: "css:select[aria-label^='Row ']", side: "left" },
+      { n: 4, at: "text:Fault in the file", side: "left" },
     ],
   },
   {
@@ -603,7 +604,7 @@ export const SHOTS = [
     steps: [{ waitFor: "text:Brought in here" }, LOADED, { scroll: "text:Brought in here" }, { wait: 400 }],
     marks: [
       { n: 1, at: "text:Bookings with no rate yet", side: "right" },
-      { n: 2, at: "css:td button", nth: 0, side: "left" },
+      { n: 2, at: "label:rows refused", side: "left" },
       { n: 3, at: "text:Undo", nth: 0, side: "left" },
       { n: 4, at: "text:Undone", nth: 0, side: "left" },
     ],

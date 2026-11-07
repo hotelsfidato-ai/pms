@@ -82,6 +82,9 @@ create table if not exists data_imports (
   undone_tx     xid8,
   constraint data_imports_undone check ((undone_at is null) = (undone_by is null))
 );
+-- A table made before the tick (a re-run on a copy that had it): the column
+-- first, so the grants below can name it.
+alter table data_imports add column if not exists send_vouchers boolean not null default false;
 create index if not exists data_imports_by_hotel on data_imports (hotel_id, made_at desc);
 
 comment on table data_imports is
@@ -485,9 +488,6 @@ end $$;
 -- own Send voucher still sends one when somebody chooses to, and every later
 -- message follows the hotel's settings as for any booking. A job has no staff
 -- session and the import's rows are row-secured: hence security definer.
--- A re-run of this file (re-runnable) adds the column to a table made before it.
-alter table data_imports add column if not exists send_vouchers boolean not null default false;
-
 create or replace function app.quietly_imported(p_reservations uuid[])
 returns setof uuid
 language sql stable security definer

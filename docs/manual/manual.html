@@ -10641,6 +10641,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ol class="steps">
     <li>Choose what the file holds: <span class="ui">Guests</span>, or <span class="ui">Bookings and past stays</span>.</li>
     <li>Type the old system's name in <span class="ui">The old system</span> (IDS, eZee, our spreadsheet). It goes on every booking's note, <span class="msg">“Brought in from IDS (IDS-1001).”</span>, and the next file starts from it.</li>
+    <li>For a bookings file, leave <span class="ui">Send each guest our booking voucher</span> off unless the guests should hear from the hotel now (below).</li>
     <li>Tap <span class="ui">Choose the file</span> and pick it. The file is read and every row checked at once; nothing is saved yet.</li>
     <li>Check <span class="ui">The file's columns</span>: each field shows the file's heading matched to it. Change any that is wrong, or pick <span class="ui">Not in the file</span>. The fields with a star must be matched. The match is kept for the hotel's next file of the same kind.</li>
     <li>Read <span class="ui">Every row, before anything is saved</span> (below). Correct the file for every row marked <span class="ui">Fault in the file</span>, then choose it again. For a guest marked <span class="ui">Already on file</span>, choose what to do (below).</li>
@@ -10648,13 +10649,13 @@ figure.shot.phone img { max-width: 72mm; }
   </ol>
 
   <figure class="shot" id="fig-A17-60">
-    <img src="img/A17-60.png" alt="Bring in old data with a guests file checked: what the file holds, the old system's name, the file's columns matched to their headings, and every row with what it becomes, one already on file with its keep, merge or skip choice">
+    <img src="img/A17-60.png" alt="Bring in old data with a guests file checked: the file's columns matched to their headings, and every row with what it becomes: a new guest, guests already on file with their keep, merge or skip choice, and a fault in the file">
     <figcaption><b>Figure A17-60.</b> A guests file, checked. Nothing is saved yet.</figcaption>
     <ol class="callouts">
-      <li>What the file holds, and the old system's name</li>
       <li>The file's columns, matched by their headings</li>
       <li>Check again, and Bring in</li>
       <li>A guest already on file: keep, merge or skip</li>
+      <li>A fault in the file: nothing is saved until it is corrected</li>
     </ol>
   </figure>
 
@@ -10722,7 +10723,7 @@ figure.shot.phone img { max-width: 72mm; }
     <h4>Watch out</h4>
     <ul>
       <li><b>A fault in the file saves nothing:</b> a row with no name or no dates, a date that is not one, a phone, email or GSTIN that is not right, a plan or payment method the hotel does not have, an advance with no date or method, or the same guest or reference twice. <span class="msg">“2 rows have a fault in the file. Nothing was saved: correct the file and check it again.”</span></li>
-      <li><b>Every booking brought in is sent the hotel's voucher</b> by email, as every booking is, where its guest has an email (never by WhatsApp: the file does not say the guest agreed to it). The page says so for a bookings file. To bring them in quietly, switch the voucher off first (A17.12), and on again after.</li>
+      <li><b>No message goes to the guests of the bookings brought in</b>: their old system confirmed them already. Tick <span class="ui">Send each guest our booking voucher</span> to send each guest with an email this hotel's voucher, with its new reference, once the file is brought in (never by WhatsApp: the file does not say the guest agreed to it). The tick starts off, and the list of imports says <span class="ui">Sent</span> or <span class="ui">Not sent</span>. It is grey when the hotel's voucher is switched off (A17.12). Later messages follow the hotel's settings, as for any booking, and <span class="ui">Send voucher</span> on a booking still sends one when the desk chooses to.</li>
       <li>An old Excel file (.xls) is not read: save it as .xlsx or CSV. At most 5,000 rows and 5 MB a file; split a bigger one.</li>
       <li>The hotel's Guests list counts bookings at the hotel; a guest brought in without a booking is found by the desk by phone or email, and on Guest 360 (A10).</li>
     </ul>
@@ -10730,7 +10731,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Bringing in an old system's guests and bookings is the owner's approved list, item 7 (<span class="d">D27-383</span>); past stays as history only, and no money of the past in the live books, as Backfill data (<span class="d">D27-398</span>). No default prices: a rate not in the file is a dash. An Aadhaar is kept as its last four only (UIDAI's rules on storing an Aadhaar number; D25-37). Where the owner did not say (keep, merge or skip; the notes for the company, GSTIN and ID; the advance on its own day and only from before the first day; the voucher as for every booking; who may): <span class="d">D27-396</span>.</p>
+    <p>Bringing in an old system's guests and bookings is the owner's approved list, item 7 (<span class="d">D27-383</span>); past stays as history only, and no money of the past in the live books, as Backfill data (<span class="d">D27-398</span>). No default prices: a rate not in the file is a dash. An Aadhaar is kept as its last four only (UIDAI's rules on storing an Aadhaar number; D25-37). Where the owner did not say (keep, merge or skip; the notes for the company, GSTIN and ID; the advance on its own day and only from before the first day; who may): <span class="d">D27-396</span>. No voucher unless the import's tick says so: the master's decision, under <span class="d">D27-396</span>.</p>
   </div>
 
   <h3>To change the hotel's details</h3>
