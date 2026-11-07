@@ -6561,6 +6561,37 @@ copy will see of theirs.**
 
 ---
 
+### 475 · MINE: helpers copied shared lists from old versions, and would have dropped later work (7 November)
+
+Four helpers each "added a line" to a function many migrations change (`app.test_hotel_classes`, `owner_reset.steps`,
+`app.test_hotel_hotels_columns`) by copying the whole function from the version on their branch, often 255's. Merged
+as written, each would have deleted what 257, 259, 262 and 263 had added: the two-step tables' class, the reset order
+that keeps an outside diner's booking before its order, the after-check-in setting. Caught at each merge by diffing the
+copy against the version it came from, and rewritten as in-place patches (`pg_get_functiondef` + `replace`, the way
+262 already did it). **The rule** (now in `.local/build-all/RULES.md`): a shared function is patched in place, or
+redefined from its LATEST version on cp6, never from an older copy; at a merge, diff every redefined function.
+
+---
+
+### 474 · MINE: I ran migrations and tests outside the database queue for two days (7 November)
+
+`.local/dbq.sh` exists since 2 October so that one migrate or API test run happens at a time on this slow disk. I did
+not use it, and neither did the helpers I briefed. Drive D sat at about 90 % busy, the web server took up to seven
+minutes for one page, a recording failed at sign-in, and another chat's release gate failed one test on a timeout.
+**The rule:** every migrate and API test run goes through `bash "/d/fidato pms/.local/dbq.sh" <command>`, mine and
+every helper's; read HANDOVER section 2's "local servers" lines before starting work again after a gap.
+
+---
+
+### 473 · MINE: I merged code into cp6 before the demo database had its migrations (7 November)
+
+The master's API on 8787 runs cp6's working tree against the demo database `fidato`. Twice I merged a branch whose
+code needs new tables and did not migrate `fidato` at once: every request answered "Something went wrong", and a video
+recording running at the time captured nothing usable. **The rule:** after a merge with a migration, back up and
+migrate `fidato` (through dbq) before anything else, and check one request answers.
+
+---
+
 ### 472 · A helper's: "a removed record is frozen" froze it only after the removal (7 November)
 
 The D27-398 Backfill guard (`app.backfill_guard`, 266) refused any change to a row already removed. On the removal
