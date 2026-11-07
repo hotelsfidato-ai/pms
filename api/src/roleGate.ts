@@ -321,6 +321,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/groups/:id/lead`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/routing`]: CHANGE_BILL,
   [`POST ${H}/bookings`]: BOOK,
+  /* D27-383 item 8: a group's rooming list is filled in by whoever may change
+     its bookings (reading a file saves nothing, but is part of it); the
+     waitlist is the desk's, whoever may make a booking. */
+  [`POST ${H}/groups/:id/rooming-list/read`]: CHANGE_BOOKING,
+  [`PUT ${H}/groups/:id/rooming-list`]: CHANGE_BOOKING,
+  [`POST ${H}/waitlist`]: grant("reservation", "create", "Putting a guest on the waitlist"),
+  [`POST ${H}/waitlist/:id/remove`]: grant("reservation", "create", "Taking a guest off the waitlist"),
   /* Phase 1 (the owner, 27 Sep): whoever may make a booking confirms one that
      was waiting for the hotel, and sends its one voucher (D27-35). The two
      lists are kept by the owner, an administrator or the GM - asked in
@@ -750,6 +757,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/companies/:id`]: grant("company", "edit", "Changing a company"),
   [`POST ${H}/contracts`]: grant("company", "edit", "Setting a company's contract"),
   [`PUT ${H}/contracts/:id`]: grant("company", "edit", "Setting a company's contract"),
+  /* Allotments (D27-383 item 8, 267): kept as contracts are (C-6). */
+  [`POST ${H}/allotments`]: grant("company", "edit", "Holding rooms in an allotment"),
+  [`PUT ${H}/allotments/:id`]: grant("company", "edit", "Changing an allotment"),
 
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
@@ -893,6 +903,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,
   [`GET ${H}/groups/:id`]: STAYS,
+  /* D27-383 item 8: a group's rooming list (and its files), and the waitlist. */
+  [`GET ${H}/groups/:id/rooming-list`]: STAYS,
+  [`GET ${H}/waitlist`]: STAYS,
   [`GET ${H}/guests/blacklist-warnings`]: STAYS,
   [`GET ${H}/sales-people`]: STAYS,
   [`GET ${H}/room-promotions`]: STAYS,
@@ -1155,6 +1168,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/company-records`]: see("company", "companies"),
   [`GET ${H}/companies/:id/contracts`]: see("company", "companies"),
   [`GET ${H}/contract-price`]: see(["reservation", "rate"], "a stay's price"),
+  /* An allotment (267): whoever reads companies, or books from it. */
+  [`GET ${H}/allotments/:id`]: see(["company", "reservation"], "an allotment"),
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
@@ -1196,6 +1211,9 @@ export const WITHHELD: Readonly<Record<string, { keys: readonly string[]; unless
   [`GET ${H}/stays/:id`]: { keys: ["phone", "email"], unless: "customer" },
   [`GET ${H}/groups`]: { keys: ["masterBalance", "guestBalance"], unless: "invoice" },
   [`GET ${H}/groups/:id`]: { keys: ["balance", "guestBalance", "master"], unless: "invoice" },
+  /* D27-383 item 8: a guest's phone on the rooming list and the waitlist. */
+  [`GET ${H}/groups/:id/rooming-list`]: { keys: ["phone"], unless: "customer" },
+  [`GET ${H}/waitlist`]: { keys: ["phone"], unless: "customer" },
   /* A function's bill (round E, BQ-1): with no folioId the page draws no
      Bill card at all (banquet/pages/BanquetEvent.tsx). */
   [`GET ${H}/banquet/events/:id`]: { keys: ["folioId", "bill", "invoice"], unless: "invoice" },

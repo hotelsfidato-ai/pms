@@ -179,8 +179,9 @@ export interface ReportDoc {
      order is built as a ReportDoc and drawn by api/src/reportRender.ts.
 
      It is deliberately NOT in REPORT_KEYS: that list is what the Reports
-     screen offers, and a purchase order is not a report anybody runs. */
-  report: ReportKey | "purchase-order";
+     screen offers, and a purchase order is not a report anybody runs.
+     A group's rooming list likewise (D27-383 item 8). */
+  report: ReportKey | "purchase-order" | "rooming-list";
   title: string;
   /** From the database, never a literal (MEMORY 256). */
   /** timezone: where "datetime" cells are printed, e.g. "Asia/Kolkata"; India when absent. */

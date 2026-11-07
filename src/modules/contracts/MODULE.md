@@ -4,8 +4,10 @@
 C-13, all as the lane recommended). Branch `contracts/rates-30sep`.
 
 A company's record (add, edit), a contract per company and hotel, and the
-booking priced by it. Allotments (rooms held until a release date) are
-**not** built: later, when there is such a contract (C-12).
+booking priced by it. **Allotments** (rooms held under a contract until each
+night's release) were built on 7 November under D27-383 item 8 (C-12's
+"later"): migration 267, `api/src/modules/contracts/allotments.ts`,
+`components/AllotmentDialog.tsx`, the Allotments part of a company's page.
 
 ```
 src/modules/contracts/                  the screens, the dialogs, the client
@@ -32,7 +34,7 @@ api/test/modules/contracts/             the routes, the booking, the credit refu
 | C-9 | Credit is **the company's, for the group**: allowed or not, days, limit. **Bill to company is refused** for a company not allowed credit; days and limit are shown, not enforced, until company payments are recorded (D27-152). Companies already billed on credit start with it allowed |
 | C-10 | One contact person per company |
 | C-11 | No two companies with one name or one GSTIN (asked by the route, not an index: an index could fail a deploy on rows nobody has seen) |
-| C-12 | Allotments later |
+| C-12 | Allotments later - built 7 November under D27-383 item 8 (CHANGELOG) |
 | C-13 | Add company on Contracts and on Companies and agents, the same dialog |
 
 ---
@@ -58,7 +60,17 @@ GET   /api/hotels/:code/companies/:id/contracts a company, its contracts here, t
 POST  /api/hotels/:code/contracts               add a contract                                 company: edit
 PUT   /api/hotels/:code/contracts/:id           change one (bookings keep their stamped rate)  company: edit
 GET   /api/hotels/:code/contract-price          the booking page's quote under the contract    as /tariff
+GET   /api/hotels/:code/allotments/:id          one allotment, night by night (New booking)    company or reservation: view
+POST  /api/hotels/:code/allotments              hold rooms (never past what is free)           company: edit
+PUT   /api/hotels/:code/allotments/:id          change one, or { active: false } to stop       company: edit
 ```
+
+An allotment is one contract's, one room type, a first and last night (both
+held), rooms a night and release days. `app.allotment_held` (267) says what
+each night still holds; `app.inventory_grid`'s `available` is less that;
+`app.release_allotments`, called by the night audit, puts each night due back
+on sale once (`allotment_releases`). A booking from it is checked by
+`allotmentPickup` (the front door's export) inside reservations' `book.ts`.
 
 ## Where it reaches other services (their lines, claimed for this job)
 

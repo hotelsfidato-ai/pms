@@ -41,6 +41,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 **Gates, this copy, each by its exit code.** `npx tsc -b --force` 0 (and the API's `tsc --noEmit` 0). `npx vitest run` 1552 passed, 1 failed, exit 1: `src/test/migrationNumbers.test.ts` only, because 257-265 are other helpers' and not in this copy. `cd api && npm test` 3077 passed, 2 failed, exit 1: `guards.test.ts`'s "refuses to void a stay that already happened" asked an in-house stay, which the owner may now void (D27-397) - it now asks a departed one - and `suAvailability.test.ts` timed out at 20 s under load; the two files alone, a scratch database: 57 passed, exit 0. `db/tests/run.sh`: all 1909 assertions passed, exit 0.
 
+## 2026-11-07 · The Calendar shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
+
+**Shipped.** `GET /:code/calendar-prices` (`api/src/modules/front-desk/stays.ts`) also answers each type's `held` that night (`app.allotment_held`, migration 267). `data/stayview.ts` takes it off the type's and the footer's free count (never off occupancy: held is not sold); `pages/StayView.tsx` shows it beside the free figure as "+3h", with "Rooms held for an allotment, not sold" in the key when any day has one. By floor, held is 0 (it is a room type's). `api/test/modules/front-desk/calendarPrices.test.ts`'s exact answer gains `held: 0` (5/5). **Proved:** seen on the local demo, Deluxe on 20 Nov "4 +3h", the footer 14 for 17 sellable. The rest: contracts' CHANGELOG, 7 November.
+
 ---
 
 ## 2026-11-02 · Walk-ins opens on the last 90 days, like All bookings (the owner, 2 November)

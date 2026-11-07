@@ -204,3 +204,63 @@ begin
   perform test.ok('new-booking','the fixture does not outlive the test',
     n = 0 and not exists (select 1 from guests where id = g), n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- THE WAITLIST (D27-383 item 8, "the waitlist")
+-- =============================================================================
+-- What the table promises underneath the routes
+-- (api/test/modules/reservations/waitlist.test.ts):
+--   * an entry is for nights: the departure after the arrival
+--   * waiting has no close; booked names its booking; removed does not
+--   * nothing is deleted by the app
+-- =============================================================================
+do $$
+declare
+  h uuid; t uuid; w uuid; failed boolean; n int;
+begin
+  h := app.provision_property_unchecked('WLT', 'Waitlist Test', 'Nowhere');
+  select id into t from room_types where hotel_id = h order by sort_order limit 1;
+  insert into waitlist (hotel_id, guest_name, room_type_id, arrival, departure)
+  values (h, 'WLT guest', t, date '2030-03-01', date '2030-03-03') returning id into w;
+
+  failed := false;
+  begin
+    insert into waitlist (hotel_id, guest_name, room_type_id, arrival, departure)
+    values (h, 'WLT same day', t, date '2030-03-01', date '2030-03-01');
+  exception when check_violation then failed := true;
+  end;
+  perform test.ok('waitlist', 'an entry is for nights: a departure on the arrival is refused', failed);
+
+  failed := false;
+  begin
+    update waitlist set status = 'booked', closed_at = now() where id = w;
+  exception when check_violation then failed := true;
+  end;
+  perform test.ok('waitlist', 'booked names its booking', failed);
+
+  failed := false;
+  begin
+    update waitlist set status = 'removed' where id = w;
+  exception when check_violation then failed := true;
+  end;
+  perform test.ok('waitlist', 'removed has a close', failed);
+
+  update waitlist set status = 'removed', closed_at = now(), close_reason = 'Went elsewhere' where id = w;
+  perform test.ok('waitlist', 'removed with its close is kept',
+    (select status from waitlist where id = w) = 'removed');
+
+  set local role pms_app;
+  failed := false;
+  begin
+    delete from waitlist where id = w;
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('waitlist', 'the app deletes no entry', failed);
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  select count(*) into n from waitlist where hotel_id = h;
+  perform test.ok('waitlist', 'the fixture does not outlive the test', n = 0, n || ' left behind');
+end $$;

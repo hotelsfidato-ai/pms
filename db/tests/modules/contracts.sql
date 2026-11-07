@@ -147,3 +147,128 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+-- =============================================================================
+-- ALLOTMENTS — rooms held under a contract (D27-383 item 8, "allotments")
+-- =============================================================================
+-- What only the database can promise; the refusals in words (never an
+-- overbooking, nights inside the contract, the release still ahead, a pickup
+-- past what is held) are api/test/modules/contracts/allotments.test.ts:
+--   * availability is less what is held; a held room is neither occupied nor
+--     sold; a booking from the allotment moves availability once, not twice
+--   * the release: nights within their release days go back on sale, the
+--     rooms nobody booked recorded once - a second run releases nothing
+--   * reception holds no allotment; no allotment of 0 rooms
+-- Builds one property of its own and removes it.
+-- =============================================================================
+do $$
+declare
+  h uuid; dlx uuid; clerk uuid; co uuid; k uuid; a uuid; g uuid; r uuid;
+  failed boolean; n int; v int; g0 record; g1 record;
+begin
+  h := app.provision_property_unchecked('ALT', 'Allotment Test', 'Nowhere');
+  update hotels set business_date = date '2030-01-01' where id = h;
+  perform app.bulk_create_rooms(h, 'DLX', 2::smallint, 201, 205);
+  select id into dlx from room_types where hotel_id = h and code = 'DLX';
+  insert into staff (email, full_name) values ('alt-clerk@fidato.in', 'ALT Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  delete from staff_hotels where staff_id = clerk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (clerk, h, 'front_desk');
+  insert into companies (name, kind) values ('ALT Test Agent', 'travel_agent') returning id into co;
+  insert into contracts (hotel_id, company_id, name, valid_from, valid_to, pricing, discount_percent)
+  values (h, co, 'ALT 2030', date '2030-01-01', date '2030-12-31', 'discount', 10) returning id into k;
+  insert into guests (full_name) values ('ALT fixture guest') returning id into g;
+
+  select * into g0 from app.inventory_grid(h, date '2030-01-10', date '2030-01-10') where room_type_id = dlx;
+
+  -- 3 rooms on the nights of 10, 11 and 12 Jan, released 2 days before each.
+  insert into allotments (hotel_id, contract_id, room_type_id, first_night, last_night, rooms, release_days)
+  values (h, k, dlx, date '2030-01-10', date '2030-01-12', 3, 2) returning id into a;
+
+  select * into g1 from app.inventory_grid(h, date '2030-01-10', date '2030-01-10') where room_type_id = dlx;
+  perform test.ok('allotments', 'availability is less the rooms held',
+    g1.available = g0.available - 3, g0.available || ' -> ' || g1.available);
+  perform test.ok('allotments', 'a held room is neither occupied nor sold',
+    g1.occupied = g0.occupied and g1.sold = g0.sold);
+  select available into v from app.inventory_grid(h, date '2030-01-13', date '2030-01-13') where room_type_id = dlx;
+  perform test.ok('allotments', 'the night after the last is not held', v = g0.available, v::text);
+
+  -- A booking from it, the nights of 10 and 11.
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status, allotment_id)
+  values (h, 'ALT-1', g, dlx, date '2030-01-10', date '2030-01-12', 2000, 'confirmed', a)
+  returning id into r;
+  select * into g1 from app.inventory_grid(h, date '2030-01-10', date '2030-01-10') where room_type_id = dlx;
+  perform test.ok('allotments', 'a booking from it moves availability once, not twice',
+    g1.available = g0.available - 3 and g1.occupied = g0.occupied + 1, g1.available::text);
+  select held into v from app.allotment_held(h, date '2030-01-10', date '2030-01-10') where allotment_id = a;
+  perform test.ok('allotments', 'and the allotment holds one room fewer', v = 2, v::text);
+  select held into v from app.allotment_held(h, date '2030-01-12', date '2030-01-12') where allotment_id = a;
+  perform test.ok('allotments', 'a night it does not cover keeps all three', v = 3, v::text);
+
+  -- ---------- the release ------------------------------------------------------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select app.release_allotments(h, date '2030-01-07') into v;
+  reset role;
+  perform test.ok('allotments', 'the audit of 7 Jan releases nothing: 10 Jan is 3 days off', v = 0, v::text);
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select app.release_allotments(h, date '2030-01-08') into v;
+  reset role;
+  perform test.ok('allotments', 'the audit of 8 Jan puts the 2 rooms nobody booked on 10 Jan back on sale',
+    v = 2, v::text);
+  select count(*) into n from allotment_releases where allotment_id = a;
+  perform test.ok('allotments', 'one night is recorded released, by whoever closed the day',
+    n = 1 and (select released_by from allotment_releases where allotment_id = a) = clerk, n::text);
+  select available into v from app.inventory_grid(h, date '2030-01-10', date '2030-01-10') where room_type_id = dlx;
+  perform test.ok('allotments', 'a released night is on sale again', v = g0.available - 1, v::text);
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select app.release_allotments(h, date '2030-01-08') into v;
+  reset role;
+  select count(*) into n from allotment_releases where allotment_id = a;
+  perform test.ok('allotments', 'the release is idempotent: the same day again releases nothing',
+    v = 0 and n = 1, v || ' rooms, ' || n || ' rows');
+
+  select app.release_allotments(h, date '2030-01-10') into v;
+  select count(*) into n from allotment_releases where allotment_id = a;
+  perform test.ok('allotments', 'the audit of 10 Jan releases 11 and 12 Jan: 2 and 3 rooms',
+    v = 5 and n = 3, v || ' rooms, ' || n || ' rows');
+
+  -- ---------- who, and what the table refuses ----------------------------------
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into allotments (hotel_id, contract_id, room_type_id, first_night, last_night, rooms, release_days)
+    values (h, k, dlx, date '2030-02-01', date '2030-02-02', 1, 1);
+  exception when insufficient_privilege then failed := true;
+  end;
+  reset role;
+  perform test.ok('allotments', 'reception holds no allotment', failed);
+  failed := false;
+  begin
+    insert into allotments (hotel_id, contract_id, room_type_id, first_night, last_night, rooms, release_days)
+    values (h, k, dlx, date '2030-02-01', date '2030-02-02', 0, 1);
+  exception when check_violation then failed := true;
+  end;
+  perform test.ok('allotments', 'an allotment of 0 rooms is refused', failed);
+
+  -- ---------- clean up --------------------------------------------------------
+  alter table hotels disable trigger hotels_no_delete;
+  delete from staff_hotels where hotel_id = h;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  delete from companies where id = co;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
+  update staff set is_active = false where id = clerk;
+  select count(*) into n from hotels where code = 'ALT';
+  perform test.ok('allotments', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);

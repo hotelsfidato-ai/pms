@@ -403,6 +403,8 @@ groups.post("/:code/bookings", async (c) => {
     campaign?: string;
     /* D27-371: the guest's own company, for the tax invoice. */
     guestCompany?: GuestCompany;
+    /* 267, 268 (D27-383 item 8): taken from an allotment; for a waitlist entry. */
+    allotmentId?: string; waitlistId?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -463,6 +465,8 @@ groups.post("/:code/bookings", async (c) => {
     isSingleLady: input.isSingleLady === true,
     ...(typeof input.campaign === "string" ? { campaign: input.campaign } : {}),
     ...(input.guestCompany && typeof input.guestCompany === "object" ? { guestCompany: input.guestCompany } : {}),
+    ...(typeof input.allotmentId === "string" && input.allotmentId ? { allotmentId: input.allotmentId } : {}),
+    ...(typeof input.waitlistId === "string" && input.waitlistId ? { waitlistId: input.waitlistId } : {}),
   });
 
   const result = await withSession(c.get("subject"), async (client) => {

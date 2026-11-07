@@ -436,6 +436,8 @@ export default function StayViewPage({ view }: {
                   ),
               ).length,
               rate: null,
+              /* Held rooms are a room type's, not a floor's (267). */
+              held: 0,
             })),
           };
         });
@@ -609,6 +611,12 @@ export default function StayViewPage({ view }: {
                 {BAR_LABEL[t]}
               </span>
             ))}
+            {groups.some((g) => g.perDate.some((d) => d.held > 0)) && (
+              <span className="inline-flex items-center gap-1.5">
+                <b className="text-2xs font-semibold text-brand-orange-700">+2h</b>
+                Rooms held for an allotment, not sold
+              </span>
+            )}
           </p>
         </div>
 
@@ -690,6 +698,7 @@ export default function StayViewPage({ view }: {
                   {group.perDate.map((cell) => (
                     <div
                       key={cell.date}
+                      title={cell.held > 0 ? `${cell.available} free · ${cell.held} held for an allotment` : undefined}
                       className="grid grid-rows-[20px_16px] place-content-center text-center border-r border-grey-200 last:border-r-0"
                     >
                       <div className={cn(
@@ -697,6 +706,12 @@ export default function StayViewPage({ view }: {
                         cell.available === 0 ? "text-brand-red-700" : "text-ink-900",
                       )}>
                         {cell.available}
+                        {/* HELD, NEVER SOLD (267, D27-383 item 8). */}
+                        {cell.held > 0 && (
+                          <span className="ml-1 text-2xs font-semibold text-brand-orange-700" data-held>
+                            +{cell.held}h
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs leading-4 text-grey-500 tabular">
                         {/* A dash when the hotel has not priced this type.

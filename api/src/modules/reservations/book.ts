@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
 import { countProblem, countryProblem, dateProblem, gstinProblem, MAX_NIGHTS } from "../../validate.ts";
 import { roomRateBeforeGst, overCreditLimit } from "../finance/index.ts";
+import { allotmentPickup } from "../contracts/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -126,6 +127,12 @@ export interface BookingRequest {
       invoice for the guest's bill is addressed to it; the guest still pays.
       Not a `companies` row, and not companyId (Bill to company). */
   guestCompany?: GuestCompany;
+  /** Taken from this allotment (267): its company, its contract, and its
+      held rooms rather than the hotel's free ones. Checked by contracts'
+      `allotmentPickup`. The desk's only, like guestId. */
+  allotmentId?: string;
+  /** Booked for this waitlist entry (268), which then says "booked". */
+  waitlistId?: string;
 }
 
 export interface GuestCompany { name?: string; gstin?: string; address?: string }
@@ -411,8 +418,10 @@ async function deskTerms(
 /* ── The booking itself ───────────────────────────────────────────── */
 
 export async function makeBooking(
-  client: Client, request: BookingRequest,
+  client: Client, asked: BookingRequest,
 ): Promise<BookingResult> {
+  /* A pickup is made for the allotment's company, set below once checked. */
+  let request = asked;
   const lines = request.lines.filter((l) => l.roomTypeId);
   const externalRef = request.externalRef ?? null;
   const fingerprint = externalRef ? fingerprintOf(request) : null;
@@ -476,9 +485,25 @@ export async function makeBooking(
      on by default, as D17-43 had it; off, the desk's booking - a group's
      too, whole or not at all - is refused past a full house like a
      machine's. */
+  /* FROM AN ALLOTMENT (267): its rooms are held for it, so the hotel's free
+     rooms are not asked; the allotment's own held rooms are, under its lock. */
+  if (request.allotmentId) {
+    const pickup = await allotmentPickup(client, hotelId, request.allotmentId, {
+      companyId: request.companyId, checkIn: request.checkIn, checkOut: request.checkOut, lines });
+    if ("reason" in pickup) return refuse(pickup.reason);
+    request = { ...request, companyId: pickup.companyId };
+  }
+  /* FOR A WAITLIST ENTRY (268): still waiting, at this hotel. */
+  if (request.waitlistId) {
+    const { rows } = await client.query(
+      `select 1 from waitlist where id::text = $1 and hotel_id = $2 and status = 'waiting'`,
+      [request.waitlistId, hotelId]);
+    if (!rows[0]) return refuse("That guest is no longer on the waitlist. Reload it.");
+  }
+
   const deskMayOverbook = request.refuseWhenFull ? false : (await client.query<{ yes: boolean }>(
     "select desk_may_overbook as yes from hotels where id = $1", [request.hotelId])).rows[0]?.yes ?? true;
-  if (request.refuseWhenFull || !deskMayOverbook) {
+  if (!request.allotmentId && (request.refuseWhenFull || !deskMayOverbook)) {
     const full = await noRoomFor(client, { ...request, lines });
     if (full) return { ok: false, kind: "no_room", reason: full };
   }
@@ -872,6 +897,21 @@ export async function makeBooking(
       await client.query(
         "update reservations set campaign = $1 where id = any($2::uuid[])",
         [campaign, reservationIds]);
+    }
+
+    /* FROM AN ALLOTMENT (267): every room of it is one of the allotment's. */
+    if (request.allotmentId) {
+      await client.query(
+        "update reservations set allotment_id = $1 where id = any($2::uuid[])",
+        [request.allotmentId, reservationIds]);
+    }
+    /* THE WAITLIST ENTRY (268) is booked: its first room names the booking. */
+    if (request.waitlistId) {
+      await client.query(
+        `update waitlist set status = 'booked', reservation_id = $2, closed_at = now(),
+                closed_by = app.current_user_id()
+          where id::text = $1 and status = 'waiting'`,
+        [request.waitlistId, reservationIds[0]]);
     }
 
     /* THE GUEST'S COMPANY (D27-371), on every room of it - its own statement,

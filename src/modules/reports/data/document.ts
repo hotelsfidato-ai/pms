@@ -88,8 +88,9 @@ export interface ReportDoc {
   /* ⚠ Kept identical to the server's copy, as the note at the top of both
      files insists. Widened by one word for purchasing (D18-3): a purchase
      order is drawn by the shared renderer rather than a second one, and it
-     is NOT in REPORT_KEYS because it is not a report anybody runs. */
-  report: ReportKey | "purchase-order";
+     is NOT in REPORT_KEYS because it is not a report anybody runs.
+     A group's rooming list likewise (D27-383 item 8). */
+  report: ReportKey | "purchase-order" | "rooming-list";
   title: string;
   property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
   orientation: "portrait" | "landscape";

@@ -3,7 +3,7 @@
   <div class="chapter-head">
     <span class="num">Chapter A2</span>
     <h1>Bookings</h1>
-    <p>For reception and whoever takes bookings. How to find a booking, take one on the phone, book and check in a walk-in, book several rooms as a group, hold a booking while it waits for the hotel, change the dates or the room, and cancel or void a booking. The last sections are for the owner: the cancellation terms, the booking sources and CRS bookings.</p>
+    <p>For reception and whoever takes bookings. How to find a booking, take one on the phone, book and check in a walk-in, book several rooms as a group and fill in its rooming list, hold a booking while it waits for the hotel, change the dates or the room, and cancel or void a booking. The owner's sections follow: the cancellation terms, the booking sources and CRS bookings. Then a booking from a company's allotment, and the waitlist.</p>
   </div>
 
   <!-- A2.1 -->
@@ -16,6 +16,7 @@
       <tr><td>Groups</td><td>Reception, managers</td><td>The bookings of more than one room: their rooms, who pays, the lead guest (A2.6). Not in reception's menu: open it with Find a screen (A0.6).</td></tr>
       <tr><td>CRS bookings</td><td>Reception; the owner and an Admin for its connection</td><td>Bookings the CRS sold for this hotel, and what became of each (A2.11).</td></tr>
       <tr><td>New booking</td><td>Whoever may make a booking</td><td>One page to take a booking, give it a room, or check the guest in (A2.2 to A2.5).</td></tr>
+      <tr><td>Waitlist</td><td>Reception</td><td>Guests waiting for a room type on nights that were full, and who can have a room now (A2.13). Not in reception's menu: open it with Find a screen, or from All bookings' notice.</td></tr>
     </tbody>
   </table>
 
@@ -424,6 +425,47 @@
     <p>Two accounts, never one total: the host and the guests are different people asked for different money, and a sum would be a number nobody can be asked to pay. Who leads a group: the room booked first that still stands, unless the desk picks another: <span class="d">D22-52</span>. The host's account is settled and invoiced on the group's page, with the same Settle and the same question before an invoice number is taken as a guest's bill: <span class="d">D27-305</span>. Its cash to the rupee, as a room bill's: <span class="d">D27-337</span>.</p>
   </div>
 
+  <h3 id="a2-rooming">The rooming list: each room's guest</h3>
+  <p>A group is booked in one guest's name; the group sends the names later, often as an Excel sheet. On the group's page tap <span class="ui">Rooming list</span>. Each room is a row: its booking, room type and room, the dates, the plan, who pays (<span class="ui">Host</span> or <span class="ui">Guest</span>), the <span class="ui">Guest name</span> and the <span class="ui">Phone</span>.</p>
+  <ol class="steps">
+    <li><b>By hand:</b> type each guest's name, and a phone if you have one. Under the list: <span class="msg">“2 bookings will take the name typed.”</span></li>
+    <li><b>From the group's file:</b> tap <span class="ui">Read the group's file</span> and choose the Excel (.xlsx) or CSV file. Its columns are matched by their headings: <span class="ui">Booking</span>, or <span class="ui">Room type</span>, <span class="ui">Arrival</span> and <span class="ui">Departure</span> (dates as 12/11/2026, day first); <span class="ui">Guest name</span>; <span class="ui">Phone</span>; <span class="ui">Plan</span> and <span class="ui">Who pays</span> if the file has them. When every row is right the names fill in: <span class="msg">“4 names read. Check them, then Save the rooming list. Nothing is saved yet.”</span></li>
+    <li>When a row is wrong, nothing is filled in. The card <span class="msg">“Nothing was saved”</span> lists every problem by its row, such as <span class="msg">“Row 4: no Deluxe room of this group from 14 Nov 2026 to 16 Nov 2026 is left to name.”</span> Correct the file and read it again.</li>
+    <li>Tap <span class="ui">Save rooming list</span>. Each name becomes the guest of its booking: on Arrivals, the bill and the registration card. <span class="msg">“Rooming list saved”</span>. If one row is wrong, no name is saved.</li>
+    <li><b>To print or send it:</b> <span class="ui">Print or download</span>, then <span class="ui">PDF, to print or send</span>, <span class="ui">Excel</span> or <span class="ui">CSV</span>. The copy has the bookings, names, room types, rooms, dates, plan and who pays; no phone numbers. The group's leader can fill the Excel copy in and send it back: its <span class="ui">Booking</span> column finds each room.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-38">
+    <img src="img/A2-38.png" alt="Rooming list of the Kulkarni Wedding: four rooms with Booking, Room type, Dates, Plan, Who pays, Guest name and Phone boxes, Print or download, Read the group's file and Save rooming list">
+    <figcaption><b>Figure A2-38.</b> A group's rooming list.</figcaption>
+    <ol class="callouts">
+      <li>Print or download: PDF, Excel or CSV</li>
+      <li>Read the group's file</li>
+      <li>A room's guest name and phone</li>
+      <li>Save rooming list: every name, or none</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-39">
+    <img src="img/A2-39.png" alt="The card Nothing was saved, listing a row with no guest name and a row whose dates match no room of the group">
+    <figcaption><b>Figure A2-39.</b> A file with problems: each row named, and nothing saved.</figcaption>
+    <ol class="callouts">
+      <li>Nothing was saved</li>
+      <li>Each problem, by its row in the file</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The list names guests and nothing else. The room type, dates, plan and who pays are the booking's: a file that says otherwise is refused, row by row (<span class="msg">“… is a Deluxe from 14 Nov 2026 to 16 Nov 2026 on CP, not what the file says. Change the booking first, or the file.”</span>). Change the booking, or tick Host pays on the group's page.</li>
+      <li>Only rooms still to arrive take a name. A guest who has arrived is changed at the desk: <span class="msg">“… has arrived; its guest is changed at the desk.”</span></li>
+      <li>An old Excel file (.xls) is not read: save it as .xlsx or CSV.</li>
+      <li>A phone already on a guest's record is not overwritten by the list; change it on the guest's record.</li>
+      <li>Whoever may change a booking fills the list in; anyone who reads bookings may print it.</li>
+    </ul>
+  </div>
+
   <!-- A2.7 -->
   <h2 id="a2-7"><span class="n">A2.7</span>Waiting for the hotel</h2>
   <p>A booking the hotel has not accepted yet: the room is held, and nothing goes to the guest. Bookings from the CRS arrive this way (A2.11). The desk can make one too.</p>
@@ -790,7 +832,63 @@
   </figure>
 
   <!-- A2.12 -->
-  <h2 id="a2-12"><span class="n">A2.12</span>In short</h2>
+  <h2 id="a2-12"><span class="n">A2.12</span>A booking from an allotment</h2>
+  <p>An allotment is a block of rooms of one type held for a company or a travel agent over some nights, at their contract's rate (A15.9 says how the Owner, an Admin or the GM holds one). While held, those rooms are not for sale to anybody else: Rates and the Calendar show them as held, never as sold. On the Calendar a room type's day reads, for example, <span class="msg">“4 +3h”</span>: 4 rooms free, 3 held for an allotment.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Contracts</span>, the company, and under its contract the allotment. Tap <span class="ui">Book from it</span>.</li>
+    <li>New booking opens on the allotment's room type and first night still held, for the company: <span class="msg">“From the allotment of Demo Travels: Deluxe, 20 Nov 2026 to 22 Nov 2026 …”</span>. The count beside the room is what the allotment still holds, and the price is the contract's.</li>
+    <li>Type the guest, choose the booking source, and save as usual. The room comes out of the allotment, not out of the hotel's free rooms.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-40">
+    <img src="img/A2-40.png" alt="New booking from an allotment: Deluxe, the count the allotment still holds, and Contract: Demo Travels 2026-27 with its rate">
+    <figcaption><b>Figure A2-40.</b> A booking taken from an allotment: the room line.</figcaption>
+    <ol class="callouts">
+      <li>The allotment's room type</li>
+      <li>What the allotment still holds on these nights</li>
+      <li>The contract's rate</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Only the allotment's room type and nights: <span class="msg">“The allotment holds the nights of … to …; this stay runs outside them. Book the other nights as an ordinary booking.”</span></li>
+      <li>No more rooms than it still holds: <span class="msg">“Only 2 rooms are left in the allotment on 21 Nov 2026.”</span></li>
+      <li>Each night's unbooked rooms go back on sale at the night audit of its release date (the release days before that night). After that the night is an ordinary booking: <span class="msg">“The allotment's rooms for 20 Nov 2026 went back on sale at the night audit of 15 Nov 2026.”</span> The audit's result says how many went back.</li>
+      <li>A day use is not taken from an allotment: it holds nights.</li>
+    </ul>
+  </div>
+
+  <!-- A2.13 -->
+  <h2 id="a2-13"><span class="n">A2.13</span>The waitlist</h2>
+  <p>When a room type is full for a guest's nights, put them on the <span class="ui">Waitlist</span> (under Bookings; reception finds it with Find a screen). Nothing is booked or sent by the system: the desk decides, and the guest is called by a person.</p>
+  <ol class="steps">
+    <li>On New booking, where a room line says <span class="msg">“0 left”</span>, tap <span class="ui">Put on the waitlist</span>; or on the Waitlist, tap <span class="ui">Put a guest on the waitlist</span>.</li>
+    <li>The window <span class="msg">“Put on the waitlist”</span> carries the name, phone, dates and room type already typed. Add a <span class="ui">Note</span>, such as “would take a smaller room”, and tap <span class="ui">Add to the waitlist</span>.</li>
+    <li>When a room frees up for those nights (a cancellation, a shorter stay, an allotment released), the Waitlist shows the guest under <span class="ui">A room is free now</span> with the rooms free, oldest first, and All bookings says <span class="msg">“1 guest on the waitlist can have a room now. Open the waitlist”</span>.</li>
+    <li>Call the guest. Tap <span class="ui">Book</span>: New booking opens filled in from the entry. Saving the booking takes them off the waitlist.</li>
+    <li>Tap <span class="ui">Remove</span> for a guest who no longer wants the room, with a word on why; the entry is kept in the record.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-41">
+    <img src="img/A2-41.png" alt="The Waitlist: A room is free now with a guest, 1 room free now, Book and Remove; Still full below">
+    <figcaption><b>Figure A2-41.</b> The waitlist: who can have a room now, and who is still waiting.</figcaption>
+    <ol class="callouts">
+      <li>Put a guest on the waitlist</li>
+      <li>A room is free now: oldest first</li>
+      <li>Book: New booking, filled in</li>
+      <li>Still full</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Rooming lists, allotments and the waitlist were approved with the audit's Step 2 (<span class="d">D27-383</span>) and built as the owner asked, with every open point decided the safe way and written down (<span class="d">D27-396</span>): the rooming list names guests and changes no price, date or bill; an allotment never overbooks the hotel; nothing on the waitlist is booked or sent by itself.</p>
+  </div>
+
+  <!-- A2.14 -->
+  <h2 id="a2-14"><span class="n">A2.14</span>In short</h2>
   <table>
     <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
@@ -799,6 +897,9 @@
       <tr><td>The voucher</td><td>Booked: Send voucher, once.</td><td>A2.4</td></tr>
       <tr><td>A walk-in</td><td>Rooms: tap a free room, name, phone, ID, Check in now.</td><td>A2.5</td></tr>
       <tr><td>Several rooms</td><td>Rooms more than 1, a Group name. Groups for the host's account and the lead guest.</td><td>A2.6</td></tr>
+      <tr><td>The group sent its names</td><td>The group's page: Rooming list, type them or Read the group's file, Save rooming list.</td><td>A2.6</td></tr>
+      <tr><td>A room from a company's allotment</td><td>Contracts, the company, Book from it.</td><td>A2.12</td></tr>
+      <tr><td>The room type is full</td><td>New booking: Put on the waitlist. The Waitlist shows when a room frees up.</td><td>A2.13</td></tr>
       <tr><td>Not accepted yet</td><td>Booking details: Waiting for the hotel. Then Confirm the booking.</td><td>A2.7</td></tr>
       <tr><td>New dates, more guests</td><td>More options: Change dates or guests.</td><td>A2.8</td></tr>
       <tr><td>A guest in the house changes room</td><td>More options: Move to another room.</td><td>A2.8</td></tr>

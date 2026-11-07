@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { Users, Wallet, Check, Flag, FileText } from "lucide-react";
+import { Users, Wallet, Check, Flag, FileText, ListChecks } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -192,6 +192,14 @@ export default function GroupPanelPage() {
           g.company,
           `${g.rooms.length} ${g.rooms.length === 1 ? "room" : "rooms"}`,
         ].filter(Boolean).join(" · ")}
+        /* D27-383 item 8: the guests' names, typed or read from the group's file. */
+        actions={
+          <Button asChild variant="secondary">
+            <Link to={`/h/${hotelId}/groups/${g.id}/rooming-list`}>
+              <ListChecks className="size-4" /> Rooming list
+            </Link>
+          </Button>
+        }
       />
 
       {/* ── The two balances ─────────────────────────────────────── */}

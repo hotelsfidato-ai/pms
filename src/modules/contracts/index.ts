@@ -5,3 +5,5 @@ export { CompanyDialog } from "./components/CompanyDialog";
 export { getContractTariff, type ContractTariff } from "./data/contracts";
 /* D27-382: Edit on Companies and agents opens the dialog on the whole record. */
 export { listCompanyRecords, type CompanyRow } from "./data/contracts";
+/* D27-383 item 8: New booking opened from an allotment's Book button. */
+export { getAllotment, leftIn, type Allotment } from "./data/contracts";

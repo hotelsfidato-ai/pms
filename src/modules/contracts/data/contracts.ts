@@ -62,6 +62,8 @@ export type ContractInput = Omit<Contract, "id">;
 
 export interface CompanyContracts {
   company: Company;
+  /** The rooms held under its contracts here (267). */
+  allotments: Allotment[];
   contracts: Contract[];
   roomTypes: { id: string; name: string }[];
   mealPlans: { code: string; includes: string }[];
@@ -131,3 +133,72 @@ export async function getContractTariff(
     return null;
   }
 }
+
+/* ── Allotments (D27-383 item 8, migration 267) ──────────────────────
+   Rooms of one type held under a contract for a run of nights, released
+   N days before each night at the night audit. The server is the rule:
+   it refuses an allotment that would overbook the hotel, by name. */
+
+export interface AllotmentNight {
+  night: string;
+  /** Bookings made from the allotment covering this night. */
+  picked: number;
+  /** Still held for the company: 0 once released. */
+  held: number;
+  released: boolean;
+  /** Recorded at the release: rooms back on sale, and the day whose audit did it. */
+  releasedRooms: number | null;
+  releasedOn: string | null;
+}
+
+export interface Allotment {
+  id: string;
+  contractId: string;
+  contractName: string;
+  companyId: string;
+  companyName: string;
+  companyKind: CompanyKind;
+  roomTypeId: string;
+  roomType: string;
+  firstNight: string;
+  lastNight: string;
+  rooms: number;
+  releaseDays: number;
+  notes: string | null;
+  /** The contract's figures for this room type; empty where none is agreed. */
+  rates: { mealPlan: string; single: number | null; double: number | null }[];
+  discountPercent: number | null;
+  nights: AllotmentNight[];
+}
+
+export interface AllotmentInput {
+  contractId?: string;
+  roomTypeId?: string;
+  firstNight: string;
+  lastNight: string;
+  rooms: number;
+  releaseDays: number;
+  notes: string | null;
+}
+
+export const getAllotment = (hotelId: string, id: string) =>
+  api<Allotment & { today: string }>(`/api/hotels/${hotelId}/allotments/${id}`);
+
+export const addAllotment = (hotelId: string, input: AllotmentInput) =>
+  send(`/api/hotels/${hotelId}/allotments`, "POST", input);
+
+export const saveAllotment = (hotelId: string, id: string, input: AllotmentInput) =>
+  send(`/api/hotels/${hotelId}/allotments/${id}`, "PUT", input);
+
+export const stopAllotment = (hotelId: string, id: string) =>
+  send(`/api/hotels/${hotelId}/allotments/${id}`, "PUT", { active: false });
+
+/** The nights still to come that are not released: what can be booked from. */
+export const nightsAhead = (a: Allotment, today: string) =>
+  a.nights.filter((n) => !n.released && n.night >= today);
+
+/** The fewest rooms still held on a night to come, or null when none is. */
+export const leftIn = (a: Allotment, today: string): number | null => {
+  const ahead = nightsAhead(a, today);
+  return ahead.length ? Math.min(...ahead.map((n) => n.held)) : null;
+};
