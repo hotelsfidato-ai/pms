@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { PoolClient as Client } from "pg";
 import { withSession } from "../../auth.ts";
 import { canSend, send, NOT_CONNECTED } from "../../sending.ts";
+import { surveyLinkFor } from "../../routes/guestSurvey.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    REVIEWS - asking after check-out, and recording who was asked
@@ -101,7 +102,7 @@ export const REVIEWS_REFUSED = {
 /** Does the signed-in person hold one of these roles at this property? A
     group administrator holds everything everywhere, as they do throughout
     this system. */
-async function hasRoleAt(
+export async function hasRoleAt(
   client: Client, hotelId: string, roles: readonly string[],
 ): Promise<boolean> {
   const { rows } = await client.query<{ may: boolean }>(
@@ -122,7 +123,7 @@ async function hasRoleAt(
   return rows[0]?.may === true;
 }
 
-async function hotelFor(client: Client, code: string) {
+export async function hotelFor(client: Client, code: string) {
   const { rows } = await client.query<{
     id: string; code: string; name: string; phone: string | null;
   }>(
@@ -367,12 +368,19 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
         "Review requests are switched off for this hotel (Settings, Messages).") };
     }
 
+    /* The feedback survey rides in the same message where the hotel asks
+       for it and this stay has not answered (D27-383 item 10): a link to the
+       guest's own page as `data.feedback`. No new kind of message; n8n's
+       review wording names it (the owner's paste, CHANGELOG). Whatever the
+       guest answers never changes this message (no review gating). */
+    const feedback = await surveyLinkFor(client, hotel.id, stay.id, session.staffId);
+
     const result = await send(client, {
       channel,
       kind: "review",
       hotel: { id: hotel.id, code: hotel.code, name: hotel.name, phone: hotel.phone },
       to: { name: stay.guest, phone: stay.phone, email: stay.email },
-      data: { link: link.url, reference: stay.reference },
+      data: { link: link.url, reference: stay.reference, ...(feedback ? { feedback } : {}) },
       about: { kind: "reservation", id: stay.id },
       /* A clerk pressed this, so the record names them. Without it the
          Guest messages screen filed every review request under "The system"

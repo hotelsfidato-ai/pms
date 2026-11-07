@@ -385,6 +385,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/guests/:id/vip`]: GUEST,
   /* GU-1 (round D): correcting a guest's name, phone, email, address, nationality. */
   [`PATCH ${H}/guests/:id`]: GUEST,
+  /* D27-383 item 10: a guest's preferences, by whoever may edit the guest. */
+  [`PUT ${H}/guests/:id/preferences`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   /* D27-382: the other adults in a room, by the people who record the lead's. */
@@ -891,6 +893,13 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/guest-message-settings`]: see("room_config", "the guest messages' switches"),
   [`GET ${H}/report-emails`]: see("room_config", "who gets the reports by email"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
+  /* D27-383 item 10: what guests answered after check-out, for the GM. */
+  [`GET ${H}/feedback`]: own("reputation/feedback.ts: FEEDBACK_ROLES"),
+  /* D27-383 item 10: guests' preferences, where they help - whoever reads
+     stays (the lists, the panel, Assign room, the housekeeping board) and the
+     till by name, for an in-house guest's allergy on the restaurant's order. */
+  [`GET ${H}/guest-preferences`]: see("reservation", "guests' preferences", ["pos", "bar"]),
+  [`GET ${H}/guests/:id/preferences`]: see("reservation", "a guest's preferences", ["pos", "bar"]),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,
   [`GET ${H}/leads/:ref`]: GUESTS,

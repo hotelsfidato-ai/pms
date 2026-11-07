@@ -21,6 +21,8 @@
 const STAY1 = "45342d24-31b9-4b1a-91b8-3ad2fe849503";
 const STAY2 = "762d9f36-a67f-4982-bc30-494c37ea991b";
 const REKHA = "652bdeab-81de-4892-8695-8028e290ff4d";
+/* Lata Bhosale's booking (FH-2608-5005), arriving on the demo's 7 Nov 2026. */
+const LATA = "fc57ef15-ccbb-4635-8271-5cc6c764d2b2";
 
 export const SHOTS = [
   /* ── Guests ───────────────────────────────────────────────────────── */
@@ -192,5 +194,66 @@ export const SHOTS = [
       { n: 2, at: "text:Not agreed to WhatsApp, and no email address", side: "bottom" },
       { n: 3, at: "text:Nothing has been sent, because nothing can be yet", side: "left" },
     ],
+  },
+
+  /* ── A guest's preferences, and guest feedback (D27-383 item 10) ──────
+     Taken 7 Nov 2026 on a helper's own copy (fidato_prefs, business date
+     7 Nov): Lata Bhosale (FH-2608-5005, arriving in 204) was given her
+     preferences through the window in A10-32 (allergy Peanuts, a high floor,
+     twin beds, quiet, Jain, pillow, The Hindu); the feedback survey switched
+     on at 5EL and eight answers from past stays put in that copy's database
+     (.local/seed-guest-care.sql). Nothing here sends. */
+  {
+    id: "A10-30", title: "Arrivals: the mark of a guest's preferences", as: "Reception",
+    path: "/h/5EL/arrivals",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Lata Bhosale", ms: 90000 }, { waitFor: "css:[data-preference-mark]", ms: 30000 }, { settle: true }],
+    marks: [{ n: 1, at: "css:[data-preference-mark]", side: "right" }],
+  },
+  {
+    id: "A10-31", title: "The booking's panel: the guest's preferences", as: "Reception",
+    path: `/h/5EL/arrivals?res=${LATA}`,
+    steps: [{ waitFor: "text:Edit preferences", ms: 30000 }, { wait: 800 }, { scroll: "css:[data-guest-preferences]" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "css:[data-allergy]", side: "left" },
+      { n: 2, at: "text:A high floor · Twin beds · A quiet room · Jain · Pillow: Firm, an extra one · Newspaper: The Hindu", side: "bottom" },
+      { n: 3, at: "text:Edit preferences", side: "left" },
+    ],
+  },
+  {
+    id: "A10-32", title: "The Preferences window", as: "Reception",
+    path: `/h/5EL/arrivals?res=${LATA}`,
+    steps: [{ waitFor: "text:Edit preferences", ms: 30000 }, { click: "text:Edit preferences" },
+      { waitFor: "text:What the guest likes. Kept on their record: the same on every booking of theirs.", ms: 10000 }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Floor", side: "left" },
+      { n: 2, at: "text:A quiet room", side: "left" },
+      { n: 3, at: "text:Shown in red to the desk, housekeeping and the restaurant.", side: "right" },
+      { n: 4, at: "text:Save", side: "top" },
+    ],
+  },
+  {
+    id: "A10-33", title: "Housekeeping: the arriving guest's preferences on the room", as: "Housekeeping",
+    path: "/h/5EL/housekeeping",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-room-preferences='204']", ms: 30000 }, { wait: 500 },
+      { scroll: "css:[data-room-preferences='204']" }, { wait: 400 }],
+    marks: [{ n: 1, at: "css:[data-room-preferences='204']", side: "bottom" }],
+  },
+  {
+    id: "A10-34", title: "Guest feedback", as: "General Manager",
+    path: "/h/5EL/feedback",
+    steps: [{ waitFor: "text:Scores by month", ms: 30000 }, { settle: true }],
+    marks: [
+      { n: 1, at: "css:a[href='/h/5EL/feedback']", side: "right" },
+      { n: 2, at: "text:Scores by month", side: "right" },
+      { n: 3, at: "text:Latest answers", side: "right" },
+      { n: 4, at: "text:2 of 5", side: "right" },
+    ],
+  },
+  {
+    id: "A10-35", title: "Notifications: a low feedback score", as: "General Manager",
+    path: "/h/5EL/feedback",
+    steps: [{ waitFor: "text:Scores by month", ms: 30000 }, { click: "css:button[aria-label^='Notifications,']" },
+      { waitFor: "text:A low feedback score", ms: 15000 }, { wait: 500 }, { scroll: "text:A low feedback score" }, { wait: 400 }],
+    marks: [{ n: 1, at: "text:A low feedback score", side: "left" }],
   },
 ];

@@ -224,4 +224,50 @@ export const SHOTS = [
           .querySelector('a').click()` },
       { waitFor: "css:[data-invoice-sheet]", ms: SLOW }, { wait: 2500 }],
   },
+
+  /* ── After check-out: the survey on the guest's own page (D27-383 item 10) ──
+     Taken 7 Nov 2026 on a helper's own copy (fidato_prefs): the survey
+     switched on at 5EL, and two guest links with known tokens and this
+     phone's unlocks put in that copy's database (.local/seed-guest-care.sql)
+     - Kalyani Rege, who left on 7 Nov, and Lata Bhosale, arriving that day.
+     The unlock is kept on "this phone" as the page keeps it (localStorage,
+     "guest-unlock:" and the token's first twelve characters). A5-F2 sends
+     one answer; to take A5-F1 again, run the seed file first. */
+  {
+    id: "A5-F1", title: "The guest's page after check-out: the feedback survey", size: "phone",
+    path: "/g/manual-survey-token-kalyani-rege-a5-feedback-0001",
+    steps: [
+      { eval: "localStorage.setItem('guest-unlock:manual-surve', 'manual-unlock-kalyani'); setTimeout(() => location.reload(), 50)" },
+      { wait: 2500 }, { waitFor: "text:How was your stay?", ms: SLOW }, { scroll: "text:How was your stay?" }, { wait: 500 },
+    ],
+    marks: [
+      { n: 1, at: "label:Your stay overall", side: "top" },
+      { n: 2, at: "label:The room", side: "right" },
+    ],
+  },
+  {
+    id: "A5-F2", title: "The survey answered: thank you, and nothing more", size: "phone",
+    path: "/g/manual-survey-token-kalyani-rege-a5-feedback-0001",
+    steps: [
+      { waitFor: "text:How was your stay?", ms: SLOW },
+      { eval: "[...document.querySelector('[aria-label=\"Your stay overall\"]').querySelectorAll('[role=radio]')][3].click()" },
+      { eval: "[...document.querySelector('[aria-label=\"Staff\"]').querySelectorAll('[role=radio]')][4].click()" },
+      { wait: 300 }, { click: "text:Send my feedback" },
+      { waitFor: "text:Thank you. Your answer reached 5 Elements Akkalkot.", ms: SLOW },
+      { scroll: "text:Your feedback" }, { wait: 500 },
+    ],
+    marks: [{ n: 1, at: "text:Thank you. Your answer reached 5 Elements Akkalkot.", side: "bottom" }],
+  },
+  {
+    id: "A5-F3", title: "The guest's page: their own preferences", size: "phone",
+    path: "/g/manual-prefs-token-lata-bhosale-a5-preferences-01",
+    steps: [
+      { eval: "localStorage.setItem('guest-unlock:manual-prefs', 'manual-unlock-lata'); setTimeout(() => location.reload(), 50)" },
+      { wait: 2500 }, { waitFor: "text:Your preferences", ms: SLOW }, { scroll: "css:[data-guest-preferences-section]" }, { wait: 500 },
+    ],
+    marks: [
+      { n: 1, at: "text:Allergy: Peanuts", side: "top" },
+      { n: 2, at: "text:Change my preferences", side: "top" },
+    ],
+  },
 ];

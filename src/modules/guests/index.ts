@@ -34,3 +34,12 @@ export {
 /* D27-382: every adult in the room, for the check-in window, the stay panel
    and a walk-in's card. */
 export { StayCompanions } from "./components/StayCompanions";
+
+/* D27-383 item 10: a guest's preferences - the mark for the stay lists and
+   Assign room (front desk), the details for the stay panel and Guest 360, one
+   line for the housekeeping board and the restaurant's order, and the form
+   for the guest's own page (online check-in). */
+export {
+  PreferenceMark, GuestPreferences, RoomPreferences, PreferenceFields, preferenceWords,
+} from "./components/Preferences";
+export type { Preferences } from "./data/preferences";

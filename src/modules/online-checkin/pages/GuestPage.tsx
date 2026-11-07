@@ -29,6 +29,8 @@ import { DigiLockerButton } from "@/modules/online-checkin/DigiLockerButton";
 import { WakeUpSection } from "@/modules/online-checkin/WakeUpSection";
 import { GallerySection } from "@/modules/online-checkin/GallerySection";
 import { AboutTheHotel } from "@/modules/online-checkin/AboutTheHotel";
+import { PreferencesSection } from "@/modules/online-checkin/PreferencesSection";
+import { SurveySection } from "@/modules/online-checkin/SurveySection";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -359,8 +361,11 @@ function Behind(
         <ShieldCheck className="size-4 text-success shrink-0" />
         <StatusPill tone="success">Verified on this phone</StatusPill>
       </div>
+      {/* D27-383 item 10: after check-out, where the hotel asks; once a stay. */}
+      <SurveySection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
       <DetailsSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
       <IdPhotoSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
+      <PreferencesSection token={token} onUnlockGone={onUnlockGone} />
       <BillSection token={token} onUnlockGone={onUnlockGone} />
       {/* Only what this hotel has switched on (D21-63). */}
       {view.offers.length > 0 && (

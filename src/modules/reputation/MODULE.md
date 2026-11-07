@@ -154,6 +154,29 @@ Named here so the master sees it at merge:
   new section, no edit to `permissions.ts`, `navigation.ts`, `server.ts` or
   `sending.ts`.
 
+## Guest feedback (D27-383 item 10, 7 November 2026; built under D27-396)
+
+The survey on the guest's own page after check-out (online check-in's
+`SurveySection.tsx`, the door's `api/src/routes/guestSurvey.ts`, migration
+"the feedback survey") and what came back.
+
+| Menu name | Address | Page file | Who |
+|---|---|---|---|
+| Guest feedback (Guests & CRM, order 45) | `/h/:code/feedback` | `pages/Feedback.tsx` | `FEEDBACK_ROLES` - owner, admin, GM (`api/src/modules/reputation/feedbackRoles.ts`, imported by the menu's `canSee` and the server: one list) |
+
+- `GET /api/hotels/:code/feedback` (`feedback.ts`): `on` (the `feedback_survey`
+  module), the scores by month (12, averages to one decimal, null where nobody
+  scored a part) and the latest 100 answers with guest, booking, room and comment.
+- **A low score** (1 or 2, overall or any part: `lowScore`, one rule) is in the
+  bell for a week for `FEEDBACK_ROLES` (`api/src/routes/notifications.ts`).
+- **The review request carries the survey** where the module is on and the stay
+  has not answered: `data.feedback`, a fresh link to the guest's page
+  (`surveyLinkFor`, `app.guest_link_expires`). No new kind of message; n8n's
+  review wording names it (the owner's paste, CHANGELOG). Nothing reads a
+  score to decide what is sent: **no review gating**.
+- **The switch:** Settings, Property, Modules, "Feedback survey" (admin's
+  `SWITCHABLE` and `MODULE_COPY`), off until turned on (an absent row reads off).
+
 ## Not in this version
 
 Pulling reviews in from anywhere, replying to them, scoring or sentiment, and
