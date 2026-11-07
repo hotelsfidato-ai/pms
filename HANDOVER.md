@@ -847,6 +847,15 @@ npx vitest run          197 passed, 13 files
 >   charge off by default and tips, coupons, profit per dish; 263-265). Each in its own copy, database and ports.
 > - **Videos, one chapter at a time:** A7 first (no planned feature touches it), then A3, A1, A12, A13, A14; the
 >   chapters the features change wait for their wave.
+> - **7 Nov, STOPPED AGAIN at the usage limit; all helpers stopped, nothing lost.** On cp6 since: safety (f375c732),
+>   restaurant (570b9669, migrations 259-261, resetOrder fixed 62e886ee), report emails (65b81f60, 263), the book's
+>   pictures (6d2d0b9a), stock expiry and bill matching (e212f7f2, 264-265; that merge commit carries MAIN's message).
+>   The demo `fidato` is migrated to 265. **Full gates not run since wave 1.** Videos in the final folder: A1, A3,
+>   A7, A9, A13, A14. **Waiting in their copies, resume with SendMessage:** rooming lists, allotments, waitlist
+>   (fidato_groups, 271-273), minibar and checklists (fidato_care, 274-276), preferences and feedback (fidato_prefs,
+>   277-279); renumber each at its merge after MAIN's Backfill (266). Videos A0 (render cut off: re-render `--stale`)
+>   and A12 (waiting to render), both uncommitted in C:\videos. The stock copy agent-a3b07f1ca02baa195 is merged,
+>   junctions out, but the Recycle Bin refused it ("not supported"): recycle it by hand. MAIN's release-r20 copy stays.
 > - **STOPPED 6 Nov evening at the usage limit; all helpers stopped, nothing lost.** Merged: accounts (c12c58af,
 >   copy recycled; full gates NOT yet run on it). A7 remade and in the final folder (ed3c7b70). Left in their copies,
 >   to resume or finish: safety `worktree-agent-a6e66555171d09f4b` (2 commits, two-step built, not reported),
