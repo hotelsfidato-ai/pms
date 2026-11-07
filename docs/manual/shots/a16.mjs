@@ -270,7 +270,7 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:Report", side: "left" },
       { n: 2, at: "text:As on", side: "right" },
-      { n: 3, at: "text:Properties", side: "left" },
+      { n: 3, at: "css:main legend", side: "left" },
       { n: 4, at: "text:5 Elements Akkalkot", nth: 1, side: "left" },
       { n: 5, at: "text:Total", side: "left" },
       { n: 6, at: "text:PDF", side: "bottom" },
@@ -279,12 +279,15 @@ export const SHOTS = [
   {
     id: "A16-19", title: "Group reports: the total adds like with like", as: "Owner", size: "tall",
     path: "/group-reports",
-    steps: [{ waitFor: "text:PTD (month to date)", ms: 30000 }, setValue("select", 0, "monthly-statistics"),
-      { waitFor: "text:Tax is not added across GST states", ms: 30000 }, { wait: 800 }],
+    /* Restaurant sales: four figures a period, so the Tax column is on the page. */
+    steps: [{ waitFor: "text:PTD (month to date)", ms: 30000 }, setValue("select", 0, "restaurant-sales"),
+      { waitFor: "text:Tax is not added across GST states", ms: 30000 }, { wait: 800 },
+      { scroll: "text:Tax is not added across GST states" }, { wait: 400 }],
     marks: [
-      { n: 1, at: "text:Total", side: "left" },
-      { n: 2, at: "text:Tax is not added across GST states", side: "top" },
-      { n: 3, at: "text:A total adds up only like with like", side: "left" },
+      { n: 1, at: "text:TAX", side: "top" },
+      { n: 2, at: "text:Total", nth: 2, side: "left" },
+      { n: 3, at: "text:Tax is not added across GST states", side: "bottom" },
+      { n: 4, at: "text:A total adds up only like with like", side: "left" },
     ],
   },
   {
@@ -295,8 +298,8 @@ export const SHOTS = [
       { click: "text:By ₹" }, setValue("input[type=number]", 0, "500"),
       { waitFor: "text:Save at 2 properties", ms: 20000 }, { wait: 600 }],
     marks: [
-      { n: 1, at: "text:Properties", side: "left" },
-      { n: 2, at: "css:select", side: "top" },
+      { n: 1, at: "css:main legend", side: "left" },
+      { n: 2, at: "css:select", side: "bottom" },
       { n: 3, at: "text:From", side: "top" },
       { n: 4, at: "text:By ₹", side: "bottom" },
       { n: 5, at: "text:Deluxe (DLX)", side: "left" },
