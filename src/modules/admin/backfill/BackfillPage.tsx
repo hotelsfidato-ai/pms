@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { useUi } from "@/lib/ui";
-import { addDays, dateShort, moneyPrecise } from "@/lib/format";
+import { addDays, dateCompact, dateShort, moneyPrecise } from "@/lib/format";
 import { downloadCsv, reportFilename, toCsv } from "@/lib/csv";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState, DataTable, type Column,
@@ -73,7 +73,6 @@ export default function BackfillPage() {
             Kept apart from the live books: the night audit, reports, tax invoices, Form C, the cash drawers
             and Tally never count these. The hotel's own paper bill number is recorded; no new invoice is made.
           </p>
-          {!v.mayWrite && <p className="text-sm text-grey-600">You can read these. {READ_ONLY}</p>}
         </CardBody>
       </Card>
 
@@ -166,16 +165,12 @@ function Toolbar({ mayWrite, addLabel, onAdd, onExport, blocked = null }: {
   );
 }
 
-/** The trail: who entered it, the last correction, and a removal. */
-function trailWords(r: { enteredBy: string | null; changeReason: string | null; changedBy: string | null;
+/** A correction or a removal, under the line it changed (who entered it is in the CSV). */
+function trailWords(r: { changeReason: string | null; changedBy: string | null;
   removedReason: string | null; removedBy: string | null }): ReactNode {
-  return (
-    <span className="text-sm text-grey-600">
-      {r.removedReason ? `Removed by ${r.removedBy ?? DASH}: ${r.removedReason}`
-        : r.changeReason ? `Corrected by ${r.changedBy ?? DASH}: ${r.changeReason}`
-        : `Entered by ${r.enteredBy ?? DASH}`}
-    </span>
-  );
+  const said = r.removedReason ? `Removed by ${r.removedBy ?? DASH}: ${r.removedReason}`
+    : r.changeReason ? `Corrected by ${r.changedBy ?? DASH}: ${r.changeReason}` : null;
+  return said && <span className="block text-sm text-grey-600">{said}</span>;
 }
 
 function actions<T extends { removedAt: string | null }>(
@@ -195,18 +190,18 @@ const removedPill = (r: { removedAt: string | null }) =>
   r.removedAt ? <StatusPill tone="neutral">Removed</StatusPill> : null;
 
 function messageWords(s: BackfillStay): ReactNode {
-  if (!s.sendBill) return DASH;
+  if (!s.sendBill) return null;
   if (s.message?.status === "sent") return <StatusPill tone="success">Sent {s.message.at ?? ""}</StatusPill>;
   return <StatusPill tone="danger">Not sent</StatusPill>;
 }
 
 function stayColumns(v: BackfillView, onCorrect: (s: BackfillStay) => void, onRemove: (s: BackfillStay) => void): Column<BackfillStay>[] {
   return [
-    { key: "dates", header: "Dates", cell: (s) => (
-      <span className={s.removedAt ? "tabular line-through text-grey-500" : "tabular"}>
-        {dateShort(s.arrival)} – {dateShort(s.departure)}
+    { key: "dates", header: "Dates and room", cell: (s) => (
+      <span className={s.removedAt ? "tabular whitespace-nowrap line-through text-grey-500" : "tabular whitespace-nowrap"}>
+        {dateCompact(s.arrival)} – {dateShort(s.departure)}
+        <span className="block text-sm text-grey-600">Room {s.room}</span>
       </span>) },
-    { key: "room", header: "Room", cell: (s) => <span className="tabular">{s.room}</span> },
     { key: "guest", header: "Guest", cell: (s) => (
       <span className="flex flex-col">
         <span className="font-medium">{s.guestName} {removedPill(s)}</span>
@@ -214,16 +209,21 @@ function stayColumns(v: BackfillView, onCorrect: (s: BackfillStay) => void, onRe
           {ID_WORDS[s.idType] ?? s.idType} {s.idNumber ?? ""}
           {s.nationality !== "IN" && ` · ${s.nationality} · ${s.formCReference ? `Form C ${s.formCReference}` : "Form C not recorded"}`}
         </span>
+        {trailWords(s)}
       </span>) },
-    { key: "charges", header: "Room charges", numeric: true, cell: (s) => fig(s.roomCharges) },
+    /* Other charges under the room charges, so the line fits beside the menu. */
+    { key: "charges", header: "Room charges", numeric: true, cell: (s) => (
+      <span className="flex flex-col"><span>{fig(s.roomCharges)}</span>
+        {s.otherCharges !== null && (
+          <span className="text-sm text-grey-600">+ {fig(s.otherCharges)} {s.otherChargesFor}</span>)}
+      </span>) },
     { key: "gst", header: "GST", numeric: true, hideBelow: "md", cell: (s) => fig(s.gst) },
-    { key: "other", header: "Other", numeric: true, hideBelow: "lg", cell: (s) => fig(s.otherCharges) },
     { key: "paid", header: "Paid", numeric: true, hideBelow: "md",
-      cell: (s) => (s.paid === null ? DASH : `${fig(s.paid)} ${s.paidBy}`) },
-    { key: "bill", header: "Hotel's bill", hideBelow: "lg", cell: (s) => s.billNumber ?? DASH },
-    { key: "sent", header: "Bill sent", hideBelow: "xl", cell: messageWords },
-    { key: "who", header: "Entered", hideBelow: "xl", cell: trailWords },
-    { key: "act", header: "", width: "w-[150px]", cell: (s) => actions(v, s, onCorrect, onRemove) },
+      cell: (s) => (s.paid === null ? DASH : (
+        <span className="flex flex-col"><span>{fig(s.paid)}</span><span className="text-sm text-grey-600">{s.paidBy}</span></span>)) },
+    { key: "bill", header: "Hotel's bill", hideBelow: "lg", cell: (s) => (
+      <span className="flex flex-col items-end gap-1"><span className="tabular">{s.billNumber ?? DASH}</span>{messageWords(s)}</span>) },
+    { key: "act", header: "", width: "w-[160px]", cell: (s) => actions(v, s, onCorrect, onRemove) },
   ];
 }
 
@@ -231,15 +231,14 @@ function billColumns(v: BackfillView, onCorrect: (b: BackfillBill) => void, onRe
   return [
     { key: "date", header: "Date", cell: (b) => (
       <span className={b.removedAt ? "tabular line-through text-grey-500" : "tabular"}>{dateShort(b.billDate)}</span>) },
-    { key: "outlet", header: "Restaurant", cell: (b) => <span>{b.outlet} {removedPill(b)}</span> },
+    { key: "outlet", header: "Restaurant", cell: (b) => <span>{b.outlet} {removedPill(b)}{trailWords(b)}</span> },
     { key: "number", header: "Hotel's bill", cell: (b) => b.billNumber ?? DASH },
     { key: "amount", header: "Before GST", numeric: true, hideBelow: "md", cell: (b) => fig(b.amount) },
     { key: "gst", header: "GST", numeric: true, hideBelow: "md", cell: (b) => fig(b.gst) },
     { key: "total", header: "Total", numeric: true, cell: (b) => fig(b.total) },
     { key: "paid", header: "Paid by", hideBelow: "lg", cell: (b) => b.paidBy ?? DASH },
     { key: "note", header: "Note", hideBelow: "xl", cell: (b) => b.note ?? DASH },
-    { key: "who", header: "Entered", hideBelow: "xl", cell: trailWords },
-    { key: "act", header: "", width: "w-[150px]", cell: (b) => actions(v, b, onCorrect, onRemove) },
+    { key: "act", header: "", cell: (b) => actions(v, b, onCorrect, onRemove) },
   ];
 }
 
@@ -249,10 +248,9 @@ function cashColumns(v: BackfillView, onCorrect: (c: BackfillCash) => void, onRe
       <span className={c.removedAt ? "tabular line-through text-grey-500" : "tabular"}>{dateShort(c.cashDate)}</span>) },
     { key: "dir", header: "In or out", cell: (c) => <span>{c.direction === "in" ? "Money in" : "Money out"} {removedPill(c)}</span> },
     { key: "amount", header: "Amount", numeric: true, cell: (c) => fig(c.amount) },
-    { key: "purpose", header: "What for", cell: (c) => c.purpose },
+    { key: "purpose", header: "What for", cell: (c) => <span>{c.purpose}{trailWords(c)}</span> },
     { key: "person", header: "Who", hideBelow: "md", cell: (c) => c.person },
-    { key: "who", header: "Entered", hideBelow: "xl", cell: trailWords },
-    { key: "act", header: "", width: "w-[150px]", cell: (c) => actions(v, c, onCorrect, onRemove) },
+    { key: "act", header: "", cell: (c) => actions(v, c, onCorrect, onRemove) },
   ];
 }
 
@@ -264,7 +262,7 @@ function Summary({ v, onExport }: { v: BackfillView; onExport: (csv: string) => 
   const total = { date: "Total", ...totalOf(days) } as DayRow;
   const rows = days.length ? [...days, total] : [];
   const columns: Column<DayRow>[] = [
-    { key: "date", header: "Day", cell: (r) => <span className={r.date === "Total" ? "font-medium" : "tabular"}>
+    { key: "date", header: "Day", cell: (r) => <span className={r.date === "Total" ? "font-medium" : "tabular whitespace-nowrap"}>
       {r.date === "Total" ? "Total" : dateShort(r.date)}</span> },
     { key: "rooms", header: "Rooms sold", numeric: true, cell: (r) => r.roomsSold },
     { key: "charges", header: "Room charges", numeric: true, cell: (r) => fig(r.roomCharges) },
@@ -272,7 +270,7 @@ function Summary({ v, onExport }: { v: BackfillView; onExport: (csv: string) => 
     { key: "other", header: "Other charges", numeric: true, hideBelow: "md", cell: (r) => fig(r.otherCharges) },
     { key: "food", header: "Restaurant sales", numeric: true, hideBelow: "md", cell: (r) => fig(r.restaurantSales) },
     { key: "foodGst", header: "Restaurant GST", numeric: true, hideBelow: "lg", cell: (r) => fig(r.restaurantGst) },
-    ...methods.map((m): Column<DayRow> => ({ key: `pay-${m}`, header: m, numeric: true, hideBelow: "lg",
+    ...methods.map((m): Column<DayRow> => ({ key: `pay-${m}`, header: `Paid by ${m}`, numeric: true, hideBelow: "lg",
       cell: (r) => fig(r.payments[m] ?? null) })),
     { key: "in", header: "Cash in", numeric: true, hideBelow: "md", cell: (r) => fig(r.cashIn) },
     { key: "out", header: "Cash out", numeric: true, hideBelow: "md", cell: (r) => fig(r.cashOut) },
@@ -439,7 +437,7 @@ function StayDialog({ v, hotelId, row, onClose, onSaved }: {
         {(p) => <Input {...fieldProps(p)} type="email" value={f.email} onChange={(e) => { set("email")(e.target.value); setChosen(null); }} />}
       </Field>
       {!row && (
-        <div className="sm:col-span-2">
+        <div className="sm:col-span-2 empty:hidden">
           <ReturningGuest hotelId={hotelId} phone={f.phone} email={f.email} chosen={chosen} onChoose={setChosen} />
         </div>
       )}
@@ -455,7 +453,7 @@ function StayDialog({ v, hotelId, row, onClose, onSaved }: {
           </NativeSelect>
         )}
       </Field>
-      <Field label={foreign ? "Passport number" : "ID number"} required={!row}
+      <Field label={foreign ? "Passport number" : "ID number"} required={!row} className={foreign ? undefined : "sm:col-span-2"}
         hint={row ? `Blank keeps ${row.idNumber ?? "the one on file"}.` : undefined}>
         {(p) => <Input {...fieldProps(p)} value={f.idNumber} onChange={(e) => set("idNumber")(e.target.value)} />}
       </Field>
@@ -464,7 +462,8 @@ function StayDialog({ v, hotelId, row, onClose, onSaved }: {
           <Field label="Visa or OCI number" required hint="Not asked of a citizen of Nepal or Bhutan.">
             {(p) => <Input {...fieldProps(p)} value={f.visaNumber} onChange={(e) => set("visaNumber")(e.target.value)} />}
           </Field>
-          <Field label="Form C reference" hint="If it was filed outside the system. Blank: Form C not recorded.">
+          <Field label="Form C reference" className="sm:col-span-2"
+            hint="If it was filed outside the system. Blank: Form C not recorded.">
             {(p) => <Input {...fieldProps(p)} value={f.formCReference} onChange={(e) => set("formCReference")(e.target.value)} />}
           </Field>
         </>

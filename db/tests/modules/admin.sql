@@ -1563,6 +1563,8 @@ declare
   first_day date; today date; s1 uuid; s2 uuid; v text; n int;
 begin
   begin
+    select id into owner from staff where email = 'owner@fidato.in';
+    perform set_config('app.user_id', owner::text, true);
     h     := app.provision_property_unchecked('BFL', 'Backfill Test', 'Nowhere');
     other := app.provision_property_unchecked('BFM', 'Backfill Other', 'Nowhere');
     select id into rt from room_types where hotel_id = h and code = 'STD';
@@ -1573,7 +1575,6 @@ begin
     today := (select (now() at time zone timezone)::date from hotels where id = h);
     first_day := today - 10;
     update hotels set business_date = first_day where id = h;
-    select id into owner from staff where email = 'owner@fidato.in';
     insert into staff (email, full_name) values ('bfl-gm@fidato.in', 'Backfill GM') returning id into gm;
     insert into staff (email, full_name) values ('bfl-clerk@fidato.in', 'Backfill Clerk') returning id into clerk;
     insert into staff (email, full_name) values ('bfl-acct@fidato.in', 'Backfill Accountant') returning id into acct;

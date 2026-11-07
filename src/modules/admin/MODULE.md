@@ -219,6 +219,39 @@ properties and people.
   (`flows/CommissioningCard.tsx`). The two calls are in `data/setup.ts`
   (`GET /api/hotels/:code/setup`, `PUT /api/hotels/:code/setup/:stepId`); the
   server decides every state. Tests: `setupWizard.test.tsx`.
+- **Backfill data (the owner's D27-398, 7 November).** What happened before a
+  hotel's first day, from its paper records, in a register of its own
+  (migration "backfill data": `backfill_stays`, `backfill_restaurant_bills`,
+  `backfill_cash`) - never `reservations`, `folios`, `folio_postings`,
+  `pos_orders`, `cashier_shifts` or `invoices`, so no live screen, report,
+  night audit, Form C list, drawer or Tally counts it. The page is
+  `/settings/property/backfill-data` (`backfill.settings.ts`, after Set up this
+  hotel; `backfill/BackfillPage.tsx`): the first day, tabs Stays, Restaurant
+  bills, Cash and Day by day (`backfill/summary.ts`: rooms sold each night, a
+  stay's money on its last night), Add / Correct / Remove (a reason for each;
+  a removed line stays, struck through) and a CSV of each tab. The Accountant,
+  who has no Settings, reads the same page at `/h/:code/backfill` (Find a
+  screen: "Backfilled records", nav.ts; canSee = `invoice` approve and no
+  `setting`). Calls `data/backfill.ts`; server `api/src/modules/admin/backfill.ts`:
+  `GET /:code/backfill`, `POST /:code/backfill/:kind`, `PUT
+  /:code/backfill/:kind/:id`, `POST /:code/backfill/:kind/:id/remove` (kind
+  stays, bills, cash; roleGate: write `reservation` approve - owner, Admin, GM;
+  read `invoice` approve - and the Accountant; the database asks
+  `app.manages_hotel` / `app.reads_backfill` in row security). The date rule is
+  ONE function, `app.backfill_refusal` over `app.backfill_first_day` (the
+  earlier of `hotels.business_date` and the first night audit); the tables'
+  guard asks it too, with one room a night (an exclusion constraint), a reason
+  for every correction and a removed row frozen. The guest is the desk's
+  suggestion (`ReturningGuest`, checked by `app.use_returning_guest`) or a new
+  guest record; Guest 360 lists the stay as "Backfilled" (`app.guest_360`,
+  crm's word and its dash). The send tick, on Add only: one email, kind
+  `backfill-bill` (the CRS workflow's draft, `deploy/n8n/pms-send-crs.json`:
+  the hotel's bill number, never "tax invoice"), through `sending.ts`, so in
+  `messages_sent` about `backfill-stay`. ID and visa numbers go to the writers
+  only (D25-38); an Aadhaar is its last four. The full reset keeps a guest with
+  a backfilled stay (`owner_reset.orphans`); a test hotel's Reset clears the
+  three (its trade). Tests: `backfill.test.tsx`; `api/test/modules/admin/backfill.test.ts`;
+  `db/tests/modules/admin.sql` ("backfill data").
 
 ---
 

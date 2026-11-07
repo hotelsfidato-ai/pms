@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    405 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    408 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -10411,7 +10411,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:20%">Group</th><th>Pages (↗ opens a Front office screen)</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
-      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
+      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Backfill data</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
       <tr><td>Rooms</td><td><span class="ui">Room types</span></td><td>A17.5</td></tr>
       <tr><td>Rates and tax</td><td><span class="ui">Rates</span> ↗ (A15), <span class="ui">Rate plans</span>, <span class="ui">Meal plans</span>, <span class="ui">Taxes</span></td><td>A17.6, A17.7</td></tr>
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Room discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
@@ -10598,6 +10598,94 @@ figure.shot.phone img { max-width: 72mm; }
       <li>The invoice series is not a step. It stays on the Profile checklist, above.</li>
       <li>The GM cannot open Modules or Integrations (A17.1), so on steps 13 and 17 those buttons are grey for them, with the line about the role. The GM may still mark step 13 <span class="ui">Completed</span>.</li>
     </ul>
+  </div>
+
+  <h3>Backfill data: what happened before the first day</h3>
+  <p>A hotel that ran on paper before it came onto the system keeps the essentials of those days here: each stay, each restaurant bill and the cash in and out. <span class="ui">Backfill data</span> is in the Property group of the Settings menu, under <span class="ui">Set up this hotel</span>. The top of the page says the hotel's first day in the system, <span class="msg">“First day in the system: 1 Nov 2026.”</span> Only days before it are entered here; from that day on, the normal screens are used.</p>
+  <p>It is a register of its own. Nothing here is a booking, a bill, a payment or an invoice, so the night audit, the reports, the tax invoice numbers, Form C, the cash drawers and Tally never count it, and nothing on the live screens changes. The one exception is the guest: a backfilled guest is found or added in the guests' records, so the desk recognises them next time, and Guest 360 lists the stay as <span class="ui">Backfilled</span> (A10).</p>
+
+  <figure class="shot" id="fig-A17-56">
+    <img src="img/A17-56.png" alt="Backfill data: the first day, the four tabs Stays, Restaurant bills, Cash and Day by day, Add a stay and Export CSV, and the list of stays">
+    <figcaption><b>Figure A17-56.</b> Backfill data, the Stays tab.</figcaption>
+    <ol class="callouts">
+      <li>The hotel's first day in the system: only days before it are entered</li>
+      <li>The four tabs</li>
+      <li>Add a stay</li>
+      <li>Export CSV: the tab as a spreadsheet</li>
+      <li>A stay, with More options: Correct and Remove</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:22%">Tab</th><th>What each line holds</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Stays</span></td><td>The guest's name, phone, email (optional) and nationality; the ID and its number; for a foreign guest the passport, the visa or OCI number and, if it was filed outside the system, the Form C reference (none: <span class="msg">“Form C not recorded”</span>); the room, arrival and departure, adults and children; the rate a night, room charges, GST and other charges (one figure, with a word on what); what was paid and how; and the hotel's own bill number.</td></tr>
+      <tr><td><span class="ui">Restaurant bills</span></td><td>The restaurant, the date, the hotel's bill number, the amount before GST, the GST, the total, how it was paid, and a note.</td></tr>
+      <tr><td><span class="ui">Cash</span></td><td>The date, money in or out, the amount, what it was for, and who paid it in or took it.</td></tr>
+      <tr><td><span class="ui">Day by day</span></td><td>One line a day: rooms sold, room charges, GST, other charges, restaurant sales and their GST, what was paid by each payment method, cash in and cash out, and a <span class="ui">Total</span> line. Rooms sold count each night of a stay; a stay's charges and payment count on its last night. Removed lines are left out.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>To add a stay</h4>
+  <ol class="steps">
+    <li>On the <span class="ui">Stays</span> tab, tap <span class="ui">Add a stay</span>.</li>
+    <li>Type the guest's name, and their phone or email. If the guests' records already hold that phone or email, a line offers the person by name, as on New booking: tap <span class="ui">Same person</span> if it is them. Otherwise a new guest record is made.</li>
+    <li>Choose the ID and type its number. For a foreign guest (any nationality but IN) the ID is the passport, and the visa or OCI number is asked too, except of a citizen of Nepal or Bhutan.</li>
+    <li>Choose the room and the dates. The departure is the hotel's first day at the latest: a guest still in on the first day is checked in on the normal screens.</li>
+    <li>Type the figures from the hotel's paper bill. Leave a figure blank if it is not known: it shows as a dash, never as a zero.</li>
+    <li>Tick <span class="ui">Send the guest their bill and thank-you</span> only if the guest should get it (below), then tap <span class="ui">Save</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A17-57">
+    <img src="img/A17-57.png" alt="The lower half of the Add a stay window: the dates, the figures, how it was paid, the hotel's bill number and the send tick">
+    <figcaption><b>Figure A17-57.</b> Add a stay, its lower half. Above it are the guest and the ID.</figcaption>
+    <ol class="callouts">
+      <li>The dates: the departure is the first day at the latest</li>
+      <li>The figures: a blank one is a dash</li>
+      <li>How it was paid: one of the hotel's payment methods</li>
+      <li>The hotel's own bill number</li>
+      <li>The send tick, with what it does or why it cannot</li>
+    </ol>
+  </figure>
+
+  <p><b>The send tick.</b> <span class="ui">Send the guest their bill and thank-you</span> is off unless ticked. Ticked, the guest gets one email when the stay is saved: thank you for staying, the dates, the room, the figures and the hotel's own bill number. It is never called a tax invoice, and a correction never sends it again. It goes by email only, so it needs the guest's email; it is grey, with the reason under it, when the guest has no email or when sending is not set up at the hotel (<span class="msg">“Sending is not set up yet. …”</span>). The <span class="ui">Bill sent</span> column then says <span class="ui">Sent</span> or <span class="ui">Not sent</span>.</p>
+
+  <h4>To correct or remove a line</h4>
+  <ol class="steps">
+    <li>On the line, tap <span class="ui">More options</span>, then <span class="ui">Correct</span> or <span class="ui">Remove</span>.</li>
+    <li>Change what was wrong, or say nothing more than why it goes. Both ask <span class="ui">Why it is being corrected</span> or <span class="ui">Why it is being removed</span>, and <span class="ui">Save</span> or <span class="ui">Remove</span> waits until a reason is typed.</li>
+  </ol>
+  <p>A removed line stays on the list, struck through and marked <span class="ui">Removed</span>, with who removed it and why, and it no longer counts in <span class="ui">Day by day</span>. It is not changed again; if it was right after all, add it again. Every addition, correction and removal is in the audit log (A17.13). Correcting a stay changes this register only: the guest's own record is corrected on Guest 360 (A10).</p>
+
+  <h4>Who</h4>
+  <ul>
+    <li><b>The owner, an Admin and the GM</b> add, correct and remove.</li>
+    <li><b>The Accountant</b> reads the same page, from Find a screen as <span class="ui">Backfilled records</span>, without the guests' ID numbers (those are for the people who check guests in). <span class="ui">Add</span>, <span class="ui">Correct</span> and <span class="ui">Remove</span> are grey for them: <span class="msg">“Only the owner, an administrator or the general manager enters and corrects these.”</span></li>
+    <li>Nobody else opens it.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Refused, with the reason:</b> a day on or after the first day (<span class="msg">“Only days before the hotel's first day, 1 Nov 2026, are backfilled. From that day on, use the normal screens.”</span>); a stay still in on the first day; a date in the future; and a second stay in the same room on the same night, with the first one named (<span class="msg">“Room 101 is already backfilled for …”</span>).</li>
+      <li>Type the hotel's own bill number from the paper bill. The system makes no tax invoice for a past day, so its own invoice numbers stay in order.</li>
+      <li>Nothing here is wiped by any button, and nothing about how a hotel starts changes.</li>
+    </ul>
+  </div>
+
+  <figure class="shot" id="fig-A17-58">
+    <img src="img/A17-58.png" alt="Day by day: one line a day with rooms sold, room charges, GST, restaurant sales, payments by method, cash in and out, and the Total line">
+    <figcaption><b>Figure A17-58.</b> Day by day, with its Export CSV.</figcaption>
+    <ol class="callouts">
+      <li>Export CSV: the summary as a spreadsheet</li>
+      <li>One day</li>
+      <li>The Total line</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Backfill data as a Settings section, its essentials, the send tick and the hotel's own bill number: <span class="d">D27-398</span>. No tax invoice for a past day keeps the invoice series in order (CGST Rules, rule 46). Where the owner did not say (the register of its own, the first day's rule, a stay's figures on its last night, the email only): <span class="d">D27-396</span>.</p>
   </div>
 
   <h3>To change the hotel's details</h3>

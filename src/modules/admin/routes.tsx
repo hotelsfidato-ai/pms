@@ -1,7 +1,8 @@
 import { Navigate, Route, useLocation } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import { IS_DEV } from "@/components/app/navigation";
+import { IS_DEV, mayReach } from "@/components/app/navigation";
+import { useRole } from "@/lib/session";
 import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
@@ -20,6 +21,16 @@ import BackfillPage from "@/modules/admin/backfill/BackfillPage";
    with it. */
 function SetupForHotel() {
   return <Navigate to={{ pathname: SETUP_PAGE, search: useLocation().search }} replace />;
+}
+
+/* D27-398: whoever has Settings is sent to Backfill data there; the
+   Accountant reads it here; anybody else is refused, with the reason. */
+const BACKFILL_PAGE = "/settings/property/backfill-data";
+function BackfillForHotel() {
+  const role = useRole();
+  return mayReach(role, BACKFILL_PAGE) ? <Navigate to={BACKFILL_PAGE} replace /> : (
+    <RequireAccess path="/h/:code/backfill" resource="invoice"><BackfillPage /></RequireAccess>
+  );
 }
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
@@ -148,14 +159,7 @@ export const routes = (
     />
     {/* D27-398: Backfill data for the Accountant, who reads it and has no
         Settings (nav.ts). The same page; the server says it is read-only. */}
-    <Route
-      path="/h/:code/backfill"
-      element={
-        <RequireAccess path="/h/:code/backfill" resource="invoice">
-          <PropertyScope /><BackfillPage />
-        </RequireAccess>
-      }
-    />
+    <Route path="/h/:code/backfill" element={<><PropertyScope /><BackfillForHotel /></>} />
     {/* Two screens Settings replaced: their addresses open the console.
         Configuration was where the refusals sent people to set GST. */}
     <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />

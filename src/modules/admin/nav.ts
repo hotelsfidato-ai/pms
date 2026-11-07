@@ -42,7 +42,7 @@ export const nav: ServiceNavEntry[] = [
      Accountant reads it and has no Settings, so reads it here, from Find a
      screen: whoever reads it (`invoice` approve, as the server's read rule)
      and cannot open Settings. */
-  { section: "finance", order: 90, listed: false,
+  { section: "finance", order: 97, listed: false,
     label: "Backfilled records", to: "/h/:code/backfill", icon: CalendarClock, resource: "invoice",
     keywords: ["backfill", "before go live", "past days", "paper bills"],
     canSee: (role) => can(role, "approve", "invoice") && !canAccess(role, "setting") },

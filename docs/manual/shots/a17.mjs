@@ -491,6 +491,48 @@ export const SHOTS = [
     ],
   },
 
+  /* D27-398: Settings › Backfill data. Needs a few backfilled lines on the
+     demo hotel first (any added through the page); the Add window is
+     filled and pictured, then closed with Cancel - nothing is saved. */
+  {
+    id: "A17-56", title: "Backfill data: the Stays tab", as: "Owner",
+    path: "/settings/property/backfill-data",
+    steps: [{ waitFor: "text:First day in the system" }, LOADED, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:First day in the system", side: "bottom" },
+      { n: 2, at: "css:[role=tablist]", side: "bottom" },
+      { n: 3, at: "text:Add a stay", side: "bottom" },
+      { n: 4, at: "text:Export CSV", side: "right" },
+      { n: 5, at: "text:More options", side: "left" },
+    ],
+  },
+  /* The window's lower half: the dates, the figures and the send tick
+     (the guest and the ID above it are as on New booking). */
+  {
+    id: "A17-57", title: "Backfill data: Add a stay", as: "Owner",
+    path: "/settings/property/backfill-data",
+    steps: [{ waitFor: "text:First day in the system" }, LOADED, { click: "text:Add a stay" }, { waitFor: DIALOG },
+            { scroll: "text:Send the guest their bill and thank-you" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:Arrival", side: "left" },
+      { n: 2, at: "text:Room charges", side: "left" },
+      { n: 3, at: "text:Paid by", side: "right" },
+      { n: 4, at: "text:The hotel's bill number", side: "left" },
+      { n: 5, at: "text:Send the guest their bill and thank-you", side: "right" },
+    ],
+  },
+  {
+    id: "A17-58", title: "Backfill data: Day by day", as: "Owner", size: "wall",
+    path: "/settings/property/backfill-data",
+    steps: [{ waitFor: "text:First day in the system" }, LOADED, { click: "css:[role=tab]:nth-child(4)" },
+            { waitFor: "text:Rooms sold count each night" }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "text:Export CSV", side: "bottom" },
+      { n: 2, at: "css:table tbody tr", side: "left" },
+      { n: 3, at: "text:Total", side: "left" },
+    ],
+  },
+
   /* ── Messages ────────────────────────────────────────────────────── */
   {
     id: "A17-40", title: "Guest messages on/off", as: "Owner",

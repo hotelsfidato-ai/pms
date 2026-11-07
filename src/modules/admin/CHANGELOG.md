@@ -11,6 +11,87 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Backfill data: what happened before a hotel's first day (D27-398, D27-396)
+
+**Asked for:** the owner's "option to backfill data for all the key parameters ... bookings, POS and cash", a Settings
+section of its own that takes the essentials and the guest, with an option to send or not (`.local/build-all/backfill.md`).
+Built without asking (D27-396).
+
+**Shipped**
+- Migration "backfill data" (written 264, renamed **266** on the master's word; refer to it by name):
+  `backfill_stays`, `backfill_restaurant_bills`, `backfill_cash` - each with row security (read
+  `app.reads_backfill`: owner, Admin, GM, and the Accountant; write `app.manages_hotel`), no delete for pms_app, the
+  audit trigger, and one guard (`app.backfill_guard`): the date rule, the room or restaurant is the hotel's own, a
+  correction needs its reason, a removed row is frozen, who and when are the database's. One room a night is an
+  exclusion constraint. `app.backfill_first_day` (the earlier of `hotels.business_date` and the first night audit)
+  and `app.backfill_refusal` (the one date rule, in words). Patched in place: `app.test_hotel_classes` (the three as
+  a test hotel's trade, 262's way). Replaced: `owner_reset.orphans` (253's, plus one line: a guest with a backfilled
+  stay is kept, or the full reset would stop on the new key) and `app.guest_360` (212's, plus the backfilled stays in
+  its list as `backfilled`; its totals stay the live stays'). No column on `hotels`.
+- `api/src/modules/admin/backfill.ts`: `GET /:code/backfill`, `POST /:code/backfill/:kind`, `PUT
+  /:code/backfill/:kind/:id`, `POST /:code/backfill/:kind/:id/remove`; roleGate rules `BACKFILL` (`reservation`
+  approve) and `BACKFILL_READ` (`invoice` approve). Activity names the three tables.
+- The page: Settings › Property › **Backfill data** (`backfill.settings.ts`, `backfill/BackfillPage.tsx`,
+  `backfill/summary.ts`, `data/backfill.ts`); the Accountant's read-only address `/h/:code/backfill` ("Backfilled
+  records" in Find a screen; anybody with Settings is sent to the Settings page). Guest 360 says "Backfilled", and a
+  dash for a stay with no figure (crm, two lines).
+- The CRS workflow's email `backfill-bill` (`deploy/n8n/pms-send-crs.json`, one draft added; **the owner re-imports
+  the workflow before a backfilled bill can go**; until then n8n refuses the kind and the stay says "Not sent").
+- Manual A17.2, "Backfill data: what happened before the first day", pictures A17-56 to A17-58.
+
+**Decided under D27-396** (the owner did not say):
+- **Where:** Property group, after Set up this hotel, because it is part of bringing a hotel onto the system.
+- **The first day:** the earlier of `hotels.business_date` and the first night audit's day (any run), because the
+  night audit never moves `hotels.business_date` and a day must be live or backfilled, never both. The D27-393
+  step S6 sets `hotels.business_date`, so it is read through it.
+- **Message order:** "Only days before the hotel's first day ..." is said before "A date in the future ...", which
+  is reached only when a hotel's first day is still to come.
+- **A stay is at least one night** (departure after arrival); a day use is entered as its night.
+- **ID is required** (type and number) for every stay, because the register is the hotel's guest record; a foreign
+  guest's ID is the passport, with the visa or OCI number (none for Nepal and Bhutan, as Form III).
+- **The ID lives on the register row only:** `guest_documents` is not written, so a past stay's paper never
+  overwrites a returning guest's current document.
+- **The guest:** the desk's own suggestion (`ReturningGuest`, "Same person" is the person's choice, D21-2) checked
+  by `app.use_returning_guest`; otherwise a new guest record (name, phone, email, nationality). A correction changes
+  the register only; the guest record is corrected on Guest 360.
+- **Visits are not changed:** `app.guest_visits` (the desk's "stayed with the group N times") still counts live stays
+  only, because the brief keeps live screens exactly as they are; Guest 360's list shows the backfilled stay.
+- **One payment per stay** (amount and method), because the brief asks "what was paid and how"; the method is one of
+  the hotel's payment methods, stored by its word.
+- **Restaurant bills:** amount, GST and total are typed as on the paper bill and not checked against each other
+  (round-offs and service charges exist).
+- **Cash:** amount, what for and who are required.
+- **The summary:** rooms sold each night of a stay; a stay's room charges, GST, other charges and payment on its
+  LAST NIGHT, because the paper bill is one document made at check-out and the last night keeps every figure on a
+  backfilled day; a restaurant bill's total under its payment method; removed lines left out; a Total line.
+- **The send tick:** by email only, because WhatsApp goes only through the CRS's approved templates (D27-266) and
+  the live tax invoice goes by email only (D27-284); on Add only, so it is sent once and a correction never sends;
+  greyed with the reason when sending is not set up (`canSend`), at a test hotel, or with no email typed. The
+  hotel's guest-message switches are not asked, because this is sent only when a person ticks it, as the desk's
+  Send invoice ignores them. A ticked save that cannot send is refused; one whose send fails is saved, and says so.
+- **Who sees ID numbers:** the writers only (D25-38: the people who check guests in), so the Accountant reads the
+  register without them; an Aadhaar shows its last four (D25-37).
+- **The Accountant's screen:** a Front office address found by Find a screen, because the Settings space is closed
+  to the Accountant and opening it is a change of role the owner has not made.
+
+**Proved** (run here, 7 November)
+- DB: `.local/dbtest.sh` - migration applied twice on `fidato_backfill`, the "backfill data" block of
+  `db/tests/modules/admin.sql`: 23 of 23, FAILED=0, exit 0.
+- API: `bash scripts/with-test-db.sh test/modules/admin/backfill.test.ts test/roleGate.test.ts test/resetOrder.test.ts
+  test/modules/admin/activity.test.ts`: 100 of 100, exit 0. Workflow: `workflows.test.ts` 35 of 35.
+- Web: `backfill.test.tsx` 7 of 7; navigation (25), settings console, spaces, admin, setup wizard, crm, boundaries.
+- Seen in the browser pane (page text; screenshots time out while the pane is hidden): the Owner's page, the four
+  tabs, the Day by day figures by hand, the refusal of a stay still in on the first day, phone width as cards with
+  no sideways scroll, the Accountant's read-only page without ID numbers, the Owner sent from `/h/5EL/backfill` to
+  Settings.
+
+**Left open**
+- The owner re-imports `deploy/n8n/pms-send-crs.json` before a backfilled bill can be emailed.
+- `src/test/migrationNumbers.test.ts` fails in this copy on the gap (263 to 265 are other chats'); the master
+  renumbers at merge.
+
+---
+
 ## 2026-11-06 · Two-step sign-in; Shimla and Amrapali can never be reset; staging and standby steps (D27-384, D27-396)
 
 **Asked for:** the safety work the owner put before every feature (D27-384), the parts that cost nothing, built
