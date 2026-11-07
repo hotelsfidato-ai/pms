@@ -6561,6 +6561,17 @@ copy will see of theirs.**
 
 ---
 
+### 471 · MINE: my commit in the main checkout closed the other master's merge (7 November)
+
+Two master chats share `D:\fidato pms`. The build-all master had its stock merge staged there (MERGE_HEAD set, 81
+files staged). I ran `git add HANDOVER.md && git commit -m ...`, and git made my commit THAT merge: e212f7f2, parents
+6d2d0b9a and 3e5a49d8, with my message on their 81 files. Nothing was lost (the other master checked every renumbered
+file) and history is left as it is. **The rule:** before any commit in the main checkout, read `git status` and look
+for `.git/MERGE_HEAD` or staged files that are not mine; commit by explicit path (`git commit <my files> -m ...`), so
+nobody else's staged work rides along.
+
+---
+
 ### 470 · A helper's: NOT over a comparison with a nullable column let a charge through (6 November)
 
 The D27-397 helper's Undo check-in had to refuse while any charge other than the check-in's own night stands on the
