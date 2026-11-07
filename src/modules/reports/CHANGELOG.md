@@ -86,6 +86,9 @@ offered which properties, the two menu entries for the owner of two, a revenue m
 somebody at one) and `manual.test.ts`. Pictures A16-18 (the Manager report for three), A16-19 (Restaurant sales: four
 figures a period, so the Tax column and its dashed totals are on the page) and A16-20 (the rate change) taken on
 CDP 9411 after loading `docs/manual/shots/a16-group.sql`; manual built.
+API, the full suite through dbq (17:32-18:40, beside the web suite): 253 files, 3,219 tests, 3 failed - the channel
+manager's `suAvailability.test.ts` "a year" pair (timed out at 20 s) and `testHotels.test.ts`'s voucher text (empty) -
+none in a file this work touches; the two files alone: 87 tests, exit 0. They failed under load only.
 
 **Left open.** Nothing of this item.
 
