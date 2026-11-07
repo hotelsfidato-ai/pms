@@ -81,7 +81,13 @@ every column); as the revenue manager (5EL and Shimla) only those two offered, M
 at no property"; as a GM at one property, not in the menu and "This page is not part of your role"; at 375 px, no
 sideways page.
 
-**Left open.** The pictures A16-18 to A16-20 and the web suite wait for the PC (the master's release run).
+Web: `npx vitest run` 237 files, 1580 tests, exit 0 (18:00), with `src/modules/reports/groupReports.test.ts` (5: who is
+offered which properties, the two menu entries for the owner of two, a revenue manager over two, a Viewer, and not for
+somebody at one) and `manual.test.ts`. Pictures A16-18 (the Manager report for three), A16-19 (Restaurant sales: four
+figures a period, so the Tax column and its dashed totals are on the page) and A16-20 (the rate change) taken on
+CDP 9411 after loading `docs/manual/shots/a16-group.sql`; manual built.
+
+**Left open.** Nothing of this item.
 
 ## 2026-11-07 · Email any report, and reports on a schedule (D27-383 item 5)
 
