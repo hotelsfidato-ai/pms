@@ -1,5 +1,6 @@
 import {
   AlertTriangle, PackageX, TrendingUp, TrendingDown, Trash2, Truck, IndianRupee, ClipboardList,
+  CalendarX, CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { IconChip } from "@/components/ui";
@@ -11,7 +12,7 @@ import { TILES, type Tile } from "@/modules/stores/lib/tiles";
    row scrolls inside itself, snapping. */
 
 const ICON: Record<Tile, typeof Truck> = {
-  below: AlertTriangle, runOut: PackageX, received: TrendingUp, issued: TrendingDown,
+  expired: CalendarX, expiring: CalendarClock, below: AlertTriangle, runOut: PackageX, received: TrendingUp, issued: TrendingDown,
   wasted: Trash2, awaiting: Truck, notValued: IndianRupee, notCounted: ClipboardList,
 };
 
@@ -22,7 +23,7 @@ export function StoreTiles({ counts, picked, onPick }: {
     <div
       role="group"
       aria-label="Filter the store"
-      className="mb-5 grid grid-cols-4 xl:grid-cols-8 gap-2
+      className="mb-5 grid grid-cols-5 gap-2
                  max-sm:flex max-sm:overflow-x-auto max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-5
                  max-sm:-mx-5 max-sm:px-5 max-sm:py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
                  max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-24px),transparent)]"

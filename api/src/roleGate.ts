@@ -688,6 +688,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
   [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/counts`]: own("stores/stockGrants.ts"),
+  [`PUT ${H}/stores/expiry-warning`]: own("stores/stores.ts: WARNING_SETTERS"),  // D27-383 item 11
 
   /* housekeeping */
   [`PUT ${H}/rooms/:number/housekeeping`]: ROOM_STATE,

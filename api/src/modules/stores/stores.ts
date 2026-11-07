@@ -3,13 +3,14 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import {
-  mayStock, actionForKind, isInventoryManagerAt, STOCK_REFUSED, type StockAction,
+  mayStock, actionForKind, isInventoryManagerAt, holdsRoleAt, STOCK_REFUSED, type StockAction,
 } from "./stockGrants.ts";
 import { priceProblem } from "../../validate.ts";
 import { can, type Role } from "../../permissions.ts";
 import { awaitingDelivery } from "../purchasing/index.ts";
 import { outletSales } from "../pos/index.ts";
 import { dailyFigures } from "../reports/index.ts";
+import { expiryAlerts, isWarnDays } from "./expiry.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -577,9 +578,18 @@ stores.get("/:code/stores", async (c) => {
       "select id::text, name from pos_outlets where hotel_id = $1 and is_active order by name",
       [hotelId]);
 
+    /* EXPIRY (D27-383 item 11): what is past its use-by, or within the
+       hotel's warning, and still on a shelf - per item, per store. */
+    const expiry = await expiryAlerts(client, hotelId);
+
     return {
       outlets,
       businessDate,
+      /* The warning period, the property's calendar day it counts from, and
+         whether this person may change it - the server's answer, so the
+         screen and the PUT cannot disagree. */
+      expiry: { warnDays: expiry.warnDays, today: expiry.today,
+                mayChange: await holdsRoleAt(client, hotelId, WARNING_SETTERS) },
       people: people.filter((p) => p.name),
       stores: places
         .filter((p) => p.is_active || holding.has(p.id))
@@ -647,6 +657,10 @@ stores.get("/:code/stores", async (c) => {
           today: todayByItem.get(r.id) ?? {},
           lastCounted: countedByItem.get(r.id) ?? {},
           onOrder: orderedByItem.get(r.id) ?? {},
+          /* Each delivery near or past its use-by, by store, oldest first. */
+          expiry: expiry.alerts.filter((a) => a.itemId === r.id).map((a) => ({
+            storeId: a.storeId, quantity: a.quantity, useBy: a.useBy, receivedOn: a.receivedOn, expired: a.expired,
+          })),
         };
       }),
     };
@@ -655,6 +669,33 @@ stores.get("/:code/stores", async (c) => {
   if (!body) return c.json({ error: "No such property." }, 404);
   if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
   return c.json(body);
+});
+
+/* ── How many days before its use-by a delivery is flagged (D27-383 item 11) ── */
+
+/** Who sets it: the owner, an administrator, the GM (decided under D27-396). */
+const WARNING_SETTERS: readonly string[] = ["owner", "admin", "gm"];
+const WARNING_REFUSED = "How early the Store warns of a use-by is set by the owner, an administrator or the "
+  + "general manager. Ask one of them.";
+
+stores.put("/:code/stores/expiry-warning", async (c) => {
+  const input = await c.req.json<{ days?: unknown }>().catch(() => ({}) as { days?: unknown });
+  if (!isWarnDays(input.days)) {
+    return c.json(refuse("Warn from 1 to 90 days before the use-by date: a whole number of days."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    /* ⚠ ABOVE THE WRITE (MEMORY 243). A hotel's own setting: the people the
+       hotels row lets change it (app.manages_hotel); anybody else's update
+       would change nothing and say nothing. */
+    if (!(await holdsRoleAt(client, hotelId, WARNING_SETTERS))) return { forbidden: true as const };
+    await client.query("update hotels set expiry_warn_days = $2 where id = $1", [hotelId, input.days]);
+    return { ok: true as const, warnDays: input.days as number };
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in result) return c.json(refuse(WARNING_REFUSED), 403);
+  return c.json(result);
 });
 
 /* ── One item's history ───────────────────────────────────────────── */

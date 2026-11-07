@@ -91,7 +91,10 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
                     {b.credit && (
                       <p className="text-sm text-grey-600" data-credit>
                         On credit, due {dateShort(b.credit.dueOn)}
-                        {b.credit.paidOn ? ` - paid on ${dateShort(b.credit.paidOn)}` : " - not paid yet"}
+                        {/* PUR-4: what is left on it (249), never a payment date the server no longer sends. */}
+                        {Number(b.credit.owed) === 0 ? " - paid"
+                          : b.total !== null && Number(b.credit.owed) < b.total ? ` - ${money(Number(b.credit.owed))} left to pay`
+                          : " - not paid yet"}
                       </p>
                     )}
                     <div className="flex flex-wrap items-center gap-3 text-sm text-grey-500">

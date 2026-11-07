@@ -818,6 +818,11 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **7 November, later: RELEASE 20 READY, the owner's to type.** `release.mjs` ran once; website `index-DKNUD7VZ.js`;
+> steps `.local/release-20-steps.md` (sent). After A1-A7: check read-only (site bundle, server at 1c3db06d, database
+> at 262, no API errors), then recycle `release-r20`. Backfill's migration is now 266 (the build-all chat takes
+> 264-265 for stock expiry).
+>
 > **7 November, about 04:30: RELEASE 20 GATES GREEN at 1c3db06d** (copy `.claude/worktrees/release-r20`, branch
 > `release/r20`): web 1,565, API 3,127, db 1,958, replay 262, PG16, restore 1, to minute, in 78 min. It carries D27-397
 > (merged, migration 262), the Night audit fix and wave 1. **Not yet done:** `node scripts/release.mjs release/r20`

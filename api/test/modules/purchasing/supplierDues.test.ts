@@ -53,12 +53,18 @@ const supplier = async (name: string) => (await sql<{ id: string }>(
   `insert into suppliers (hotel_id, name) select id, $2 from hotels where code = $1
    on conflict (hotel_id, name) do update set is_active = true returning id::text`, [HOTEL, name]))[0]!.id;
 
-/** An order raised by the Inventory Manager, approved by the GM and sent: one line, priced. */
-async function sentOrder(): Promise<{ id: string; lineId: string }> {
+/** An order raised by the Inventory Manager, approved by the GM and sent: one line, priced,
+    and with the GST rate agreed when one is given (D27-383 item 11). */
+async function sentOrder(gstRate?: number): Promise<{ id: string; lineId: string }> {
   const raised = await call(keeper, "POST", "/purchasing/requests", {
     storeId, reason: `${TAG} dal for the week`, lines: [{ itemId, quantity: 20, unitPrice: 110 }] });
   expect(raised.status, await raised.clone().text()).toBe(200);
   const { request } = (await raised.json()) as { request: { id: string } };
+  if (gstRate !== undefined) {
+    const [line] = await sql<{ id: string }>("select id::text from purchase_request_lines where request_id = $1", [request.id]);
+    const set = await call(keeper, "PUT", `/purchasing/requests/${request.id}/lines/${line!.id}`, { gstRate });
+    expect(set.status, await set.clone().text()).toBe(200);
+  }
   const [ap] = await sql<{ id: string | null }>(
     "select approval_id::text as id from purchase_requests where id = $1", [request.id]);
   if (ap!.id) {
@@ -77,7 +83,8 @@ type Bill = { id: string; supplierId: string | null; supplier: string; billNo: s
   amount: string; owed: string; paid: string; tds: string; credited: string; status: string; dueOn: string;
   replaces: string | null; from: { kind: string; reference?: string };
   payments: { id: string; amount: string; method: string; reference: string | null; handedOverBy: string | null;
-              tds: { section: string; rate: string; amount: string } | null; reversed: { reason: string } | null }[];
+              tds: { section: string; rate: string; amount: string } | null; reversed: { reason: string } | null;
+              differencesSeenBy?: string | null }[];
   creditNotes: { id: string; amount: string; reversed: { reason: string } | null }[] };
 type Dues = { today: string; suppliers: { id: string; name: string }[]; bills: Bill[];
   credits: { id: string; supplierId: string; amount: string; noteNo: string }[] };
@@ -152,7 +159,7 @@ describe("goods on credit, owed, paid in parts, credited and reversed (D27-370, 
       credit: { billNo: "G-1", billDate: today, amount: 2200 } });
     expect(await reason(noDue), "a due date is required").toBe("Pick the date the bill is due.");
     const future = await call(keeper, "POST", `/purchasing/requests/${order.id}/delivery`, {
-      lines: [{ lineId: order.lineId, receivedQuantity: 20 }],
+      lines: [{ lineId: order.lineId, receivedQuantity: 20, billedQuantity: 20 }],
       credit: { billNo: "G-1", billDate: inDays(3), amount: 2200, dueOn: inDays(30) } });
     expect(await reason(future)).toBe("A bill is not dated in the future.");
     expect((await sql("select 1 from supplier_bills where purchase_request_id = $1", [order.id])).length).toBe(0);
@@ -161,7 +168,7 @@ describe("goods on credit, owed, paid in parts, credited and reversed (D27-370, 
   it("the Inventory Manager records a delivery on credit, and a bar bill on credit with its supplier picked", async () => {
     const order = await sentOrder();
     const res = await call(keeper, "POST", `/purchasing/requests/${order.id}/delivery`, {
-      lines: [{ lineId: order.lineId, receivedQuantity: 20, receivedUnitCost: 110 }],
+      lines: [{ lineId: order.lineId, receivedQuantity: 20, receivedUnitCost: 110, billedQuantity: 20 }],
       credit: { billNo: "G-2", billDate: "2025-01-10", amount: 2310, dueOn: "2025-02-09" } });
     expect(res.status, await res.clone().text()).toBe(200);
     const detail = (await (await call(keeper, "GET", `/purchasing/requests/${order.id}`)).json()) as { credit: unknown };
@@ -362,5 +369,106 @@ describe("the three reports: Supplier dues, TDS deducted, a supplier's statement
     expect((await call(accountant, "GET", `/reports/supplier-statement.xlsx?supplier=${supplierId}&asOn=${today}`)).status).toBe(200);
     expect((await call(keeper, "GET", `/reports/supplier-statement?supplier=${supplierId}`)).status).toBe(403);
     expect((await call(manager, "GET", `/reports/supplier-statement.pdf?supplier=${supplierId}`)).status).toBe(403);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE SUPPLIER'S BILL MATCHED TO THE ORDER (the owner's D27-383, item 11)
+
+   Per line, the bill against the order: more billed than came, a price
+   above the agreed one, a GST rate other than the order's. Each flagged on
+   the order and on Supplier dues; nothing refused automatically; paying a
+   flagged bill asks whoever pays to confirm, and keeps their name. A
+   missing figure is never a difference. The database's half is in
+   db/tests/modules/purchasing.sql, "bill matched to the order".
+   ══════════════════════════════════════════════════════════════════ */
+describe("the supplier's bill held against its order (D27-383 item 11)", () => {
+  type Diff = { item: string; unit: string; kind: string; billed: string; against: string };
+  type Detail = { differences: Diff[];
+    lines: { agreedGstRate: string | null; billedQuantity: string | null; billGstRate: string | null }[] };
+  const detail = async (id: string) => (await (await call(keeper, "GET", `/purchasing/requests/${id}`)).json()) as Detail;
+  let flagged = { id: "", lineId: "" };
+
+  it("the order's GST rate is typed with the price, 0 to 100, and fixed once the order is sent", async () => {
+    const raised = await call(keeper, "POST", "/purchasing/requests", {
+      storeId, reason: `${TAG} gst on the order`, lines: [{ itemId, quantity: 5, unitPrice: 100 }] });
+    const { request } = (await raised.json()) as { request: { id: string } };
+    const [line] = await sql<{ id: string }>("select id::text from purchase_request_lines where request_id = $1", [request.id]);
+    const put = (body: object) => call(keeper, "PUT", `/purchasing/requests/${request.id}/lines/${line!.id}`, body);
+    for (const gstRate of [101, -1, 5.555, "5"]) {
+      expect(await reason(await put({ gstRate })), String(gstRate)).toBe("A GST rate is from 0 to 100 per cent, or nothing at all.");
+    }
+    expect((await put({ gstRate: 5 })).status).toBe(200);
+    expect((await detail(request.id)).lines[0]!.agreedGstRate).toBe("5.00");
+    const [row] = await sql<{ price: string }>("select unit_price::text as price from purchase_request_lines where id = $1", [line!.id]);
+    expect(row!.price, "the price is untouched").toBe("100.00");
+    expect((await put({ gstRate: null })).status).toBe(200);
+    expect((await detail(request.id)).lines[0]!.agreedGstRate, "blank is none agreed").toBeNull();
+
+    const sent = await sentOrder(5);
+    expect(await reason(await call(keeper, "PUT", `/purchasing/requests/${sent.id}/lines/${sent.lineId}`, { gstRate: 18 })))
+      .toBe("This order has already gone to the supplier. What they were told they would be paid does not change afterwards.");
+  });
+
+  it("on credit, every line says what the bill charges for; without it nothing is received", async () => {
+    const order = await sentOrder(5);
+    const res = await call(keeper, "POST", `/purchasing/requests/${order.id}/delivery`, {
+      lines: [{ lineId: order.lineId, receivedQuantity: 18, receivedUnitCost: 115 }],
+      credit: { billNo: "G-31", billDate: today, amount: 2400, dueOn: inDays(30) } });
+    expect(await reason(res)).toBe(
+      "On credit, type how much the supplier's bill charges for on every line, as printed. Not on the bill is 0.");
+    const negative = await call(keeper, "POST", `/purchasing/requests/${order.id}/delivery`, {
+      lines: [{ lineId: order.lineId, receivedQuantity: 18, billedQuantity: -1 }] });
+    expect(await reason(negative)).toBe("What the bill charges for is zero or more.");
+    const [r] = await sql<{ status: string }>("select status from purchase_requests where id = $1", [order.id]);
+    expect(r!.status, "nothing received").toBe("ordered");
+    flagged = order;
+  });
+
+  it("flags more billed than came, a price above the agreed one and another GST rate - and records the delivery", async () => {
+    const res = await call(keeper, "POST", `/purchasing/requests/${flagged.id}/delivery`, {
+      lines: [{ lineId: flagged.lineId, receivedQuantity: 18, receivedUnitCost: 115, billedQuantity: 20,
+                gstRate: 18, gstAmount: 414, gstClaimable: true }],
+      credit: { billNo: "G-31", billDate: today, amount: 2714, dueOn: inDays(30) } });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { differences: number }).differences).toBe(3);
+    const d = await detail(flagged.id);
+    expect(d.differences.map((x) => [x.kind, x.billed, x.against])).toEqual([
+      ["quantity", "20.000", "18.000"], ["price", "115.00", "110.00"], ["gst", "18.00", "5.00"]]);
+    expect([d.lines[0]!.billedQuantity, d.lines[0]!.billGstRate, d.lines[0]!.agreedGstRate]).toEqual(["20.000", "18.00", "5.00"]);
+    const bills = await sql("select 1 from supplier_bills where purchase_request_id = $1", [flagged.id]);
+    expect(bills.length, "the bill is on the dues as printed: nothing refused").toBe(1);
+  });
+
+  it("a missing figure is never a difference: no agreed GST, no cost each", async () => {
+    const order = await sentOrder();
+    const res = await call(keeper, "POST", `/purchasing/requests/${order.id}/delivery`, {
+      lines: [{ lineId: order.lineId, receivedQuantity: 20, billedQuantity: 20, gstRate: 18, gstAmount: 0, gstClaimable: false }],
+      credit: { billNo: "G-32", billDate: today, amount: 2200, dueOn: inDays(30) } });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as { differences: number }).differences).toBe(0);
+    expect((await detail(order.id)).differences).toEqual([]);
+  });
+
+  it("Supplier dues shows the differences; paying asks the payer to confirm, and keeps their name", async () => {
+    type Due = Bill & { differences: Diff[] };
+    const due = async (no: string) => (await dues(accountant, true)).bills.find((b) => b.billNo === no) as Due;
+    expect((await due("G-31")).differences.map((x) => x.kind)).toEqual(["quantity", "price", "gst"]);
+    expect((await due("G-32")).differences).toEqual([]);
+
+    const pay = (id: string, body: object = {}) => call(accountant, "POST", `/purchasing/dues/${id}/payment`,
+      { amount: 1000, method: "cash", paidOn: today, handedOverBy: "Ravi", ...body });
+    const g31 = await due("G-31");
+    for (const seen of [undefined, false]) {
+      expect(await reason(await pay(g31.id, seen === undefined ? {} : { differencesSeen: seen })), String(seen)).toBe(
+        "This bill differs from its order in 3 places. Confirm you have seen the differences, then record the payment.");
+    }
+    expect((await sql("select 1 from supplier_payments where bill_id = $1", [g31.id])).length, "nothing written").toBe(0);
+    expect((await pay(g31.id, { differencesSeen: true })).status).toBe(200);
+    expect((await due("G-31")).payments.map((p) => [p.amount, p.differencesSeenBy])).toEqual([["1000.00", `${TAG} accountant`]]);
+
+    const g32 = await due("G-32");
+    expect((await pay(g32.id)).status, "a bill like its order is paid as before").toBe(200);
+    expect((await due("G-32")).payments.map((p) => p.differencesSeenBy)).toEqual([null]);
   });
 });

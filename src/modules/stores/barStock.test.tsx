@@ -89,7 +89,7 @@ vi.mock("@/modules/stores/data/barPours", async (importOriginal) => ({
 vi.mock("@/modules/stores/data/stores", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/stores/data/stores")>()),
   getStore: async () => ({
-    businessDate: "2026-10-21", people: [], inUse: [], outlets: [],
+    businessDate: "2026-10-21", people: [], inUse: [], outlets: [], expiry: { warnDays: 7, today: "2026-10-21", mayChange: false },
     stores: [{ id: "main", name: "Main store", isActive: true, isMain: true },
              { id: "bar", name: "Bar store", isActive: true, isMain: false }],
     items: [{
@@ -97,7 +97,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => ({
       levels: {}, lowIn: [], low: false, unitCost: 520, value: 3036.8, byStore: { bar: 5.84 },
       cylinder: false, empties: 0, emptiesByStore: {}, cylindersOnDeposit: null, depositPerCylinder: null,
       depositHeld: null, inUse: null, lastMovement: "2026-10-21", movements: 2, isActive: true,
-      crockery: false, heldIn: ["bar"], today: {}, lastCounted: {}, onOrder: {},
+      crockery: false, heldIn: ["bar"], today: {}, lastCounted: {}, onOrder: {}, expiry: [],
     }],
   }),
   saveStockCount: async (_hotel: string, input: unknown) => {

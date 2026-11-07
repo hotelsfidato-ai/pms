@@ -8,7 +8,7 @@ import {
   VIEW_ROLES, SETTING_KEEPERS, PURCHASING_REFUSED, hasRoleAt, mayRaise,
 } from "./purchasingGrants.ts";
 import { priceProblem } from "../../validate.ts";
-import { creditProblem, hotelToday, recordCredit, type CreditIn } from "./supplierDues.ts";
+import { creditProblem, differencesOf, hotelToday, recordCredit, type CreditIn } from "./supplierDues.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING — a request, an approval, an order, a delivery
@@ -265,10 +265,12 @@ purchasing.get("/:code/purchasing/requests/:id", async (c) => {
       quantity: string; unit_price: string | null;
       received_quantity: string | null; received_unit_cost: string | null;
       note: string | null;
+      agreed_gst_rate: string | null; billed_quantity: string | null; gst_rate: string | null;
     }>(
       `select pl.id::text, pl.line_no, pl.item_id::text, i.name as item, i.unit,
               pl.quantity::text, pl.unit_price::text,
-              pl.received_quantity::text, pl.received_unit_cost::text, pl.note
+              pl.received_quantity::text, pl.received_unit_cost::text, pl.note,
+              pl.agreed_gst_rate::text, pl.billed_quantity::text, pl.gst_rate::text
          from purchase_request_lines pl
          join stock_items i on i.id = pl.item_id
         where pl.request_id = $1
@@ -287,13 +289,19 @@ purchasing.get("/:code/purchasing/requests/:id", async (c) => {
     return {
       request: asRequest(rows[0]),
       credit: credit[0] ?? null,
+      /* Where the bill differs from the order (D27-383 item 11), from the
+         database's one definition. Flagged, never refused. */
+      differences: await differencesOf(client, c.req.param("id")),
       lines: lines.map((l) => ({
         id: l.id, lineNo: l.line_no, itemId: l.item_id, item: l.item, unit: l.unit,
         quantity: l.quantity,
         /* Null is a real answer and it prints "-", never 0. */
         unitPrice: l.unit_price,
+        agreedGstRate: l.agreed_gst_rate,
         receivedQuantity: l.received_quantity,
         receivedUnitCost: l.received_unit_cost,
+        billedQuantity: l.billed_quantity,
+        billGstRate: l.gst_rate,
         note: l.note,
       })),
     };
@@ -494,14 +502,25 @@ purchasing.post("/:code/purchasing/requests", async (c) => {
    ═══════════════════════════════════════════════════════════════════ */
 
 purchasing.put("/:code/purchasing/requests/:id/lines/:lineId", async (c) => {
-  type Body = { unitPrice?: number | null; free?: boolean };
+  /* `gstRate`: the order's GST rate for the line (D27-383 item 11), sent on
+     its own or with the price; null clears it. */
+  type Body = { unitPrice?: number | null; free?: boolean; gstRate?: number | null };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
-  const price = input.unitPrice;
-  if (price !== null && (price === undefined || !Number.isFinite(Number(price)) || Number(price) < 0)) {
-    return c.json(refuse("A price is zero or more, or nothing at all."), 409);
+  const gstGiven = input.gstRate !== undefined;
+  const gst = input.gstRate ?? null;
+  if (gst !== null && (typeof gst !== "number" || !Number.isFinite(gst) || gst < 0 || gst > 100
+      || Math.round(gst * 100) !== gst * 100)) {
+    return c.json(refuse("A GST rate is from 0 to 100 per cent, or nothing at all."), 409);
   }
-  const zero = priceProblem(price === null ? null : Number(price), input.free === true);  /* X-1 */
-  if (zero) return c.json(refuse(zero), 409);
+  const priceGiven = !gstGiven || input.unitPrice !== undefined;
+  const price = input.unitPrice;
+  if (priceGiven) {
+    if (price !== null && (price === undefined || !Number.isFinite(Number(price)) || Number(price) < 0)) {
+      return c.json(refuse("A price is zero or more, or nothing at all."), 409);
+    }
+    const zero = priceProblem(price === null ? null : Number(price), input.free === true);  /* X-1 */
+    if (zero) return c.json(refuse(zero), 409);
+  }
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -521,8 +540,11 @@ purchasing.put("/:code/purchasing/requests/:id/lines/:lineId", async (c) => {
     }
 
     await client.query(
-      "update purchase_request_lines set unit_price = $1 where id = $2",
-      [price ?? null, c.req.param("lineId")]);
+      `update purchase_request_lines
+          set unit_price = case when $3 then $1::numeric else unit_price end,
+              agreed_gst_rate = case when $4 then $5::numeric else agreed_gst_rate end
+        where id = $2`,
+      [price ?? null, c.req.param("lineId"), priceGiven, gstGiven, gst]);
     return { ok: true as const };
   });
 
@@ -624,6 +646,8 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
       /** The bill's GST for the line, all three or none, and its expiry (D27-238). */
       gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
       expiresOn?: string | null;
+      /** On credit: how much the supplier's bill charges for (D27-383 item 11). */
+      billedQuantity?: number | null;
     }[];
     /** On credit: the supplier's bill - number, date, amount, due date (D27-370). */
     credit?: CreditIn | null;
@@ -650,6 +674,16 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
     /* The Store's own check, before anything is written (MEMORY 243). */
     const facts = deliveryFactsProblem(l);
     if (facts) return c.json(refuse(facts), 409);
+    /* THE BILL'S QUANTITY (D27-383 item 11): on credit every line says what
+       the bill charges for, 0 an answer, so it can be held against what came. */
+    const b = l.billedQuantity;
+    if (b !== undefined && b !== null && (typeof b !== "number" || !Number.isFinite(b) || b < 0)) {
+      return c.json(refuse("What the bill charges for is zero or more."), 409);
+    }
+    if (credit && (b === undefined || b === null)) {
+      return c.json(refuse(
+        "On credit, type how much the supplier's bill charges for on every line, as printed. Not on the bill is 0."), 409);
+    }
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -724,10 +758,11 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
       await client.query(
         `update purchase_request_lines
             set received_quantity = $1, received_unit_cost = $2,
-                gst_rate = $4, gst_amount = $5, gst_claimable = $6, expires_on = $7::date
+                gst_rate = $4, gst_amount = $5, gst_claimable = $6, expires_on = $7::date,
+                billed_quantity = $8
           where id = $3`,
         [qty, cost, l.lineId, gst?.gstRate ?? null, gst?.gstAmount ?? null,
-         gst?.gstClaimable ?? null, l.expiresOn || null]);
+         gst?.gstClaimable ?? null, l.expiresOn || null, l.billedQuantity ?? null]);
 
       /* Nothing came of this one: recorded as 0 above, and no movement -
          a receipt of nothing is not a receipt. */
@@ -770,7 +805,8 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
       });
     }
 
-    return { ok: true as const, received };
+    /* Flagged, never refused (D27-383 item 11): the screen says how many. */
+    return { ok: true as const, received, differences: (await differencesOf(client, c.req.param("id"))).length };
   }).catch((err: unknown) => {
     const sentence = (err as { refusal?: string }).refusal;
     if (sentence) return refuse(sentence);
@@ -835,9 +871,10 @@ purchasing.get("/:code/purchasing/orders/:file{[0-9a-f-]+\\.pdf}", async (c) => 
 
     const { rows: lines } = await client.query<{
       line_no: number; item: string; unit: string;
-      quantity: string; unit_price: string | null;
+      quantity: string; unit_price: string | null; gst: string | null;
     }>(
-      `select pl.line_no, i.name as item, i.unit, pl.quantity::text, pl.unit_price::text
+      `select pl.line_no, i.name as item, i.unit, pl.quantity::text, pl.unit_price::text,
+              pl.agreed_gst_rate::text as gst
          from purchase_request_lines pl
          join stock_items i on i.id = pl.item_id
         where pl.request_id = $1 order by pl.line_no`, [id]);
@@ -868,6 +905,7 @@ purchasing.get("/:code/purchasing/orders/:file{[0-9a-f-]+\\.pdf}", async (c) => 
         lineNo: l.line_no, item: l.item, unit: l.unit,
         quantity: Number(l.quantity),
         unitPrice: l.unit_price === null ? null : Number(l.unit_price),
+        gstRate: l.gst === null ? null : Number(l.gst),
       })),
     });
 

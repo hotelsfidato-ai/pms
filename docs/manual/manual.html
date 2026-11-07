@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    444 pictures, 8 still to be taken. Built from the chapters in docs/manual/chapters.
+    445 pictures, 8 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -5704,7 +5704,8 @@ figure.shot.phone img { max-width: 72mm; }
     <tbody>
       <tr><td>See the Store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager, the chef, housekeeping, the accountant, a viewer.</td></tr>
       <tr><td>Add an item, receive, issue, record waste or a return, move to another store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager.</td></tr>
-      <tr><td>Correct the count, count a store, set levels, undo</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager.</td></tr>
+      <tr><td>Correct the count, count a store, set levels, undo; told of expired stock in the bell</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager.</td></tr>
+      <tr><td>Change how early a use-by is warned of (A9.5)</td><td>The owner, an Admin, the GM.</td></tr>
     </tbody>
   </table>
   <p>Somebody who may only look sees one line, <span class="msg">“You can see the store. Receiving, issuing and adding items is for the Inventory Manager, hotel manager or GM.”</span>, and a <span class="ui">History</span> button on each item.</p>
@@ -5828,7 +5829,7 @@ figure.shot.phone img { max-width: 72mm; }
     <figcaption><b>Figure A9-05.</b> Receiving: claimable, use by, who from, the bill.</figcaption>
     <ol class="callouts">
       <li>Can this GST be claimed?</li>
-      <li>Use by. Optional</li>
+      <li>Use by. Optional; the Expired and Expiring soon tiles read it (A9.5)</li>
       <li>Who from</li>
       <li>Delivery note or bill number: what somebody holds when they ask why the count is what it is</li>
       <li>Receive</li>
@@ -5855,7 +5856,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p><span class="ui">Shelf</span> is the Store as it stands: each item, what is on hand, and what it is worth. Under the heading, the number of items and what the shelf is worth in all.</p>
 
   <figure class="shot" id="fig-A9-06">
-    <img src="img/A9-06.png" alt="The Store: Shelf, Days, Reports, Import, Count a store, Add an item, the Store picker, eight tiles and three items under Kitchen">
+    <img src="img/A9-06.png" alt="The Store: Shelf, Days, Reports, Import, Count a store, Add an item, the Store picker, ten tiles in two rows and the items under Kitchen">
     <figcaption><b>Figure A9-06.</b> The Store.</figcaption>
     <ol class="callouts">
       <li>Shelf. Days is the other view (A9.10)</li>
@@ -5871,6 +5872,8 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:30%">Tile</th><th>Counts the items that</th></tr></thead>
     <tbody>
+      <tr><td>Expired</td><td>Have a delivery past its use-by date still on a shelf (below).</td></tr>
+      <tr><td>Expiring soon</td><td>Have a delivery whose use-by date is within the hotel's warning, 7 days to start (below).</td></tr>
       <tr><td>Below level</td><td>Are at or below their level in a store (A9.7).</td></tr>
       <tr><td>Run out</td><td>Had some, and hold none now.</td></tr>
       <tr><td>Received today, Issued today</td><td>Came in, or went out, today.</td></tr>
@@ -5880,7 +5883,27 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Not counted in 30 days</td><td>Are held in a place where they were never counted, or not for 30 days (A9.9).</td></tr>
     </tbody>
   </table>
-  <p>A tile with a job in it (Below level, Run out, Not valued, Not counted) turns yellow.</p>
+  <p>A tile with a job in it (Expired, Expiring soon, Below level, Run out, Not valued, Not counted) turns yellow.</p>
+
+  <h3>Use-by dates: what has expired, and what will soon</h3>
+  <p>A delivery's <span class="ui">Use by</span> date (A9.4, and a delivery against an order, A9.11) is what the two expiry tiles read. For each item and each store, the Store works out what is left of every delivery, <b>first expiring, first out</b>: stock going out of a store - issued, wasted, moved, used by a KOT - is taken from the delivery with the earliest use-by there, and a move to another store takes its use-by with it. An item whose deliveries have no use-by is never on these tiles: nothing is guessed.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Expired</span> (or <span class="ui">Expiring soon</span>). Only those items show, the oldest use-by first.</li>
+    <li>Each card says, in red for expired and yellow for soon, which store, how much of which delivery is left, and its use-by: <span class="msg">“Main store: 50 kg from the delivery of 7 Nov 2026 - use by 10 Nov 2026”</span>. An expired one is also marked <span class="ui">Expired</span> beside its name.</li>
+    <li>Take expired stock off with <span class="ui">More</span>, <span class="ui">Waste</span> (A9.7), in its store, saying why. Waste takes it from the delivery that expired first, so the line goes. Use what is expiring soon first.</li>
+  </ol>
+  <p>The owner, an Admin, the GM, the hotel manager and the Inventory Manager also see it in the bell (<span class="ui">Notifications</span>): <span class="msg">“2 deliveries past the use-by, still on the shelf”</span> and <span class="msg">“1 delivery to use within 7 days”</span>, the first three named. Each opens the Store on its tile.</p>
+  <p><b>The warning.</b> How many days before its use-by a delivery counts as expiring soon is set for each hotel: 7 to start, any whole number from 1 to 90. On either expiry tile, tap <span class="ui">Change the warning</span>, type <span class="ui">Days before the use-by</span> and tap <span class="ui">Save</span>. The owner, an Admin or the GM sets it, as the hotel's other settings; the Inventory Manager sees the tiles but not the link.</p>
+
+  <figure class="shot" id="fig-A9-50">
+    <img src="img/A9-50.png" alt="The Store on the Expiring soon tile: the note that the use-by is within the next 7 days, Change the warning, and the rice card's lines Kitchen store: 4 kg and Main store: 35 kg from the delivery, use by in two days">
+    <figcaption><b>Figure A9-50.</b> What to use first.</figcaption>
+    <ol class="callouts">
+      <li>Expired, and Expiring soon</li>
+      <li>What the tile means, and Change the warning</li>
+      <li>The delivery: its store, what is left of it, and its use-by</li>
+    </ol>
+  </figure>
 
   <figure class="shot" id="fig-A9-07">
     <img src="img/A9-07.png" alt="An item card: Basmati rice, On hand 50 kg, Worth ₹4,000 at ₹80/kg average, Receive, Issue, More, and Main 50 · Kitchen - · Bar -">
@@ -5959,7 +5982,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:28%">In More</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td>Waste</td><td>Takes spoiled stock off a store, with why. Somebody will ask at the end of the month.</td></tr>
+      <tr><td>Waste</td><td>Takes spoiled stock off a store, with why. Somebody will ask at the end of the month. It takes from the delivery with the earliest use-by, so expired stock wasted leaves the Expired tile (A9.5).</td></tr>
       <tr><td>Return to supplier</td><td>Takes stock off that went back: <span class="ui">Who it goes back to</span> and why (damaged, the wrong thing, more than was ordered).</td></tr>
       <tr><td>Move to another store</td><td>From one store to another, such as the Main store to the Kitchen store. Needs nobody's approval.</td></tr>
       <tr><td>Correct the count</td><td>For one store: type what the shelf holds now. The difference is recorded. To count a whole store, use Count a store (A9.9).</td></tr>
@@ -6257,6 +6280,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ol class="steps">
     <li>Open the approved order. It says <span class="ui">Ready to order</span>.</li>
     <li>If a line has no agreed price, type it on the line. <span class="ui">Send the order</span> appears only when every line has one.</li>
+    <li>If a GST rate was agreed, type it in the line's <span class="ui">GST %</span> box (0, 5, 18 or 40 are offered). It prints on the order, and the supplier's bill is held against it when the goods come. Blank is none agreed: a dash, and the bill's GST is not compared. Like the price, it is fixed once the order is sent.</li>
     <li>Tap <span class="ui">Send the order</span>, choose <span class="ui">Order it from</span>, and tap <span class="ui">Send the order</span>.</li>
     <li>Tap <span class="ui">Download the order</span>: a PDF. Print it, or attach it to a message to the supplier. <b>Nothing is sent automatically.</b></li>
   </ol>
@@ -6282,7 +6306,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Open the order. It says <span class="ui">Ordered</span>. Tap <span class="ui">Record the delivery</span>.</li>
     <li>For each line, type what <span class="ui">Came</span> and what it cost each, before GST. Then the bill's <span class="ui">GST %</span>, the GST amount, <span class="ui">Claimable</span>, and the <span class="ui">Use by</span> date if it has one.</li>
     <li>Type <span class="ui">Anything to note</span>: a short delivery, a damaged case, a different brand.</li>
-    <li>If the goods came <b>on credit</b> - the supplier is paid later - tick <span class="ui">On credit - the supplier's bill is paid later</span> and type the supplier's <span class="ui">Bill number</span>, the <span class="ui">Bill date</span>, the <span class="ui">Amount, as printed</span> and the date it is <span class="ui">Due on</span> (filled with the bill date + 30 days; change it to what the bill says). The bill goes on <span class="ui">Supplier dues</span> (below).</li>
+    <li>If the goods came <b>on credit</b> - the supplier is paid later - tick <span class="ui">On credit - the supplier's bill is paid later</span> and type the supplier's <span class="ui">Bill number</span>, the <span class="ui">Bill date</span>, the <span class="ui">Amount, as printed</span> and the date it is <span class="ui">Due on</span> (filled with the bill date + 30 days; change it to what the bill says). Then, on every line, <span class="ui">On the bill</span>: how much the bill charges for, as printed (not on the bill is 0). The bill goes on <span class="ui">Supplier dues</span> (below).</li>
     <li>Tap <span class="ui">Record the delivery</span>. The goods land in the order's store, as a delivery in the Store (A9.4).</li>
   </ol>
 
@@ -6305,18 +6329,30 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
-  <figure class="shot" id="fig-A9-29">
-    <img src="img/A9-29.png" alt="The order Delivered - received by Test Inventory Manager, with the note, and Came 25 at ₹82">
-    <figcaption><b>Figure A9-29.</b> Delivered.</figcaption>
-    <ol class="callouts"><li>Delivered</li><li>Who received it, and when, with the note</li><li>Came</li></ol>
-  </figure>
-
   <figure class="shot" id="fig-A9-45">
-    <img src="img/A9-45.png" alt="Record the delivery with On credit ticked: Bill number, Bill date, Amount, as printed, and Due on">
+    <img src="img/A9-45.png" alt="Record the delivery with On credit ticked: On the bill 26 beside Came 25, cost each 85, Bill number, Bill date, Amount, as printed, and Due on">
     <figcaption><b>Figure A9-45.</b> A delivery on credit.</figcaption>
-    <ol class="callouts"><li>On credit</li><li>The supplier's bill number</li><li>The amount, as printed</li><li>Due on</li></ol>
+    <ol class="callouts"><li>On credit</li><li>On the bill: what the bill charges for</li><li>The supplier's bill number</li><li>The amount, as printed</li><li>Due on</li></ol>
   </figure>
-  <p>The delivered order then says, under the note, <span class="msg">“On credit: bill … due …”</span> and whether it is paid yet.</p>
+  <p>The delivered order then says, under the note, <span class="msg">“On credit: bill … due …”</span> and whether it is paid yet, or what is left to pay.</p>
+
+  <h3>The bill held against the order</h3>
+  <p>When a delivery is recorded, each line of the supplier's bill is held against what the order agreed. Three things are flagged:</p>
+  <table>
+    <thead><tr><th style="width:34%">Flagged when</th><th>Read from</th></tr></thead>
+    <tbody>
+      <tr><td>More is billed than came</td><td><span class="ui">On the bill</span> against <span class="ui">Came</span> (a delivery on credit).</td></tr>
+      <tr><td>The price is above the agreed one</td><td>The cost each, before GST, against the agreed price, before GST.</td></tr>
+      <tr><td>The GST rate is not the order's</td><td>The bill's <span class="ui">GST %</span> against the order's.</td></tr>
+    </tbody>
+  </table>
+  <p>A figure that is missing - no GST agreed, no cost typed - is never a difference; it reads “-”. <b>Nothing is refused</b>: the delivery is recorded as it came and the bill goes on Supplier dues as printed. The order shows a yellow box, <span class="msg">“The supplier's bill differs from the order in 2 places”</span>, with each one in words, and the figures that differ in red in the lines (<span class="ui">Billed</span>, <span class="ui">Cost</span>, <span class="ui">GST on bill</span>). The Accountant or the GM decides: pay it as it is, ask the supplier for a credit note (below), or reverse the bill and record the right one.</p>
+
+  <figure class="shot" id="fig-A9-29">
+    <img src="img/A9-29.png" alt="The order Delivered - received by Test Inventory Manager, on credit, the yellow box saying the supplier's bill differs from the order in 2 places, and the lines with Billed 26 and Cost ₹85 in red">
+    <figcaption><b>Figure A9-29.</b> Delivered, and where the bill differs.</figcaption>
+    <ol class="callouts"><li>Delivered</li><li>Who received it, and when, with the note and the bill on credit</li><li>Where the bill differs from the order</li><li>Came</li><li>Billed and Cost: in red where they differ</li></ol>
+  </figure>
 
   <div class="box watch">
     <h4>Watch out</h4>
@@ -6329,6 +6365,8 @@ figure.shot.phone img { max-width: 72mm; }
       <li><span class="ui">Cancel</span> works until it is delivered, and asks why.</li>
       <li>A bill on credit needs all four: its number, its date (not in the future), its amount (more than zero, as printed) and its due date (on its own date or later). A missing one is refused and nothing is received.</li>
       <li>The Inventory Manager records the supplier's bill on the delivery, but does not see Supplier dues or pay it.</li>
+      <li>On credit, every line needs <span class="ui">On the bill</span>, as printed: <span class="msg">“How much of the Basmati rice does the bill charge for? Type it as printed; not on the bill is 0.”</span> It is never filled in for you.</li>
+      <li>A bill that charges less than came, or a lower price, is not flagged: only what costs the hotel more is.</li>
     </ul>
   </div>
 
@@ -6379,27 +6417,29 @@ figure.shot.phone img { max-width: 72mm; }
     <li>The <span class="ui">Amount paid</span> is filled with what is left; type less to pay a part.</li>
     <li>Pick <span class="ui">How</span>: Cash, Cheque, Bank transfer or UPI. For a cheque, a bank transfer or UPI the <span class="ui">Reference</span> (cheque, UTR or UPI number) is needed; for cash it may be left empty. Check <span class="ui">Paid on</span>, and type who <span class="ui">Handed over</span> the money or cheque.</li>
     <li>If TDS was deducted, tick <span class="ui">TDS deducted</span> and type its <span class="ui">Section</span> (194C, 194Q, 194J or 194I), <span class="ui">Rate, %</span> and <span class="ui">TDS amount</span>. The Accountant decides whether TDS applies; the system works nothing out. The supplier is paid the rest, and the payment and its TDS together come off the bill.</li>
+    <li>If the bill differs from its order, the window lists how, and asks you to tick <span class="ui">I have seen these differences, and this bill is to be paid as it is</span>. Your name is kept on the payment: <span class="msg">“differences from the order seen by …”</span>.</li>
     <li>Tap <span class="ui">Record payment</span>. When nothing is left, the bill leaves the list.</li>
   </ol>
   <p>A <b>credit note</b> lowers what is owed, money only: <span class="ui">Credit note</span> on a bill, or beside the supplier's name for one not against a bill. Say whose note it is (the supplier's, or ours), its number, date, amount and what it is for. Goods sent back leave the store as a store movement, separately.</p>
   <p>A <b>mistake</b> is never changed or deleted: <span class="ui">Reverse</span> a bill, a payment or a credit note and say why. Both stay on the record, with who did it. Reversing a wrong bill can carry the right one (its number, date, amount and due date), which then replaces it.</p>
 
   <figure class="shot" id="fig-A9-46">
-    <img src="img/A9-46.png" alt="Purchasing, Supplier dues: the total owed, a supplier with its bills and total, an overdue due date in red, and Record payment">
+    <img src="img/A9-46.png" alt="Purchasing, Supplier dues: the total owed, a supplier with its bills and total, a bill marked in red Differs from the order, and Record payment">
     <figcaption><b>Figure A9-46.</b> Supplier dues.</figcaption>
-    <ol class="callouts"><li>Supplier dues</li><li>The total owed</li><li>A supplier's total</li><li>Record payment</li></ol>
+    <ol class="callouts"><li>Supplier dues</li><li>The total owed</li><li>A supplier's total</li><li>Record payment</li><li>Where the bill differs from its order</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A9-47">
-    <img src="img/A9-47.png" alt="Pay bill: Amount paid, How, Reference, Paid on, Handed over by, TDS deducted, and Record payment">
+    <img src="img/A9-47.png" alt="Pay bill: This bill differs from its order with the differences and the tick to confirm, Amount paid, How, Reference, Paid on, Handed over by, TDS deducted, and Record payment">
     <figcaption><b>Figure A9-47.</b> Recording a payment, all or a part.</figcaption>
-    <ol class="callouts"><li>How</li><li>Reference: needed unless cash</li><li>Amount paid: what is left, or less</li><li>TDS deducted, when it is</li><li>Record payment</li></ol>
+    <ol class="callouts"><li>How</li><li>Reference: needed unless cash</li><li>Amount paid: what is left, or less</li><li>TDS deducted, when it is</li><li>Record payment</li><li>A bill that differs from its order: the tick that you have seen how</li></ol>
   </figure>
 
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
       <li>A payment is never more than what is left on the bill, nor dated in the future or before the bill.</li>
+      <li>A bill that differs from its order is not paid without the tick: <span class="msg">“This bill differs from its order in 2 places. Confirm you have seen the differences, then record the payment.”</span> The database refuses it too, whatever screen it comes from (<span class="d">D27-383</span>).</li>
       <li>Nothing changes in a cash drawer or a shift: the payment is a record of what was paid.</li>
       <li>A bill, payment or credit note is put right only by <span class="ui">Reverse</span>, with a reason.</li>
       <li>What was owed on a date and the payments made are in the <span class="ui">Supplier dues report</span>; one supplier's ledger in the <span class="ui">Supplier statement</span>; TDS by section in <span class="ui">TDS on suppliers</span> (A11.6).</li>

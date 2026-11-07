@@ -30,6 +30,8 @@ export interface OrderLine {
   quantity: number;
   /** Null until somebody agrees one. Prints "-", never 0. */
   unitPrice: number | null;
+  /** The GST rate agreed, in per cent (D27-383 item 11). None prints "-". */
+  gstRate?: number | null;
 }
 
 export interface OrderFacts {
@@ -49,7 +51,7 @@ export interface OrderFacts {
 }
 
 /** An order as the group prints it. Portrait A4, like every other
-    document; a purchase order has six columns and needs no more. */
+    document; a purchase order has seven columns and needs no more. */
 export function orderDocument(o: OrderFacts): ReportDoc {
   const amount = (l: OrderLine) =>
     l.unitPrice === null ? null : Math.round(l.quantity * l.unitPrice * 100) / 100;
@@ -106,6 +108,7 @@ export function orderDocument(o: OrderFacts): ReportDoc {
           col("unit", "Unit", "text"),
           col("quantity", "Quantity", "ratio"),
           col("price", "Rate", "money"),
+          col("gst", "GST %", "percent"),
           col("amount", "Amount", "money"),
         ],
         rows: [
@@ -115,6 +118,7 @@ export function orderDocument(o: OrderFacts): ReportDoc {
             unit: l.unit,
             quantity: l.quantity,
             price: l.unitPrice,
+            gst: l.gstRate ?? null,
             amount: amount(l),
           })),
           total({ item: "Total", amount: sum }),
@@ -126,7 +130,7 @@ export function orderDocument(o: OrderFacts): ReportDoc {
       `Why this was asked for: ${o.reason}`,
       /* Said on the paper, because the supplier is the person who finds
          out otherwise. */
-      "Prices are as agreed. Anything not priced here has not been agreed and must not be supplied.",
+      "Prices are as agreed, before GST, at the GST rate shown where one is. Anything not priced here has not been agreed and must not be supplied.",
       "This order is sent by hand - printed, or attached to a message. Nothing about it is sent automatically.",
     ],
   };
