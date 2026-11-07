@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · The Calendar shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
+
+**Shipped.** `GET /:code/calendar-prices` (`api/src/modules/front-desk/stays.ts`) also answers each type's `held` that night (`app.allotment_held`, migration 271). `data/stayview.ts` takes it off the type's and the footer's free count (never off occupancy: held is not sold); `pages/StayView.tsx` shows it beside the free figure as "+3h", with "Rooms held for an allotment, not sold" in the key when any day has one. By floor, held is 0 (it is a room type's). **Proved:** seen on the local demo, Deluxe on 20 Nov "4 +3h", the footer 14 for 17 sellable. The rest: contracts' CHANGELOG, 7 November.
+
+---
+
 ## 2026-11-02 · Walk-ins opens on the last 90 days, like All bookings (the owner, 2 November)
 
 **Asked for.** The owner: "Last 90 days, like All bookings".

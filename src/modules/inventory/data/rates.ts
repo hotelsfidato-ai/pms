@@ -34,7 +34,10 @@ export interface InventoryCell {
       Both numbers are right, and a grid showing only one of them
       disagrees with the Manager Report. */
   sold: number;
+  /** Less what allotments hold (271): a held room is neither free nor sold. */
   available: number;
+  /** Rooms an allotment holds that night (271, D27-383 item 8). */
+  held?: number;
 }
 
 export interface Restriction {

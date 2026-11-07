@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Rooms left shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
+
+**Shipped.** Migration 271 keeps `app.inventory_grid`'s columns and takes what allotments hold off `available` (`occupied` and `sold` unchanged), so New booking's "n left", the channel manager's push and a machine's refusal read held rooms as not for sale. `GET /:code/inventory` cells carry `held`; `pages/Rates.tsx` Rooms left shows "n held" under the day and says so in its key. The rest: contracts' CHANGELOG, 7 November.
+
+---
+
 ## 2026-10-15 · A loose Several rooms range, and Remove a room nothing has used (the owner's D27-336)
 
 Helper copy `.claude/worktrees/rooms-remove`, branch `inventory/rooms-remove`, from cp6 df577ec1. No migration: `pms_app` already has DELETE on `rooms`, and its row policy (`hotel_isolation`) covers every command - the API tests ran on a scratch database migrated from zero.

@@ -8,6 +8,30 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · Rooming lists, allotments and the waitlist (D27-383 item 8, built under D27-396)
+
+**Asked for.** The audit's Step 2, item 8 (`.local/hms-audit.html`), by the master's build-all brief: a group's rooming list (typed or read from the group's Excel/CSV, errors listed before anything is saved, nothing half-saved, printed and exported; the names become the bookings' guests); allotments (contracts' side, `src/modules/contracts/CHANGELOG.md`); a waitlist (nothing booked or messaged by the system). Branch `worktree-agent-a0fcc88e8c55a4bc6`.
+
+**Shipped.**
+- **Rooming list**, `/h/:code/groups/:id/rooming-list` (`pages/RoomingList.tsx`, the group page's new **Rooming list** button). `api/src/modules/reservations/roomingList.ts`: `GET .../rooming-list` (and `?as=pdf|xlsx|csv`, drawn by the shared `reportRender.ts`, so the reports' `ReportDoc.report` gained `"rooming-list"` in both copies), `POST .../rooming-list/read` (an .xlsx through exceljs, already the API's; a CSV by a small splitter; headings matched by their usual names; each row tied to a room by Booking, else by room type + arrival + departure (+ plan); every problem listed by row; nothing written), `PUT .../rooming-list` (every row checked above the first write, all or none).
+- **Waitlist**, `/h/:code/waitlist` (`pages/Waitlist.tsx`, `flows/WaitlistDialog.tsx`), migration **272**. `api/src/modules/reservations/waitlist.ts`: `GET /waitlist` (each waiting entry with `free`, the fewest rooms of its type free on its nights from `app.inventory_grid`, so a cancellation, a shorter stay or a released allotment shows by itself), `POST /waitlist`, `POST /waitlist/:id/remove`. New booking's room line offers **Put on the waitlist** at 0 left; All bookings says "n guests on the waitlist can have a room now"; **Book** opens New booking with `?waitlist=`.
+- **New booking** (`pages/BookingPage.tsx`): `?allotment=` (an allotment's Book from it) and `?waitlist=` fill the page once; `allotmentId` and `waitlistId` go to `POST /bookings`. `book.ts` checks both above the first write (contracts' `allotmentPickup`; the entry still waiting), stamps `reservations.allotment_id` and marks the entry booked in the booking's transaction. A pickup skips the hotel-full check (its rooms are held for it) and is made for the allotment's company.
+- roleGate: the two rooming-list writes are `reservation: edit` (CHANGE_BOOKING), the waitlist's `reservation: create`; reads STAYS; the phone withheld from roles without `customer` view on both reads.
+
+**Decided under D27-396** (the owner reviews later):
+- The rooming list changes the guest's name and phone only, on rooms still to arrive. Room type, dates, plan and who pays are the booking's (priced, billed; routing is `invoice: edit`): shown, printed and checked against the file, a mismatch listed as an error, never changed from it - because a list typed by a group must not reprice or rebill a booking.
+- A name that differs from the booking's guest becomes a new guest record (guests are never deleted); the same name only fills a blank phone, never overwrites one - book.ts's "filled, never overwritten" rule.
+- File dates are read day first (12/11/2026 is 12 November), as India writes them; an .xls is refused with "save as .xlsx or CSV"; a file over 2 MB is refused.
+- The printed and downloaded list carries no phone numbers: it leaves the hotel.
+- Anyone who reads bookings may download the list; filling it in is whoever may change a booking.
+- The waitlist may be added to whether or not the type is full (the desk decides); Waitlist is search-only for reception (the working menu is pinned by the core's navigation test - the master's call), with All bookings' notice and New booking's button as the desk's way in.
+
+**Proved.** See the contracts entry of the same day for the run as a whole.
+
+**Left open.** Reception's working menu does not carry Waitlist (the master's call). The rooming list does not add rooms to a group (that is New booking).
+
+---
+
 ## 2026-11-02 · Normal guest or Company guest, and a Business source only for a company (the owner's D27-392)
 
 **Asked for.** The owner's screenshot: Business source offered only "None" at Shimla. Their words: a walk-in has no company, so how can they give one? They asked for a toggle between a normal guest and a GST-registered company guest. For a company, they want the screen to say whether the company already exists, and to add a new one, with the GSTIN needed. They chose all three recommendations (D27-392).

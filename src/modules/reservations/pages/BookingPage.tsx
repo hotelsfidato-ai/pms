@@ -28,7 +28,9 @@ import {
   GuestIdFields, guestIdState, guestIdPayload, deskGuestId, type GuestId,
 } from "@/modules/guests";
 import { getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
-import { getContractTariff, listCompanyRecords, type ContractTariff } from "@/modules/contracts";
+import { getAllotment, getContractTariff, listCompanyRecords, type ContractTariff } from "@/modules/contracts";
+import { listWaitlist } from "@/modules/reservations/data/waitlist";
+import { WaitlistDialog } from "@/modules/reservations/flows/WaitlistDialog";
 import { can } from "@/lib/permissions";
 import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
@@ -332,7 +334,53 @@ export default function BookingPage() {
 
   const isWalkIn = !!walkRoom && walkDate === today;
 
+  /* FROM AN ALLOTMENT OR THE WAITLIST (D27-383 item 8): the page opened
+     with ?allotment= (an allotment's Book button) or ?waitlist= (an entry's
+     Book), filled in once from it. The server checks the allotment again. */
+  const allotmentId = search.get("allotment");
+  const waitlistId = search.get("waitlist");
+  const allotment = useQuery({
+    queryKey: ["allotment", hotelId, allotmentId],
+    queryFn: () => getAllotment(hotelId, allotmentId ?? ""),
+    enabled: !!allotmentId,
+  });
+  const waitlisted = useQuery({
+    queryKey: ["waitlist", hotelId],
+    queryFn: () => listWaitlist(hotelId),
+    enabled: !!waitlistId,
+  });
+  const entry = waitlisted.data?.entries.find((e) => e.id === waitlistId) ?? null;
+  /* What this booking is made from; cleared by "New booking" (reset). */
+  const [madeFrom, setMadeFrom] = useState<{ allotmentId?: string; waitlistId?: string } | null>(null);
+  const [waitlisting, setWaitlisting] = useState(false);
+  const [waitlistType, setWaitlistType] = useState("");
+  const mayBook = can(role, "create", "reservation");
+  useEffect(() => {
+    if (madeFrom || !seeded) return;
+    const a = allotment.data;
+    if (a) {
+      const night = a.nights.find((n) => !n.released && n.held > 0 && n.night >= a.today)?.night ?? a.firstNight;
+      setFrom(night); setTo(addDays(night, 1));
+      setLines([newLine(a.roomTypeId, 0)]);
+      setBillTo("company"); setCompanyId(a.companyId);
+      setMadeFrom({ allotmentId: a.id });
+    } else if (entry) {
+      setGuestName(entry.guestName); setPhone(entry.phone ?? "");
+      setFrom(entry.arrival); setTo(entry.departure);
+      setLines([newLine(entry.roomTypeId, 0)]);
+      if (entry.note) setNotes(entry.note);
+      setMadeFrom({ waitlistId: entry.id });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [madeFrom, seeded, allotment.data, entry]);
+  const pickup = madeFrom?.allotmentId && allotment.data ? allotment.data : null;
+
   const leftFor = (roomTypeId: string) => {
+    /* Taken from an allotment: what it still holds on the fewest night. */
+    if (pickup && roomTypeId === pickup.roomTypeId) {
+      const held = pickup.nights.filter((n) => n.night >= (from ?? "") && n.night < (to ?? ""));
+      return held.length ? Math.min(...held.map((n) => (n.released ? 0 : n.held))) : 0;
+    }
     const cells = (inventory.data?.cells ?? []).filter((c) => c.roomTypeId === roomTypeId
       && c.date >= (from ?? "") && c.date < (to ?? ""));
     if (cells.length === 0) return null;
@@ -553,6 +601,8 @@ export default function BookingPage() {
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
     setPromotionId(""); setNotes(""); setAdvance(""); setAdvanceBy(rules?.defaultPaymentMethod ?? "Cash"); setPrepaid(true);
     setEarlyReason(""); setWaiveEarly(false); setCampaign("");
+    /* Not from the allotment or the entry any more, and not filled from them again. */
+    setMadeFrom({});
     if (today) { setFrom(today); setTo(addDays(today, 1)); }
   };
 
@@ -594,6 +644,9 @@ export default function BookingPage() {
       ...(specialRequest.trim() ? { specialRequest: specialRequest.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
+      /* D27-383 item 8: taken from an allotment; for a waitlist entry. */
+      ...(madeFrom?.allotmentId ? { allotmentId: madeFrom.allotmentId } : {}),
+      ...(madeFrom?.waitlistId ? { waitlistId: madeFrom.waitlistId } : {}),
       ...(show.company && companyGuest
         ? { guestCompany: { name: companyName.trim(), gstin: companyGstin.trim(), address: companyAddress.trim() } }
         : {}),
@@ -695,6 +748,24 @@ export default function BookingPage() {
       />
       {lead.error && (
         <p className="mb-3 text-sm text-warning-dark" data-lead-gone>{lead.error.message}</p>
+      )}
+      {/* D27-383 item 8: what this booking is taken from. */}
+      {pickup && (
+        <p className="mb-3 text-sm text-grey-700" data-from-allotment>
+          From the allotment of <b>{pickup.companyName}</b>: {pickup.roomType},{" "}
+          {dateShort(pickup.firstNight)} to {dateShort(pickup.lastNight)}, under &ldquo;{pickup.contractName}&rdquo;.
+          Booked for the company at the contract&rsquo;s rate; the count beside the room is what it still holds.
+        </p>
+      )}
+      {madeFrom?.waitlistId && entry && (
+        <p className="mb-3 text-sm text-grey-700" data-from-waitlist>
+          For <b>{entry.guestName}</b>, on the waitlist since {dateShort(entry.createdAt)}. Saving the booking takes them off it.
+        </p>
+      )}
+      {(allotment.error || (waitlistId && waitlisted.data && !entry)) && !madeFrom && (
+        <p className="mb-3 text-sm text-warning-dark">
+          {allotment.error ? "That allotment is not held any more." : "That guest is no longer on the waitlist."}
+        </p>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -904,9 +975,14 @@ export default function BookingPage() {
                       })}
                     onChange={(next) => setLine(line.key, next)}
                     onRemove={() => setLines((ls) => ls.filter((l) => l.key !== line.key))}
+                    /* D27-383 item 8: a full type's guest can wait for a room. */
+                    {...(mayBook && !pickup && !dayUse ? { onWaitlist: () => { setWaitlistType(line.roomTypeId); setWaitlisting(true); } } : {})}
                   />
                 ))}
               </div>
+              <WaitlistDialog hotelId={hotelId} types={types} open={waitlisting} onOpenChange={setWaitlisting}
+                start={{ guestName, phone, roomTypeId: waitlistType, arrival: from ?? "", departure: to ?? "",
+                         note: notes }} />
             </CardBody>
           </Card>
 
@@ -1277,7 +1353,10 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
    "what will that cost". */
 function RoomLine({
   line, quote, pricing, nights, dayUse, types, left, mayGive, inclusiveNote, contractRate, waiting, removable, rooms, onChange, onRemove,
+  onWaitlist,
 }: {
+  /** Offered when the type is full for these nights (D27-383 item 8). */
+  onWaitlist?: () => void;
   line: Line;
   quote: Quote;
   pricing: boolean;
@@ -1402,6 +1481,9 @@ function RoomLine({
             onClick={() => onChange({ ...line, rooms: left, room: "" })}>
             All {left} left
           </Button>
+        )}
+        {onWaitlist && left !== null && (left === 0 || over) && (
+          <Button variant="ghost" size="sm" onClick={onWaitlist}>Put on the waitlist</Button>
         )}
         <LinePrice line={line} quote={quote} pricing={pricing} nights={nights} dayUse={dayUse} />
       </div>

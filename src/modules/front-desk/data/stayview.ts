@@ -66,7 +66,9 @@ export interface ChartRoom {
 export interface ChartRoomType {
   type: string;
   rooms: ChartRoom[];
-  perDate: Array<{ date: string; available: number; rate: number | null }>;
+  /** `held`: rooms an allotment holds that night (271) - neither free nor
+      sold, and already taken off `available`. */
+  perDate: Array<{ date: string; available: number; rate: number | null; held: number }>;
 }
 
 export interface ChartFooter {
@@ -144,7 +146,7 @@ const SOLD = new Set<Stay["status"]>(["due-in", "in-house", "due-out", "checked-
     else the type's standard price, else null (D27-271 item 3). */
 async function nightPrices(hotelId: string, from: string, days: number) {
   try {
-    return await api<Array<{ type: string; date: string; price: number | null }>>(
+    return await api<Array<{ type: string; date: string; price: number | null; held?: number }>>(
       `/api/hotels/${hotelId}/calendar-prices?from=${from}&days=${days}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
@@ -283,6 +285,9 @@ export async function getStayView(
   const types = [...new Set(allRooms.map((r) => r.type))];
 
   const priceOn = new Map((prices ?? []).map((p) => [`${p.type}/${p.date}`, p.price]));
+  /* HELD, NEVER SOLD (271, D27-383 item 8): an allotment's rooms are no
+     particular room, so they come off what is free, and say so. */
+  const heldOn = new Map((prices ?? []).map((p) => [`${p.type}/${p.date}`, p.held ?? 0]));
   const roomTypes: ChartRoomType[] = types.map((type) => {
     const ofType = rooms.filter((r) => r.type === type);
     return {
@@ -295,9 +300,11 @@ export async function getStayView(
             (b) => b.tone !== "void" && b.startIndex <= i && b.startIndex + b.span - 1 >= i,
           ),
         );
+        const held = heldOn.get(`${type}/${date}`) ?? 0;
         return {
           date,
-          available: sellable.length - taken.length,
+          available: Math.max(sellable.length - taken.length - held, 0),
+          held,
           /* That night's own price (D27-271 item 3). Null and not 0: the
              chart prints a dash. */
           rate: priceOn.get(`${type}/${date}`) ?? null,
@@ -320,9 +327,11 @@ export async function getStayView(
        a no-show's room read as sold. */
     const sold = allStays.filter((s) => SOLD.has(s.status) && !s.isDayUse
       && s.arrival <= date && date < s.departure).length;
+    /* Held rooms are not available, and not sold either (271). */
+    const held = roomTypes.reduce((n, t) => n + (t.perDate[i]?.held ?? 0), 0);
     return {
       date,
-      availableInventory: sellable.length - taken.length,
+      availableInventory: Math.max(sellable.length - taken.length - held, 0),
       occupancyPct: sellable.length
         ? Math.round((sold / sellable.length) * 1000) / 10
         : 0,

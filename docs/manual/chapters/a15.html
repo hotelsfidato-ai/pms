@@ -225,6 +225,7 @@
     <li>A day with <b>nothing left</b> shows yellow; a day on <b>stop sell</b>, red.</li>
     <li>Complimentary and tentative rooms hold a room but are left out of the small figure; occupancy on the reports counts complimentary rooms.</li>
     <li>A minimum or maximum stay shows on the day as its figures, such as <span class="msg">“2–5”</span>.</li>
+    <li>Rooms an allotment holds (A15.9) show under the day as <span class="msg">“3 held”</span>: they are already taken off the rooms left, and are not counted as sold.</li>
   </ul>
 
   <h3>To close a date or set a minimum stay</h3>
@@ -514,6 +515,38 @@
     <p>Fixed rates per room type and meal plan, single and double, or a percentage off the day's rate; the contract in force on arrival prices every night; no contract figure is the day's price; the Owner, an Admin and the GM keep contracts: <span class="d">D27-184</span>. A contract rate is never split for GST: <span class="d">D27-233</span>.</p>
   </div>
 
+  <h3 id="a15-allotments">Allotments: rooms held for a company or an agent (the Owner, an Admin or the GM)</h3>
+  <p>An allotment holds rooms of one type for the company over some of its contract's nights, at the contract's rate. Each night's rooms nobody has booked go back on sale at the night audit a set number of days before that night (its release), and the release is recorded.</p>
+  <ol class="steps">
+    <li>Open the company. Under its contract, tap <span class="ui">Hold rooms</span>.</li>
+    <li>Choose the <span class="ui">Room type</span>, the <span class="ui">First night</span> and the <span class="ui">Last night</span> (both are held), the <span class="ui">Rooms a night</span>, and the <span class="ui">Release (days before each night)</span>: <span class="msg">“Rooms nobody booked go back on sale at that night audit.”</span></li>
+    <li>Tap <span class="ui">Hold rooms</span>. <span class="msg">“Rooms held”</span>. The allotment shows under the contract: its rooms and nights, its release and the next one, <span class="ui">Booked from it</span>, <span class="ui">Still held</span> (the fewest on a night), <span class="ui">Back on sale</span>, and the contract's rate for its room type (a dash where none is agreed).</li>
+    <li>Reception books from it with <span class="ui">Book from it</span> (A2.12). <span class="ui">Change</span> alters its nights, rooms, release or notes; <span class="ui">Stop holding</span>, inside Change, puts what it still holds back on sale at once. Bookings made from it stand.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-20">
+    <img src="img/A15-20.png" alt="A contract with its allotment: Deluxe, 3 rooms a night, 20 Nov 2026 to 22 Nov 2026, released 5 days before each night, Booked from it, Still held, Back on sale, Rate, Book from it and Change">
+    <figcaption><b>Figure A15-20.</b> An allotment under its contract.</figcaption>
+    <ol class="callouts">
+      <li>Hold rooms</li>
+      <li>The room type, rooms a night and nights</li>
+      <li>The release, and the next one</li>
+      <li>Booked from it, still held, back on sale</li>
+      <li>Book from it</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>An allotment never overbooks the hotel: <span class="msg">“Only 7 Deluxe rooms are free on 20 Nov 2026; the allotment would hold 20 more. An allotment never overbooks the hotel.”</span></li>
+      <li>Its nights are inside its contract, and the contract's dates cannot then be moved past them.</li>
+      <li>A release already past is refused: <span class="msg">“With 5 days' release, the rooms for … would go back on sale at tonight's night audit. Choose fewer release days or later nights.”</span></li>
+      <li>It never holds fewer rooms than are booked from it on a night. Its room type and contract do not change: stop it and hold another.</li>
+      <li>A night released stays released, even if that day's night audit is cancelled: the rooms may have been sold since. Hold them again with a new allotment.</li>
+    </ul>
+  </div>
+
   <!-- A15.10 -->
   <h2 id="a15-10"><span class="n">A15.10</span>Rate work in short</h2>
   <table>
@@ -527,6 +560,7 @@
       <tr><td>A booking site's booking refused or waiting</td><td>Channel manager: settle it, then I have dealt with this.</td><td>A15.7</td></tr>
       <tr><td>A booking site's bookings wait for a person</td><td>Booking sources: pick its SU code.</td><td>A15.7</td></tr>
       <tr><td>A company agrees a rate</td><td>Contracts: open the company, Add contract.</td><td>A15.9</td></tr>
+      <tr><td>A company wants rooms kept for it</td><td>Contracts: the company, Hold rooms under its contract.</td><td>A15.9</td></tr>
     </tbody>
   </table>
 </section>

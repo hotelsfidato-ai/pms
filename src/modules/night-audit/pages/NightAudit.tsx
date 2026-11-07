@@ -338,6 +338,10 @@ export default function NightAuditPage() {
                   {result.noShows
                     ? ` · ${result.noShows} no-show${result.noShows === 1 ? "" : "s"}`
                     : ""}
+                  {/* Allotments past their release (271, D27-383 item 8). */}
+                  {result.allotmentRoomsReleased
+                    ? ` · ${result.allotmentRoomsReleased} allotment room${result.allotmentRoomsReleased === 1 ? "" : "s"} back on sale`
+                    : ""}
                 </p>
 
                 {/* ── The restaurant's day ───────────────────────

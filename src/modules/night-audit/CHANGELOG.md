@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · Allotments released at the night audit (D27-383 item 8, by the build-all helper)
+
+**Shipped.** `nightAudit.ts`, before the run is marked completed: `select app.release_allotments(hotel, the day closing)` (migration 271) - every allotment night within its release days goes back on sale, the rooms nobody booked recorded once per night in `allotment_releases`, so a second run releases nothing. The answer gains `allotmentRoomsReleased`; the result line says "n allotment rooms back on sale" when there are any. **Decided under D27-396:** cancelling a night audit does not take a release back (the rooms may have been sold since). **Proved:** `api/test/modules/contracts/allotments.test.ts` closes a day at Pune with an allotment due and reads 2 released, then the same day again refused with one row kept; `db/tests/modules/contracts.sql` (allotments) runs the function twice on one day.
+
+---
+
 ## 2026-11-02, later · After a cancel: Tally, and the daily reports (the owner's answers to D27-390's questions)
 
 **Asked for:** moved bills stay as built; the daily report email sent again, marked Corrected; Tally warned on the cancel window and the export card; the check-in refusal kept; rooms left dirty.

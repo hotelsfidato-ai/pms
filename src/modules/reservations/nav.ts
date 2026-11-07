@@ -1,4 +1,4 @@
-import { CalendarCheck, Users, BookPlus } from "lucide-react";
+import { CalendarCheck, Users, BookPlus, ListOrdered } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can } from "@/lib/permissions";
 
@@ -24,4 +24,11 @@ export const nav: ServiceNavEntry[] = [
        Viewer and the Accountant were offered it). */
     canSee: (role) => can(role, "create", "reservation"),
     keywords: ["reservation", "book a room"] },
+  /* D27-383 item 8 (272): guests waiting for a full room type. Reached by
+     search, from New booking where a type is full and from All bookings'
+     notice when a room frees up; Reception's working menu is pinned by the
+     core's navigation test, so adding it there is the master's call. */
+  { section: "bookings", order: 60,
+    label: "Waitlist", to: "/h/:code/waitlist", icon: ListOrdered, resource: "reservation",
+    keywords: ["wait list", "waiting list", "full", "sold out"] },
 ];

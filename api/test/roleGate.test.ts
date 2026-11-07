@@ -264,6 +264,23 @@ describe("who reads what (D27-140 to D27-147)", () => {
     expect(whoMay(rule(`POST ${H}/companies`))).toEqual(["owner", "admin", "gm", "front_desk"]);
   });
 
+  it("D27-383 item 8: allotments kept as contracts are; the rooming list filled by whoever changes a booking; the waitlist by whoever books", () => {
+    for (const key of [`POST ${H}/allotments`, `PUT ${H}/allotments/:id`]) {
+      expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
+    }
+    for (const key of [`POST ${H}/groups/:id/rooming-list/read`, `PUT ${H}/groups/:id/rooming-list`]) {
+      expect(whoMay(rule(key)), key).toEqual(whoMay(rule(`POST ${H}/groups/:id/lead`)));
+    }
+    for (const key of [`POST ${H}/waitlist`, `POST ${H}/waitlist/:id/remove`]) {
+      expect(whoMay(rule(key)), key).toEqual(whoMay(rule(`POST ${H}/bookings`)));
+    }
+    for (const key of [`GET ${H}/groups/:id/rooming-list`, `GET ${H}/waitlist`]) {
+      expect(who(key), key).toEqual(who(`GET ${H}/groups/:id`));
+    }
+    expect(new Set(who(`GET ${H}/allotments/:id`)))
+      .toEqual(new Set([...who(`GET ${H}/company-records`), ...who(`GET ${H}/groups/:id`)]));
+  });
+
   it("D27-240: the Store and equipment reports are the owner's, an administrator's, the GM's, the hotel manager's, the Inventory Manager's, the accountant's and the Viewer's", () => {
     for (const key of ["stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
       "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment"]) {

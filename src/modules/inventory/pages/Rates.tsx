@@ -369,6 +369,12 @@ function InventoryGrid({ hotelId, dates, nav, cells, restrictions, mayEdit, onDo
                       <span className="block text-xs text-grey-500 tabular">
                         {cell ? `${cell.sold}/${cell.sellable}` : ""}
                       </span>
+                      {/* HELD, NEVER SOLD (271, D27-383 item 8). */}
+                      {(cell?.held ?? 0) > 0 && (
+                        <span className="block text-xs font-medium text-brand-orange-700 tabular" data-held>
+                          {cell!.held} held
+                        </span>
+                      )}
                       {rule && <RuleMarks rule={rule} />}
                     </button>
                   </td>
@@ -431,7 +437,8 @@ function Legend() {
       <span className="text-grey-500">
         The small figures are <b>paying rooms sold / sellable</b>. Complimentary
         and tentative rooms hold a room but are left out; occupancy on the reports
-        counts complimentary rooms.
+        counts complimentary rooms. <b>Held</b> is rooms an allotment keeps for a
+        company: not free, and not sold.
       </span>
     </div>
   );

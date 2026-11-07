@@ -38,7 +38,9 @@ Find a screen (Ctrl K).
 | All bookings (Bookings) | `/h/:code/reservations` | `pages/Reservations.tsx` | Reception |
 | Groups (Bookings) | `/h/:code/groups` | `pages/Groups.tsx` | none — search-only for Reception |
 | (no menu entry) one group; its heading is the group's name | `/h/:code/groups/:id` | `pages/GroupPanel.tsx` | — |
-| New booking (Bookings) | `/h/:code/book` (`?room=&date=` from an empty room, `?lead=` from a lead) | `pages/BookingPage.tsx` | Reception |
+| New booking (Bookings) | `/h/:code/book` (`?room=&date=` from an empty room, `?lead=` from a lead, `?allotment=` from an allotment, `?waitlist=` from a waitlist entry) | `pages/BookingPage.tsx` | Reception |
+| (no menu entry) a group's rooming list | `/h/:code/groups/:id/rooming-list` | `pages/RoomingList.tsx` | - (the group page's Rooming list) |
+| Waitlist (Bookings) | `/h/:code/waitlist` | `pages/Waitlist.tsx` | none - search-only for Reception |
 
 Four addresses, four page files. The menu gate is `reservation` for all
 three entries. The Bookings section interleaves these with guests' entries by
@@ -70,6 +72,21 @@ of 15 September (`3424882`).
 | POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open. Since D27-305 (10) it is addressed to the company the group is billed to - the group's own, else its lead room's (one booking made every room) - as a function's bill is (060), so "Bill to company" reaches that company's City ledger |
 | POST | `/:code/stays/:id/routing` | send a room's charges to the group's master bill, or back (`reservations.route_room_to_group`, 056) |
 | POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057) - except a DAY USE (departure = arrival, D27-227), whose price must be typed and is never looked up (D27-229) - and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
+
+**`api/src/modules/reservations/roomingList.ts`** and **`waitlist.ts`** (D27-383 item 8, 7 November)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/groups/:id/rooming-list` | the group's standing rooms: guest, phone, type, room, dates, plan, who pays, still to arrive; `?as=pdf\|xlsx\|csv` the copy (no phones), drawn by `reportRender.ts`. STAYS; phone withheld without `customer` view |
+| POST | `/:code/groups/:id/rooming-list/read` | `{ name, data: base64 }`: an .xlsx or CSV read, each row tied to a room, every problem listed; nothing written. `reservation: edit` |
+| PUT | `/:code/groups/:id/rooming-list` | `{ rows: [{ reservationId, guestName, phone }] }`: all or none; a new name is a new guest on that booking. `reservation: edit` |
+| GET | `/:code/waitlist` | waiting entries, oldest first, each with `free` now (`app.inventory_grid`). STAYS; phone withheld |
+| POST | `/:code/waitlist` | add one (migration 272). `reservation: create` |
+| POST | `/:code/waitlist/:id/remove` | removed, with who and why; nothing deleted. `reservation: create` |
+
+`POST /:code/bookings` also takes `allotmentId` (contracts' `allotmentPickup`,
+above the first write) and `waitlistId` (the entry marked booked in the same
+transaction).
 
 5 endpoints. The groups **list** the Groups screen reads, `GET /:code/groups`,
 is not here: it is in front desk's `api/src/modules/front-desk/stays.ts`,

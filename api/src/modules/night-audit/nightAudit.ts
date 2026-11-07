@@ -600,6 +600,14 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       retained += amount;
     }
 
+    /* ── Allotments past their release (271, D27-383 item 8) ──────────
+       Every night within its release days goes back on sale: the rooms
+       nobody booked from it, recorded once per night (allotment_releases),
+       so a second run releases nothing. */
+    const { rows: released } = await client.query<{ rooms: number }>(
+      "select app.release_allotments($1, $2::date) as rooms", [hotelId, businessDate]);
+    const allotmentRoomsReleased = released[0]?.rooms ?? 0;
+
     /* ── Close it. THIS is what moves the date. ───────────────────── */
     await client.query(
       `update night_audit_runs
@@ -754,6 +762,8 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
          Rolling them together would hide the second entirely. */
       retentionCharged: Math.round(retained * 100) / 100,
       noShowsWithoutTerms: untermed,
+      /* Allotment rooms nobody booked, back on sale from tomorrow (271). */
+      allotmentRoomsReleased,
     } as Record<string, unknown>;
   });
 

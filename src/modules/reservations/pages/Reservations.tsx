@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { ClipboardList, LogIn, Users, LogOut, UserX } from "lucide-react";
+import { listWaitlist } from "@/modules/reservations/data/waitlist";
 import { cn } from "@/lib/cn";
 import { addDays, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -67,6 +68,12 @@ export default function ReservationsPage() {
       asked ? `q=${encodeURIComponent(asked)}` : `since=${since}`),
   });
 
+  /* Who on the waitlist has a room free now (272). A failed read says nothing. */
+  const waiting = useQuery({
+    queryKey: ["waitlist", hotelId], queryFn: () => listWaitlist(hotelId), retry: false,
+  });
+  const freeForWaiting = (waiting.data?.entries ?? []).filter((e) => (e.free ?? 0) > 0).length;
+
   const active = FILTERS.find((f) => f.key === filter) ?? FILTERS[0]!;
   /* A phone is found by its digits, however it was typed (QA BK-10). */
   const digits = q.replace(/\D/g, "");
@@ -118,6 +125,16 @@ export default function ReservationsPage() {
           </div>
         }
       />
+
+      {/* D27-383 item 8: a room freed up for somebody on the waitlist. */}
+      {freeForWaiting > 0 && (
+        <p className="mb-4 text-sm text-ink-900" data-waitlist-free>
+          {freeForWaiting === 1 ? "1 guest" : `${freeForWaiting} guests`} on the waitlist can have a room now.{" "}
+          <Link to={`/h/${hotelId}/waitlist`} className="font-medium text-brand-orange-700 hover:underline underline-offset-4">
+            Open the waitlist
+          </Link>
+        </p>
+      )}
 
       {/* The filters: a row of level count tiles, as on Rooms and the
           Calendar (tapped more than anything else here, so 44px and more

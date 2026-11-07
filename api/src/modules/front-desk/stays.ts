@@ -446,17 +446,25 @@ stays.get("/:code/calendar-prices", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows } = await client.query<{ type: string; date: string; price: string | null }>(
-      `select rt.name as type, d::date::text as date, p.price::text
+    /* And the rooms an allotment holds that night (271, D27-383 item 8): the
+       Calendar shows them as held, never as sold. */
+    const { rows } = await client.query<{ type: string; date: string; price: string | null; held: number }>(
+      `with held as (
+         select room_type_id, night, sum(held)::int as held
+           from app.allotment_held($1, $2::date, $2::date + ($3::int - 1))
+          group by room_type_id, night)
+       select rt.name as type, d::date::text as date, p.price::text, coalesce(h.held, 0) as held
          from room_types rt
          cross join generate_series($2::date, $2::date + ($3::int - 1), interval '1 day') d
          left join lateral app.price_for(rt.id, 'EP', d::date) p on true
+         left join held h on h.room_type_id = rt.id and h.night = d::date
         where rt.hotel_id = $1
         order by rt.sort_order, rt.name, d`,
       [hotelId, from, days],
     );
     /* null, not 0: zero would say the room is free. */
-    return rows.map((r) => ({ type: r.type, date: r.date, price: r.price === null ? null : Number(r.price) }));
+    return rows.map((r) => ({ type: r.type, date: r.date, price: r.price === null ? null : Number(r.price),
+                              held: r.held }));
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
