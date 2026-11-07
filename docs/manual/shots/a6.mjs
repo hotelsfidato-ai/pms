@@ -14,7 +14,8 @@
 // are filled in and closed.
 // Taken by: CDP_PORT=9343 node docs/manual/tools/shoot.mjs a6 [ids...]
 
-const API = "http://localhost:8787/api/hotels/5EL";
+/* API=http://localhost:<port> for a copy's own API (a helper's, D27-396). */
+const API = `${process.env.API ?? "http://localhost:8787"}/api/hotels/5EL`;
 const TOAST = "css:[role=region] [role=status]";
 
 /* The room's cleaning state through the board's own address (no screen sends
@@ -22,6 +23,37 @@ const TOAST = "css:[role=region] [role=status]";
 const roomState = (room, state) =>
   `fetch("${API}/rooms/${room}/housekeeping", { method: "PUT", headers: { "content-type": "application/json",
     "x-dev-staff-id": "dev-gm" }, body: JSON.stringify({ state: "${state}" }) }).then((r) => r.status)`;
+
+/* The minibar's and the checklists' stage, through the API (D27-383 item 10).
+   A hotel that already has a minibar list keeps it; one without gets three
+   "A6 Test" Store items, 24 of each in the Main store, one left unpriced. */
+const CALL = `const call = (who, method, path, body) => fetch("${API}" + path, { method,
+  headers: { "content-type": "application/json", "x-dev-staff-id": who },
+  ...(body ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());`;
+const MINIBAR_STAGE = `(async () => { ${CALL}
+  let list = await call("dev-gm", "GET", "/minibar");
+  if (!list.items.length) {
+    const main = (await call("dev-gm", "GET", "/stores")).stores.find((s) => s.name === "Main store").id;
+    for (const [name, unit, price] of [["A6 Test Water 1L", "bottle", "60"], ["A6 Test Cashews 50g", "packet", "120"],
+                                       ["A6 Test Cola 300ml", "can", ""]]) {
+      const item = await call("dev-gm", "POST", "/stores/items", { name, unit, category: "Housekeeping" });
+      await call("dev-gm", "POST", "/stores/movements", { kind: "receipt", itemId: item.id, locationId: main, quantity: 24 });
+      await call("dev-gm", "POST", "/minibar/items", { stockItemId: item.id, price, storeId: main });
+    }
+    list = await call("dev-gm", "GET", "/minibar");
+  }
+  const priced = list.items.find((i) => i.active && i.price !== null && !i.alcohol);
+  return call("dev-housekeeping", "POST", "/minibar/records",
+    { room: "205", lines: [{ itemId: priced.id, quantity: 2 }], disputed: true }).then((r) => r.ok);
+})()`;
+const CHECKLIST_STAGE = `(async () => { ${CALL}
+  const have = (await call("dev-gm", "GET", "/checklists")).checklists;
+  if (!have.some((c) => c.job === "checkout" && !c.roomType)) await call("dev-gm", "POST", "/checklists", { job: "checkout",
+    items: ["Bed made with fresh linen", "Bathroom cleaned and dry", "Towels replaced", "Minibar checked", "Floor swept and mopped"] });
+  if (!have.some((c) => c.job === "inspection" && !c.roomType)) await call("dev-gm", "POST", "/checklists", { job: "inspection",
+    items: ["Linen spotless", "Bathroom spotless", "AC and lights work", "Nothing left behind"] });
+  return call("dev-gm", "PUT", "/checklists/required", { required: true }).then((r) => r.ok);
+})()`;
 
 /* A native list's option, chosen as a person would: by the words on it. */
 const choose = (selector, startsWith, nth = 0) => ({
@@ -466,6 +498,95 @@ export const SHOTS = [
   },
   { id: "A6-34b", title: "Mark disposed", noShot: true, as: "General Manager",
     steps: [{ click: "text:Mark disposed" }, { wait: 1500 }] },
+
+  /* ── The minibar (D27-383 item 10) ─────────────────────────────────
+     Its stage, through the API as the GM: three Store items received into
+     the Main store and put on the minibar list (one left unpriced), when the
+     hotel has no list yet; then a take housekeeping is not sure of, in 205,
+     for the desk. Room 206 has a guest in it. */
+  { id: "A6-34m", title: "A minibar list, and a take waiting for the desk", noShot: true, as: "General Manager", path: BOARD,
+    steps: [{ eval: MINIBAR_STAGE }, { wait: 500 }] },
+  {
+    id: "A6-35", title: "What was taken from room 206", as: "Housekeeping", size: "phone", path: BOARD,
+    steps: [ROOMS, { scroll: "css:[data-hk-room='206']" }, { click: "label:Record the minibar in room 206" },
+      { waitFor: "text:Record what was taken" }, { click: "css:[data-minibar-item] button[aria-label^='One more']", nth: 1 },
+      { click: "css:[data-minibar-item] button[aria-label^='One more']", nth: 1 }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "css:[data-minibar-item]", side: "top" },
+      { n: 2, at: "css:[data-minibar-item] [aria-live]", nth: 1, side: "left" },
+      { n: 3, at: "text:No price yet - cannot be charged", side: "right" },
+      { n: 4, at: "text:Not sure, or the guest says not theirs - the desk confirms it", side: "top" },
+      { n: 5, at: "css:[data-minibar-save]", side: "top" },
+    ],
+  },
+  { id: "A6-35b", title: "Record what was taken", noShot: true, as: "Housekeeping", size: "phone",
+    steps: [{ click: "css:[data-minibar-save]" }, { waitFor: TOAST, ms: 15000 }, { wait: 1500 }] },
+  {
+    id: "A6-36", title: "The Minibar screen, at the desk", as: "Reception", path: "/h/5EL/minibar",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-minibar-waiting]", ms: 20000 }, { settle: true }],
+    marks: [
+      { n: 1, at: "css:[data-minibar-waiting]", side: "right" },
+      { n: 2, at: "text:Charge to the bill", side: "bottom" },
+      { n: 3, at: "css:[data-minibar-record]", side: "left" },
+    ],
+  },
+  {
+    id: "A6-36l", title: "The minibar's list, as the GM keeps it", as: "General Manager", path: "/h/5EL/minibar",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-minibar-list]", ms: 20000 }, { settle: true },
+      { scroll: "css:[data-minibar-list]", nth: 1 }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Add an item", side: "left" },
+      { n: 2, at: "css:[data-minibar-list]", nth: 1, side: "left" },
+      { n: 3, at: "text:Change", nth: 1, side: "left" },
+    ],
+  },
+
+  /* ── Checklists (D27-383 item 10) ────────────────────────────────────
+     A checkout clean and an inspection for every room type, the switch on,
+     and 209 sent for cleaning; the switch goes off again at the end. */
+  { id: "A6-36c", title: "Checklists, switched on", noShot: true, as: "General Manager", path: BOARD,
+    steps: [{ eval: CHECKLIST_STAGE }, { eval: roomState("209", "dirty") }, { wait: 500 }] },
+  {
+    id: "A6-37", title: "A checkout clean, ticked", as: "Housekeeping", size: "phone", path: BOARD,
+    steps: [ROOMS, { scroll: "css:[data-hk-room='209']" }, { click: "label:Mark room 209 clean" },
+      { waitFor: "css:[data-checklist-item]" },
+      ...[0, 1, 2, 3, 4].map((nth) => ({ click: "css:[data-checklist-item] button", nth })), { wait: 400 }],
+    marks: [
+      { n: 1, at: "css:[role=dialog] h2", side: "top" },
+      { n: 2, at: "css:[data-checklist-item] button", nth: 1, side: "right" },
+      { n: 3, at: "css:[data-checklist-save]", side: "top" },
+    ],
+  },
+  { id: "A6-37b", title: "Room 209 is clean", noShot: true, as: "Housekeeping", size: "phone",
+    steps: [{ click: "css:[data-checklist-save]" }, { waitFor: TOAST, ms: 15000 }, { wait: 1500 }] },
+  {
+    id: "A6-38", title: "An inspection that fails an item", as: "General Manager", size: "phone", path: BOARD,
+    steps: [ROOMS, { scroll: "css:[data-hk-room='209']" }, { click: "label:Mark room 209 inspected" },
+      { waitFor: "css:[data-checklist-item]" },
+      { click: "label:Linen spotless: OK" }, { click: "label:Bathroom spotless: failed" },
+      { type: ["label:What is wrong with Bathroom spotless", "Hair in the basin"] },
+      { click: "label:AC and lights work: OK" }, { click: "label:Nothing left behind: OK" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "label:Linen spotless: OK", side: "top" },
+      { n: 2, at: "label:What is wrong with Bathroom spotless", side: "top" },
+      { n: 3, at: "css:[data-checklist-save]", side: "top" },
+    ],
+  },
+  { id: "A6-38b", title: "Send room 209 back for cleaning", noShot: true, as: "General Manager", size: "phone",
+    steps: [{ click: "css:[data-checklist-save]" }, { waitFor: TOAST, ms: 15000 }, { wait: 1500 }] },
+  {
+    id: "A6-39", title: "The Checklists screen", as: "General Manager", path: "/h/5EL/checklists",
+    steps: [{ waitFor: "css:[data-checklist-run]", ms: 20000 }, { settle: true }],
+    marks: [
+      { n: 1, at: "text:A room is marked clean or inspected only by ticking its checklist", side: "bottom" },
+      { n: 2, at: "text:Every room type", nth: 0, side: "right" },
+      { n: 3, at: "css:[data-checklist-run]", side: "left" },
+      { n: 4, at: "text:Bathroom spotless - Hair in the basin", side: "left" },
+    ],
+  },
+  { id: "A6-39b", title: "Checklists off again, as the run found them", noShot: true, as: "General Manager", path: BOARD,
+    steps: [{ eval: `fetch("${API}/checklists/required", { method: "PUT", headers: { "content-type": "application/json",
+      "x-dev-staff-id": "dev-gm" }, body: JSON.stringify({ required: false }) }).then((r) => r.status)` }] },
 
   /* ── Put 210 back as the run found it ─────────────────────────────── */
   { id: "A6-99", title: "Room 210 back to clean, as it was", noShot: true, as: "General Manager", path: BOARD,

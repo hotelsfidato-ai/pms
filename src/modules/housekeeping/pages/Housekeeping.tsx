@@ -203,10 +203,17 @@ export default function HousekeepingPage() {
      Inspected open the room's checklist; the card's Minibar records what
      was taken. Neither read failing stops the board: the server still
      refuses a plain tap a checklist should have made, and says so. */
-  const setup = useQuery({ queryKey: ["checklists", hotelId], queryFn: () => getChecklists(hotelId) });
+  /* Read again each time the board opens: a GM may have switched checklists
+     on, or priced an item, since. */
+  const setup = useQuery({
+    queryKey: ["checklists", hotelId], queryFn: () => getChecklists(hotelId), refetchOnMount: "always",
+  });
   const lists = setup.data?.required ? setup.data.checklists : [];
-  const minibar = useQuery({ queryKey: ["minibar", hotelId], queryFn: () => getMinibar(hotelId) });
-  const minibarItems = minibar.data?.mayRecord ? minibar.data.items.filter((i) => i.active) : [];
+  const minibar = useQuery({
+    queryKey: ["minibar", hotelId], queryFn: () => getMinibar(hotelId), refetchOnMount: "always",
+  });
+  const minibarItems = minibar.data?.items.filter((i) => i.active) ?? [];
+  const mayRecordMinibar = minibar.data?.mayRecord ?? false;
 
   /* null is everyone. A supervisor sets the rota looking at every
      room; a housekeeper narrows it to their own and the board finally
@@ -446,6 +453,7 @@ export default function HousekeepingPage() {
                       lists={lists}
                       onTicked={(state) => ticked(room, state)}
                       minibarItems={minibarItems}
+                      mayRecordMinibar={mayRecordMinibar}
                     />
                   </li>
                 ))}
@@ -461,6 +469,7 @@ export default function HousekeepingPage() {
 
 function RoomCard({
   room, queued, onMark, staff, assignment, onAssign, hotelId, blocks, lists, onTicked, minibarItems,
+  mayRecordMinibar,
 }: {
   room: HousekeepingRoom;
   queued: QueuedChange[];
@@ -473,8 +482,10 @@ function RoomCard({
   /** The hotel's checklists while its switch is on; empty when off. */
   lists: Checklist[];
   onTicked: (state: string) => void;
-  /** The minibar's items, for those who may record; empty for anybody else. */
+  /** The hotel's minibar list; empty when it has none, and then no button. */
   minibarItems: MinibarItem[];
+  /** False: the button is grey and says who records it (Rule 6). */
+  mayRecordMinibar: boolean;
 }) {
   const pending = queued.length > 0 ? queued[queued.length - 1]! : null;
   const effective = pending?.state ?? room.housekeeping;
@@ -674,8 +685,8 @@ function RoomCard({
                   label="Minibar"
                   icon={GlassWater}
                   ariaLabel={`Record the minibar in room ${room.number}`}
-                  ready
-                  reason=""
+                  ready={mayRecordMinibar}
+                  reason="Recording the minibar is for housekeeping, reception or a manager."
                   onPress={() => setStocking(true)}
                   onRefused={setSaid}
                   hover="hover:border-grey-400 hover:bg-grey-50"

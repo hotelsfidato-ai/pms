@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · `issueFromStore` on the front door - the minibar's refill (D27-383 item 10, D27-396)
+
+**Shipped** (by housekeeping's minibar helper, for the master to review): `issueFromStore(client, hotel, staff, {itemId, storeId, quantity, department, note})` - the Store's own checks (a store at this property, the item, never below zero: "There is 1 bottle of Nuts in Main store, and this would take out 2...") and its one insert (`writeMovement`, kind `issue`, department `Minibar`, note "Minibar refill - room 206"), exported from `api/src/modules/stores/index.ts` as the receipt is to Purchasing. No route, no grant changed: who may record a minibar take is housekeeping's. Proved by `care.test.ts` (on hand 10 to 8; a refill the store does not hold refuses the whole record and leaves no movement).
+
+---
+
 ## 2026-10-29 · Release 16: the owner's answers (D27-378) - the Kitchen store marked, Kitchen stock in the kitchen's menu
 
 **Asked for:** the owner's D27-378, through the master: each hotel's Kitchen store marked by the migration, and a new hotel's, as the Bar store was; "Kitchen stock" in the kitchen manager's and the chef's Restaurant menu, like Bar stock. Everything else kept as built. cp6 (release 15, migration 250) merged first; `owner_reset.steps()` needs nothing: `recipe_lines` and the mark are setup, which a reset keeps.

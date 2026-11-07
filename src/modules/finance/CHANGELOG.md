@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · `postCharge` takes a source, and posts alcohol as VAT (for the minibar, D27-383 item 10, D27-396)
+
+**Shipped** (by housekeeping's minibar helper, for the master to review): `ChargeToPost.source` (`{type, id}` into `folio_postings.source_type`, `source_id`; the minibar names its record), and a charge with `taxKind: "alcohol"` is posted with `tax_scheme 'vat'` - the till's rule for a bar dish on a room bill (D21-91) - refused where the hotel is not switched on for alcohol, untaxed, or with no VAT rate, each in a sentence above the first write. The desk's own route sends no `taxKind`, so nothing the desk posts changes. Proved by `api/test/modules/housekeeping/care.test.ts` (a beer from the minibar: amount 500, VAT 10%, 50, `vat`; seen red with the scheme forced to `gst`).
+
+---
+
 ## 2026-11-05 · Settings' "Discounts" is "Room discounts" (the owner's D27-395)
 
 **Shipped.** `money.settings.ts`, `pages/money/Discounts.tsx` and the setup steps say **Room discounts**. The page adds: "The restaurant's discounts are Promotions, in Point of sale → Menu." The owner had added two 20% discounts here for a restaurant bill, and the Till never reads this list. Nothing about room discounts changed (10% by hand, D27-36). The whole entry is in the POS CHANGELOG, as is the restaurant's limit, which is gone.
