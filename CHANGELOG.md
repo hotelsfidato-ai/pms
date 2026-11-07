@@ -50,6 +50,39 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-06/07 · Build all, don't ask (D27-396): the approved features and the videos, so far
+
+**Asked for:** the owner, 6 November: "don't ask me permission, build all of them and I will take a look at it".
+
+**Built and merged on cp6** (each by a helper in its own copy; the master merged, renumbered and migrated `fidato`):
+- Safety (D27-384): two-step sign-in in our own API, off until switched on (257); SHI and AMR locked against any reset
+  by the server (258); `docs/go-live/STAGING.md` and `STANDBY.md`, steps only (they need the owner's Oracle account).
+- Accounts (item 2-4): money owed by age, company statements, commission owed, GSTR-1 JSON, input tax credit, GST on
+  advances. Seven questions for the CA in reports' CHANGELOG.
+- Restaurant (item 9): outside diners' table bookings, a voluntary service charge (CCPA 2022), tips, coupons, profit
+  per dish (259-261).
+- Report emails (item 5): Email on every report, scheduled reports (263). **Needs the owner's n8n paste:**
+  `deploy/n8n/OWNER-STEPS.md` part 7, file `.local/n8n/paste-7nov/read-the-message.js`.
+- Stock (item 11): use-by alerts, the supplier's bill checked against its order before payment (264-265).
+- Groups (item 8): rooming lists, allotments released at the night audit, the waitlist (267-269).
+- Guest care (item 10, half): the minibar on the room bill (VAT for alcohol), housekeeping checklists (270-271).
+- The book: 33 of its 44 missing pictures taken; A13-22 and A13-25 retaken.
+
+**Videos, in `D:\fidato\final videos` (old finals in `.local\old-finals`):** A0, A1, A3, A7, A9, A12, A13, A14.
+
+**Found:** the full reset deleted orders before the bookings pointing at them (fixed in 259); shared lists copied from
+old versions would have lost later work (MEMORY 475); merges before migrating the demo broke the local API (473);
+nothing used the database queue (474). Another chat's commit closed one of my staged merges (MEMORY 471, content
+intact).
+
+**Proved:** wave 1's full gate run (only resetOrder failed, fixed). Each later merge: type check, migration numbers,
+manual, database tests and its own API tests on scratch databases. **No full gate run since wave 1.**
+
+**Left open:** guest preferences and the feedback survey, importing an old system, group-wide reports and one rate change
+(being built); exports everywhere; UPI QR, payment links and payroll plans; the A8 update and the other chapters.
+
+---
+
 ## 2026-10-31 · All of A9 remade: 18 videos with the bar, Supplier dues and recipes (C:\videos)
 
 **Asked for:** the owner: "Remake A9": the same way as A8, each task checked against today's book and pictures.
