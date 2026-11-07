@@ -415,10 +415,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         notes: string | null;
         guest_id: string;
         nationality: string;
+        unpriced: boolean;
       }>(
         `select id, status, check_in::text, check_out::text, room_type_id,
                 notes, guest_id,
-                (select g.nationality from guests g where g.id = guest_id) as nationality
+                (select g.nationality from guests g where g.id = guest_id) as nationality,
+                agreed_rate is null as unpriced
            from reservations
           where hotel_id = $1 and id = $2
           for update`,
@@ -433,6 +435,11 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (stay.status === "cancelled") return refuse("This booking was cancelled.");
       if (stay.status === "no_show") return refuse("This booking was marked a no-show.");
       if (stay.status !== "confirmed") return refuse("Only a confirmed booking can be checked in.");
+      /* A booking brought in from an old system with no rate (D27-383 item 7,
+         migration "old system import"): never checked in on a dash. */
+      if (stay.unpriced) {
+        return refuse("This booking came in from the old system with no rate. Set its rate first: Change rate, on its bill.");
+      }
 
       /* FD-8 (QA, 28 September): adults 0 reached the database's own check
          and came back "Something went wrong". Refused in words. */

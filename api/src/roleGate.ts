@@ -390,6 +390,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/backfill/:kind`]: BACKFILL,
   [`PUT ${H}/backfill/:kind/:id`]: BACKFILL,
   [`POST ${H}/backfill/:kind/:id/remove`]: BACKFILL,
+  /* D27-383 item 7: an old system's guests and bookings - the owner or an
+     administrator at the hotel (the module switches' pair). */
+  [`POST ${H}/imports/:kind/check`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
+  [`POST ${H}/imports/:kind`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
+  [`POST ${H}/imports/:id/undo`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
   /* The Accountant, the GM, the owner and an Admin (D27-382): who may export. */
   [`PUT ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
@@ -1070,6 +1075,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/setup`]: see("setting", "the hotel's setup steps"),
   /* Backfill data (D27-398): the owner, an administrator, the GM and the accountant. */
   [`GET ${H}/backfill`]: BACKFILL_READ,
+  /* D27-383 item 7: what was brought in from an old system. */
+  [`GET ${H}/imports`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),

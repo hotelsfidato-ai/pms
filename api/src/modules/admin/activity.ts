@@ -43,6 +43,8 @@ const KINDS: Record<string, string> = {
      visa there are masked by PERSONAL below, as anywhere. */
   backfill_stays: "Backfilled stay", backfill_restaurant_bills: "Backfilled restaurant bill",
   backfill_cash: "Backfilled cash",
+  /* D27-383 item 7: Settings → Bring in old data. */
+  data_imports: "Brought in from an old system",
 };
 const kindOf = (table: string) =>
   KINDS[table] ?? table.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());

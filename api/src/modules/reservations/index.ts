@@ -27,6 +27,12 @@ export const mounts: readonly Mount[] = [
    undone in the same transaction (front-desk/afterCheckIn.ts). */
 export { cancelBooking } from "./desk.ts";
 
+/* D27-383 item 7: an old system's bookings brought in (admin's oldSystem.ts)
+   are made by the one act every booking is, with its refusals, never
+   overbooked; and its file is read as a rooming list's is. */
+export { makeBooking, type BookingRequest } from "./book.ts";
+export { fileRows, fileDate } from "./roomingList.ts";
+
 export {
   createChannelBooking, cancelChannelBooking, channelBookingAlreadyHere,
   isUniqueViolation,
