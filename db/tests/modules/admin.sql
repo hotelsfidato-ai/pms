@@ -1725,7 +1725,7 @@ begin
     -- ---------- removed: kept, frozen, and the room free again ----------
     perform set_config('app.user_id', gm::text, true);
     set local role pms_app;
-    update backfill_stays set removed_at = now(), removed_reason = 'Entered twice' where id = s1;
+    update backfill_stays set removed_at = now(), removed_reason = 'Entered twice', rate = 1 where id = s1;
     insert into backfill_stays (hotel_id, guest_id, guest_name, id_type, id_number, room_id, arrival, departure)
     values (h, g, 'Backfill Guest', 'driving_licence', 'DL0420110012345', r101, first_day - 4, first_day - 2)
     returning id into s2;
@@ -1735,8 +1735,8 @@ begin
     exception when others then v := sqlstate || ': ' || sqlerrm;
     end;
     reset role;
-    res := res || jsonb_build_object('n', 'a removed stay is kept, with who and why, and frees its room',
-      'ok', (select removed_by = gm and removed_reason = 'Entered twice' from backfill_stays where id = s1)
+    res := res || jsonb_build_object('n', 'a removed stay is kept, with who and why, unchanged, and frees its room',
+      'ok', (select removed_by = gm and removed_reason = 'Entered twice' and rate = 3200 from backfill_stays where id = s1)
             and s2 is not null);
     res := res || jsonb_build_object('n', 'and is never changed again',
       'ok', v like '23514: A removed record stays on the record%', 'd', v);

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
-  reverseStockMovement, importStockItems, setStockItem, saveStockCount,
+  reverseStockMovement, importStockItems, setStockItem, saveStockCount, setExpiryWarning,
   type StockItem, type StockKind, type StockMovement, type MovementKind, type StoreSummary,
   type CountLine,
 } from "@/modules/stores/data/stores";
@@ -220,6 +220,7 @@ export default function StoresPage() {
      D27-354), on the store ?store= names. */
   const [counting, setCounting] = useState(() => params.get("count") === "1");
   const [importing, setImporting] = useState(false);
+  const [warning, setWarning] = useState(false);
 
   const q = useQuery({
     queryKey: ["stores", code],
@@ -239,10 +240,14 @@ export default function StoresPage() {
      has left the list - switched off and emptied - falls back to all. */
   const picked = places.find((s) => s.id === storeId) ?? null;
   const today = q.data?.businessDate ?? "";
-  /* A place in use holds crockery only; a tile narrows to what answers it. */
+  /* A place in use holds crockery only; a tile narrows to what answers it.
+     An expiry tile lists the oldest use-by first (D27-383 item 11). */
+  const oldest = (i: StockItem) => i.expiry
+    .find((e) => e.expired === (tile === "expired") && (!picked || e.storeId === picked.id))?.useBy ?? "";
   const items = all
     .filter((i) => !picked || !inUseIds.has(picked.id) || i.crockery)
-    .filter((i) => !tile || inTile(tile, i, picked, today));
+    .filter((i) => !tile || inTile(tile, i, picked, today))
+    .sort((a, b) => (tile === "expired" || tile === "expiring" ? oldest(a).localeCompare(oldest(b)) : 0));
 
   /* What the screen shows for an item: the whole hotel, or the picked store.
      Null where the picked store holds none of it — a dash. */
@@ -433,6 +438,22 @@ export default function StoresPage() {
         <StoreTiles counts={tileCounts(all, picked, today)} picked={tile} onPick={setTile} />
       )}
 
+      {/* EXPIRY (D27-383 item 11): what the two tiles mean, and the hotel's
+          warning, changed by the owner, an Admin or the GM (the server says). */}
+      {q.data !== undefined && (tile === "expired" || tile === "expiring") && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 -mt-2 mb-5 text-sm text-grey-600" data-expiry-note="">
+          {tile === "expired"
+            ? "Past the use-by, and still counted on the shelf. Take it off with More, Waste."
+            : `A use-by within the next ${q.data.expiry.warnDays} day${q.data.expiry.warnDays === 1 ? "" : "s"}. Use these first.`}
+          {q.data.expiry.mayChange && (
+            <button type="button" onClick={() => setWarning(true)}
+                    className="font-medium text-brand-orange-700 hover:underline underline-offset-4 cursor-pointer">
+              Change the warning
+            </button>
+          )}
+        </p>
+      )}
+
       {q.data !== undefined && q.isError && (
         <div role="status"
              className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-5 rounded-lg
@@ -492,7 +513,54 @@ export default function StoresPage() {
                       onOpenChange={(o) => { if (!o) setLevelling(null); }}
                       onDone={() => { setLevelling(null); refresh(); }} />
       )}
+      {warning && q.data && (
+        <WarningDialog code={code} days={q.data.expiry.warnDays}
+                       onClose={() => setWarning(false)} onDone={() => { setWarning(false); refresh(); }} />
+      )}
     </Page>
+  );
+}
+
+/* ── How early a use-by is flagged (D27-383 item 11) ──────────────── */
+
+function WarningDialog({ code, days, onClose, onDone }: {
+  code: string; days: number; onClose: () => void; onDone: () => void;
+}) {
+  const [typed, setTyped] = useState(String(days));
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const save = async () => {
+    const n = Number(typed);
+    if (!Number.isInteger(n) || n < 1 || n > 90) {
+      setProblem("Warn from 1 to 90 days before the use-by date: a whole number of days.");
+      return;
+    }
+    setSaving(true);
+    const out = await setExpiryWarning(code, n);
+    setSaving(false);
+    if (!out.ok) { setProblem(out.reason); return; }
+    toast.success(`The Store now warns ${n} day${n === 1 ? "" : "s"} before a use-by.`);
+    onDone();
+  };
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent
+        title="When to warn of a use-by"
+        description="For this hotel: the Store and the bell list a delivery this many days before its use-by, and every day after it while some is still on the shelf."
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={() => void save()}>Save</Button>
+          </>
+        }
+      >
+        <Field label="Days before the use-by" hint="1 to 90. 7 to start.">
+          {(p) => <Input {...fieldProps(p)} inputMode="numeric" className="w-[120px]" value={typed}
+                         onChange={(e) => { setTyped(e.target.value); setProblem(null); }} />}
+        </Field>
+        {problem && <p role="alert" className="mt-3 text-sm text-brand-red-700">{problem}</p>}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -562,6 +630,9 @@ function ItemRow({
   /* Below level (D25-14), on the card now that the tile replaces the yellow
      list (Q2): which store, what it holds, and the level. */
   const belowIn = stores.filter((s) => item.lowIn.includes(s.id) && (!picked || s.id === picked.id));
+  /* Each delivery past or near its use-by, in the picked place or all,
+     oldest first (D27-383 item 11): which store, what is left of it, when. */
+  const expiryHere = item.expiry.filter((e) => !picked || e.storeId === picked.id);
 
   return (
     <li>
@@ -576,6 +647,7 @@ function ItemRow({
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-md font-semibold text-ink-900">{item.name}</p>
               {low && <StatusPill tone="warning">Low</StatusPill>}
+              {expiryHere.some((e) => e.expired) && <StatusPill tone="danger">Expired</StatusPill>}
             </div>
             <p className="text-sm text-grey-500 mt-0.5">
               {levelText}
@@ -700,8 +772,16 @@ function ItemRow({
 
         {/* THE ITEM'S ROWS, under one hairline (the Figure Rule): what each
             store holds, the deposit, and why Issue is grey. */}
-        {((!picked && stores.length > 1) || item.cylinder || (mayChange && empty) || belowIn.length > 0) && (
+        {((!picked && stores.length > 1) || item.cylinder || (mayChange && empty) || belowIn.length > 0
+          || expiryHere.length > 0) && (
           <div className="border-t border-grey-100 px-4 py-3 space-y-1">
+            {expiryHere.map((e) => (
+              <p key={`${e.storeId}-${e.useBy}-${e.receivedOn}`} data-expiry-line={e.expired ? "expired" : "expiring"}
+                 className={cn("text-sm tabular", e.expired ? "text-brand-red-700 font-medium" : "text-brand-yellow-800")}>
+                {stores.find((s) => s.id === e.storeId)?.name ?? "-"}: {heldText(e.quantity, item.sizeMl)} {item.unit} from
+                the delivery of {dateShort(e.receivedOn)} - {e.expired ? "expired, use by " : "use by "}{dateShort(e.useBy)}
+              </p>
+            ))}
             {belowIn.length > 0 && (
               <p className="text-sm text-brand-yellow-800 tabular" data-below-list="">
                 {belowIn.map((s) => `${s.name}: ${item.byStore[s.id] === undefined

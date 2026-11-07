@@ -31,7 +31,7 @@
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Room discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
       <tr><td>Lists</td><td><span class="ui">Booking sources</span> ↗ (A2), <span class="ui">Market segments</span>, <span class="ui">Reservation types</span>, <span class="ui">Ready reasons</span>, <span class="ui">Holidays</span>, <span class="ui">ID types</span>, <span class="ui">VIP levels</span></td><td>A17.10</td></tr>
       <tr><td>Front desk</td><td><span class="ui">Times and rules</span>, <span class="ui">Front desk rules</span></td><td>A17.11</td></tr>
-      <tr><td>Messages</td><td><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗, <span class="ui">Online check-in</span> ↗ (A10), <span class="ui">Guest messages on/off</span>, <span class="ui">Daily report emails</span></td><td>A17.12</td></tr>
+      <tr><td>Messages</td><td><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗, <span class="ui">Online check-in</span> ↗ (A10), <span class="ui">Guest messages on/off</span>, <span class="ui">Daily report emails</span>, <span class="ui">Scheduled reports</span></td><td>A17.12</td></tr>
       <tr><td>People and security</td><td><span class="ui">People</span> ↗ (A16), <span class="ui">Roles and permissions</span>, <span class="ui">Audit log</span>, <span class="ui">Activity</span>, <span class="ui">Sign-ins and devices</span>, <span class="ui">Signing in</span></td><td>A17.13</td></tr>
       <tr><td>Modules and connections</td><td><span class="ui">Modules</span>, <span class="ui">Channel manager</span> ↗ (A15), <span class="ui">CRS bookings</span> ↗ (A2), <span class="ui">Rivals' prices</span>, <span class="ui">Integrations</span> ↗ (A12), <span class="ui">Connection health</span></td><td>A17.14</td></tr>
     </tbody>
@@ -104,17 +104,7 @@
   <p>The checklist says what is missing. <span class="ui">Set up this hotel</span> walks a new hotel from nothing to its first booking in 18 steps. It is second in the Property group of the Settings menu, under <span class="ui">Profile</span>; the checklist links to it, and so does the Dashboard's <span class="ui">Still to do</span> card (below). It is one page for the hotel chosen in the top bar. The owner, an Admin and the GM have it; for anybody else the server says <span class="msg">“A hotel is set up by its owner, general manager or Admin, or by a group administrator. Ask one of them.”</span></p>
 
   <figure class="shot" id="fig-A17-51">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A17-51 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/settings/property/set-up-this-hotel</code></dd>
-        <dt>Sign in as</dt><dd>Owner</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Set up</dt><dd>A test hotel with nothing set up yet, so the first steps read To do; one step put on Later and one on Remind me; the first step open.</dd>
-        <dt>Arrows</dt><dd>1 → a group's heading with its count; 2 → one step's row: number, name, state; 3 → What it is, Why it matters, What is missing; 4 → Open …; 5 → Completed, Next, Later, Remind me</dd>
-        <dt>File</dt><dd><code>img/A17-51.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A17-51.png" alt="Set up this hotel: the steps in groups with their states, and Front desk times and rules open with what it is, why it matters and its choices">
     <figcaption><b>Figure A17-51.</b> Set up this hotel: the steps, and one of them open.</figcaption>
     <ol class="callouts">
       <li>A group of steps, with how many are done</li>
@@ -162,16 +152,7 @@
   </ul>
 
   <figure class="shot" id="fig-A17-52">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A17-52 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd>From a step's <span class="ui">Open Taxes</span> button, so the address carries the step</dd>
-        <dt>Sign in as</dt><dd>Owner</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the orange line under the top bar; 2 → Back to setup; 3 → the ✕ that closes it</dd>
-        <dt>File</dt><dd><code>img/A17-52.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A17-52.png" alt="Taxes opened from a step, with the orange bar Setting up this hotel: step 2 of 18, Taxes, Back to setup and a close button">
     <figcaption><b>Figure A17-52.</b> A screen opened from a step, with the way back.</figcaption>
     <ol class="callouts">
       <li>Which step this screen belongs to</li>
@@ -185,17 +166,7 @@
   <p><b>Ready to go live</b> changes nothing. Once steps 1 to 5 are done it says <span class="msg">“Ready to go live. The five things a first booking needs are done. Nothing is locked: change anything, at any time.”</span> Until then, <span class="msg">“Not ready yet. Still needed before the first booking: Taxes, Rooms.”</span> Under it are two lists: <span class="ui">Still to do</span>, with the steps you put off first, each opening its step, and <span class="ui">Done</span>.</p>
 
   <figure class="shot" id="fig-A17-53">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A17-53 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/settings/property/set-up-this-hotel?step=go-live</code></dd>
-        <dt>Sign in as</dt><dd>Owner</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Set up</dt><dd>A test hotel with steps 1 to 5 done and some of the others still to do.</dd>
-        <dt>Arrows</dt><dd>1 → the green “Ready to go live” line; 2 → Still to do, with a count; 3 → Done, with a count</dd>
-        <dt>File</dt><dd><code>img/A17-53.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A17-53.png" alt="The Ready to go live summary showing Not ready yet, the steps still to do and the steps done">
     <figcaption><b>Figure A17-53.</b> Ready to go live: a summary that changes nothing.</figcaption>
     <ol class="callouts">
       <li>Ready, or not ready yet, and why</li>
@@ -218,9 +189,9 @@
   <p>A hotel that ran on paper before it came onto the system keeps the essentials of those days here: each stay, each restaurant bill and the cash in and out. <span class="ui">Backfill data</span> is in the Property group of the Settings menu, under <span class="ui">Set up this hotel</span>. The top of the page says the hotel's first day in the system, <span class="msg">“First day in the system: 1 Nov 2026.”</span> Only days before it are entered here; from that day on, the normal screens are used.</p>
   <p>It is a register of its own. Nothing here is a booking, a bill, a payment or an invoice, so the night audit, the reports, the tax invoice numbers, Form C, the cash drawers and Tally never count it, and nothing on the live screens changes. The one exception is the guest: a backfilled guest is found or added in the guests' records, so the desk recognises them next time (<span class="msg">“Stayed with the group once”</span>), and Guest 360 lists the stay as <span class="ui">Backfilled</span> (A10).</p>
 
-  <figure class="shot" id="fig-A17-56">
-    <img src="img/A17-56.png" alt="Backfill data: the first day, the four tabs Stays, Restaurant bills, Cash and Day by day, Add a stay and Export CSV, and the list of stays">
-    <figcaption><b>Figure A17-56.</b> Backfill data, the Stays tab.</figcaption>
+  <figure class="shot" id="fig-A17-57">
+    <img src="img/A17-57.png" alt="Backfill data: the first day, the four tabs Stays, Restaurant bills, Cash and Day by day, Add a stay and Export CSV, and the list of stays">
+    <figcaption><b>Figure A17-57.</b> Backfill data, the Stays tab.</figcaption>
     <ol class="callouts">
       <li>The hotel's first day in the system: only days before it are entered</li>
       <li>The four tabs</li>
@@ -250,9 +221,9 @@
     <li>Tick <span class="ui">Send the guest their bill and thank-you</span> only if the guest should get it (below), then tap <span class="ui">Save</span>.</li>
   </ol>
 
-  <figure class="shot" id="fig-A17-57">
-    <img src="img/A17-57.png" alt="The lower half of the Add a stay window: the dates, the figures, how it was paid, the hotel's bill number and the send tick">
-    <figcaption><b>Figure A17-57.</b> Add a stay, its lower half. Above it are the guest and the ID.</figcaption>
+  <figure class="shot" id="fig-A17-58">
+    <img src="img/A17-58.png" alt="The lower half of the Add a stay window: the dates, the figures, how it was paid, the hotel's bill number and the send tick">
+    <figcaption><b>Figure A17-58.</b> Add a stay, its lower half. Above it are the guest and the ID.</figcaption>
     <ol class="callouts">
       <li>The dates: the departure is the first day at the latest</li>
       <li>The figures: a blank one is a dash</li>
@@ -287,9 +258,9 @@
     </ul>
   </div>
 
-  <figure class="shot" id="fig-A17-58">
-    <img src="img/A17-58.png" alt="Day by day: one line a day with rooms sold, room charges, GST, restaurant sales, payments by method, cash in and out, and the Total line">
-    <figcaption><b>Figure A17-58.</b> Day by day, with its Export CSV.</figcaption>
+  <figure class="shot" id="fig-A17-59">
+    <img src="img/A17-59.png" alt="Day by day: one line a day with rooms sold, room charges, GST, restaurant sales, payments by method, cash in and out, and the Total line">
+    <figcaption><b>Figure A17-59.</b> Day by day, with its Export CSV.</figcaption>
     <ol class="callouts">
       <li>Export CSV: the summary as a spreadsheet</li>
       <li>One day</li>
@@ -558,19 +529,9 @@
     <li>With <span class="ui">Several rooms</span> off, <span class="ui">Add a room</span> adds one room exactly as above.</li>
   </ul>
 
-  <figure class="shot" id="fig-A17-54">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A17-54 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/settings/rooms/room-types</code>, then Add a room, with Several rooms switched on</dd>
-        <dt>Sign in as</dt><dd>Owner</dd>
-        <dt>Window</dt><dd>1280 × 800, desk. Nothing is saved.</dd>
-        <dt>Set up</dt><dd>From 401, To 409, a Type, Floor 4: the button reads Add 9 rooms.</dd>
-        <dt>Arrows</dt><dd>1 → Several rooms; 2 → From and To; 3 → Floor; 4 → Add 9 rooms</dd>
-        <dt>File</dt><dd><code>img/A17-54.png</code></dd>
-      </dl>
-    </div>
-    <figcaption><b>Figure A17-54.</b> Several rooms: From, To, and the count on the button (not saved).</figcaption>
+  <figure class="shot" id="fig-A17-56">
+    <img src="img/A17-56.png" alt="The Add a room window with Several rooms switched on, From 401, To 409, Floor 4 and the button Add 9 rooms">
+    <figcaption><b>Figure A17-56.</b> Several rooms: From, To, and the count on the button (not saved).</figcaption>
     <ol class="callouts">
       <li>Several rooms</li>
       <li>From and To</li>
@@ -1057,10 +1018,11 @@
     </ol>
   </figure>
   <p>Right after the night audit closes the day, each address gets <b>one email</b> with every report switched on for it: the subject is the hotel's name, "daily reports" and the date ("5 Elements Akkalkot daily reports - 26 Oct 2026"); each report's key figures are in the email under its name, and each report is attached as its own PDF. If one of an address's reports cannot be made that night, its whole email waits and goes, complete, once every report is ready. An address typed under one report only gets that report. There are five: <b>Night audit report</b> (on to start), <b>Manager report</b>, <b>Money owed</b>, <b>Restaurant and stock</b> and <b>Bar stock</b> (off to start; <span class="d">D27-354</span>). Type the addresses, set the switches, and tap <span class="ui">Save</span> at the foot. <b>Nobody gets anything until an address is typed.</b></p>
+  <p><span class="ui">Scheduled reports</span>, beside it, sends any other report by email after the night audit: every day, once a week on a chosen day or once a month on a chosen date, for yesterday, last week, last month or the month so far, as a PDF or an Excel file. It is described in A7.6; any report can also be emailed from its own screen (A11.2).</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>. One email per address, a PDF for each report: <span class="d">D27-371</span>.</p>
+    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>. One email per address, a PDF for each report: <span class="d">D27-371</span>. Any report by email, and reports on a schedule: <span class="d">D27-383</span>, built under <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A17.13 -->

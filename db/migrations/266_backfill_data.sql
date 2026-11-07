@@ -299,6 +299,10 @@ begin
         using errcode = 'check_violation';
     end if;
     if new.removed_at is not null then
+      -- Removed as it stood: a removal changes nothing else in the same write.
+      v_why := new.removed_reason;
+      new := old;
+      new.removed_reason := v_why;
       new.removed_by := app.current_user_id();
       new.removed_at := now();
       return new;

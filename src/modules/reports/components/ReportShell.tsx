@@ -52,6 +52,8 @@ export function ReportShell({
   controls,
   /** The report and its query, for the files the server makes of it. */
   download,
+  /** Its Email button (D27-383 item 5), beside the files. */
+  email,
 }: {
   title: string;
   property?: string;
@@ -72,6 +74,7 @@ export function ReportShell({
   meta?: ReactNode;
   controls?: ReactNode;
   download?: { path: (kind: "pdf" | "xlsx" | "csv") => string; ready: boolean };
+  email?: ReactNode;
 }) {
   const identity = useDocumentIdentity();
   const propertyName = property ?? identity.property ?? DASH;
@@ -110,6 +113,7 @@ export function ReportShell({
               </Button>
             )}
             {download && <Downloads download={download} />}
+            {email}
             {csv && !download && (
               <Button
                 variant="secondary"

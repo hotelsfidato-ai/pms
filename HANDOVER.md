@@ -818,6 +818,19 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **7 November, later: RELEASE 20 READY, the owner's to type.** `release.mjs` ran once; website `index-DKNUD7VZ.js`;
+> steps `.local/release-20-steps.md` (sent). After A1-A7: check read-only (site bundle, server at 1c3db06d, database
+> at 262, no API errors), then recycle `release-r20`. Backfill's migration is now 266 (the build-all chat takes
+> 264-265 for stock expiry).
+>
+> **7 November, about 04:30: RELEASE 20 GATES GREEN at 1c3db06d** (copy `.claude/worktrees/release-r20`, branch
+> `release/r20`): web 1,565, API 3,127, db 1,958, replay 262, PG16, restore 1, to minute, in 78 min. It carries D27-397
+> (merged, migration 262), the Night audit fix and wave 1. **Not yet done:** `node scripts/release.mjs release/r20`
+> once, read the bundle from `dist/index.html`, and write `.local/release-20-steps.md` (A1-A8). The demo database
+> `fidato` is at 262 (backup `.local/backups/fidato-before-migrate-262-7nov.dump`). D27-398 Backfill data is being
+> built by a helper in `.claude/worktrees/backfill` (migration 264; 263 is the build-all chat's). Copy
+> `.claude/worktrees/after-checkin` is merged: recycle it, junctions out first.
+>
 > **6 November, 20:15: D27-397, AFTER CHECK-IN (this chat, not the build-all waves).** The owner: the GM undoes a
 > check-in, cancels or voids an in-house guest, and changes its arrival date, rate, room type and payment method;
 > the front desk asks and the GM approves; a switch in Front desk rules, on. **Migrations 266-268 are taken by it.**
@@ -834,6 +847,15 @@ npx vitest run          197 passed, 13 files
 >   charge off by default and tips, coupons, profit per dish; 263-265). Each in its own copy, database and ports.
 > - **Videos, one chapter at a time:** A7 first (no planned feature touches it), then A3, A1, A12, A13, A14; the
 >   chapters the features change wait for their wave.
+> - **7 Nov, STOPPED AGAIN at the usage limit; all helpers stopped, nothing lost.** On cp6 since: safety (f375c732),
+>   restaurant (570b9669, migrations 259-261, resetOrder fixed 62e886ee), report emails (65b81f60, 263), the book's
+>   pictures (6d2d0b9a), stock expiry and bill matching (e212f7f2, 264-265; that merge commit carries MAIN's message).
+>   The demo `fidato` is migrated to 265. **Full gates not run since wave 1.** Videos in the final folder: A1, A3,
+>   A7, A9, A13, A14. **Waiting in their copies, resume with SendMessage:** rooming lists, allotments, waitlist
+>   (fidato_groups, 271-273), minibar and checklists (fidato_care, 274-276), preferences and feedback (fidato_prefs,
+>   277-279); renumber each at its merge after MAIN's Backfill (266). Videos A0 (render cut off: re-render `--stale`)
+>   and A12 (waiting to render), both uncommitted in C:\videos. The stock copy agent-a3b07f1ca02baa195 is merged,
+>   junctions out, but the Recycle Bin refused it ("not supported"): recycle it by hand. MAIN's release-r20 copy stays.
 > - **STOPPED 6 Nov evening at the usage limit; all helpers stopped, nothing lost.** Merged: accounts (c12c58af,
 >   copy recycled; full gates NOT yet run on it). A7 remade and in the final folder (ed3c7b70). Left in their copies,
 >   to resume or finish: safety `worktree-agent-a6e66555171d09f4b` (2 commits, two-step built, not reported),

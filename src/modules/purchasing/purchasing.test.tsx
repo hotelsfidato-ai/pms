@@ -64,16 +64,16 @@ vi.mock("@/modules/purchasing/data/purchasing", async (importOriginal) => {
   const rice = (over: Record<string, unknown> = {}) => ({
     id: "l1", lineNo: 1, itemId: "rice", item: "Basmati rice", unit: "kg",
     quantity: "50.000", unitPrice: null, receivedQuantity: null,
-    receivedUnitCost: null, note: null, ...over,
+    receivedUnitCost: null, note: null, agreedGstRate: null, billedQuantity: null, billGstRate: null, ...over,
   });
   const oil = (over: Record<string, unknown> = {}) => ({
     id: "l2", lineNo: 2, itemId: "oil", item: "Sunflower oil", unit: "litre",
     quantity: "10.000", unitPrice: "140.00", receivedQuantity: null,
-    receivedUnitCost: null, note: null, ...over,
+    receivedUnitCost: null, note: null, agreedGstRate: null, billedQuantity: null, billGstRate: null, ...over,
   });
 
   /* The id in the URL says which state this request is in. */
-  const DETAIL: Record<string, { request: unknown; lines: unknown[] }> = {
+  const DETAIL: Record<string, { request: unknown; lines: unknown[]; differences?: unknown[]; credit?: unknown }> = {
     waiting: { request: request(), lines: [rice(), oil()] },
     ready: {
       request: request({ id: "ready", state: "ready", total: "4500.00", unpriced: 0,
@@ -99,6 +99,22 @@ vi.mock("@/modules/purchasing/data/purchasing", async (importOriginal) => {
       lines: [rice({ unitPrice: "62.00", receivedQuantity: "45.000",
                      receivedUnitCost: "64.00" })],
     },
+    /* D27-383 item 11: delivered on credit; the bill differs from the order three ways. */
+    flagged: {
+      request: request({ id: "flagged", state: "received", total: "3100.00", unpriced: 0,
+        supplier: { id: "sup1", name: "Akkalkot Traders" }, decidedBy: "Test GM",
+        receivedBy: "Store Keeper", receivedAt: "2026-09-18T09:00:00.000Z" }),
+      lines: [rice({ unitPrice: "62.00", agreedGstRate: "5.00", receivedQuantity: "50.000", billedQuantity: "52.000",
+                     receivedUnitCost: "64.00", billGstRate: "18.00" }),
+              oil({ receivedQuantity: "10.000", billedQuantity: "10.000", receivedUnitCost: "140.00", billGstRate: "18.00" })],
+      /* PUR-4: part of it paid - what is left, not "not paid yet". */
+      credit: { billNo: "AT-771", billDate: "2026-09-18", amount: "3100.00", dueOn: "2026-10-18", owed: "1100.00" },
+      differences: [
+        { lineId: "l1", item: "Basmati rice", unit: "kg", kind: "quantity", billed: "52.000", against: "50.000" },
+        { lineId: "l1", item: "Basmati rice", unit: "kg", kind: "price", billed: "64.00", against: "62.00" },
+        { lineId: "l1", item: "Basmati rice", unit: "kg", kind: "gst", billed: "18.00", against: "5.00" },
+      ],
+    },
   };
 
   return {
@@ -117,7 +133,7 @@ vi.mock("@/modules/purchasing/data/purchasing", async (importOriginal) => {
       };
     },
     getPurchaseRequest: async (_hotel: string, id: string) =>
-      DETAIL[id] ?? DETAIL["waiting"],
+      ({ differences: [], ...(DETAIL[id] ?? DETAIL["waiting"]) }),
     getRequesters: async () => ({
       mayChange: control.maySet,
       roles: Object.entries(control.requesters).map(([role, mayRaise]) => ({ role, mayRaise })),
@@ -442,13 +458,49 @@ describe("purchasing", () => {
     fireEvent.change(within(dialog).getByLabelText("Bill date"), { target: { value: "2026-09-18" } });
     fireEvent.change(within(dialog).getByLabelText("Amount, as printed, ₹"), { target: { value: "3100" } });
     fireEvent.change(within(dialog).getByLabelText("Due on"), { target: { value: "2026-10-18" } });
+    /* D27-383 item 11: on credit, what the bill charges for - typed, never filled in. */
+    const billed = within(dialog).getByLabelText("How much of the Basmati rice the bill charges for") as HTMLInputElement;
+    expect(billed.value).toBe("");
+    fireEvent.click(record);
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toBe("How much of the Basmati rice does the bill charge for? Type it as printed; not on the bill is 0.");
+    expect(control.delivered).toHaveLength(0);
+    fireEvent.change(billed, { target: { value: "52" } });
     fireEvent.click(record);
     await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
     expect(control.delivered[0]).toEqual({
       note: undefined,
       credit: { billNo: "AT-771", billDate: "2026-09-18", amount: 3100, dueOn: "2026-10-18" },
-      lines: [{ lineId: "l1", receivedQuantity: 50, receivedUnitCost: 62 }],
+      lines: [{ lineId: "l1", receivedQuantity: 50, receivedUnitCost: 62, billedQuantity: 52 }],
     });
+  });
+
+  it("flags where the delivered bill differs from the order, cell by cell (D27-383 item 11)", async () => {
+    as("stores");
+    go("/h/PU8/purchasing/flagged");
+    render(<App />);
+
+    const card = await vi.waitFor(() => {
+      const found = document.querySelector("[data-differences]");
+      if (!found) throw new Error("no differences card yet");
+      return found;
+    });
+    expect(card.querySelector("p")!.textContent).toBe("The supplier's bill differs from the order in 3 places");
+    expect([...card.querySelectorAll("li")].map((l) => l.textContent)).toEqual([
+      "Basmati rice: billed 52 kg, 50 kg came",
+      "Basmati rice: ₹64.00 a kg on the bill, ₹62.00 agreed",
+      "Basmati rice: GST 18% on the bill, 5% on the order",
+    ]);
+    const cells = (name: string) => [...screen.getByText(name).closest("tr")!.querySelectorAll("td")]
+      .map((td) => [td.textContent, td.className.includes("text-brand-red-700")]);
+    /* Item, Ordered, Agreed price, GST %, Amount, Came, Billed, Cost, GST on bill. */
+    expect(cells("Basmati rice").slice(3)).toEqual([
+      ["5%", false], ["₹3,100", false], ["50", false], ["52", true], ["₹64", true], ["18%", true]]);
+    expect(cells("Sunflower oil").slice(3), "no GST agreed: not compared")
+      .toEqual([["-", false], ["₹1,400", false], ["10", false], ["10", false], ["₹140", false], ["18%", false]]);
+    /* PUR-4: what is left on the bill, read from the server's `owed`. */
+    expect(document.querySelector("[data-credit]")!.textContent!.replace(/\s+/g, " "))
+      .toMatch(/^On credit: bill AT-771 of .+, ₹3,100, due .+ - ₹1,100 left to pay\.$/);
   });
 
   it("raises a request, and leaves the price blank where nothing is agreed", async () => {

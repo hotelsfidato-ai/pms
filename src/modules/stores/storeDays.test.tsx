@@ -14,7 +14,10 @@ import { mayReadStockReports } from "@/modules/reports";
    footer, and by outlet a dash for sales to a role that reads no reports.
    ══════════════════════════════════════════════════════════════════ */
 
-const control = vi.hoisted(() => ({ recorded: [] as unknown[] }));
+/* `mayWarn`: the server's answer to "may this person change the warning".
+   The App's query cache lives across this file, so a test changes it before
+   the store is read again (a save refetches it). */
+const control = vi.hoisted(() => ({ recorded: [] as unknown[], warned: [] as number[], mayWarn: true }));
 
 vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/stores/data/stores")>();
@@ -24,7 +27,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     cylinder: false, empties: 0, emptiesByStore: {}, cylindersOnDeposit: null,
     depositPerCylinder: null, depositHeld: null, inUse: null,
     lastMovement: null, movements: 0, isActive: true,
-    crockery: false, heldIn: [], today: {}, lastCounted: {}, onOrder: {}, ...over,
+    crockery: false, heldIn: [], today: {}, lastCounted: {}, onOrder: {}, expiry: [], ...over,
   });
   const stores = [
     { id: "main", name: "Main store", isActive: true, isMain: true },
@@ -36,6 +39,8 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       stores,
       outlets: [{ id: "rest", name: "Fidato Restaurant" }],
       businessDate: "2026-08-25",
+      /* Whether this person may change the warning is the server's answer. */
+      expiry: { warnDays: 7, today: "2026-08-25", mayChange: control.mayWarn },
       people: [{ id: "p1", name: "Ravi Waiter" }],
       inUse: [{ id: "dining", name: "Dining room", kind: "restaurant", isActive: true }],
       items: [
@@ -49,7 +54,12 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
         /* Held, never priced, never counted, and below its level. */
         item("salt", "Salt", {
           category: "Kitchen", onHand: 6, byStore: { kitchen: 6 }, heldIn: ["kitchen"],
-          levels: { kitchen: 10 }, lowIn: ["kitchen"], low: true, movements: 1 }),
+          levels: { kitchen: 10 }, lowIn: ["kitchen"], low: true, movements: 1,
+          /* D27-383 item 11: the server's reading - 4 past the use-by, 2 within the week. */
+          expiry: [
+            { storeId: "kitchen", quantity: 4, useBy: "2026-08-24", receivedOn: "2026-08-10", expired: true },
+            { storeId: "kitchen", quantity: 2, useBy: "2026-08-29", receivedOn: "2026-08-20", expired: false },
+          ] }),
         /* Crockery, in use at the dining room. */
         item("plate", "Dinner plate", {
           category: "Restaurant", crockery: true, onHand: 30, unitCost: 150, value: 4500,
@@ -69,6 +79,10 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       sales: null,
       foodCostBasis: "before_gst",
     }),
+    setExpiryWarning: async (_hotel: string, days: number) => {
+      control.warned.push(days);
+      return { ok: true };
+    },
     recordStockMovement: async (_hotel: string, input: unknown) => {
       control.recorded.push(input);
       return { ok: true, id: "98", onHand: 50, onHandHere: 50, emptiesHere: null,
@@ -91,6 +105,7 @@ beforeEach(() => {
   startSignedIn();
   go(`/h/${HOTEL}/stores`);
   control.recorded.splice(0);
+  control.warned.splice(0);
 });
 
 describe("the Store's tiles (D27-238, D27-242 Q3)", () => {
@@ -102,6 +117,7 @@ describe("the Store's tiles (D27-238, D27-242 Q3)", () => {
     const counts = Object.fromEntries([...document.querySelectorAll("[data-store-tile]")]
       .map((t) => [t.getAttribute("data-store-tile"), t.querySelector("b")!.textContent]));
     expect(counts).toEqual({
+      expired: "1", expiring: "1",
       below: "1", runOut: "1", received: "1", issued: "0", wasted: "0",
       awaiting: "1", notValued: "1", notCounted: "1",
     });
@@ -111,6 +127,46 @@ describe("the Store's tiles (D27-238, D27-242 Q3)", () => {
     expect(screen.getByText("Soap bar")).toBeTruthy();
     fireEvent.click(tile("runOut"));
     expect(await screen.findByText("Bath towel")).toBeTruthy();
+  });
+
+  it("Expired shows what is past its use-by, per store, with what is left; the warning is changed with its reason (D27-383 item 11)", async () => {
+    as("gm");
+    render(<App />);
+    await screen.findByText("Bath towel");
+    expect(tile("expired").className, "a job: warm").toMatch(/brand-yellow/);
+
+    fireEvent.click(tile("expired"));
+    await waitFor(() => expect(screen.queryByText("Bath towel")).toBeNull());
+    const salt = card("Salt");
+    const lines = [...salt.querySelectorAll("[data-expiry-line]")].map((l) => [l.getAttribute("data-expiry-line"), l.textContent]);
+    expect(lines).toEqual([
+      ["expired", expect.stringMatching(/^Kitchen store: 4 piece from the delivery of .+ - expired, use by .+$/)],
+      ["expiring", expect.stringMatching(/^Kitchen store: 2 piece from the delivery of .+ - use by .+$/)],
+    ]);
+    expect(within(salt).getByText("Expired")).toBeTruthy();
+    expect(document.querySelector("[data-expiry-note]")!.textContent)
+      .toMatch(/^Past the use-by, and still counted on the shelf\. Take it off with More, Waste\./);
+
+    fireEvent.click(screen.getByRole("button", { name: "Change the warning" }));
+    const dialog = await screen.findByRole("dialog");
+    const days = within(dialog).getByLabelText(/Days before the use-by/) as HTMLInputElement;
+    expect(days.value).toBe("7");
+    fireEvent.change(days, { target: { value: "0" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toBe("Warn from 1 to 90 days before the use-by date: a whole number of days.");
+    expect(control.warned, "refused before it is sent").toEqual([]);
+    /* The store read again after the save says this person may no longer
+       change it: the link goes - the screen follows the server's answer. */
+    control.mayWarn = false;
+    fireEvent.change(days, { target: { value: "10" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(control.warned).toEqual([10]));
+    fireEvent.click(tile("expiring"));
+    await waitFor(() => expect(document.querySelector("[data-expiry-note]")!.textContent)
+      .toBe("A use-by within the next 7 days. Use these first."));
+    expect(screen.queryByRole("button", { name: "Change the warning" })).toBeNull();
+    control.mayWarn = true;
   });
 });
 

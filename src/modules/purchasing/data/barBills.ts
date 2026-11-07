@@ -33,8 +33,8 @@ export interface BarBill {
   id: string; supplier: string; billNo: string; billDate: string; tpNo: string | null;
   handling: number | null; tcs: number | null; total: number | null;
   recordedBy: string | null; recordedAt: string; photoId: string | null;
-  /** On credit (D27-370): when it is due, and when it was paid; null when paid on the day. */
-  credit: { dueOn: string; paidOn: string | null } | null;
+  /** On credit (D27-370): when it is due, and what is left on it (D27-372, PUR-4); null when paid on the day. */
+  credit: { dueOn: string; owed: string } | null;
   lines: BarBillLine[];
 }
 

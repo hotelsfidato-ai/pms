@@ -1,4 +1,5 @@
 import type { Client } from "../../db.ts";
+import { monthEnd } from "../../businessDate.ts";
 import { REPORT_KEYS, type ReportDoc, type ReportKey, type ReportParams } from "./document.ts";
 import { propertyById, type Property } from "./figures.ts";
 import { monthlyStatistics, monthlyOccupancy, yearlyStatistics } from "./builders/statistics.ts";
@@ -81,6 +82,56 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "input-tax-credit": (c, h, p) => inputTaxCreditReport(c, h, month(p)),
   "gst-advances": (c, h, p) => gstAdvancesReport(c, h, month(p)),
 };
+
+/* ── What each report is of (D27-383 item 5: emailing one) ──────────
+   Its name, the period its question covers, and whether it is of one
+   supplier or account the person picks. Read to say the period in the
+   email, to know whether the period holds a day the night audit has not
+   closed, and to turn a schedule's period into the report's question. A
+   key without a line here does not compile. */
+export type Span = "day" | "window" | "month" | "year";
+export const ABOUT: Readonly<Record<ReportKey, { title: string; span: Span; pick?: true }>> = {
+  "night-audit": { title: "Night audit report", span: "day" },
+  manager: { title: "Manager report", span: "day" },
+  "city-ledger": { title: "City ledger", span: "window" },
+  "no-show": { title: "No show", span: "day" },
+  "monthly-occupancy": { title: "Monthly occupancy", span: "month" },
+  "monthly-statistics": { title: "Monthly statistics", span: "month" },
+  "yearly-statistics": { title: "Yearly statistics", span: "year" },
+  "lodging-tax": { title: "Lodging tax", span: "month" },
+  "stock-on-hand": { title: "Closing stock", span: "day" },
+  "stock-movements": { title: "Stock movement by day", span: "window" },
+  "stock-consumption": { title: "Consumption", span: "window" },
+  "stock-wastage": { title: "Wastage and breakage", span: "window" },
+  "stock-count-differences": { title: "Count differences", span: "window" },
+  "stock-dead": { title: "Dead stock", span: "day" },
+  "stock-cover": { title: "Days of cover", span: "day" },
+  "supplier-spend": { title: "Supplier spend", span: "window" },
+  equipment: { title: "Equipment report", span: "day" },
+  "bar-stock": { title: "Bar stock", span: "day" },
+  voids: { title: "Voids", span: "window" },
+  "flr-daily": { title: "FORM F.L.R.-1A / 2A / 3A", span: "day" },
+  "flr-monthly": { title: "FORM F.L.R.-3", span: "month" },
+  "supplier-dues": { title: "Supplier dues", span: "window" },
+  tds: { title: "TDS deducted", span: "window" },
+  "supplier-statement": { title: "Supplier statement", span: "window", pick: true },
+  "petty-cash": { title: "Petty cash", span: "window" },
+  "dues-by-age": { title: "Money owed by age", span: "day" },
+  "company-statement": { title: "Statement of account", span: "window", pick: true },
+  commission: { title: "Commission owed", span: "window" },
+  "gstr-1": { title: "GSTR-1", span: "month" },
+  "input-tax-credit": { title: "Input tax credit", span: "month" },
+  "gst-advances": { title: "GST on advances", span: "month" },
+};
+
+/** The first and last day a report's question covers, as its builder above reads it. */
+export function periodOf(key: ReportKey, p: ReportParams): { from: string; to: string } {
+  const span = ABOUT[key].span;
+  if (span === "month") return { from: `${month(p)}-01`, to: monthEnd(`${month(p)}-01`) };
+  if (span === "year") return { from: `${year(p)}-01-01`, to: `${year(p)}-12-31` };
+  if (span === "window") return { from: key === "city-ledger" ? p.from ?? p.asOn : from(p), to: p.asOn };
+  return { from: p.asOn, to: p.asOn };
+}
 
 /** The Bar stock switch (D27-367): its three reports are refused where it is off -
     by the screen's route, the file route, and left out of the nightly email. */

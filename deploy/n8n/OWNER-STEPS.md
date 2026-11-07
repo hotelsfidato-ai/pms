@@ -254,3 +254,28 @@ audit, but in the old wording - the subject is the reports' names, the hotel and
 figures are in one table with each report's name as a line - and **only the first PDF is
 attached** (the Night audit report when it is on). The other reports count as sent for that day
 and are not sent again. Paste, and the next day's email is the new one.
+
+## 7 · Any report by email, and reports on a schedule (D27-383 item 5, the CRS's n8n, in your browser)
+
+The PMS can now email any report from its screen (the **Email** button), and send any report on a
+schedule after the night audit (Settings, Messages, Scheduled reports). Each goes as a new kind of
+email, `report`: the subject **"<Hotel>: <Report> - <its days>"**, the person's note at the top, the
+report's facts as a table, the PDF or Excel file attached, and who sent it or that it was sent by
+schedule. Only the node **Read the message** of the sending workflow changes.
+
+**Do this BEFORE the release that brings it.** The new node reads every email the PMS sends today
+the same way, so pasting it early does no harm.
+
+1. **Your PC** - open `D:\fidato pms\.local\n8n\paste-7nov\read-the-message.js` in Notepad,
+   **Ctrl+A**, **Ctrl+C**.
+2. **The CRS's n8n, in the browser** - open the live workflow **PMS send · email and WhatsApp
+   (CRS)** → double-click **Read the message** → click in its code → **Ctrl+A**, **Ctrl+V** →
+   close the node.
+3. **Before Save:** the settings at the top of the code are the ones in this file: `FROM`,
+   `REPLY_TO`, `VOUCHER_TEMPLATE` and `const OWN_TEMPLATE_READY = false;`. If you had changed any
+   of them in n8n, type them in again now.
+4. **Save**.
+
+**If the PMS is updated before this paste:** an emailed or scheduled report is refused by n8n with
+*No email for "report" in this workflow.* The person sees that sentence, the schedule's list shows
+it as failed, and Connection health turns amber. Nothing else changes; paste, and the next one goes.

@@ -54,9 +54,34 @@ export interface PurchaseLine {
   quantity: string;
   /** Null until somebody agrees one. */
   unitPrice: string | null;
+  /** The order's GST rate, per cent (D27-383 item 11). Null: none agreed. */
+  agreedGstRate: string | null;
   receivedQuantity: string | null;
   receivedUnitCost: string | null;
+  /** What the supplier's bill charges for, on a delivery on credit. */
+  billedQuantity: string | null;
+  /** The bill's GST rate on the line, per cent, as the delivery recorded it. */
+  billGstRate: string | null;
   note: string | null;
+}
+
+/** One way a delivered order's bill differs from the order (D27-383 item 11):
+    more billed than came, a price above the agreed one, a GST rate other than
+    the agreed one. `billed` is the bill's; `against` is what came or was agreed.
+    Flagged, never refused. Worked out by the database, once. */
+export interface BillDifference {
+  lineId: string; item: string; unit: string; kind: "quantity" | "price" | "gst"; billed: string; against: string;
+}
+
+/** A difference in words: "Basmati rice: billed 26 kg, 25 kg came". */
+export function differenceText(d: BillDifference): string {
+  const n = (v: string) => String(Number(v));
+  if (d.kind === "quantity") return `${d.item}: billed ${n(d.billed)} ${d.unit}, ${n(d.against)} ${d.unit} came`;
+  if (d.kind === "price") {
+    const rs = (v: string) => `₹${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${d.item}: ${rs(d.billed)} a ${d.unit} on the bill, ${rs(d.against)} agreed`;
+  }
+  return `${d.item}: GST ${n(d.billed)}% on the bill, ${n(d.against)}% on the order`;
 }
 
 export interface PurchaseStore { id: string; name: string; isMain: boolean }
@@ -145,7 +170,9 @@ export interface CreditBill { billNo: string; billDate: string; amount: number; 
 export async function getPurchaseRequest(
   hotelId: string, id: string,
 ): Promise<{ request: PurchaseRequest; lines: PurchaseLine[];
-             credit: (Omit<CreditBill, "amount"> & { amount: string; paidOn: string | null }) | null }> {
+             /** What is left on the bill: "0.00" once paid (249). */
+             credit: (Omit<CreditBill, "amount"> & { amount: string; owed: string }) | null;
+             differences: BillDifference[] }> {
   return api(`/api/hotels/${hotelId}/purchasing/requests/${id}`);
 }
 
@@ -183,6 +210,14 @@ export async function priceLine(
     "PUT", { unitPrice, ...(free ? { free } : {}) });
 }
 
+/** The order's GST rate for one line, per cent (D27-383 item 11); null clears
+    it. Only while the order has not gone out, as the price. */
+export async function setLineGst(
+  hotelId: string, requestId: string, lineId: string, gstRate: number | null,
+): Promise<Result<unknown>> {
+  return call(`/api/hotels/${hotelId}/purchasing/requests/${requestId}/lines/${lineId}`, "PUT", { gstRate });
+}
+
 export async function sendOrder(
   hotelId: string, requestId: string, supplierId: string,
 ): Promise<Result<{ request: PurchaseRequest }>> {
@@ -211,12 +246,16 @@ export async function recordDelivery(
       /** The bill's GST for the line, all three or none, and its use-by
           (D27-238, D27-242 Q6). */
       gstRate?: number; gstAmount?: number; gstClaimable?: boolean; expiresOn?: string;
+      /** On credit: what the bill charges for, every line (D27-383 item 11). */
+      billedQuantity?: number;
     }[];
     /** On credit: the supplier's bill goes on the Supplier dues (D27-370). */
     credit?: CreditBill;
   },
 ): Promise<Result<{
   received: { item: string; quantity: number; store: string; onHandHere: number }[];
+  /** How many ways the bill differs from the order: flagged, not refused. */
+  differences: number;
 }>> {
   return call(
     `/api/hotels/${hotelId}/purchasing/requests/${requestId}/delivery`,
@@ -247,6 +286,8 @@ export interface SupplierPayment {
   id: string; paidOn: string; method: PayMethod; reference: string | null; amount: string;
   tds: { section: TdsSection; rate: string; amount: string } | null;
   handedOverBy: string | null; recordedBy: string | null; reversed: boolean;
+  /** Who confirmed they had seen the bill's differences from its order, on paying it. */
+  differencesSeenBy: string | null;
 }
 export interface SupplierCreditNote {
   id: string; noteNo: string; noteDate: string; amount: string; issuedBy: "supplier" | "hotel"; reason: string;
@@ -262,6 +303,8 @@ export interface SupplierDue {
   /** The bill this one replaced, after a reversal (D27-372). */
   replaces: string | null;
   from: { kind: "bar" } | { kind: "order"; id: string; reference: string };
+  /** Where the bill differs from its order (D27-383 item 11). Paying asks first. */
+  differences: BillDifference[];
   payments: SupplierPayment[];
   creditNotes: SupplierCreditNote[];
 }
@@ -282,7 +325,9 @@ export async function getSupplierDues(hotelId: string): Promise<SupplierDues> {
 export async function paySupplierDue(
   hotelId: string, billId: string,
   input: { amount: number; method: PayMethod; reference: string | null; paidOn: string; handedOverBy: string;
-           tds: { section: TdsSection; rate: number; amount: number } | null },
+           tds: { section: TdsSection; rate: number; amount: number } | null;
+           /** "I have seen how this bill differs from its order" - asked of a bill with any. */
+           differencesSeen?: boolean },
 ): Promise<Result<unknown>> {
   return call(`/api/hotels/${hotelId}/purchasing/dues/${billId}/payment`, "POST", input);
 }

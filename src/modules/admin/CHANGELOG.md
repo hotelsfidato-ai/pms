@@ -38,7 +38,7 @@ Built without asking (D27-396).
   dash for a stay with no figure (crm, two lines).
 - The CRS workflow's email `backfill-bill` (`deploy/n8n/pms-send-crs.json`, one draft added; **the owner re-imports
   the workflow before a backfilled bill can go**; until then n8n refuses the kind and the stay says "Not sent").
-- Manual A17.2, "Backfill data: what happened before the first day", pictures A17-56 to A17-58.
+- Manual A17.2, "Backfill data: what happened before the first day", pictures A17-57 to A17-59.
 
 **Decided under D27-396** (the owner did not say):
 - **Where:** Property group, after Set up this hotel, because it is part of bringing a hotel onto the system.
@@ -88,10 +88,15 @@ Built without asking (D27-396).
   no sideways scroll, the Accountant's read-only page without ID numbers, the Owner sent from `/h/5EL/backfill` to
   Settings.
 
+**At the master's merge of cp6 (7 November)**
+- 266 now follows cp6's 265, so there is no gap.
+- The guard's removal is frozen as it stood. It is `new := old`, plus the removal's reason, who and when. Before
+  this, a removal could change a figure in the same write. The test now tries that write and expects the rate kept.
+- The pictures are now A17-57 to A17-59, because cp6's A17-56 is "Several rooms".
+- The `backfill-bill` email now sits after cp6's `report` email in `pms-send-crs.json`.
+
 **Left open**
 - The owner re-imports `deploy/n8n/pms-send-crs.json` before a backfilled bill can be emailed.
-- `src/test/migrationNumbers.test.ts` fails in this copy on the gap (263 to 265 are other chats'); the master
-  renumbers at merge.
 
 ---
 
