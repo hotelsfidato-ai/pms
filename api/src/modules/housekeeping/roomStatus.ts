@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { needsChecklist } from "./checklists.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A ROOM'S HOUSEKEEPING STATE, AND TAKING A ROOM OUT OF INVENTORY
@@ -85,6 +86,15 @@ property.put("/:code/rooms/:number/housekeeping", async (c) => {
       return {
         allowed: false,
         reason: "A dirty room is cleaned before it is inspected.",
+      };
+    }
+    /* A HOTEL THAT TICKS ITS CHECKLISTS (D27-383 item 10; off by default):
+       a room with one for the job is marked through it, not by this tap. */
+    if (await needsChecklist(client, hotel.id, c.req.param("number"), state)) {
+      return {
+        allowed: false,
+        reason: `This hotel marks room ${c.req.param("number")} ${state} by ticking its checklist. `
+          + `Tap ${state === "clean" ? "Clean" : "Inspected"} on the Housekeeping board.`,
       };
     }
 

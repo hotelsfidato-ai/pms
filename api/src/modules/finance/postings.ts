@@ -120,6 +120,9 @@ export interface ChargeToPost {
   /** Allowed over the company's credit limit, and why (D27-275): the owner,
       an administrator or the GM only. */
   overLimitReason?: string | undefined;
+  /** Where the line came from (folio_postings.source_type, source_id): the
+      minibar names its record (D27-383 item 10). */
+  source?: { type: string; id: string } | undefined;
 }
 
 type ChargeOutcome = { ok: true; id: string } | ({ ok: false; reason: string } & Partial<OverLimit>);
@@ -243,11 +246,24 @@ async function chargeRefused(
      So the rate is asked for with `gst_rate_or_null` first and the
      refusal carries the sentence that says what to do. The raise stays
      where it is as the backstop for anybody who posts without asking. */
+  /* ALCOHOL IS VAT, NEVER GST (D21-91), and only where the property serves
+     it (D21-90) - the till's rule, for a drink from the minibar (D27-383
+     item 10). Its line carries tax_scheme 'vat' (insertCharge). */
+  if (taxKind === "alcohol") {
+    const { rows: on } = await client.query<{ on: boolean }>(
+      "select app.module_enabled($1, 'alcohol') as on", [hotelId]);
+    if (!on[0]?.on) return "This property is not switched on for alcohol, so a drink cannot be billed.";
+    if (!taxable) return "Alcohol always carries its VAT.";
+  }
   if (taxable) {
     const { rows: rate } = await client.query<{ rate: string | null }>(
       "select app.gst_rate_or_null($1, $2, $3::numeric) as rate",
       [hotelId, taxKind, amount],
     );
+    if (taxKind === "alcohol" && (rate[0]?.rate === null || rate[0]?.rate === undefined)) {
+      return "This property has no VAT rate for alcohol. Set it in the tax card, under Settings → Taxes and billing. "
+           + "A missing rate is not zero - nothing is billed until somebody sets it.";
+    }
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
       return `This property has no GST rule for ${taxKind}. Set it in the GST card, under Settings → Taxes and billing or Finance → Invoices. `
            + "A missing rate is not zero - nothing is billed until somebody sets it.";
@@ -266,18 +282,23 @@ async function insertCharge(
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
        (hotel_id, folio_id, business_date, category, description,
-        amount, tax_rate, tax_amount, idempotency_key, tax_kind)
+        amount, tax_rate, tax_amount, idempotency_key, tax_kind,
+        tax_scheme, source_type, source_id)
      select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
             t.rate, round($6::numeric * t.rate / 100.0, 2), $9::uuid,
             /* The kind it is taxed by, kept for its invoice line's SAC (D27-258 Q6). */
-            $8::text
+            $8::text,
+            /* Alcohol's rate is VAT (D21-91), as the till posts it. */
+            case when $8::text = 'alcohol' then 'vat' else 'gst' end,
+            $10::text, $11::uuid
        from (select case when $7::boolean
                          then app.gst_rate($1, $8::text, $6::numeric)
                          else 0::numeric end as rate) t
      returning id::text`,
     [hotelId, folioId, await resolveDate(client, hotelId, input.businessDate),
      CATEGORY[input.category ?? "Miscellaneous"] ?? "misc",
-     input.description.trim(), amount, taxable, taxKind, input.idempotencyKey ?? null],
+     input.description.trim(), amount, taxable, taxKind, input.idempotencyKey ?? null,
+     input.source?.type ?? null, input.source?.id ?? null],
   );
 
   return made[0]!.id;

@@ -375,6 +375,34 @@ export async function mayDeliverInto(
   return null;
 }
 
+/** AN ISSUE FOR ANOTHER SERVICE (D27-383 item 10, the minibar's refill): the
+    Store's own checks - a store at this property, the item, never below
+    zero - and its one insert, lent through the front door as the receipt
+    is. A refusal writes nothing. */
+export async function issueFromStore(
+  client: Client, hotelId: string, staffId: string,
+  input: { itemId: string; storeId: string; quantity: number; department: string; note: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const store = await storeAt(client, hotelId, input.storeId);
+  if (!store) return { ok: false, reason: "That is not a store at this property." };
+  const { rows: item } = await client.query<{ name: string; unit: string }>(
+    "select name, unit from stock_items where id = $1 and hotel_id = $2", [input.itemId, hotelId]);
+  if (!item[0]) return { ok: false, reason: "No such item in this store." };
+  const qty = Number(input.quantity);
+  if (!Number.isFinite(qty) || qty <= 0) return { ok: false, reason: "How many? An issue of nothing is not an issue." };
+  const onHand = await onHandIn(client, input.itemId, store.id);
+  if (qty > onHand) {
+    return { ok: false, reason:
+      `There ${onHand === 1 ? "is" : "are"} ${figure(onHand)} ${item[0].unit} of ${item[0].name} in `
+      + `${store.name}, and this would take out ${figure(qty)}. Receive it, or correct the count, first.` };
+  }
+  const id = await writeMovement(client, hotelId, staffId, {
+    itemId: input.itemId, storeId: store.id, kind: "issue", signed: -qty,
+    department: input.department, note: input.note,
+  });
+  return { ok: true, id };
+}
+
 /** One line of a delivery, as a receipt in the Store's ledger. Returns what
     the store holds afterwards, or a refusal in a sentence. */
 export async function receiveIntoStore(

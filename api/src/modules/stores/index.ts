@@ -39,3 +39,6 @@ export { barStore, barDrinks, addBarDrink } from "./stores.ts";
 /* A delivery's GST and expiry, checked one way for both doors in (D27-238):
    Purchasing asks it for every line before its first write. */
 export { deliveryFactsProblem } from "./stores.ts";
+/* The minibar's refill (housekeeping, D27-383 item 10): an issue, by the
+   Store's own checks and insert. */
+export { issueFromStore } from "./stores.ts";
