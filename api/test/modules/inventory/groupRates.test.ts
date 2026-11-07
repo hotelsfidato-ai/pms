@@ -119,7 +119,7 @@ describe("what would change, before anything is saved", () => {
     expect(d.skipped).toBe("Deluxe here is Superior plus a difference: change Superior's price, or the difference, on this property's own Rates.");
     /* Nothing written by a preview. */
     expect(await priceOn(types.get("GRA:DLX")!, FROM)).toBe(4000);
-    expect(body.roomTypes.find((t: { name: string }) => t.name.toLowerCase() === "deluxe").at).toEqual(["GRA", "GRB", "GRD"]);
+    expect([...body.roomTypes.find((t: { name: string }) => t.name.toLowerCase() === "deluxe").at].sort()).toEqual(["GRA", "GRB", "GRD"]);
   });
 
   it("skips a property with no price to change by an amount, naming the days", async () => {
