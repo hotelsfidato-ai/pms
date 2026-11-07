@@ -11,6 +11,87 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Group reports: several properties in one report (D27-383 item 6)
+
+Branch `worktree-agent-a06c4473ec734a6e0`, copy `.claude\worktrees\agent-a06c4473ec734a6e0`, on cp6 at `9f4f1532`.
+The rate change across properties, the same item's second half, is in the inventory CHANGELOG.
+
+**Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), item 6, built under D27-396:
+the main reports (Manager report, Monthly statistics, Money owed by age, room revenue and occupancy, the
+restaurant's sales) for a chosen set of the properties a person may open, each property's line and a group
+total, as screen, PDF and Excel; never a property's figures to somebody who may not open it; a total of like
+with like only; a missing figure a dash and the total saying it is incomplete.
+
+**Shipped.**
+- `api/src/modules/reports/group.ts`: `GET /api/group/reports/:key?hotels=&asOn=|month=|from=` and the same as
+  `.pdf`, `.xlsx`, `.csv` (the shared renderer). Five keys: `manager`, `monthly-statistics`, `room-revenue`,
+  `dues-by-age`, `restaurant-sales`. Mounted at `/api` (no hotel in the address); roleGate `own`.
+- **A property's line is its own report's.** Manager report, Money owed by age and Restaurant sales are read off
+  the property's own document (`buildReport`, the row by its label); Monthly statistics and Room revenue and
+  occupancy from the same `dailyFigures` + `figuresRow` (now exported from `builders/statistics.ts`, with `GRID`).
+- **Who.** At every property named, the person's role there (a group administrator: the owner) must pass the
+  one-property report's own read rule (`READ_RULES["GET /api/hotels/:code/reports/<key>"]`, `allows`): money owed
+  is `invoice` view (D27-147), the rest `report`. A file asks `report` export too. One property that fails, and
+  NOTHING comes back: the refusal names it. A property not worked at and one that does not exist read the same.
+  A test hotel is refused (D27-296 (11)).
+- `src/modules/reports/pages/GroupReports.tsx` at `/group-reports`, menu "Group reports" under Across properties
+  (`nav.ts`; shown only to a role that reads reports at more than one real property: `groupHotels.ts`
+  `hotelsWhere`, which the inventory's Group rate change uses too, through the front door). The report, its
+  date, month or days, and the properties as ticks; drawn by `ReportView` inside `ReportShell`, which takes two
+  new props: `heading` (the page's own) and `group` (never marked as a test hotel's).
+
+**Decided under D27-396** (for the owner to review):
+- **The total adds like with like:** money only over properties in one currency (a "Total, INR" each where there
+  are two); tax only within one GST state (the GSTIN's first two digits, else the state): across states the
+  total's Tax is a dash and a footnote names the states, because GST is filed per GSTIN - each property's line
+  keeps its own; counts added; occupancy, ADR and RevPAR worked out again from the totals, never averaged.
+  Because: adding INR to another currency, or one state's GST to another's, is a figure nobody files.
+- **A figure missing at one property:** that figure's total is a dash, the row reads "Total - incomplete" and a
+  footnote names who has none. Because: a partial sum looks like the whole group's (the stricter reading).
+- **No date asked:** the earliest business date of the properties chosen. Because: no property is reported past
+  its own day.
+- **Nothing owed at a property is ₹0.00 on its line**, not a dash: its own report says nobody owed anything.
+- **The Manager report's group form is its headline figures** (Today, PTD, YTD each: rooms, occupancy, ADR,
+  RevPAR, room and extra charges, POS and total revenue, tax, payments), not its 70 lines a property: each
+  property's own report keeps every line. Restaurant sales is the Manager report's POS Summary, every outlet.
+- **No Email button** on a group report: the email routes are one property's (item 5). Added when asked.
+
+**Frozen files touched:** `api/src/roleGate.ts` (four `own` rules: the two group report routes, the rate change's
+GET and POST). The reports `document.ts` (both copies) widens `report` by `` `group-${string}` ``.
+
+**Found, and fixed before merging.** A figure was read off the row whose `label` cell matched, and Money owed by age's
+first column is `account`: every property owed money would have printed ₹0.00 (a nought defaulted). `off()` now reads
+the section's own first column, and a Total owed not found is a dash; nought only where the property's own report has
+no account. Found by reading, not by a failing test; the test on a property that is owed (GRP, 1,000 in 31-60 days,
+equal bucket for bucket to its own report) was written after the fix.
+
+**Proved.** `api/test/modules/reports/groupReports.test.ts`, 15 tests, through `.local/dbq.sh` + with-test-db.sh: with
+`inventory/groupRates.test.ts` and `roleGate.test.ts` 3 files, 103 tests, exit 0 (15:18, 7 Nov; 14 of these then), and
+after the fix above the two files again, 24 tests, exit 0 (15:40). It sees each refusal:
+a GM at 5EL naming AGR (403, the sentence, no sections), a code that does not exist (the same words), the revenue
+manager asking money owed (D27-147), a housekeeping role at one of two properties (named), a Viewer's download, an
+empty `hotels`, an unknown key and `toString`. 5EL's Manager report line equals its own Manager report's Sold Room,
+Room Charges, ADR and Tax on all three periods, its Monthly statistics line equals its own Total row cell for cell,
+and the total adds Maharashtra's tax and dashes it across Maharashtra and Uttar Pradesh. `lineUp` alone: a figure
+missing ("Total - incomplete: B has no Tax."), a rate missing an input, two currencies, two GST states. Both tsc clean.
+**On screen** (API 8810, web 5190, own database `fidato_group` with Shimla and Agra from `docs/manual/shots/a16-group.sql`):
+as the Owner, all five reports for three properties (the Manager report's three periods, Tax dashed in the Total with
+the MH, UP, HP note; the occupancy chart; Money owed ₹0.00 a line), the PDF of the Manager report (landscape, one page,
+every column); as the revenue manager (5EL and Shimla) only those two offered, Money owed by age "You read this report
+at no property"; as a GM at one property, not in the menu and "This page is not part of your role"; at 375 px, no
+sideways page.
+
+Web: `npx vitest run` 237 files, 1580 tests, exit 0 (18:00), with `src/modules/reports/groupReports.test.ts` (5: who is
+offered which properties, the two menu entries for the owner of two, a revenue manager over two, a Viewer, and not for
+somebody at one) and `manual.test.ts`. Pictures A16-18 (the Manager report for three), A16-19 (Restaurant sales: four
+figures a period, so the Tax column and its dashed totals are on the page) and A16-20 (the rate change) taken on
+CDP 9411 after loading `docs/manual/shots/a16-group.sql`; manual built.
+API, the full suite through dbq (17:32-18:40, beside the web suite): 253 files, 3,219 tests, 3 failed - the channel
+manager's `suAvailability.test.ts` "a year" pair (timed out at 20 s) and `testHotels.test.ts`'s voucher text (empty) -
+none in a file this work touches; the two files alone: 87 tests, exit 0. They failed under load only.
+
+**Left open.** Nothing of this item.
+
 ## 2026-11-07 · Email any report, and reports on a schedule (D27-383 item 5)
 
 Branch `worktree-agent-a0bf00ca95f207bdb`, copy `.claude\worktrees\agent-a0bf00ca95f207bdb`, on cp6 at `c12c58af`.
