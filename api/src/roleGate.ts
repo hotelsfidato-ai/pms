@@ -899,7 +899,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
      stays (the lists, the panel, Assign room, the housekeeping board) and the
      till by name, for an in-house guest's allergy on the restaurant's order. */
   [`GET ${H}/guest-preferences`]: see("reservation", "guests' preferences", ["pos", "bar"]),
-  [`GET ${H}/guests/:id/preferences`]: see("reservation", "a guest's preferences", ["pos", "bar"]),
+  [`GET ${H}/guests/:id/preferences`]: see("reservation", "guests' preferences", ["pos", "bar"]),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,
   [`GET ${H}/leads/:ref`]: GUESTS,
