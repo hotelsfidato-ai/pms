@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    405 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    408 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -4934,9 +4934,67 @@ figure.shot.phone img { max-width: 72mm; }
     </ul>
   </div>
 
+  <h3>Reports on a schedule</h3>
+  <p>Any other report can go by email on a schedule, in the same send right after the night audit: <b>every day</b>, <b>once a week</b> after the audit of a chosen day, or <b>once a month</b> after the audit of a chosen date. Each is one report, the days it covers, the file (PDF or Excel) and the addresses; each address gets its own email, its subject the hotel, the report and its days, saying it was sent by schedule. A day the night audit never closes sends nothing. The owner, an Admin or the GM sets them, for each hotel, in <span class="ui">Settings</span>, <span class="ui">Messages</span>, <span class="ui">Scheduled reports</span>.</p>
+
+  <figure class="shot" id="fig-A7-06">
+    <img src="img/A7-06.png" alt="Scheduled reports: the Manager report every Friday, Monthly statistics on the 6th, Closing stock paused, each with its last send">
+    <figcaption><b>Figure A7-06.</b> Settings, Messages: Scheduled reports.</figcaption>
+    <ol class="callouts">
+      <li>Add a schedule</li>
+      <li>The report, the days it covers, when it goes and the file</li>
+      <li>Who gets it</li>
+      <li>The last send and its result</li>
+      <li>Pause, change or delete it</li>
+      <li>A paused one sends nothing</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:30%">Days it covers</th><th>For the audit of the day it goes after</th></tr></thead>
+    <tbody>
+      <tr><td>The day the audit closed</td><td>That day. A report of one day is as on it.</td></tr>
+      <tr><td>Last week, Monday to Sunday</td><td>The last whole week: on a Sunday, the week ending that day; on any other day, the week before. Pick Sunday to get it the moment the week closes.</td></tr>
+      <tr><td>Last month</td><td>The whole calendar month before that day's month.</td></tr>
+      <tr><td>This month so far</td><td>The 1st of that day's month to that day.</td></tr>
+    </tbody>
+  </table>
+  <p>A report that is as on one day - the Manager report, the Night audit report, Closing stock, Money owed by age and the like - is as on the last day of its period; a report over days covers them all.</p>
+
+  <h3>To add one</h3>
+  <figure class="shot" id="fig-A7-07">
+    <img src="img/A7-07.png" alt="Add a schedule: Report, Days it covers, How often with Every week, After the night audit of Sunday, File PDF, Send to, and Save">
+    <figcaption><b>Figure A7-07.</b> Add a schedule (not saved).</figcaption>
+    <ol class="callouts">
+      <li>The report</li>
+      <li>The days it covers</li>
+      <li>Every day, every week or every month</li>
+      <li>The day of the week, or the date (1 to 28)</li>
+      <li>PDF or Excel</li>
+      <li>Who gets it: one address a line</li>
+    </ol>
+  </figure>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a schedule</span>.</li>
+    <li>Choose the <span class="ui">Report</span> and the <span class="ui">Days it covers</span>.</li>
+    <li>Choose <span class="ui">Every day</span>, <span class="ui">Every week</span> with its day, or <span class="ui">Every month</span> with its date.</li>
+    <li>Choose <span class="ui">PDF</span> or <span class="ui">Excel</span>, type the addresses (at most 20), and tap <span class="ui">Save</span>.</li>
+  </ol>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A report of a whole month</b> (Monthly statistics, Monthly occupancy, Lodging tax, FLR-3, GSTR-1, Input tax credit, GST on advances) <b>goes for last month only</b>: this month holds days not closed yet. <b>Yearly statistics</b>, and a statement of one supplier or account, cannot go on a schedule: <span class="msg">“Yearly statistics covers a whole year, which none of the periods is, so it cannot go on a schedule.”</span></li>
+      <li><b>Nothing is sent for days the night audit has not closed.</b> If it ever finds one, it sends nothing that day and the list says why: <span class="msg">“Not sent: the period runs to …, and the night audit has not closed … yet, so the report would not be final.”</span> The same for a file over 9 MB, and for the bar's reports while Bar stock is switched off.</li>
+      <li><b>A failed email</b> is tried again, three times in all, and shows on <span class="ui">Connection health</span> (A17.14), as the daily ones do. The list shows <span class="msg">“Last: Failed”</span> with the reason.</li>
+      <li><b>Pause</b> stops it and keeps everything; <span class="ui">Resume</span> starts it from the next audit. A schedule added or changed after an audit starts from the next one.</li>
+      <li>A day cancelled and closed again does not send its scheduled reports a second time; only the daily report emails go again, marked Corrected.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>.</p>
+    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>. One email per address with a PDF for each report: <span class="d">D27-371</span>. Sent again, marked Corrected, when a cancelled day is run again: <span class="d">D27-390</span>. Any report on a schedule, weekly or monthly, after that day's audit: <span class="d">D27-383</span>; its periods, its own email per report, a whole month's report for last month only, and nothing for a day not closed: decided under <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A7.7 -->
@@ -7683,8 +7741,45 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><span class="ui">Print</span>: prints the report alone, without the menu or the buttons.</li>
     <li><span class="ui">PDF</span>, <span class="ui">Excel</span>, <span class="ui">CSV</span>: save the report as a file (Figure A11-04). The file is made on the server from the same figures as the screen. They wait until the report has loaded. The message <span class="msg">“PDF saved”</span> names the file; if it fails, <span class="msg">“The PDF was not made”</span> says why.</li>
-    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span> and <span class="ui">CSV</span> only.</li>
+    <li><span class="ui">Email</span>: sends the report, as it is on screen, as a PDF or an Excel file (below). It waits until the report has loaded.</li>
+    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span> and <span class="ui">CSV</span> only, and no <span class="ui">Email</span>.</li>
   </ul>
+
+  <h3>To email a report</h3>
+  <figure class="shot" id="fig-A11-39">
+    <img src="img/A11-39.png" alt="The Manager report with Email the Manager report open: Send to with an address, the hotel's report addresses, File PDF or Excel, a note, and Send">
+    <figcaption><b>Figure A11-39.</b> Email the Manager report (not sent).</figcaption>
+    <ol class="callouts">
+      <li>The addresses it goes to, one a line</li>
+      <li>The hotel's report addresses: tap one to add it</li>
+      <li>PDF or Excel</li>
+      <li>A short note, at the top of the email</li>
+      <li>Send</li>
+    </ol>
+  </figure>
+  <ol class="steps">
+    <li>Open the report and choose its days and its other choices, as for printing it.</li>
+    <li>Tap <span class="ui">Email</span>.</li>
+    <li>Under <span class="ui">Send to</span>, type each address on its own line, or tap one of <b>the hotel's report addresses</b> (the addresses its daily report emails and scheduled reports go to). At most 20.</li>
+    <li>Choose <span class="ui">PDF</span> or <span class="ui">Excel</span>, and type a note if you want one.</li>
+    <li>Tap <span class="ui">Send</span>. <span class="msg">“Emailed”</span> names who it went to.</li>
+  </ol>
+  <ul>
+    <li><b>It goes as it is on screen</b>: the same days and the same choices, the same file the PDF or Excel button saves. Each address gets its own email; its subject is the hotel, the report and its days ("5 Elements Akkalkot: Manager report - As on 05/11/2026"), and it says who sent it.</li>
+    <li><b>Who may:</b> whoever may open the report. Anyone else is told who may, in the report's own words, for example <span class="msg">“Reading money owed and taken is for the owner, an administrator, the general manager, the hotel manager, reception, the accountant or a viewer. Ask one of them.”</span></li>
+    <li><b>Every email is written down</b>: who sent it, which report and days, to whom, when, and whether it went. One that fails says why (<span class="msg">“Not sent”</span>) and shows on <span class="ui">Connection health</span> (A17.14).</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A report of a day the night audit has not closed is sent as it is</b>, and the email says so: <span class="msg">“The night audit has not closed 6 Nov 2026 yet: the figures for that day may still change.”</span> To send final figures, choose a day before the business date where the report has a date, or send it after the audit.</li>
+      <li><b>An address that is not one is refused</b>, and nothing is sent: <span class="msg">“"name@example" is not an email address.”</span></li>
+      <li><b>A file over 9 MB is not sent</b>, never cut: <span class="msg">“This report's PDF is 12.3 MB, and an email can carry at most 9.0 MB. Nothing was sent: choose fewer days, or download it.”</span></li>
+      <li>A yellow box <span class="msg">“Nothing can be sent yet”</span> means sending is not set up on the server; <span class="ui">Send</span> stays grey.</li>
+      <li>To send a report every day, week or month by itself, use <span class="ui">Scheduled reports</span> (A7.6).</li>
+    </ul>
+  </div>
 
   <h3>Reading the figures</h3>
   <ul>
@@ -7718,7 +7813,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The layout of the owner's eZee exports: <span class="d">D17-62</span>. A real Excel file and a CSV: <span class="d">D17-31</span>. PDFs made on the server: <span class="d">D17-32</span>. Dates as 25/08/2026: <span class="d">D17-77</span>. A figure the system does not hold is a dash, never a zero, because a zero would be read as a fact.</p>
+    <p>The layout of the owner's eZee exports: <span class="d">D17-62</span>. A real Excel file and a CSV: <span class="d">D17-31</span>. PDFs made on the server: <span class="d">D17-32</span>. Any report by email, as it is on screen, by whoever may open it, each send written down: <span class="d">D27-383</span>; a day not yet closed is sent as on screen and says so, the 9 MB limit from what the sending workflow takes: decided under <span class="d">D27-396</span>. Dates as 25/08/2026: <span class="d">D17-77</span>. A figure the system does not hold is a dash, never a zero, because a zero would be read as a fact.</p>
   </div>
 
   <!-- A11.3 -->
@@ -10417,7 +10512,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Room discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
       <tr><td>Lists</td><td><span class="ui">Booking sources</span> ↗ (A2), <span class="ui">Market segments</span>, <span class="ui">Reservation types</span>, <span class="ui">Ready reasons</span>, <span class="ui">Holidays</span>, <span class="ui">ID types</span>, <span class="ui">VIP levels</span></td><td>A17.10</td></tr>
       <tr><td>Front desk</td><td><span class="ui">Times and rules</span>, <span class="ui">Front desk rules</span></td><td>A17.11</td></tr>
-      <tr><td>Messages</td><td><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗, <span class="ui">Online check-in</span> ↗ (A10), <span class="ui">Guest messages on/off</span>, <span class="ui">Daily report emails</span></td><td>A17.12</td></tr>
+      <tr><td>Messages</td><td><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗, <span class="ui">Online check-in</span> ↗ (A10), <span class="ui">Guest messages on/off</span>, <span class="ui">Daily report emails</span>, <span class="ui">Scheduled reports</span></td><td>A17.12</td></tr>
       <tr><td>People and security</td><td><span class="ui">People</span> ↗ (A16), <span class="ui">Roles and permissions</span>, <span class="ui">Audit log</span>, <span class="ui">Activity</span>, <span class="ui">Sign-ins and devices</span>, <span class="ui">Signing in</span></td><td>A17.13</td></tr>
       <tr><td>Modules and connections</td><td><span class="ui">Modules</span>, <span class="ui">Channel manager</span> ↗ (A15), <span class="ui">CRS bookings</span> ↗ (A2), <span class="ui">Rivals' prices</span>, <span class="ui">Integrations</span> ↗ (A12), <span class="ui">Connection health</span></td><td>A17.14</td></tr>
     </tbody>
@@ -11355,10 +11450,11 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
   <p>Right after the night audit closes the day, each address gets <b>one email</b> with every report switched on for it: the subject is the hotel's name, "daily reports" and the date ("5 Elements Akkalkot daily reports - 26 Oct 2026"); each report's key figures are in the email under its name, and each report is attached as its own PDF. If one of an address's reports cannot be made that night, its whole email waits and goes, complete, once every report is ready. An address typed under one report only gets that report. There are five: <b>Night audit report</b> (on to start), <b>Manager report</b>, <b>Money owed</b>, <b>Restaurant and stock</b> and <b>Bar stock</b> (off to start; <span class="d">D27-354</span>). Type the addresses, set the switches, and tap <span class="ui">Save</span> at the foot. <b>Nobody gets anything until an address is typed.</b></p>
+  <p><span class="ui">Scheduled reports</span>, beside it, sends any other report by email after the night audit: every day, once a week on a chosen day or once a month on a chosen date, for yesterday, last week, last month or the month so far, as a PDF or an Excel file. It is described in A7.6; any report can also be emailed from its own screen (A11.2).</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>. One email per address, a PDF for each report: <span class="d">D27-371</span>.</p>
+    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>. One email per address, a PDF for each report: <span class="d">D27-371</span>. Any report by email, and reports on a schedule: <span class="d">D27-383</span>, built under <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A17.13 -->

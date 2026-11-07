@@ -65,6 +65,9 @@ export const OUTSIDE: Readonly<Record<string, string>> = {
   "POST /api/hotels/:code/invoices/:number{.+}/send": NOTHING_SENT,
   "POST /api/hotels/:code/reviews/:id/ask": NOTHING_SENT,
   "PUT /api/hotels/:code/report-emails": NOTHING_SENT,
+  "POST /api/hotels/:code/reports/:key/email": NOTHING_SENT,
+  "POST /api/hotels/:code/report-schedules": NOTHING_SENT,
+  "PUT /api/hotels/:code/report-schedules/:id": NOTHING_SENT,
   /* SU, the CRS, rivals' prices */
   "POST /api/hotels/:code/channel-manager/availability/send": NOTHING_SENT,
   "POST /api/hotels/:code/channel-manager/content/send": NOTHING_SENT,

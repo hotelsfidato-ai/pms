@@ -402,6 +402,37 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
       .toBe("Corrected: this day's night audit was cancelled and run again. These reports replace the ones sent before.");
   });
 
+  it("writes any report's email: the note, its facts as a table, a day still open, or by schedule (D27-383 item 5)", () => {
+    const xlsx = { name: "5EL-manager-2026-11-05.xlsx",
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      base64: Buffer.from("PK made up").toString("base64") };
+    const [byHand] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "report", file: xlsx, to: { email: "owner@example.com" },
+      data: { hotelName: "Test Hotel", reportTitle: "Manager report", period: "As on 05/11/2026",
+        facts: "As on Date: 05/11/2026\nCurrency: INR", sentBy: "Asha Test", note: "For <b>Monday</b>",
+        openDay: "06/11/2026" } }) });
+    expect(byHand!.json).toMatchObject({ stop: false, to: "owner@example.com", attachments: "data",
+      subject: "Test Hotel: Manager report - As on 05/11/2026" });
+    const text = String(byHand!.json["text"]);
+    expect(text.split("\n\n")[0]).toBe("A note from Asha Test: For <b>Monday</b>");
+    expect(text).toContain("As on Date: 05/11/2026\nCurrency: INR");
+    expect(text).toContain("The night audit has not closed 6 Nov 2026 yet: the figures for that day may still change.");
+    expect(text).toContain("Sent by Asha Test from the PMS.");
+    expect(String(byHand!.json["html"]), "a typed note is text, never markup").toContain("For &lt;b&gt;Monday&lt;/b&gt;");
+    expect(byHand!.binary?.["data"], "the Excel file attached as it came").toMatchObject(
+      { mimeType: xlsx.contentType, fileName: xlsx.name });
+
+    const [scheduled] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "report", file: pdf, to: { email: "owner@example.com" },
+      data: { hotelName: "Test Hotel", reportTitle: "Voids", period: "31/01/2000 to 06/02/2000",
+        facts: "From: 31/01/2000\nTo: 06/02/2000", schedule: "every Sunday" } }) });
+    const words = String(scheduled!.json["text"]);
+    expect(scheduled!.json["subject"]).toBe("Test Hotel: Voids - 31/01/2000 to 06/02/2000");
+    expect(words.split("\n\n")[0]).toBe("Voids for Test Hotel, 31/01/2000 to 06/02/2000.");
+    expect(words).toContain("Sent by schedule, every Sunday.");
+    expect(words).not.toContain("night audit has not closed");
+  });
+
   it("refuses a kind it has no template for, in a sentence", () => {
     expect(whatsapp({ kind: "bill" })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });

@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { useUi } from "@/lib/ui";
 import { Skeleton, ReadFailed, readError } from "@/components/ui";
 import { ReportShell } from "@/modules/reports/components/ReportShell";
+import { EmailReport } from "@/modules/reports/components/EmailReport";
 import { ReportView, factsLine, documentCsv } from "@/modules/reports/components/ReportView";
 import { getReport, type ReportKey, type ReportQuery } from "@/modules/reports/data/document";
 
@@ -74,6 +75,9 @@ export function DocumentReport({
            asked, so the file and the screen cannot show two answers. */
         path: (kind) => `/api/hotels/${hotelId}/reports/${report}.${kind}${fileQuery(query ?? {})}`,
       }}
+      /* The same question again, so the email and the screen cannot differ. */
+      email={<EmailReport hotel={hotelId} report={report} title={doc?.title ?? title} ready={Boolean(doc)}
+        query={Object.fromEntries(new URLSearchParams(fileQuery(query ?? {})))} />}
     >
       {q.isLoading ? (
         <div className="py-4 space-y-2">

@@ -20,34 +20,44 @@ import type { ReportParams } from "./document.ts";
 
 export const documents = new Hono<{ Variables: { subject: string } }>();
 
+/** A report's question, checked: everything but the as-on date, which is the
+    property's business date when absent. The screen's route and the email's
+    (emails.ts) read it alike. A malformed part is refused in a sentence. */
+export function readQuery(
+  key: string, q: Record<string, string | undefined>,
+): { error: string } | { asOn: string | undefined; rest: Omit<ReportParams, "asOn"> } {
+  const asOn = q["asOn"] === undefined ? undefined : isoDateParam(q["asOn"]);
+  if (asOn === null) return { error: "The date must be written YYYY-MM-DD." };
+  if (q["month"] !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(q["month"])) {
+    return { error: "The month must be written YYYY-MM." };
+  }
+  if (q["year"] !== undefined && !/^\d{4}$/.test(q["year"])) return { error: "The year must be four digits." };
+  const from = q["from"] === undefined ? undefined : isoDateParam(q["from"]);
+  if (from === null) return { error: "The first date must be written YYYY-MM-DD." };
+  const missing = paramsProblem(key, q["supplier"], q["account"]);
+  if (missing) return { error: missing };
+  return {
+    asOn,
+    rest: {
+      ...(q["month"] ? { month: q["month"] } : {}),
+      ...(q["year"] ? { year: Number(q["year"]) } : {}),
+      ...(from ? { from } : {}),
+      ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
+      ...(q["supplier"] ? { supplier: q["supplier"] } : {}),
+      ...(q["account"] ? { account: q["account"] } : {}),
+    },
+  };
+}
+
 for (const key of BUILT_KEYS) {
   documents.get(`/:code/reports/${key}`, async (c) => {
-    const q = c.req.query();
-    const asOn = q["asOn"] === undefined ? undefined : isoDateParam(q["asOn"]);
-    if (asOn === null) return c.json({ error: "The date must be written YYYY-MM-DD." }, 400);
-    if (q["month"] !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(q["month"])) {
-      return c.json({ error: "The month must be written YYYY-MM." }, 400);
-    }
-    if (q["year"] !== undefined && !/^\d{4}$/.test(q["year"])) {
-      return c.json({ error: "The year must be four digits." }, 400);
-    }
-    const from = q["from"] === undefined ? undefined : isoDateParam(q["from"]);
-    if (from === null) return c.json({ error: "The first date must be written YYYY-MM-DD." }, 400);
-    const missing = paramsProblem(key, q["supplier"], q["account"]);
-    if (missing) return c.json({ error: missing }, 400);
+    const query = readQuery(key, c.req.query());
+    if ("error" in query) return c.json({ error: query.error }, 400);
 
     const doc = await withSession(c.get("subject"), async (client) => {
       const property = await propertyFor(client, c.req.param("code"));
       if (!property) return null;
-      const params: ReportParams = {
-        asOn: asOn ?? property.businessDate,
-        ...(q["month"] ? { month: q["month"] } : {}),
-        ...(q["year"] ? { year: Number(q["year"]) } : {}),
-        ...(from ? { from } : {}),
-        ...(q["ignoreZero"] !== undefined ? { ignoreZero: q["ignoreZero"] === "1" } : {}),
-        ...(q["supplier"] ? { supplier: q["supplier"] } : {}),
-        ...(q["account"] ? { account: q["account"] } : {}),
-      };
+      const params: ReportParams = { asOn: query.asOn ?? property.businessDate, ...query.rest };
       if (await switchedOff(client, property.id, key)) return "off" as const;
       return buildReport(client, property.id, key, params);
     });
