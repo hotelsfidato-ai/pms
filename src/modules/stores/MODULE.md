@@ -127,7 +127,7 @@ and both stay. A list can be imported from a file.
     `/h/:code/stores/days` (`pages/StoreDays.tsx`), one menu entry, the same
     guard. The place picked and the tile live in the address (`?store=`,
     `?tile=`), so switching keeps both.
-  - **Eight tiles** (`components/StoreTiles.tsx`, rules in `lib/tiles.ts`, one
+  - **Eight tiles, ten since D27-383 (Expired, Expiring soon, below)** (`components/StoreTiles.tsx`, rules in `lib/tiles.ts`, one
     definition for both views): Below level · Run out (had some, holds none) ·
     Received / Issued / Wasted today (waste and breakage) · Awaiting delivery
     (Purchasing's door) · Not valued (held, no cost) · Not counted in 30 days
@@ -158,7 +158,7 @@ and both stay. A list can be imported from a file.
     store by `api/src/modules/stores/expiry.ts` (`lotsLeft`: first expiring first out, a move carries
     the use-by, an undo puts back what it took, below nothing is owed; no use-by is never listed) and
     sent as each item's `expiry`; the card lists them, an expired one red with an **Expired** pill. On
-    either tile, **Change the warning** (`edit`) sets `hotels.expiry_warn_days` (7, 1 to 90) through
+    either tile, **Change the warning** (the owner, an Admin or the GM: `mayChange`) sets `hotels.expiry_warn_days` (7, 1 to 90) through
     `PUT /:code/stores/expiry-warning`. The bell tells whoever may correct a count (core
     `notifications.ts`, through this door's `expiryAlerts`). "Today" is the property's calendar day.
   - **Reports** (D27-240): a menu of the nine stock and equipment reports at
@@ -205,7 +205,7 @@ POST   /:code/stores/movements                create   receipt · issue · wasta
                                                        A cylinder item's issue needs `emptiesBack`, its
                                                        receipt `emptiesTaken` (no more than that
                                                        store's empties), each written as its own row
-PUT    /:code/stores/expiry-warning           edit     days before a use-by that a delivery is flagged,
+PUT    /:code/stores/expiry-warning           owner, admin, GM  days before a use-by that a delivery is flagged,
                                                        1 to 90 (D27-383 item 11, migration 269)
 POST   /:code/stores/counts                   edit     the count sheet: one adjustment per difference,
                                                        "Count of <store>"; refused whole if a line's

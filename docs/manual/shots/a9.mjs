@@ -193,7 +193,8 @@ export const SHOTS = [
   },
   /* D27-383 item 11: the rice's delivery is used by in three days. */
   {
-    id: "A9-50", title: "Expiring soon: what to use first", as: IM,
+    /* As the GM: the warning is the owner's, an Admin's or the GM's to change. */
+    id: "A9-50", title: "Expiring soon: what to use first", as: "General Manager",
     path: "/h/5EL/stores?tile=expiring",
     steps: [{ waitFor: "css:[data-expiry-line]", ms: 15000 }, { wait: 300 }],
     marks: [
@@ -543,7 +544,7 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:On credit - the supplier's bill is paid later", side: "left" },
       { n: 2, at: "label:How much of the A9 Test Basmati rice the bill charges for", side: "bottom" },
-      { n: 3, at: "text:Bill number", side: "top" },
+      { n: 3, at: "text:Bill number", side: "left" },
       { n: 4, at: "text:Amount, as printed", side: "top" },
       { n: 5, at: "text:Due on", side: "top" },
     ],
@@ -557,9 +558,9 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:Delivered", nth: 0, side: "bottom" },
       { n: 2, at: "text:received by", side: "right" },
-      { n: 3, at: "css:[data-differences]", side: "right" },
-      { n: 4, at: "css:thead th:nth-child(6)", side: "top" },
-      { n: 5, at: "css:thead th:nth-child(7)", side: "top" },
+      { n: 3, at: "css:[data-differences]", side: "left" },
+      { n: 4, at: "css:thead th:nth-child(6)", side: "bottom" },
+      { n: 5, at: "css:thead th:nth-child(7)", side: "bottom" },
     ],
   },
   {

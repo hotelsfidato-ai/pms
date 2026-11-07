@@ -83,7 +83,8 @@ type Bill = { id: string; supplierId: string | null; supplier: string; billNo: s
   amount: string; owed: string; paid: string; tds: string; credited: string; status: string; dueOn: string;
   replaces: string | null; from: { kind: string; reference?: string };
   payments: { id: string; amount: string; method: string; reference: string | null; handedOverBy: string | null;
-              tds: { section: string; rate: string; amount: string } | null; reversed: { reason: string } | null }[];
+              tds: { section: string; rate: string; amount: string } | null; reversed: { reason: string } | null;
+              differencesSeenBy?: string | null }[];
   creditNotes: { id: string; amount: string; reversed: { reason: string } | null }[] };
 type Dues = { today: string; suppliers: { id: string; name: string }[]; bills: Bill[];
   credits: { id: string; supplierId: string; amount: string; noteNo: string }[] };
@@ -450,7 +451,7 @@ describe("the supplier's bill held against its order (D27-383 item 11)", () => {
   });
 
   it("Supplier dues shows the differences; paying asks the payer to confirm, and keeps their name", async () => {
-    type Due = Bill & { differences: Diff[]; payments: (Bill["payments"][number] & { differencesSeenBy: string | null })[] };
+    type Due = Bill & { differences: Diff[] };
     const due = async (no: string) => (await dues(accountant, true)).bills.find((b) => b.billNo === no) as Due;
     expect((await due("G-31")).differences.map((x) => x.kind)).toEqual(["quantity", "price", "gst"]);
     expect((await due("G-32")).differences).toEqual([]);

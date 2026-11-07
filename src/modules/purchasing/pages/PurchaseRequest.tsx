@@ -676,7 +676,7 @@ function DeliveryDialog({
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         title="Record the delivery"
-        className="max-w-4xl"
+        className={onCredit ? "max-w-5xl" : "max-w-4xl"}
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>

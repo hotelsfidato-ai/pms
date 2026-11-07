@@ -101,9 +101,18 @@ export function lotsLeft(moves: readonly Move[]): Lot[] {
     }
   }
 
-  return [...shelves.values()].flatMap((s) => s.lots.filter((l) => l.n > 0).map((l) => ({
-    item: s.item, place: s.place, quantity: l.n / 1000, useBy: l.useBy, receivedOn: l.receivedOn,
-  })));
+  /* One line per delivery in a place: a delivery taken out and put back, or
+     moved away and back, is pieces of itself - added up again. */
+  const out = new Map<string, Lot>();
+  for (const s of shelves.values()) {
+    for (const l of s.lots) {
+      const key = `${s.item}|${s.place}|${l.useBy}|${l.receivedOn}`;
+      const had = out.get(key);
+      if (had) had.quantity += l.n;
+      else out.set(key, { item: s.item, place: s.place, quantity: l.n, useBy: l.useBy, receivedOn: l.receivedOn });
+    }
+  }
+  return [...out.values()].filter((l) => l.quantity > 0).map((l) => ({ ...l, quantity: l.quantity / 1000 }));
 }
 
 export interface ExpiryAlert {
@@ -160,7 +169,8 @@ export async function expiryAlerts(client: Client, hotelId: string): Promise<{
         storeId: l.place, store: named.get(l.place)?.name ?? "-",
         quantity: l.quantity, useBy: l.useBy, receivedOn: l.receivedOn, expired: l.useBy < today,
       }))
-      .sort((a, b) => a.useBy.localeCompare(b.useBy) || a.item.localeCompare(b.item) || a.receivedOn.localeCompare(b.receivedOn)),
+      .sort((a, b) => a.useBy.localeCompare(b.useBy) || a.item.localeCompare(b.item)
+        || a.store.localeCompare(b.store) || a.receivedOn.localeCompare(b.receivedOn)),
   };
 }
 

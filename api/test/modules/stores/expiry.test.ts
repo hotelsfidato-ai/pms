@@ -183,22 +183,26 @@ describe("the Store lists what is past or near its use-by, per store, oldest fir
     expect((await lotsOf(milk)).map((l) => [l.quantity, l.expired])).toEqual([[4, false]]);
   });
 
-  it("the warning is the hotel's: refused to the kitchen manager and outside 1 to 90 days, then 30 lists the rice", async () => {
-    const refused = await as(cook, "PUT", "/stores/expiry-warning", { days: 30 });
-    expect(refused.status).toBe(403);
-    expect(((await refused.json()) as { reason: string }).reason).toBe(
-      "How early the Store warns of a use-by is set by the owner, an administrator, the general manager, "
-      + "the hotel manager or the Inventory Manager. Ask one of them.");
+  it("the warning is the hotel's: set by the owner, an Admin or the GM, 1 to 90 days; then 30 lists the rice", async () => {
+    for (const who of [cook, keeper]) {
+      const refused = await as(who, "PUT", "/stores/expiry-warning", { days: 30 });
+      expect(refused.status).toBe(403);
+      expect(((await refused.json()) as { reason: string }).reason).toBe(
+        "How early the Store warns of a use-by is set by the owner, an administrator or the general manager. "
+        + "Ask one of them.");
+    }
+    expect((await store()).expiry, "the screen is told the Inventory Manager may not").toMatchObject({ mayChange: false });
     for (const days of [0, 91, 2.5, "7"]) {
-      const bad = await as(keeper, "PUT", "/stores/expiry-warning", { days });
+      const bad = await as(gm, "PUT", "/stores/expiry-warning", { days });
       expect(bad.status, String(days)).toBe(409);
       expect(((await bad.json()) as { reason: string }).reason)
         .toBe("Warn from 1 to 90 days before the use-by date: a whole number of days.");
     }
     expect((await store()).expiry.warnDays, "nothing changed").toBe(7);
 
-    await ok(await as(keeper, "PUT", "/stores/expiry-warning", { days: 30 }));
-    expect((await store()).expiry.warnDays).toBe(30);
+    await ok(await as(gm, "PUT", "/stores/expiry-warning", { days: 30 }));
+    const s = (await ok(await as(gm, "GET", "/stores"))) as { expiry: { warnDays: number; mayChange: boolean } };
+    expect(s.expiry).toMatchObject({ warnDays: 30, mayChange: true });
     expect((await lotsOf(rice)).map((l) => [l.quantity, l.useBy])).toEqual([[20, day(30)]]);
     expect(await lotsOf(salt)).toEqual([]);
   });

@@ -27,7 +27,8 @@
     <tbody>
       <tr><td>See the Store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager, the chef, housekeeping, the accountant, a viewer.</td></tr>
       <tr><td>Add an item, receive, issue, record waste or a return, move to another store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager.</td></tr>
-      <tr><td>Correct the count, count a store, set levels, undo</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager.</td></tr>
+      <tr><td>Correct the count, count a store, set levels, undo; told of expired stock in the bell</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager.</td></tr>
+      <tr><td>Change how early a use-by is warned of (A9.5)</td><td>The owner, an Admin, the GM.</td></tr>
     </tbody>
   </table>
   <p>Somebody who may only look sees one line, <span class="msg">“You can see the store. Receiving, issuing and adding items is for the Inventory Manager, hotel manager or GM.”</span>, and a <span class="ui">History</span> button on each item.</p>
@@ -211,14 +212,14 @@
   <p>A delivery's <span class="ui">Use by</span> date (A9.4, and a delivery against an order, A9.11) is what the two expiry tiles read. For each item and each store, the Store works out what is left of every delivery, <b>first expiring, first out</b>: stock going out of a store - issued, wasted, moved, used by a KOT - is taken from the delivery with the earliest use-by there, and a move to another store takes its use-by with it. An item whose deliveries have no use-by is never on these tiles: nothing is guessed.</p>
   <ol class="steps">
     <li>Tap <span class="ui">Expired</span> (or <span class="ui">Expiring soon</span>). Only those items show, the oldest use-by first.</li>
-    <li>Each card says, in red for expired and yellow for soon, which store, how much of which delivery is left, and its use-by: <span class="msg">“Main store: 40 kg from the delivery of 7 Nov - use by 10 Nov”</span>. An expired one is also marked <span class="ui">Expired</span> beside its name.</li>
+    <li>Each card says, in red for expired and yellow for soon, which store, how much of which delivery is left, and its use-by: <span class="msg">“Main store: 50 kg from the delivery of 7 Nov 2026 - use by 10 Nov 2026”</span>. An expired one is also marked <span class="ui">Expired</span> beside its name.</li>
     <li>Take expired stock off with <span class="ui">More</span>, <span class="ui">Waste</span> (A9.7), in its store, saying why. Waste takes it from the delivery that expired first, so the line goes. Use what is expiring soon first.</li>
   </ol>
   <p>The owner, an Admin, the GM, the hotel manager and the Inventory Manager also see it in the bell (<span class="ui">Notifications</span>): <span class="msg">“2 deliveries past the use-by, still on the shelf”</span> and <span class="msg">“1 delivery to use within 7 days”</span>, the first three named. Each opens the Store on its tile.</p>
-  <p><b>The warning.</b> How many days before its use-by a delivery counts as expiring soon is set for each hotel: 7 to start, any whole number from 1 to 90. On either expiry tile, tap <span class="ui">Change the warning</span>, type <span class="ui">Days before the use-by</span> and tap <span class="ui">Save</span>. Whoever sets the levels sets it.</p>
+  <p><b>The warning.</b> How many days before its use-by a delivery counts as expiring soon is set for each hotel: 7 to start, any whole number from 1 to 90. On either expiry tile, tap <span class="ui">Change the warning</span>, type <span class="ui">Days before the use-by</span> and tap <span class="ui">Save</span>. The owner, an Admin or the GM sets it, as the hotel's other settings; the Inventory Manager sees the tiles but not the link.</p>
 
   <figure class="shot" id="fig-A9-50">
-    <img src="img/A9-50.png" alt="The Store on the Expiring soon tile: the note that the use-by is within the next 7 days, Change the warning, and the rice card's line Main store: 40 kg from the delivery, use by in three days">
+    <img src="img/A9-50.png" alt="The Store on the Expiring soon tile: the note that the use-by is within the next 7 days, Change the warning, and the rice card's line Main store: 50 kg from the delivery, use by in three days">
     <figcaption><b>Figure A9-50.</b> What to use first.</figcaption>
     <ol class="callouts">
       <li>Expired, and Expiring soon</li>

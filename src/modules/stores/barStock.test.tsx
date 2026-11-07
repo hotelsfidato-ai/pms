@@ -89,7 +89,7 @@ vi.mock("@/modules/stores/data/barPours", async (importOriginal) => ({
 vi.mock("@/modules/stores/data/stores", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/stores/data/stores")>()),
   getStore: async () => ({
-    businessDate: "2026-10-21", people: [], inUse: [], outlets: [], expiry: { warnDays: 7, today: "2026-10-21" },
+    businessDate: "2026-10-21", people: [], inUse: [], outlets: [], expiry: { warnDays: 7, today: "2026-10-21", mayChange: false },
     stores: [{ id: "main", name: "Main store", isActive: true, isMain: true },
              { id: "bar", name: "Bar store", isActive: true, isMain: false }],
     items: [{

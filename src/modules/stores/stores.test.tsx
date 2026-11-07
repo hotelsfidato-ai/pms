@@ -49,7 +49,7 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      const day = { businessDate: "2026-08-25", people: [], inUse: [], expiry: { warnDays: 7, today: "2026-08-25" } };
+      const day = { businessDate: "2026-08-25", people: [], inUse: [], expiry: { warnDays: 7, today: "2026-08-25", mayChange: false } };
       if (control.store === "empty") return { stores, items: [], outlets, ...day };
       return {
         stores,

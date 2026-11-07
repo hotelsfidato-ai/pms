@@ -46,8 +46,9 @@ export interface StoreList {
   /** The hotel's business date: "today" for the tiles (D27-242). */
   businessDate: string;
   /** How many days before its use-by a delivery is flagged (D27-383 item 11),
-      and the property's calendar day it counts from. */
-  expiry: { warnDays: number; today: string };
+      the property's calendar day it counts from, and whether this person may
+      change it (the owner, an Admin or the GM - the server's answer). */
+  expiry: { warnDays: number; today: string; mayChange: boolean };
   /** Who may be named as having broken something: the people rostered here.
       Empty for anybody who does not record a breakage. */
   people: { id: string; name: string }[];
@@ -187,7 +188,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    and Rooms do. */
 export async function getStore(hotelId: string): Promise<StoreList> {
   if (!hotelId) {
-    return { stores: [], items: [], outlets: [], businessDate: "", people: [], inUse: [], expiry: { warnDays: 7, today: "" } };
+    return { stores: [], items: [], outlets: [], businessDate: "", people: [], inUse: [], expiry: { warnDays: 7, today: "", mayChange: false } };
   }
   return api<StoreList>(`/api/hotels/${hotelId}/stores`);
 }

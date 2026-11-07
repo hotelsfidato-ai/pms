@@ -439,13 +439,13 @@ export default function StoresPage() {
       )}
 
       {/* EXPIRY (D27-383 item 11): what the two tiles mean, and the hotel's
-          warning, changed by whoever sets the levels. */}
+          warning, changed by the owner, an Admin or the GM (the server says). */}
       {q.data !== undefined && (tile === "expired" || tile === "expiring") && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 -mt-2 mb-5 text-sm text-grey-600" data-expiry-note="">
           {tile === "expired"
             ? "Past the use-by, and still counted on the shelf. Take it off with More, Waste."
             : `A use-by within the next ${q.data.expiry.warnDays} day${q.data.expiry.warnDays === 1 ? "" : "s"}. Use these first.`}
-          {mayCorrect && (
+          {q.data.expiry.mayChange && (
             <button type="button" onClick={() => setWarning(true)}
                     className="font-medium text-brand-orange-700 hover:underline underline-offset-4 cursor-pointer">
               Change the warning

@@ -14,7 +14,10 @@ import { mayReadStockReports } from "@/modules/reports";
    footer, and by outlet a dash for sales to a role that reads no reports.
    ══════════════════════════════════════════════════════════════════ */
 
-const control = vi.hoisted(() => ({ recorded: [] as unknown[], warned: [] as number[] }));
+/* `mayWarn`: the server's answer to "may this person change the warning".
+   The App's query cache lives across this file, so a test changes it before
+   the store is read again (a save refetches it). */
+const control = vi.hoisted(() => ({ recorded: [] as unknown[], warned: [] as number[], mayWarn: true }));
 
 vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/modules/stores/data/stores")>();
@@ -36,7 +39,8 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
       stores,
       outlets: [{ id: "rest", name: "Fidato Restaurant" }],
       businessDate: "2026-08-25",
-      expiry: { warnDays: 7, today: "2026-08-25" },
+      /* Whether this person may change the warning is the server's answer. */
+      expiry: { warnDays: 7, today: "2026-08-25", mayChange: control.mayWarn },
       people: [{ id: "p1", name: "Ravi Waiter" }],
       inUse: [{ id: "dining", name: "Dining room", kind: "restaurant", isActive: true }],
       items: [
@@ -126,7 +130,7 @@ describe("the Store's tiles (D27-238, D27-242 Q3)", () => {
   });
 
   it("Expired shows what is past its use-by, per store, with what is left; the warning is changed with its reason (D27-383 item 11)", async () => {
-    as("stores");
+    as("gm");
     render(<App />);
     await screen.findByText("Bath towel");
     expect(tile("expired").className, "a job: warm").toMatch(/brand-yellow/);
@@ -152,19 +156,17 @@ describe("the Store's tiles (D27-238, D27-242 Q3)", () => {
     expect((await within(dialog).findByRole("alert")).textContent)
       .toBe("Warn from 1 to 90 days before the use-by date: a whole number of days.");
     expect(control.warned, "refused before it is sent").toEqual([]);
+    /* The store read again after the save says this person may no longer
+       change it: the link goes - the screen follows the server's answer. */
+    control.mayWarn = false;
     fireEvent.change(days, { target: { value: "10" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(control.warned).toEqual([10]));
-  });
-
-  it("the warning is not offered to somebody who only looks", async () => {
-    as("chef");
-    render(<App />);
-    await screen.findByText("Bath towel");
     fireEvent.click(tile("expiring"));
-    expect((await waitFor(() => document.querySelector("[data-expiry-note]")))!.textContent)
-      .toMatch(/^A use-by within the next 7 days\. Use these first\./);
+    await waitFor(() => expect(document.querySelector("[data-expiry-note]")!.textContent)
+      .toBe("A use-by within the next 7 days. Use these first."));
     expect(screen.queryByRole("button", { name: "Change the warning" })).toBeNull();
+    control.mayWarn = true;
   });
 });
 
