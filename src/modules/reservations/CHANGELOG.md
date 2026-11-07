@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · An old system's bookings come in through makeBooking (D27-383 item 7, by the build-all helper)
+
+Admin's Bring in old data (`api/src/modules/admin/oldSystem.ts`) makes each booking to come with `makeBooking`,
+`refuseWhenFull` - the same act and refusals as every booking. The front door now exports `makeBooking` and the
+rooming list's `fileRows` and `fileDate`. One addition in `book.ts`: a line's `rateNotKnown` (only the import sends
+it) keeps the rate empty, a dash, instead of looking one up; `bookings[].rate` may then be null. Migration 280 lets
+`reservations.agreed_rate` be null before arrival only. The whole account: admin's `CHANGELOG.md`.
+
 ## 2026-11-07 · Rooming lists, allotments and the waitlist (D27-383 item 8, built under D27-396)
 
 **Asked for.** The audit's Step 2, item 8 (`.local/hms-audit.html`), by the master's build-all brief: a group's rooming list (typed or read from the group's Excel/CSV, errors listed before anything is saved, nothing half-saved, printed and exported; the names become the bookings' guests); allotments (contracts' side, `src/modules/contracts/CHANGELOG.md`); a waitlist (nothing booked or messaged by the system). Branch `worktree-agent-a0fcc88e8c55a4bc6`.

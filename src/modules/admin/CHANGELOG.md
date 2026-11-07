@@ -11,6 +11,73 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Bring in old data: an old system's guests and bookings (D27-383 item 7, D27-396)
+
+**Asked for:** item 7 of the owner's approved list (D27-383, `.local/hms-audit.html` Step 2): onboard a hotel with
+history in another PMS (IDS, WinHMS, eZee, a spreadsheet). Guests from a file, columns matched on screen and kept per
+hotel, duplicates shown for keep/merge/skip, every row's problems listed, all or nothing; future bookings as ordinary
+confirmed bookings, refused where the room type is missing or the nights full, an advance a payment and never an
+invoice, past stays history only; the owner and an Admin; each import recorded and undoable while untouched. Built
+without asking (D27-396), helper copy `agent-aa96a3641a5fcd3a2`, migrations 280 (281 unused).
+
+**Shipped**
+- Migration **280** "old system import": `app.imports_old_data` (owner or Admin at the hotel, or a group
+  administrator); `data_imports` (who, when, system, file, the column match, rows in, rows refused and why; pms_app
+  inserts and counts its refused rows, never its undo), `data_import_items` (each guest made or filled, booking,
+  advance), `imported_stays` (a past stay: no money); `reservations.agreed_rate` may be null on a booking still to
+  arrive or that never did (`reservations_rate_by_arrival`); `app.undo_data_import` (security definer); patched in
+  place: `app.forbid_mutation` and `app.forbid_guest_delete` (let exactly an undo's rows go, `app.import_undo_allows`),
+  `app.guest_visits` and `app.guest_360` (a past stay is a visit and is listed "imported", nothing charged),
+  `app.test_hotel_classes` (the three are trade), `owner_reset.orphans` (a guest brought in, or with a past stay
+  brought in, is kept).
+- Server `oldSystem.ts`: `GET /:code/imports`, `POST /:code/imports/:kind/check`, `POST /:code/imports/:kind`,
+  `POST /:code/imports/:id/undo`; roleGate `own` for all four. The check is the save inside a savepoint, rolled back.
+- Screen: Settings › Property › **Bring in old data** (`oldData.settings.ts`, `oldData/OldDataPage.tsx`,
+  `data/oldSystem.ts`): the kind of file, the old system's name, Choose the file; the columns; every row and what it
+  becomes; Check again and Bring in; Bookings with no rate yet; Brought in here with rows refused and Undo.
+- Outside admin, named in the report: reservations' `book.ts` (`rateNotKnown` on a line: no price looked up, kept
+  empty) and front door (`makeBooking`, `fileRows`, `fileDate`); front desk's check-in refusal (`operations.ts`) and
+  `stays.ts` (`offeredTariff` null); the core's `types.ts` (`offeredTariff: number | null`) and `fixtures`; every
+  screen that printed the nightly rate (`StayTable`, `StayDrawer`, `StayView`, `CheckInFlow`, `AmendStayFlow`,
+  `MoveRoomFlow`, finance's `FolioPanel`) shows a dash for none; crm's Guest 360 says "Brought in"; activity's label;
+  `roleGate.ts`.
+
+**Decided under D27-396** (the owner reviews later)
+- Who: the owner and an Admin, as the module switches - not the GM: an import writes a hotel's whole history at once.
+- A file fault (a bad date, phone, email, GSTIN, plan or payment method, the same guest or reference twice, a guest
+  to choose for) saves nothing; what the hotel cannot take (no such room type, nights full, a source not on its list,
+  a guest in the house today, a booking already brought in) is refused, listed and recorded, and the rest saved in
+  the same transaction - so "rows refused" means something on a saved import.
+- Merge fills only empty fields (phone, email, notes, and the address and date of birth only where the guest has no
+  ID-papers row); nothing on file is overwritten (book.ts's rule). One guest is merged into by one row only.
+- The company, GSTIN and the ID's last four go in the guest's notes ("ID in IDS: Aadhaar ending 0123"): a guest record
+  has no company field, and an ID nobody here has seen does not belong in the identity register (Form C, Form III,
+  the registration card read it). The whole ID number is never kept or sent back (UIDAI; D25-37's last four).
+- A booking's guest is the one guest on file with its phone or email (`app.guest_suggestions`, the desk's own
+  suggestion), else a new record; two on file: a new record, said on the row.
+- A rate is per night before GST. A plan left blank is EP (New booking's own). No rate: a dash (`rateNotKnown`),
+  listed until the desk sets it, and check-in refuses it - in words on the server, and the database's constraint.
+- An advance is a payment posting dated the day it was paid, `source_type` 'import', with its payments row; only from
+  before the hotel's first day (`app.backfill_first_day`), so no drawer, no day's takings and no Night audit here
+  count it, and no invoice. It is on the GST on advances report of the month it was paid (CGST Act s.13(2)), and in
+  11B when its invoice is issued; **for the CA:** an advance the old system reported in the go-live month must be
+  counted once.
+- Imported bookings are sent the hotel's voucher by email like every booking (the owner's D21-33), never WhatsApp
+  (no agreement on file); the page warns and points at the voucher's switch.
+- A past stay is any row that ended by the business date; one in the house today is refused (checked in at the desk).
+- Undo is all or nothing and deletes (as the owner's full reset does, through the guards' own allowance), refused
+  once anything it brought in is later than the import or has anything hanging off it.
+- The owner's full reset keeps a guest an import brought in, and one with a past stay brought in.
+
+**Proved** (numbers in the report): `api/test/modules/admin/oldSystem.test.ts`, `src/modules/admin/oldData.test.tsx`,
+`db/tests/modules/admin.sql` ("old system import"). Screens opened at 5189 as the owner (desktop and phone) and the GM.
+
+**Left open**
+- `src/test/migrationNumbers.test.ts` fails in this copy on the gap 270-279 until the master renumbers 280.
+- Excel's old .xls is not read (save as .xlsx or CSV), as the rooming list.
+- The hotel's Guests list counts bookings only; a guest brought in with no booking is on Guest 360 and the desk's
+  suggestion, not on that list.
+
 ## 2026-11-07 · Backfill data: what happened before a hotel's first day (D27-398, D27-396)
 
 **Asked for:** the owner's "option to backfill data for all the key parameters ... bookings, POS and cash", a Settings

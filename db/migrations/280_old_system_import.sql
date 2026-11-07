@@ -138,6 +138,8 @@ create policy data_import_items_mine on data_import_items for all
   with check (exists (select 1 from data_imports d where d.id = import_id and d.undone_at is null));
 revoke all on data_import_items from pms_app;
 grant select, insert on data_import_items to pms_app;
+-- A returning guest two bookings of one file fill: the fields add up.
+grant update (filled) on data_import_items to pms_app;
 
 
 -- =============================================================================

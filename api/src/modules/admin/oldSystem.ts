@@ -297,6 +297,7 @@ async function guestsRun(
     (o.check.matches ??= []).push({ id: h.id, name: h.name, visits: h.visits });
   }
 
+  const mergedInto = new Map<string, number>();
   for (const o of out) {
     if (!o.check.matches) continue;
     o.check.action = "duplicate";
@@ -305,6 +306,10 @@ async function guestsRun(
     if (c.action === "merge" && !o.check.matches.some((m) => m.id === c.guestId)) {
       o.check.problems.push("Merge with one of the guests listed."); continue;
     }
+    if (c.action === "merge" && mergedInto.has(c.guestId)) {
+      o.check.problems.push(`Row ${mergedInto.get(c.guestId)} merges into the same guest: one guest, one row.`); continue;
+    }
+    if (c.action === "merge") mergedInto.set(c.guestId, o.row.line);
     o.check.action = c.action === "keep" ? "new" : c.action;
   }
 
@@ -564,7 +569,8 @@ async function bookingsRun(
           if (filled.length) {
             await client.query(
               `insert into data_import_items (import_id, kind, row_id, line, filled) values ($1, 'guest_filled', $2, $3, $4)
-               on conflict (import_id, kind, row_id) do nothing`,
+               on conflict (import_id, kind, row_id) do update
+                 set filled = (select jsonb_agg(distinct f) from jsonb_array_elements(data_import_items.filled || excluded.filled) f)`,
               [importId, guest.id, check.line, JSON.stringify(filled)]);
           }
         }
