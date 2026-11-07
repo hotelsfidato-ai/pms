@@ -55,10 +55,18 @@ export default function GroupRatesPage() {
   const whole = Boolean(roomType && first && value.trim() !== "" && Number.isFinite(Number(value)));
   const question: RateChangeQuestion = { hotels: codes, roomType, from: first, through: last, kind, value: Number(value) };
 
-  const preview = useQuery({
-    queryKey: ["group-rate-change", codes, whole ? question : null],
-    queryFn: () => previewRateChange(whole ? question : { hotels: codes }),
+  /* The room type names at the properties ticked, and - once the question is
+     whole - what would change: two reads, so the names never blink out while
+     the prices are asked again. */
+  const names = useQuery({
+    queryKey: ["group-rate-change", codes],
+    queryFn: () => previewRateChange({ hotels: codes }),
     enabled: codes.length > 0,
+  });
+  const preview = useQuery({
+    queryKey: ["group-rate-change", codes, question],
+    queryFn: () => previewRateChange(question),
+    enabled: codes.length > 0 && whole,
     staleTime: 0,
   });
   const plans = preview.data?.hotels ?? [];
@@ -104,12 +112,15 @@ export default function GroupRatesPage() {
                     ))}
                   </div>
                 </fieldset>
+                {readError(names) && (
+                  <ReadFailed compact error={readError(names)} what="the room types" onRetry={() => void names.refetch()} />
+                )}
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Field label="Room type" hint="Matched by its name at each property.">
+                  <Field label="Room type" hint={names.isLoading ? "Reading the room types…" : "Matched by its name at each property."}>
                     {(f) => (
                       <NativeSelect {...fieldProps(f)} value={roomType} onChange={(e) => setRoomType(e.target.value)}>
                         <option value="">Choose a room type</option>
-                        {(preview.data?.roomTypes ?? []).map((t) => (
+                        {(names.data?.roomTypes ?? []).map((t) => (
                           <option key={t.name} value={t.name}>{t.name} ({t.at.join(", ")})</option>
                         ))}
                       </NativeSelect>
@@ -160,7 +171,7 @@ export default function GroupRatesPage() {
                       <span className="text-sm text-grey-600">
                         {toSave.length === 0 ? "Nothing to save." : `${toSave.length} of ${plans.length} ${plans.length === 1 ? "property" : "properties"} change.`}
                       </span>
-                      <Button variant="primary" disabled={saving || toSave.length === 0} onClick={() => void save()}>
+                      <Button variant="primary" disabled={saving || preview.isFetching || toSave.length === 0} onClick={() => void save()}>
                         {saving ? "Saving…" : `Save at ${toSave.length} ${toSave.length === 1 ? "property" : "properties"}`}
                       </Button>
                     </div>
