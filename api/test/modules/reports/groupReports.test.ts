@@ -161,6 +161,7 @@ describe("nothing is shown for a property the person may not open", () => {
   it("asks for a property and a known report", async () => {
     expect((await group(owner, "manager", "hotels=")).status).toBe(400);
     expect((await group(owner, "no-such", "hotels=5EL")).status).toBe(404);
+    expect((await group(owner, "toString", "hotels=5EL")).status).toBe(404);
   });
 });
 

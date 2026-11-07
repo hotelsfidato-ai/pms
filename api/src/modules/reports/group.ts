@@ -313,7 +313,7 @@ type Built = { status: 200; doc: ReportDoc; by: { name: string; at: Date; timezo
   | { status: 400 | 403 | 404; error: string };
 
 async function build(subject: string, key: string, q: Record<string, string>, file: boolean): Promise<Built> {
-  if (!(key in GROUP_SPECS)) return { status: 404, error: "No such group report." };
+  if (!Object.hasOwn(GROUP_SPECS, key)) return { status: 404, error: "No such group report." };
   const spec: Spec = GROUP_SPECS[key as GroupKey];
   const codes = [...new Set((q["hotels"] ?? "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean))];
   if (codes.length === 0) return { status: 400, error: "Choose at least one property." };
