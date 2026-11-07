@@ -1,4 +1,4 @@
-import { ClipboardList, Wrench } from "lucide-react";
+import { ClipboardList, GlassWater, ListChecks, Wrench } from "lucide-react";
 import { canAccess } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
@@ -12,6 +12,17 @@ export const nav: ServiceNavEntry[] = [
        server gives only to those who read bookings (D27-142): not the chef
        and not the Inventory Manager. */
     canSee: (role) => canAccess(role, "reservation") },
+  /* D27-383 item 10 (D27-396): not in any working menu - the owner's lists
+     are unchanged - so a search away for housekeeping and reception; the
+     board's room card opens the minibar and the checklists itself. The
+     minibar names the guest, so it asks what the board asks, or a bill. */
+  { section: "front-desk", order: 42,
+    label: "Minibar", to: "/h/:code/minibar", icon: GlassWater, resource: "inventory",
+    keywords: ["minibar", "mini bar", "taken from the room", "found after check-out"],
+    canSee: (role) => canAccess(role, "reservation") || canAccess(role, "invoice") },
+  { section: "front-desk", order: 44,
+    label: "Checklists", to: "/h/:code/checklists", icon: ListChecks, resource: "inventory",
+    keywords: ["checklist", "inspection", "deep clean", "stay-over", "housekeeping checklist"] },
   /* Beside housekeeping, because that is who finds most of it — and
      separate from a room block, because most work orders take no room
      out of service. */

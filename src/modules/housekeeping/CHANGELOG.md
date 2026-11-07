@@ -8,6 +8,33 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · The minibar, and housekeeping checklists (D27-383 item 10, built under D27-396)
+
+**Asked for:** half of item 10 of the owner's Step 2 list (`.local/hms-audit.html`, D27-383): the minibar and housekeeping checklists. A build-all helper (`.local/build-all/RULES.md`); copy `.claude/worktrees/agent-a54fcd1af1b60cea4`, database `fidato_care`, migrations 270 and 271 (the master renumbers them; 276 not needed).
+
+**Shipped.**
+- **Migration 270 "the minibar":** `minibar_items` (a Store item, the price the hotel typed - NULL until typed, never 0 - and the store its refill comes from; switched off, never deleted) and `minibar_records` (what was taken from a room, the lines as recorded, `charged` / `waiting` (`disputed`, `after_checkout`) / `not_charged`; decided once by trigger; what was recorded never changed; no DELETE; RLS forced; audited).
+- **Migration 271 "housekeeping checklists":** `hotels.checklists_required` (off), `hk_checklists` (job x room type, or every type), `hk_checklist_runs` (written once; `passed` is every item ticked; a cleaning job is never failed). Both of the test hotel's lists carry the four tables.
+- **Server** (`minibar.ts`, `checklists.ts`): the list (owner, Admin, GM - the gate's room_config edit), a record (`MINIBAR_RECORDERS`: owner, Admin, GM, hotel manager, reception, housekeeping) that charges the guest in the room through finance's `postCharge` and issues the refill through the Store's new `issueFromStore`, the desk's decision (invoice create), the lists and switch (room_config edit), a ticking (`ROOM_STATE`), each room's history. `roomStatus.ts` refuses the plain tap for a room whose type has a list for the job while the switch is on.
+- **Screens:** the room card's fourth button **Minibar** (only while the hotel has a list; grey with its reason for anybody else - 72x56 each at 375px, measured); **Clean** and **Inspected** open `flows/ChecklistFlow.tsx` when the switch is on and the room has a list; `pages/Minibar.tsx` (`/h/:code/minibar`: Waiting for the desk, Recorded, The list) and `pages/Checklists.tsx` (`/h/:code/checklists`: the switch, the lists, each room's record), both in the Front desk section, in no working menu.
+
+**Decided under D27-396** (the owner reviews):
+- **GST on a minibar snack or soft drink: the restaurant's rule** (`taxKind: "restaurant"`), as the restaurant's food on a room bill is taxed - because the brief said "as the existing food charges are taxed". ⚠ For the CA: `docs/selling-in-india/gst.md` Unresolved 3 - minibar goods may be goods at their own HSN rate (40% for aerated drinks, tobacco at RSP) rather than restaurant service. A kind of its own (`minibar` on the tax card) is the change if the CA says goods.
+- **Alcohol = a Store item with a `liquor` register row** (238) - billed on the `alcohol` rule as **VAT** (`tax_scheme 'vat'`, never GST), refused where the hotel is not switched on for alcohol or has no VAT rate, exactly as the till's bar dish on a room bill - because that is the bar's own rule already in the code. It goes on the stay's VAT bill (`app.issue_vat_bill` reads every VAT line of the folio).
+- **One bill line per item** ("Minibar - Beer 330ml x 2", category `minibar`, `source_type 'minibar'` = the record) - because a line the guest can query by itself is the bill's rule.
+- **The refill is issued when the take is recorded**, from the item's store, for a waiting record too (the bottle is gone either way); **a store holding too few refuses the whole record** (the Store's rule: never below zero) - the desk's Add charge (Minibar) stays for an emergency.
+- **Who is charged:** the checked-in stay holding the room; two checked in refuses ("the desk records it on the right guest's bill"); nobody in it: the stay that left it last, as **waiting, after check-out** - never added to the closed bill; a room nobody ever stayed in is refused.
+- **Disputed = the housekeeper's "Not sure, or the guest says not theirs"**: nothing charged until the desk (anyone who may add to a bill) chooses Charge or Not charged with a reason, once. Charge on a checked-out stay keeps finance's refusal ("This folio is closed. Reopen the stay to post to it.").
+- **Prices are the owner's, an Admin's or the GM's** (room_config edit), not the hotel manager's ("may not move a rate"); **so are the checklists and their switch** (the switch is a hotel setting: `app.manages_hotel`).
+- **A failed inspection sends the room back to Needs cleaning**; a failed item needs a note. A room type with no list for the job is marked with the plain tap even with the switch on. The tick is under `/housekeeping/`, so it is held offline like a tap; the lists and the minibar are refused offline.
+- **No working menu changed** (the owner's lists); Minibar and Checklists are a search away, and the card opens both.
+
+**Proved.** `npx tsc -b --force` and `cd api && npx tsc --noEmit`: exit 0, no output. `cd api && npm test` exit 0: 242 files, 3061 tests (roleGate 79 among them). `npx vitest run` exit 1: 1542 of 1544 - `migrationNumbers` (the gap 257-273, by the numbers given) and `manual.test` (A1.10 had not named the two screens; fixed after, 3 of 3 alone). `api/test/modules/housekeeping/care.test.ts` 17 of 17; three guards broken on purpose (no unpriced check, alcohol as GST, no checklist refusal) - 5 red, restored. `db/tests/modules/housekeeping.sql` 23 new checks, all passing on `fidato_care`. `housekeeping.test.tsx` 19 of 19, 4 new; two board guards broken (the checklist routing, the grey Minibar) - 2 red, restored. Seen in the browser at 375px and 1280px: a take on 204 from the phone ("On room 204's bill. The refill is out of the store."), the desk charging 207's waiting take, room 206's bill (Beer under Bar, VAT 10%; water under Other charges, GST 5%; "Test Housekeeper").
+
+**Left open.** The bell does not yet say a minibar take waits for the desk (`api/src/routes/notifications.ts` is the core's - a request below). No idempotency key on a record: the button waits while it is sent. The tick held offline is not shown on the card as "Queued" (the card reads only `/rooms/:n/housekeeping` holds).
+
+---
+
 ## 2026-11-02 · The board stops reading every booking (D27-387, the load test)
 
 **Shipped.** `data/housekeeping.ts` reads the desk's rows for the business date (`fetchStays(hotel, date)`), which hold everyone checked in. It ran every 30-60 seconds on every open board and only names who is in a room.

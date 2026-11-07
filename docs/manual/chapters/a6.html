@@ -3,7 +3,7 @@
   <div class="chapter-head">
     <span class="num">Chapter A6</span>
     <h1>Housekeeping</h1>
-    <p>For housekeepers, their supervisors and the desk. How to read the Housekeeping board, give rooms out, mark a room clean and then inspected (with or without a signal), report a repair, take a room out of service and put it back, follow work orders and what they cost, and look after guests' requests, wake-up calls and lost property.</p>
+    <p>For housekeepers, their supervisors and the desk. How to read the Housekeeping board, give rooms out, mark a room clean and then inspected (with or without a signal), report a repair, take a room out of service and put it back, follow work orders and what they cost, look after guests' requests, wake-up calls and lost property, record what was taken from a minibar, and tick a room's checklist.</p>
   </div>
 
   <!-- A6.1 -->
@@ -17,8 +17,11 @@
       <tr><td>Guest requests</td><td>The desk sees every request; housekeeping, the Inventory Manager, the kitchen manager, the chef and the waiter see their own team's</td><td>What guests in house have asked for: towels, a broken tap, a pot of tea.</td></tr>
       <tr><td>Wake-up calls</td><td>The desk: the owner, an Admin, the GM, the hotel manager, reception</td><td>Calls to make, on the hotel's clock.</td></tr>
       <tr><td>Lost property</td><td>The desk and housekeeping log items; only the desk returns or disposes of them</td><td>What was found, kept until it goes back to its owner or is disposed of.</td></tr>
+      <tr><td>Minibar</td><td>Housekeeping and the desk record; the desk decides what waits; the owner, an Admin or the GM keep the list and its prices</td><td>What was taken from a room's minibar, on the guest's bill, and the refill out of the store (A6.12).</td></tr>
+      <tr><td>Checklists</td><td>The owner, an Admin or the GM set them; everybody on the board ticks them</td><td>What is done in a room for each job, and each room's record of who ticked it (A6.13).</td></tr>
     </tbody>
   </table>
+  <p>Minibar and Checklists are not in the housekeeper's short menu: the room card opens both, and <span class="ui">Find a screen</span> finds them.</p>
   <p>The housekeeper's menu also has <span class="ui">Rooms</span>, the house today (A1.7), and <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span> (A9). Laundry is in A13.</p>
 
   <figure class="shot" id="fig-A6-01">
@@ -159,6 +162,8 @@
       <li>Why: “Room 210 needs cleaning first.”</li>
     </ol>
   </figure>
+
+  <p>A hotel that has switched its checklists on (A6.13) marks a room clean or inspected by ticking the room's list: <span class="ui">Clean</span> and <span class="ui">Inspected</span> open it instead of marking the room at once.</p>
 
   <div class="box why">
     <h4>Why it works this way</h4>
@@ -700,7 +705,148 @@
   </div>
 
   <!-- A6.12 -->
-  <h2 id="a6-12"><span class="n">A6.12</span>Your day in short</h2>
+  <h2 id="a6-12"><span class="n">A6.12</span>The minibar</h2>
+  <p>Each room's minibar holds the hotel's own list of things, each one an item in the Store. When a room is cleaned, or at check-out, whatever was taken goes on the guest's bill, and the refill comes out of the store, so the store's count moves with it.</p>
+  <h3>To record what was taken</h3>
+  <ol class="steps">
+    <li>On the room's card, tap <span class="ui">Minibar</span>. (At the desk: Minibar, <span class="ui">Record for a room</span>, and type the room.)</li>
+    <li>Tap <span class="ui">+</span> once for each one taken.</li>
+    <li>Not sure it was this guest, or the guest says it was not theirs? Tick <span class="ui">Not sure, or the guest says not theirs - the desk confirms it</span>.</li>
+    <li>Tap <span class="ui">Record what was taken</span>. The message says <span class="msg">“On room 206's bill. The refill is out of the store.”</span></li>
+  </ol>
+
+  <figure class="shot phone" id="fig-A6-35">
+    <img src="img/A6-35.png" alt="Minibar for room 206 on a phone: each item with its price, the counts, Not sure, the total before tax and Record what was taken">
+    <figcaption><b>Figure A6-35.</b> What was taken from room 206.</figcaption>
+    <ol class="callouts">
+      <li>Each item and its price; a drink says VAT</li>
+      <li>How many were taken</li>
+      <li>An item with no price yet cannot be counted</li>
+      <li>Not sure: the desk confirms it</li>
+      <li>Record what was taken</li>
+    </ol>
+  </figure>
+
+  <p>On the guest's bill each item is its own line, <span class="ui">Minibar - Mineral water 1L</span>, with who recorded it (A4.3). Snacks and soft drinks carry the restaurant's GST; a drink from the bar's register (beer, spirits, wine) carries the VAT on alcohol, never GST, and only where the hotel serves alcohol.</p>
+
+  <h3>What waits for the desk</h3>
+  <p>Nothing is added to a bill that is already closed. If the guest has left when the minibar is checked, or the housekeeper ticked <span class="ui">Not sure</span>, the record goes to the desk instead, under <span class="ui">Waiting for the desk</span> on the Minibar screen.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Minibar</span> (Find a screen: “minibar”).</li>
+    <li>Under <span class="ui">Waiting for the desk</span>, each card says the room, why it waits (<span class="ui">Not sure</span> or <span class="ui">Found after check-out</span>), what was taken, what it comes to before tax and whose stay it is.</li>
+    <li>Tap <span class="ui">Charge to the bill</span>, or <span class="ui">Not charged</span> and say why. The reason stays on the record.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-36">
+    <img src="img/A6-36.png" alt="The Minibar screen: a card waiting for the desk with Charge to the bill and Not charged, the records of the last 14 days, and the list with prices and what each store holds">
+    <figcaption><b>Figure A6-36.</b> The Minibar screen, at the desk.</figcaption>
+    <ol class="callouts">
+      <li>Waiting for the desk: why, what, and whose stay</li>
+      <li>Charge to the bill, or Not charged with a reason</li>
+      <li>Recorded: on the bill, not charged, or taken off the bill</li>
+    </ol>
+  </figure>
+
+  <h3>The list and its prices</h3>
+  <p>The owner, an administrator or the GM keep the list at the foot of the Minibar screen: <span class="ui">Add an item</span> picks a Store item, its price before tax, and the store it is refilled from (a drink starts on the Bar store). <span class="ui">Change</span> sets a new price or store, or takes an item off the list. An item may be listed before its price is decided; until then it shows <span class="ui">-</span> and cannot be charged. Everybody else sees the list and its prices.</p>
+
+  <figure class="shot" id="fig-A6-36l">
+    <img src="img/A6-36l.png" alt="The minibar's list as the GM sees it: Add an item, each item with its price or a dash, its store and what that store holds, and Change">
+    <figcaption><b>Figure A6-36l.</b> The minibar's list.</figcaption>
+    <ol class="callouts">
+      <li>Add an item: a Store item, its price, its store</li>
+      <li>An item with no price yet: a dash, and it cannot be charged</li>
+      <li>Change: a new price or store, or off the list</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A wrong minibar charge</b> is taken off the bill like any other, with Reverse and a reason (A4.4). The Minibar screen then says <span class="ui">Taken off the bill</span>.</li>
+      <li><b>Found after check-out:</b> <span class="ui">Charge to the bill</span> is refused while the stay is checked out: <span class="msg">“This folio is closed. Reopen the stay to post to it.”</span> Decide it as Not charged, with why, or reopen the stay first.</li>
+      <li><b>The store must hold the refill.</b> If it holds too few, nothing is recorded and the message says how many it has: receive the delivery, or correct the count, in the Store (A9).</li>
+      <li><b>No price, no charge:</b> <span class="msg">“Cola 300ml has no price yet, so it cannot be charged.”</span></li>
+      <li>A drink is refused where the hotel does not serve alcohol, or has no VAT rate for it yet.</li>
+      <li>With no signal the minibar is not recorded: it is money on a bill, so it waits for the connection.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Housekeeping records, the desk decides a disputed one, a closed bill is never added to, the refill moves the stock, and alcohol is VAT as at the bar: the owner's list of 30 October (<span class="d">D27-383</span>), built under <span class="d">D27-396</span>. No price is ever filled in for the hotel; a missing one is a dash, never a zero.</p>
+  </div>
+
+  <!-- A6.13 -->
+  <h2 id="a6-13"><span class="n">A6.13</span>Checklists</h2>
+  <p>A checklist is what is done in a room for one job: <span class="ui">Checkout clean</span>, <span class="ui">Stay-over</span>, <span class="ui">Deep clean</span> or <span class="ui">Inspection</span>. A hotel keeps one list per job for every room type, and may give a room type a list of its own.</p>
+  <p>Checklists change nothing until the hotel switches them on. Then a room that has a list for the job is marked clean or inspected only by ticking it; a room type with no list is marked with one tap, as before.</p>
+
+  <h3>To clean a room by its checklist</h3>
+  <ol class="steps">
+    <li>On the room's card, tap <span class="ui">Clean</span>. The room's list opens: <span class="ui">Checkout clean</span> for an empty room, <span class="ui">Stay-over</span> for a room with a guest. Where the room has more than one list, choose the job at the top.</li>
+    <li>Tick each item as it is done.</li>
+    <li>Tap <span class="ui">Room 209 is clean</span>. It stays grey until every item is ticked, and says which are left when tapped.</li>
+  </ol>
+
+  <figure class="shot phone" id="fig-A6-37">
+    <img src="img/A6-37.png" alt="Room 209, Checkout clean, on a phone: the items ticked and Room 209 is clean">
+    <figcaption><b>Figure A6-37.</b> A checkout clean, ticked.</figcaption>
+    <ol class="callouts">
+      <li>The room and the job</li>
+      <li>Each item, ticked as it is done</li>
+      <li>Room 209 is clean</li>
+    </ol>
+  </figure>
+
+  <h3>To inspect a room by its checklist</h3>
+  <ol class="steps">
+    <li>On a clean room's card, tap <span class="ui">Inspected</span>.</li>
+    <li>For each item tap <span class="ui">OK</span> or <span class="ui">Failed</span>. A failed item asks what is wrong.</li>
+    <li>Every item OK: tap <span class="ui">Room 209 is inspected</span>. Any failed: tap <span class="ui">Send room 209 back for cleaning</span>, and the room returns to <span class="ui">Needs cleaning</span>.</li>
+  </ol>
+
+  <figure class="shot phone" id="fig-A6-38">
+    <img src="img/A6-38.png" alt="Room 209, Inspection: Bathroom spotless failed with the note Hair in the basin, and Send room 209 back for cleaning">
+    <figcaption><b>Figure A6-38.</b> An inspection that fails an item.</figcaption>
+    <ol class="callouts">
+      <li>OK or Failed for each item</li>
+      <li>What is wrong with the failed one</li>
+      <li>Send the room back for cleaning</li>
+    </ol>
+  </figure>
+
+  <h3>The lists, the switch, and each room's record</h3>
+  <p>The <span class="ui">Checklists</span> screen (Find a screen: “checklist”) shows the switch, every list, and each room's record: who ticked which list and when, and what an inspection failed. The owner, an administrator or the GM switch checklists on or off, and add, change or remove a list (<span class="ui">Add a checklist</span>: the job, the room type or every room type, then one item per line).</p>
+
+  <figure class="shot" id="fig-A6-39">
+    <img src="img/A6-39.png" alt="The Checklists screen: the switch on, the Checkout clean and Inspection lists, and room 209's record with the failed inspection and the note">
+    <figcaption><b>Figure A6-39.</b> The Checklists screen.</figcaption>
+    <ol class="callouts">
+      <li>The switch: rooms are marked by their checklist</li>
+      <li>A list, for every room type</li>
+      <li>Each room's record: the job, who, when</li>
+      <li>What an inspection failed, and why</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>With the switch on, the plain tap is refused for a room that has a list, on the board and on the Rooms screen alike: <span class="msg">“This hotel marks room 209 clean by ticking its checklist.”</span></li>
+      <li>With no signal a ticked list is kept on the phone and sent when the connection is back, as a tap is (A6.5).</li>
+      <li>A list changed while somebody has it open is refused when they save: <span class="msg">“The checklist was changed while it was open. Open it again.”</span></li>
+      <li>Removing a list keeps every room's record of it.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Lists by room type and by job, ticked on the phone, an inspection failing items with a note, and a room marked only when its list is done: the owner's list of 30 October (<span class="d">D27-383</span>). Off until a hotel turns it on, so the board does not change underneath anybody: <span class="d">D27-396</span>.</p>
+  </div>
+
+  <!-- A6.14 -->
+  <h2 id="a6-14"><span class="n">A6.14</span>Your day in short</h2>
   <table>
     <thead><tr><th style="width:28%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
@@ -715,6 +861,8 @@
       <tr><td>A guest asks for something</td><td>Guest requests: Take it, then Done.</td><td>A6.9</td></tr>
       <tr><td>A guest wants a wake-up call</td><td>Wake-up calls (the desk): Set a call; Done once it is made.</td><td>A6.10</td></tr>
       <tr><td>Something left behind</td><td>Lost property: Log an item. The desk returns it or disposes of it.</td><td>A6.11</td></tr>
+      <tr><td>Something taken from the minibar</td><td>Minibar, on the room's card: count, Record what was taken. The desk decides what waits.</td><td>A6.12</td></tr>
+      <tr><td>The hotel ticks its checklists</td><td>Clean or Inspected opens the room's list: tick it, then save.</td><td>A6.13</td></tr>
     </tbody>
   </table>
 </section>

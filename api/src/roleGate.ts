@@ -160,6 +160,13 @@ const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 const ROOM_STATE = grant("inventory", "edit", "Changing a room's status");
 const OUT_OF_SERVICE = grant("inventory", "edit", "Taking a room out of service, or back");
 const HOUSEKEEPING_ROUNDS = grant("inventory", "edit", "Giving rooms to housekeeping");
+/* D27-383 item 10: ticking a room's checklist marks it, as the tap does; the
+   lists, their switch and the minibar's prices are the hotel's setup; the desk
+   decides a waiting minibar charge, as anyone who adds to a bill. */
+const CHECKLIST_TICK = grant("inventory", "edit", "Ticking a room's checklist");
+const CHECKLISTS = grant("room_config", "edit", "Setting the housekeeping checklists");
+const MINIBAR_LIST = grant("room_config", "edit", "Setting the minibar's items and prices");
+const MINIBAR_DECIDE = grant("invoice", "create", "Deciding a waiting minibar charge");
 
 /* Setting the hotel up: `room_config`, which the matrix gives the owner, an
    administrator and the GM (the owner's D22-30, in the matrix itself). */
@@ -720,6 +727,15 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/work-orders/:id`]: own("housekeeping/repairRoles.ts: REPAIR_UPDATERS"),
   [`POST ${H}/repair-costs`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
   [`POST ${H}/repair-costs/:id/cancel`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
+  [`POST ${H}/housekeeping/checklist-runs`]: CHECKLIST_TICK,
+  [`PUT ${H}/checklists/required`]: CHECKLISTS,
+  [`POST ${H}/checklists`]: CHECKLISTS,
+  [`PUT ${H}/checklists/:id`]: CHECKLISTS,
+  [`DELETE ${H}/checklists/:id`]: CHECKLISTS,
+  [`POST ${H}/minibar/items`]: MINIBAR_LIST,
+  [`PATCH ${H}/minibar/items/:id`]: MINIBAR_LIST,
+  [`POST ${H}/minibar/records`]: own("housekeeping/minibar.ts: MINIBAR_RECORDERS"),
+  [`POST ${H}/minibar/records/:id/decide`]: MINIBAR_DECIDE,
   /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
   [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
@@ -1076,6 +1092,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
+  [`GET ${H}/checklists`]: see("inventory", "the housekeeping checklists"),
+  [`GET ${H}/housekeeping/checklist-runs`]: see("inventory", "a room's checklists"),
+  [`GET ${H}/minibar`]: see(["reservation", "invoice"], "the minibar"),
   [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`GET ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
   [`GET ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),

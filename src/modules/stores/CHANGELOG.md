@@ -19,6 +19,12 @@ Work that touches the core or several services still goes in the root
 **Proved** `api/test/modules/stores/expiry.test.ts` (FEFO, a move and its undo, an undone delivery and issue, owed stock; through the API: expired and within 7 days, the seventh day in, a month out and no use-by never listed, an issue takes the expired first and a move carries the use-by, the bell for the Inventory Manager and the GM and not reception, Waste clears it, the warning refused to the kitchen manager and outside 1 to 90 with nothing changed, 30 days lists the rice); `storeDays.test.tsx` (the two tiles counted and warm, the card's lines, the note, the dialog refusing 0 before it sends, then 10 sent; not offered to a chef); "expiry warning" in `db/tests/modules/stores.sql` 6/6. Exit codes in the master's report.
 **Left open** (the owner's): the kitchen manager in the bell (they record waste but do not correct counts); an expiry report; the use-by on the Days view; a delivery received with its use-by already past is accepted as before.
 
+## 2026-11-07 · `issueFromStore` on the front door - the minibar's refill (D27-383 item 10, D27-396)
+
+**Shipped** (by housekeeping's minibar helper, for the master to review): `issueFromStore(client, hotel, staff, {itemId, storeId, quantity, department, note})` - the Store's own checks (a store at this property, the item, never below zero: "There is 1 bottle of Nuts in Main store, and this would take out 2...") and its one insert (`writeMovement`, kind `issue`, department `Minibar`, note "Minibar refill - room 206"), exported from `api/src/modules/stores/index.ts` as the receipt is to Purchasing. No route, no grant changed: who may record a minibar take is housekeeping's. Proved by `care.test.ts` (on hand 10 to 8; a refill the store does not hold refuses the whole record and leaves no movement).
+
+---
+
 ## 2026-10-29 · Release 16: the owner's answers (D27-378) - the Kitchen store marked, Kitchen stock in the kitchen's menu
 
 **Asked for:** the owner's D27-378, through the master: each hotel's Kitchen store marked by the migration, and a new hotel's, as the Bar store was; "Kitchen stock" in the kitchen manager's and the chef's Restaurant menu, like Bar stock. Everything else kept as built. cp6 (release 15, migration 250) merged first; `owner_reset.steps()` needs nothing: `recipe_lines` and the mark are setup, which a reset keeps.

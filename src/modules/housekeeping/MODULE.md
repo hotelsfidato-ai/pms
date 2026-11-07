@@ -44,8 +44,21 @@ Find a screen (Ctrl K).
 |---|---|---|---|
 | Housekeeping (Front desk) | `/h/:code/housekeeping` | `pages/Housekeeping.tsx` | Housekeeping |
 | Work orders (Front desk) | `/h/:code/work-orders` | `pages/WorkOrders.tsx` | Housekeeping |
+| Minibar (Front desk) | `/h/:code/minibar` | `pages/Minibar.tsx` | none (D27-383 item 10) |
+| Checklists (Front desk) | `/h/:code/checklists` | `pages/Checklists.tsx` | none (D27-383 item 10) |
 
-Two addresses, two page files. Menu gates (`nav.ts`): Housekeeping needs
+**The minibar and checklists (7 November, D27-383 item 10, built under D27-396):**
+the room card's fourth button **Minibar** (only while the hotel has a list; grey
+with "Recording the minibar is for housekeeping, reception or a manager." for
+anybody else) opens `flows/MinibarFlow.tsx`; with the hotel's switch on, **Clean**
+and **Inspected** open `flows/ChecklistFlow.tsx` for a room whose type has a list
+for the job. Minibar: Waiting for the desk (Charge to the bill / Not charged with a
+reason), Recorded (the last 14 days), The list (owner, Admin, GM change it).
+Checklists: the switch, the lists, each room's record. Minibar's entry asks
+`reservation` or `invoice` (it names the guest); Checklists' asks `inventory`.
+The board reads both again each time it opens (`refetchOnMount: "always"`).
+
+Two addresses, two page files (until 7 November; four since). Menu gates (`nav.ts`): Housekeeping needs
 `inventory`; Work orders needs `room_config` **or** the housekeeping role
 (`canSee` — housekeeping holds no `room_config` grant, MEMORY 260).
 
@@ -128,7 +141,29 @@ the core's `api/src/routes/property.ts`)
 | POST | `/:code/rooms/:number/block` | take a room out of service (reason, from, to, note); refused while a guest is in it; sets the room out of service when the block starts today or earlier. `workOrderId` (Report a repair) links the block to that open repair for this room, so Work orders says "Room is out" |
 | DELETE | `/:code/rooms/:number/block/:id` | put it back — clears any repair's link to the block, deletes it and sets the room to needs cleaning; "That block is not here." is refused before anything is written |
 
-13 endpoints. The ten from before check no role in the route — only the
+**`api/src/modules/housekeeping/minibar.ts`** (7 November, D27-383 item 10; migration 270)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/minibar` | the list (price null until typed; `onHand` in its store), the waiting records and the last 14 days', and `mayKeep`, `mayRecord`, `mayDecide`; the Store items and stores to add from for those who keep it. Gate: `reservation` or `invoice` view |
+| POST · PATCH `/:id` | `/:code/minibar/items` | add a Store item (price, store) / change price, store, on or off. Gate: room_config edit (owner, Admin, GM) |
+| POST | `/:code/minibar/records` | what was taken from a room: `MINIBAR_RECORDERS` (asked here, 403); unpriced, unknown, alcohol where not served refused; the refill issued (stores' `issueFromStore`); the guest in the room charged (finance's `postCharge`, restaurant GST / alcohol VAT, `source_type 'minibar'`); disputed or after check-out waits. A refusal after a write is thrown: all or nothing |
+| POST | `/:code/minibar/records/:id/decide` | `{charge, note}`, once: Charge (finance's refusals stand, a closed bill among them) or Not charged with a reason. Gate: invoice create |
+
+**`api/src/modules/housekeeping/checklists.ts`** (7 November, D27-383 item 10; migration 271)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/checklists` | the switch, the lists (job, room type or every type, items), the room types, `mayKeep`. Gate: inventory view |
+| PUT | `/:code/checklists/required` · POST `/:code/checklists` · PUT · DELETE `/:code/checklists/:id` | the switch (row security: `app.manages_hotel`), a list (one per job and room type; 1-60 items, none blank, each once). Gate: room_config edit |
+| POST | `/:code/housekeeping/checklist-runs` | one ticking: the room's list (its type's, else every type's) answered item by item; a cleaning job only with every item ticked (room clean); an inspection's failed item with a note (passed: inspected; failed: dirty); the room's own order refusals. Gate: ROOM_STATE. Held offline (the `/housekeeping/` tier) |
+| GET | `/:code/housekeeping/checklist-runs?room=` | the last 100 tickings: who, when, job, passed, failed items with their notes. Gate: inventory view |
+
+`roomStatus.ts`'s PUT refuses clean or inspected for a room with a list for the job
+while the switch is on (`needsChecklist`). Server tests:
+`api/test/modules/housekeeping/care.test.ts` (17).
+
+13 endpoints until 7 November (21 since). The ten from before check no role in the route — only the
 hotel's own row-level isolation applies (checked 15 September; `nav.ts` says
 the same of work orders; API-2 is the admin chat's). The phase 2B doors DO ask
 the role (`repairRoles.ts`): a repair naming equipment, and every cost door.
@@ -164,6 +199,8 @@ migrations that made or changed them:
 | `work_orders` | what needs fixing | `058_work_orders.sql` (`app.work_orders_open`; a trigger keeps the room in the same hotel), `062_idempotency.sql` (`idempotency_key`, so a held tap sent twice lands once), **repairs on equipment** (`equipment_item_id`: one TAGGED item at the same property, chosen when the repair is raised and never changed; `block_id` is now set by Report a repair) |
 | `work_order_costs` | what a repair cost | **repairs on equipment** — amount > 0; `proof_id` NOT NULL and a trigger that refuses any proof not kept against THIS cost; never edited; cancelled once with who, when and why; DELETE revoked; RLS forced; the shared audit trail |
 | `attachments` | the proof photo of a cost (`subject_table = 'work_order_costs'`) | `077_attachments.sql` (the core's) |
+| `minibar_items`, `minibar_records` | the minibar's list (a Store item, its typed price or NULL, its refill store) and what was taken from a room (charged / waiting / not charged, decided once; what was recorded never changed; no DELETE) | "the minibar" (270, D27-383 item 10) |
+| `hk_checklists`, `hk_checklist_runs`, `hotels.checklists_required` | the lists per job and room type; each ticking, written once (passed is every item ticked; a cleaning job is never failed); the switch, off | "housekeeping checklists" (271, D27-383 item 10) |
 | — (announces) | `rooms` (cleaning state, occupancy), `room_blocks`, `housekeeping_assignments`, `work_orders`: each change raises `<hotel id>:housekeeping` on the live channel `pos_changed` | **housekeeping changes are announced** (`103_…`, 17 September, HK-1) |
 
 **Who works here** (`149_who_works_here.sql`, 28 September, HK-14):
@@ -355,6 +392,19 @@ The guards this service must respect:
   again on its own, and keeps them when that read fails (seen to fail both ways).
 
 ## Requests from this service
+
+For the master, 7 November (D27-383 item 10, built under D27-396) - made in this
+branch for review, or asked:
+
+- **Made, to review:** `api/src/roleGate.ts` - the nine writes and three reads of
+  the minibar and the checklists; finance's `postCharge` (`source`, alcohol as VAT,
+  `api/src/modules/finance/postings.ts`) and the Store's `issueFromStore`
+  (`api/src/modules/stores/stores.ts`, `index.ts`) - each in its service's
+  CHANGELOG; `docs/manual/shots/a6.mjs` reads `API` from the environment.
+- **Asked:** the bell (`api/src/routes/notifications.ts`) could say "Room 205's
+  minibar waits for the desk" to whoever may decide it. The held-taps reader on the
+  board shows only `/rooms/:n/housekeeping` holds, so a ticked list held offline is
+  not drawn as Queued on its card (the toast says it is kept).
 
 For the master, 17 September — each is a file this service may not change:
 

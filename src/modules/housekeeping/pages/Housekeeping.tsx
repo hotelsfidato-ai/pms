@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import {
   Check, CloudOff, RefreshCw, Sparkle, Wrench, BedDouble, UserRound, SprayCan, RotateCcw,
-  DoorOpen, Users, LogOut, ChevronRight,
+  DoorOpen, Users, LogOut, ChevronRight, GlassWater,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { HeldError } from "@/lib/api";
@@ -22,6 +22,11 @@ import { listHousekeeping, markRoom, type HousekeepingRoom, listHousekeepers, li
 import { BUSINESS_DATE, listAllRooms, type RoomBlock } from "@/data/repositories";
 import { OutOfOrderFlow } from "@/modules/housekeeping/flows/OutOfOrderFlow";
 import { RepairFlow } from "@/modules/housekeeping/flows/RepairFlow";
+import { ChecklistFlow } from "@/modules/housekeeping/flows/ChecklistFlow";
+import { MinibarFlow } from "@/modules/housekeeping/flows/MinibarFlow";
+import {
+  getChecklists, getMinibar, checklistFor, type Checklist, type MinibarItem,
+} from "@/modules/housekeeping/data/housekeeping";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW E — housekeeping, on a phone
@@ -194,6 +199,22 @@ export default function HousekeepingPage() {
     (detail.data ?? []).map((r) => [r.number, r.blocks]),
   );
 
+  /* D27-383 item 10 (D27-396): with the hotel's switch on, Clean and
+     Inspected open the room's checklist; the card's Minibar records what
+     was taken. Neither read failing stops the board: the server still
+     refuses a plain tap a checklist should have made, and says so. */
+  /* Read again each time the board opens: a GM may have switched checklists
+     on, or priced an item, since. */
+  const setup = useQuery({
+    queryKey: ["checklists", hotelId], queryFn: () => getChecklists(hotelId), refetchOnMount: "always",
+  });
+  const lists = setup.data?.required ? setup.data.checklists : [];
+  const minibar = useQuery({
+    queryKey: ["minibar", hotelId], queryFn: () => getMinibar(hotelId), refetchOnMount: "always",
+  });
+  const minibarItems = minibar.data?.items.filter((i) => i.active) ?? [];
+  const mayRecordMinibar = minibar.data?.mayRecord ?? false;
+
   /* null is everyone. A supervisor sets the rota looking at every
      room; a housekeeper narrows it to their own and the board finally
      answers the question they actually came to it with. */
@@ -209,6 +230,13 @@ export default function HousekeepingPage() {
       : await unassignHousekeeper(hotelId, roomNumber);
     if (!res.ok) return toast.error("Not assigned", res.reason);
     await qc.invalidateQueries({ queryKey: ["hk-assignments"] });
+  };
+
+  /* A room moved by its checklist: shown at once, as a tap is. */
+  const ticked = (room: HousekeepingRoom, state: string) => {
+    qc.setQueryData<HousekeepingRoom[]>(["housekeeping", hotelId, BUSINESS_DATE], (list) =>
+      list?.map((r) => (r.number === room.number ? { ...r, housekeeping: state } : r)));
+    void qc.invalidateQueries();
   };
 
   const apply = async (room: HousekeepingRoom, state: "clean" | "inspected") => {
@@ -422,6 +450,10 @@ export default function HousekeepingPage() {
                       onAssign={(id) => void assign(room.number, id)}
                       hotelId={hotelId}
                       blocks={blocksFor.get(room.number) ?? []}
+                      lists={lists}
+                      onTicked={(state) => ticked(room, state)}
+                      minibarItems={minibarItems}
+                      mayRecordMinibar={mayRecordMinibar}
                     />
                   </li>
                 ))}
@@ -436,7 +468,8 @@ export default function HousekeepingPage() {
 }
 
 function RoomCard({
-  room, queued, onMark, staff, assignment, onAssign, hotelId, blocks,
+  room, queued, onMark, staff, assignment, onAssign, hotelId, blocks, lists, onTicked, minibarItems,
+  mayRecordMinibar,
 }: {
   room: HousekeepingRoom;
   queued: QueuedChange[];
@@ -446,6 +479,13 @@ function RoomCard({
   onAssign: (staffId: string) => void;
   hotelId: string;
   blocks: RoomBlock[];
+  /** The hotel's checklists while its switch is on; empty when off. */
+  lists: Checklist[];
+  onTicked: (state: string) => void;
+  /** The hotel's minibar list; empty when it has none, and then no button. */
+  minibarItems: MinibarItem[];
+  /** False: the button is grey and says who records it (Rule 6). */
+  mayRecordMinibar: boolean;
 }) {
   const pending = queued.length > 0 ? queued[queued.length - 1]! : null;
   const effective = pending?.state ?? room.housekeeping;
@@ -461,6 +501,13 @@ function RoomCard({
   useEffect(() => setSaid(null), [effective]);
   const [repairing, setRepairing] = useState(false);
   const [takingOut, setTakingOut] = useState(false);
+  const [ticking, setTicking] = useState<"clean" | "inspected" | null>(null);
+  const [stocking, setStocking] = useState(false);
+  /* Marked through its checklist when the room has one for the job. */
+  const hasList = (kind: "clean" | "inspected") => kind === "inspected"
+    ? !!checklistFor(lists, room.type, "inspection")
+    : (["checkout", "stayover", "deep"] as const).some((j) => checklistFor(lists, room.type, j));
+  const mark = (kind: "clean" | "inspected") => (hasList(kind) ? setTicking(kind) : onMark(kind));
 
   return (
     <div
@@ -545,7 +592,8 @@ function RoomCard({
           the card's inside is 311px, so a column is about 98px — room
           for "Inspected" on one line with the icon above it. */}
       <div className="mt-auto pt-1">
-      <div className={cn(blocked ? "flex items-center gap-2" : "grid grid-cols-3 gap-2")}>
+      <div className={cn(blocked ? "flex items-center gap-2"
+        : minibarItems.length ? "grid grid-cols-4 gap-1.5" : "grid grid-cols-3 gap-2")}>
         {blocked ? (
           /* This was a text label. A room could get INTO this state and
              the board offered nothing to get it out again — the only
@@ -582,7 +630,7 @@ function RoomCard({
               ariaLabel={`Mark room ${room.number} clean`}
               ready={effective === "dirty"}
               reason={whyNotClean(room.number, effective, !!pending)}
-              onPress={() => onMark("clean")}
+              onPress={() => mark("clean")}
               onRefused={setSaid}
               hover="hover:border-brand-orange hover:bg-brand-orange-50"
             />
@@ -592,7 +640,7 @@ function RoomCard({
               ariaLabel={`Mark room ${room.number} inspected`}
               ready={effective === "clean"}
               reason={whyNotInspected(room.number, effective, !!pending)}
-              onPress={() => onMark("inspected")}
+              onPress={() => mark("inspected")}
               onRefused={setSaid}
               hover="hover:border-success hover:bg-success-50"
             />
@@ -631,6 +679,33 @@ function RoomCard({
               open={takingOut}
               onOpenChange={setTakingOut}
             />
+            {minibarItems.length > 0 && (
+              <>
+                <MarkButton
+                  label="Minibar"
+                  icon={GlassWater}
+                  ariaLabel={`Record the minibar in room ${room.number}`}
+                  ready={mayRecordMinibar}
+                  reason="Recording the minibar is for housekeeping, reception or a manager."
+                  onPress={() => setStocking(true)}
+                  onRefused={setSaid}
+                  hover="hover:border-grey-400 hover:bg-grey-50"
+                />
+                <MinibarFlow hotelId={hotelId} room={room.number} items={minibarItems}
+                  open={stocking} onOpenChange={setStocking} />
+              </>
+            )}
+            {ticking && (
+              <ChecklistFlow
+                hotelId={hotelId}
+                room={{ number: room.number, type: room.type, occupied: room.occupied }}
+                kind={ticking}
+                lists={lists}
+                open
+                onOpenChange={(o) => !o && setTicking(null)}
+                onDone={onTicked}
+              />
+            )}
           </>
         )}
       </div>

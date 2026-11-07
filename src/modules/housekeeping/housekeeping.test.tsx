@@ -28,6 +28,14 @@ const board = vi.hoisted(() => ({
   hold: null as null | Promise<void>,
   /* When set, the Work orders list answers with it (D22-34's test). */
   orders: null as null | { mayUpdate: boolean },
+  /* D27-383 item 10: the hotel's checklists and minibar, when set; what the
+     board sent. */
+  lists: null as null | unknown,
+  minibar: null as null | unknown,
+  marks: 0,
+  ticks: [] as unknown[],
+  records: 0,
+  reads: 0,
 }));
 vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/modules/housekeeping/data/housekeeping")>();
@@ -41,7 +49,17 @@ vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
     },
     /* The stub answers no room write; the server's half of marking a room
        is api/test. Here a mark lands, so the board can say it did. */
-    markRoom: async () => ({ ok: true }),
+    markRoom: async () => { board.marks += 1; return { ok: true }; },
+    getChecklists: async (...args: Parameters<typeof real.getChecklists>) => {
+      board.reads += 1;
+      return (board.lists ?? real.getChecklists(...args)) as Awaited<ReturnType<typeof real.getChecklists>>;
+    },
+    getMinibar: async (...args: Parameters<typeof real.getMinibar>) => {
+      board.reads += 1;
+      return (board.minibar ?? real.getMinibar(...args)) as Awaited<ReturnType<typeof real.getMinibar>>;
+    },
+    tickChecklist: async (_hotel: string, input: unknown) => { board.ticks.push(input); return { ok: true, data: { passed: false, state: "dirty" } }; },
+    recordMinibar: async () => { board.records += 1; return { ok: true, data: { id: "r", status: "charged", waitingWhy: null } }; },
     listWorkOrders: async (...args: Parameters<typeof real.listWorkOrders>) => {
       if (!board.orders) return real.listWorkOrders(...args);
       return {
@@ -268,6 +286,98 @@ describe("Work orders", () => {
     } finally {
       board.orders = null;
     }
+  });
+});
+
+describe("checklists and the minibar on the room card (D27-383 item 10, D27-396)", () => {
+  const LISTS = (required: boolean) => ({
+    required, roomTypes: [], mayKeep: false,
+    checklists: [{ id: "c1", job: "inspection", roomTypeId: null, roomType: null, items: ["Linen", "Bathroom"] }],
+  });
+  const reset = () => { board.lists = null; board.minibar = null; board.marks = 0; board.ticks = []; board.records = 0; };
+  const item = (id: string, name: string, price: number | null) => ({
+    id, stockItemId: id, name, unit: "bottle", price, storeId: "s", store: "Main store", alcohol: false, active: true, onHand: 5 });
+  const MINIBAR = (mayRecord: boolean) => ({ items: [item("w", "Water", 60), item("c", "Cola", null)], records: [],
+    stock: [], stores: [], mayKeep: false, mayRecord, mayDecide: false });
+  /* The board, with THIS test's switch and list: the cache is the whole
+     file's, and the board reads both again each time it opens. */
+  const open = async () => {
+    board.marks = 0;
+    const before = board.reads;
+    go(`/h/${HOTEL}/housekeeping`);
+    render(<App />);
+    const el = await card("202");
+    await waitFor(() => expect(board.reads).toBeGreaterThanOrEqual(before + 2));
+    await act(async () => { await Promise.resolve(); });
+    return within(el);
+  };
+
+  it("switched off, Inspected marks the room with one tap, as before", async () => {
+    board.lists = LISTS(false);
+    try {
+      const room = await open();
+      fireEvent.click(room.getByRole("button", { name: "Mark room 202 inspected" }));
+      expect(await screen.findByText("Room 202 is inspected.")).toBeDefined();
+      expect(board.marks).toBe(1);
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally { reset(); }
+  });
+
+  it("switched on, Inspected opens the room's list; nothing is sent until each item is answered, a failed one with a note", async () => {
+    board.lists = LISTS(true);
+    try {
+      const room = await open();
+      fireEvent.click(room.getByRole("button", { name: "Mark room 202 inspected" }));
+      const dialog = await screen.findByRole("dialog", { name: "Room 202 · Inspection" });
+      expect(board.marks).toBe(0);
+      const save = within(dialog).getByRole("button", { name: "Room 202 is inspected" });
+      fireEvent.click(save);
+      expect(within(dialog).getByRole("status").textContent).toBe("Answer every item first: Linen, Bathroom.");
+
+      fireEvent.click(within(dialog).getByRole("button", { name: "Linen: OK" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "Bathroom: failed" }));
+      const sendBack = within(dialog).getByRole("button", { name: "Send room 202 back for cleaning" });
+      fireEvent.click(sendBack);
+      expect(within(dialog).getByRole("status").textContent).toBe("Say what is wrong with: Bathroom.");
+      expect(board.ticks).toEqual([]);
+
+      fireEvent.change(within(dialog).getByLabelText("What is wrong with Bathroom"), { target: { value: "Hair in the basin" } });
+      fireEvent.click(sendBack);
+      await waitFor(() => expect(board.ticks).toHaveLength(1));
+      expect(board.ticks[0]).toEqual({ room: "202", job: "inspection", results: [
+        { item: "Linen", ok: true }, { item: "Bathroom", ok: false, note: "Hair in the basin" }] });
+      expect(board.marks).toBe(0);
+    } finally { reset(); }
+  });
+
+  it("counts the minibar on the card; an item with no price cannot be counted, and nothing is sent until one is", async () => {
+    board.minibar = MINIBAR(true);
+    try {
+      const room = await open();
+      fireEvent.click(room.getByRole("button", { name: "Record the minibar in room 202" }));
+      const dialog = await screen.findByRole("dialog", { name: "Minibar · Room 202" });
+      expect(within(dialog).getByRole("button", { name: "One more Water" })).toBeDefined();
+      expect(within(dialog).queryByRole("button", { name: "One more Cola" })).toBeNull();
+      expect(within(dialog).getByText("No price yet - cannot be charged")).toBeDefined();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Record what was taken" }));
+      expect(within(dialog).getByRole("status").textContent).toBe("Count what was taken first.");
+      expect(board.records).toBe(0);
+      fireEvent.click(within(dialog).getByRole("button", { name: "One more Water" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "Record what was taken" }));
+      await waitFor(() => expect(board.records).toBe(1));
+    } finally { reset(); }
+  });
+
+  it("greys Minibar for somebody who may not record, and says who does - opening nothing", async () => {
+    board.minibar = MINIBAR(false);
+    try {
+      const room = await open();
+      const minibar = room.getByRole("button", { name: "Record the minibar in room 202" });
+      expect(minibar.getAttribute("aria-disabled")).toBe("true");
+      fireEvent.click(minibar);
+      expect(room.getByRole("status").textContent).toBe("Recording the minibar is for housekeeping, reception or a manager.");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally { reset(); }
   });
 });
 
