@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
--- 264 — Backfill data: what happened before a hotel's first day
+-- 266 — Backfill data: what happened before a hotel's first day
 --       (the owner's D27-398, 7 November 2026; refer to it as
 --       "backfill data", the master renumbers at merge)
 --
