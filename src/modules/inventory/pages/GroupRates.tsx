@@ -30,8 +30,8 @@ import {
 
 const KINDS: { value: ChangeKind; label: string }[] = [
   { value: "set", label: "New price" },
-  { value: "by", label: "Plus or minus ₹" },
-  { value: "percent", label: "Plus or minus %" },
+  { value: "by", label: "By ₹" },
+  { value: "percent", label: "By %" },
 ];
 
 const days = (from: string, through: string) => (from === through ? dateShort(from) : `${dateShort(from)} to ${dateShort(through)}`);
@@ -95,7 +95,7 @@ export default function GroupRatesPage() {
               <p className="text-sm text-grey-600">You set prices at no property, so there is nothing to change here.</p>
             ) : (
               <>
-                <fieldset>
+                <fieldset className="min-w-0">
                   <legend className="text-sm font-medium text-ink-900 mb-2">Properties</legend>
                   <div className="flex flex-wrap gap-x-5 gap-y-2">
                     {hotels.map((h) => (
@@ -123,7 +123,7 @@ export default function GroupRatesPage() {
                   </Field>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <fieldset className="sm:col-span-2">
+                  <fieldset className="sm:col-span-2 min-w-0">
                     <legend className="text-sm font-medium text-ink-900 mb-1.5">Change</legend>
                     <Segmented<ChangeKind> value={kind} onChange={setKind} options={KINDS}
                       className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1" />
