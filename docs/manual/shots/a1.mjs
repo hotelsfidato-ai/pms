@@ -192,7 +192,7 @@ export const SHOTS = [
       TAG("A3 Test Smith", 2, "head", "[role=dialog] *"), TAG("Room", 1, "roomline", "[role=dialog] *")],
     marks: [
       { n: 1, at: "css:[data-m=head]", side: "left" },
-      { n: 2, at: "css:[data-checkin]", side: "bottom" },
+      { n: 2, at: "css:[data-checkin]", side: "left" },
       { n: 3, at: "text:More options", side: "right" },
       { n: 4, at: "css:[role=dialog] [role=tablist]", side: "right" },
       { n: 5, at: "css:[data-m=roomline]", side: "right" },
@@ -230,13 +230,13 @@ export const SHOTS = [
     path: "/h/5EL/in-house", steps: [{ waitFor: "text:Priya Menon", ms: SLOW }, FRESH,
       /* "Test" keeps the made-up test guests, so red and green balances share the first screen. */
       { type: ["css:input[placeholder='Guest, reference or room…']", "Test"] }, { wait: 1500 },
-      TAGSW("In house now", "switch"), TAGRE("/^\\d+ rooms?$/", 1, "pill"),
+      TAGSW("In house now", "switch"), TAGRE("/^\\d+ rooms?$/", 0, "pill"),
       { eval: "(() => { const h = [...document.querySelectorAll('th')].find((t) => t.textContent.trim() === 'Balance'); if (!h) throw new Error('No Balance'); h.setAttribute('data-m', 'balh'); const i = [...h.parentElement.children].indexOf(h); const rows = [...document.querySelectorAll('tbody tr')]; rows[rows.length - 1].children[i].setAttribute('data-m', 'balz'); })()" },
       BOX("bal", "[data-m=balh]", "[data-m=balz]")],
     marks: [
       { n: 1, at: "css:[data-m=switch]", side: "left" },
       { n: 2, at: "css:[data-m=pill]", side: "right" },
-      { n: 3, at: "css:#__box_bal", side: "left" },
+      { n: 3, at: "css:#__box_bal", side: "bottom" },
     ],
   },
 
@@ -306,6 +306,221 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "css:#__box_nights", side: "bottom" },
       { n: 2, at: "css:#__box_rooms", side: "right" },
+    ],
+  },
+
+  /* ══ The book's own pictures, A1-1 ... A1-18 (7 Nov 2026, D27-396) ═════════
+     Taken after the demo had been left as the day check and the A2-A5 runs
+     made it: business date 11 Oct 2026. Nothing is typed into a form or saved:
+     a screen is opened, a row is clicked, a search box typed into, a bar
+     pointed at. They reuse the A1-T<n> pictures' targets with the book's own
+     arrow lists (chapters/a1.html). A1-16 needs a check-out after the hotel's
+     check-out time and is not taken here. ══════════════════════════════════ */
+  {
+    id: "A1-1", title: "The business date is behind: one line on every screen", as: "General Manager",
+    path: "/h/5EL/arrivals", steps: [{ waitFor: "css:[data-business-date-behind]", ms: SLOW }, { settle: true }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "css:[data-business-date-behind] span", side: "right" },
+      { n: 2, at: "css:[data-business-date-behind] a", side: "bottom" },
+    ],
+  },
+  {
+    id: "A1-2", title: "The top of the Dashboard", as: "General Manager",
+    path: "/", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Free rooms ready", ms: SLOW }, { settle: true }, FRESH, TOP,
+      TAG("Occupancy", 2, "occ"), TAG("Average rate (ARR)", 4, "rates")],
+    marks: [
+      { n: 1, at: "text:BUSINESS DATE", side: "right" },
+      { n: 2, at: "text:month so far from", side: "right" },
+      { n: 3, at: "css:section[aria-label=\"Today's work\"]", side: "left" },
+      { n: 4, at: "text:5 left", side: "right" },
+      { n: 5, at: "css:[data-m=occ]", side: "left" },
+      { n: 6, at: "css:[data-m=rates]", side: "left" },
+      { n: 7, at: "css:button[aria-label^='Today, then the month']", side: "left" },
+    ],
+  },
+  {
+    id: "A1-3", title: "The lower half of the Dashboard", as: "General Manager", size: "tall",
+    path: "/", steps: [{ waitFor: "text:Quick reports", ms: SLOW }, { waitFor: "text:Free rooms ready", ms: SLOW }, { settle: true }, FRESH,
+      TAG("Occupancy by day", 3, "occd"), TAG("Revenue", 3, "rev"), TAG("Nights ahead", 3, "ahead"), TAG("Money", 3, "money"),
+      TAG("The house now", 3, "house"), TAG("Quick reports", 1, "qr"), TAGRE("/Nights so far.*Booked ahead/", 0, "key"),
+      { eval: "document.querySelector('main').style.paddingBottom = '100px'; document.querySelector('main').scrollTo(0, 10000)" }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "css:[data-m=occd]", side: "left" },
+      { n: 2, at: "css:[data-m=key]", side: "bottom" },
+      { n: 3, at: "css:[data-m=rev]", side: "left" },
+      { n: 4, at: "css:[data-m=ahead]", side: "left" },
+      { n: 5, at: "css:[data-m=money]", side: "left" },
+      { n: 6, at: "text:No-shows", side: "left" },
+      { n: 7, at: "css:[data-m=house]", side: "left" },
+      { n: 8, at: "css:[data-m=qr]", side: "bottom" },
+    ],
+  },
+  {
+    id: "A1-4", title: "The Dashboard on a phone", as: "Reception", size: "phone",
+    path: "/", steps: [{ waitFor: "text:Free rooms ready", ms: SLOW }, { settle: true }, FRESH, PUT_AWAY, TAG("Occupancy", 2, "occ"), { wait: 300 }],
+    marks: [
+      { n: 1, at: "css:section[aria-label=\"Today's work\"]", side: "bottom" },
+      { n: 2, at: "css:[data-m=occ]", side: "bottom" },
+    ],
+  },
+  {
+    id: "A1-5", title: "Today's arrivals", as: "Reception",
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Imran Shaikh", ms: SLOW }, FRESH,
+      { eval: "document.querySelector(\"[aria-label='Show as cards']\").parentElement.setAttribute('data-m','views')" },
+      TAGSW("Upcoming", "switch"), TAGRE("/^\\d+ expected$/", 0, "pill"), TAGRE("/^\\d+ of \\d+$/", 0, "count")],
+    marks: [
+      { n: 1, at: "css:[data-m=switch]", side: "left" },
+      { n: 2, at: "css:[data-m=pill]", side: "right" },
+      { n: 3, at: "css:input[placeholder='Guest, reference or room…']", side: "right" },
+      { n: 4, at: "css:[data-m=count]", side: "left" },
+      { n: 5, at: "css:[data-m=views]", side: "bottom" },
+      { n: 6, at: "css:tbody tr:first-child td:nth-child(2)", side: "left" },
+      { n: 7, at: "text:Due in", nth: 0, side: "left" },
+    ],
+  },
+  {
+    id: "A1-6", title: "The stay panel of a guest still to arrive", as: "Reception",
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Imran Shaikh", ms: SLOW }, FRESH,
+      { click: "text:Imran Shaikh" }, { waitFor: "text:More options", ms: SLOW }, { wait: 1500 },
+      TAG("Imran Shaikh", 2, "head", "[role=dialog] *"), TAG("Room", 1, "roomline", "[role=dialog] *")],
+    marks: [
+      { n: 1, at: "css:[data-m=head]", side: "left" },
+      { n: 2, at: "css:[data-checkin]", side: "bottom" },
+      { n: 3, at: "text:More options", side: "right" },
+      { n: 4, at: "css:[role=dialog] [role=tablist]", side: "right" },
+      { n: 5, at: "css:[data-m=roomline]", side: "left" },
+      { n: 6, at: "css:[data-stay-totals]", side: "top" },
+    ],
+  },
+  {
+    id: "A1-7", title: "More options of a guest in the house", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Priya Menon", ms: SLOW }, FRESH,
+      { click: "text:Priya Menon" }, { waitFor: "text:More options", ms: SLOW }, { wait: 1000 },
+      { click: "text:More options" }, { waitFor: "text:View voucher", ms: 15000 }, { wait: 800 },
+      TAG("View voucher", 1, "cancel", "[role=menu] *"), TAG("Change dates or guests", 3, "booking", "[role=menu] *")],
+    marks: [
+      { n: 1, at: "css:[data-m=booking]", side: "left" },
+      { n: 2, at: "css:[data-m=cancel]", side: "left" },
+    ],
+  },
+  {
+    id: "A1-8", title: "In house now: the switch, the pill and the balances", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Priya Menon", ms: SLOW }, FRESH,
+      { type: ["css:input[placeholder='Guest, reference or room…']", "Test"] }, { wait: 1500 },
+      TAGSW("In house now", "switch"), TAGRE("/^\\d+ rooms?$/", 1, "pill"),
+      { eval: "(() => { const h = [...document.querySelectorAll('th')].find((t) => t.textContent.trim() === 'Balance'); if (!h) throw new Error('No Balance'); h.setAttribute('data-m', 'balh'); const i = [...h.parentElement.children].indexOf(h); const rows = [...document.querySelectorAll('tbody tr')]; rows[rows.length - 1].children[i].setAttribute('data-m', 'balz'); })()" },
+      BOX("bal", "[data-m=balh]", "[data-m=balz]")],
+    marks: [
+      { n: 1, at: "css:[data-m=switch]", side: "left" },
+      { n: 2, at: "css:[data-m=pill]", side: "right" },
+      { n: 3, at: "css:#__box_bal", side: "left" },
+    ],
+  },
+  {
+    id: "A1-9", title: "Due out: who is leaving and who still owes", as: "Reception",
+    path: "/h/5EL/in-house/due-out", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Check-out unlocks when the bill reaches zero", ms: SLOW }, FRESH,
+      TAGRE("/still owing/", 1, "owing")],
+    marks: [
+      { n: 1, at: "text:Check-out unlocks when the bill reaches zero", side: "right" },
+      { n: 2, at: "css:[data-m=owing]", side: "left" },
+      { n: 3, at: "css:tbody tr:first-child", side: "left" },
+    ],
+  },
+  {
+    id: "A1-10", title: "The panel for a guest who is leaving", as: "Reception",
+    path: "/h/5EL/in-house/due-out", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:tbody tr", ms: SLOW }, FRESH,
+      { click: "css:tbody tr:first-child td:nth-child(2)" }, { waitFor: "css:[role=dialog] [role=tablist] button", ms: SLOW }, { wait: 2500 },
+      { click: "css:[role=dialog] [role=tablist] button" }, { waitFor: "text:Settle and check out", ms: 20000 }, { wait: 1500 }],
+    marks: [
+      { n: 1, at: "text:Settle and check out", side: "left" },
+      { n: 2, at: "css:[role=dialog] [role=tab]", nth: 1, side: "right" },
+      { n: 3, at: "css:[data-stay-totals]", side: "top" },
+    ],
+  },
+  {
+    id: "A1-11", title: "Rooms: the whole house, today", as: "Reception",
+    path: "/h/5EL/stay", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-room-tile='204']", ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, FRESH,
+      TAG("Sellable", 1, "sellable"), TAG("Needs cleaning", 1, "clean"),
+      BOX("counts", "[data-m=sellable]", "[data-m=clean]"),
+      { eval: "(() => { const t = [...document.querySelectorAll('[data-room-tile]')].find((e) => /out today/.test(e.innerText)); if (!t) throw new Error('No out today tile'); t.setAttribute('data-m', 'dueout'); })()" },
+      TAGC("Calendar", "div", "views", "main *"), TAGC("Room type", "div", "group", "main *"), TAGRE("/^Superior\\s*10$/", 0, "rt")],
+    marks: [
+      { n: 1, at: "css:[data-m=views]", side: "top" },
+      { n: 2, at: "css:[data-m=group]", side: "top" },
+      { n: 3, at: "text:Assign room", side: "top" },
+      { n: 4, at: "css:#__box_counts", side: "top" },
+      { n: 5, at: "css:[data-room-tile='202']", side: "top" },
+      { n: 6, at: "css:[data-m=dueout]", side: "top" },
+      { n: 7, at: "css:[data-room-tile='306']", side: "left" },
+      { n: 8, at: "css:[data-m=rt]", side: "right" },
+    ],
+  },
+  {
+    id: "A1-12", title: "Rooms on a phone", as: "Reception", size: "phone",
+    path: "/h/5EL/stay", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-room-tile='204']", ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, FRESH,
+      { eval: "document.querySelector(\"[data-room-tile='201']\").parentElement.setAttribute('data-m', 'grid')" }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "css:[aria-label='Filter rooms']", side: "bottom" },
+      { n: 2, at: "css:[data-m=grid]", side: "bottom" },
+    ],
+  },
+  {
+    id: "A1-13", title: "The Calendar: a fortnight of the house", as: "Reception",
+    path: "/h/5EL/calendar", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-booking-bar]", ms: SLOW }, FRESH,
+      TAG("Superior", 2, "type"), TAG("Available", 2, "foot"),
+      BOX("weeks", "[aria-label='Previous week']", "[aria-label='Next week']"),
+      { eval: `(() => { const r = document.querySelector("[data-room-row='203']"); r.children[0].children[1].setAttribute('data-m', 'sparkle'); })()` }],
+    marks: [
+      { n: 1, at: "css:#__box_weeks", side: "left" },
+      { n: 2, at: "text:11 Oct 2026 – 24 Oct 2026", side: "right" },
+      { n: 3, at: "css:p[aria-hidden]", side: "top" },
+      { n: 4, at: "css:[data-date-col='2026-10-11']", side: "left" },
+      { n: 5, at: "css:[data-m=type]", side: "bottom" },
+      { n: 6, at: `css:[data-booking-bar='${PRIYA}']`, side: "right" },
+      { n: 7, at: "css:[aria-label='Book room 204 on 2026-10-14']", side: "right" },
+      { n: 8, at: "css:[data-m=sparkle]", side: "right" },
+      { n: 9, at: "css:[data-m=foot]", side: "top" },
+    ],
+  },
+  {
+    id: "A1-14", title: "Pointing at a booking", as: "Reception", clip: [260, 470, 430, 160],
+    path: "/h/5EL/calendar", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-booking-bar]", ms: SLOW }, FRESH,
+      { hover: `css:[data-booking-bar='${PRIYA}']` },
+      { waitFor: "css:[data-radix-popper-content-wrapper] p", ms: 10000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[data-radix-popper-content-wrapper] p", nth: 0, side: "left" },
+      { n: 2, at: "css:[data-radix-popper-content-wrapper] p", nth: 1, side: "right" },
+      { n: 3, at: "css:[data-radix-popper-content-wrapper] p", nth: 2, side: "left" },
+    ],
+  },
+  {
+    id: "A1-15", title: "The Calendar on a phone", as: "Reception", size: "phone",
+    path: "/h/5EL/calendar", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-booking-bar]", ms: SLOW }, FRESH,
+      BOX("nights", "[data-date-col='2026-10-11']", "[data-date-col='2026-10-13']"),
+      BOX("rooms", "[data-room-row='201'] > div:first-child", "[data-room-row='202'] > div:first-child")],
+    marks: [
+      { n: 1, at: "css:#__box_nights", side: "bottom" },
+      { n: 2, at: "css:#__box_rooms", side: "right" },
+    ],
+  },
+  {
+    id: "A1-17", title: "Walk-ins: the record, and how one is taken", as: "Reception",
+    path: "/h/5EL/walk-ins", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Take a walk-in from the Calendar", ms: SLOW }, { settle: true }, FRESH,
+      TAG("Take a walk-in from the Calendar", 2, "box")],
+    marks: [
+      { n: 1, at: "text:Guests taken at the desk without a booking", side: "right" },
+      { n: 2, at: "css:[data-m=box]", side: "left" },
+      { n: 3, at: "css:tbody tr:first-child", side: "left" },
+    ],
+  },
+  {
+    id: "A1-18", title: "Online check-in at the desk", as: "Reception", size: "tall",
+    path: "/h/5EL/online-checkin", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Room cards", ms: SLOW }, { settle: true }, FRESH],
+    marks: [
+      { n: 1, at: "text:Details waiting to be checked", side: "right" },
+      { n: 2, at: "text:Requests", side: "right" },
+      { n: 3, at: "text:Print a card", nth: 0, side: "left" },
+      { n: 4, at: "text:Print cards for every room", side: "left" },
     ],
   },
 ];

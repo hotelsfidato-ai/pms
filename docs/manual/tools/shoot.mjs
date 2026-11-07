@@ -28,7 +28,7 @@ const CHROME = process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application
 const APP = process.env.APP ?? "http://localhost:5173";
 const PORT = Number(process.env.CDP_PORT ?? 9333);
 const PROFILE = join(ROOT, ".local", `manual-chrome-${PORT}`);
-const SIZES = { desk: [1280, 800], phone: [375, 812], wall: [1440, 900] };
+const SIZES = { tall: [1280, 1150], desk: [1280, 800], phone: [375, 812], wall: [1440, 900] };
 
 const [chapter, ...only] = process.argv.slice(2);
 if (!chapter) {
@@ -63,6 +63,10 @@ let nextId = 1;
 const pending = new Map();
 ws.onmessage = (m) => {
   const msg = JSON.parse(m.data);
+  /* A "Leave site?" question (an unsaved form left open for the picture): leave. */
+  if (msg.method === "Page.javascriptDialogOpening") {
+    ws.send(JSON.stringify({ id: nextId++, method: "Page.handleJavaScriptDialog", params: { accept: true } }));
+  }
   if (msg.id && pending.has(msg.id)) {
     const { resolve, reject } = pending.get(msg.id);
     pending.delete(msg.id);
@@ -239,6 +243,13 @@ for (const shot of wanted) {
           offline: step.offline, latency: 0, downloadThroughput: -1, uploadThroughput: -1,
         });
       }
+      /* Rest the mouse on something (a booking bar's tip), no click. */
+      if (step.hover) {
+        await waitFor(step.hover);
+        const at = await centre(step.hover, step.nth);
+        await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: at[0], y: at[1] });
+        await sleep(600);
+      }
       if (step.click) await click(step.click, step.nth);
       if (step.type) await type(step.type[0], step.type[1]);
       if (step.key) await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: step.key });
@@ -265,7 +276,8 @@ for (const shot of wanted) {
     const missing = await js(`${FIND}; ${DRAW}; window.__draw(${JSON.stringify(shot.marks ?? [])})`);
     if (missing.length) throw new Error(`arrow targets not on the page: ${missing.join(" | ")}`);
     await sleep(120);
-    const { data } = await cdp("Page.captureScreenshot", { format: "png" });
+    const [cx, cy, cw, ch] = shot.clip ?? [];
+    const { data } = await cdp("Page.captureScreenshot", { format: "png", ...(shot.clip ? { clip: { x: cx, y: cy, width: cw, height: ch, scale: 1 } } : {}) });
     writeFileSync(join(MANUAL, "img", `${shot.id}.png`), Buffer.from(data, "base64"));
     await js(`document.getElementById("__manual_overlay")?.remove()`);
     console.log(`  ✓ ${shot.id}  ${shot.title ?? ""}`);

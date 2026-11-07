@@ -613,4 +613,55 @@ export const SHOTS = [
       { n: 2, at: "text:MODULES AND CONNECTIONS", side: "right" },
     ],
   },
+
+  /* ── Set up this hotel (A17.2): taken 7 Nov 2026, D27-396 ───────────────
+     The demo hotel is already set up, so a step that ticks itself reads Done;
+     the open step is "Front desk times and rules", which never ticks itself,
+     so it reads To do with its four choices. Nothing is pressed or saved. */
+  {
+    id: "A17-51", title: "Set up this hotel: the steps, and one of them open", as: "Owner", size: "tall",
+    path: "/settings/property/set-up-this-hotel?step=front-desk",
+    steps: [{ waitFor: "css:[data-step=front-desk] a", ms: 60000 }, LOADED, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Must be done before the first booking", side: "left" },
+      { n: 2, at: "css:#setup-step-front-desk", side: "right" },
+      { n: 3, at: "css:[data-step=front-desk] dl", side: "left" },
+      { n: 4, at: "css:[data-step=front-desk] a", side: "top" },
+      { n: 5, at: "css:[data-step=front-desk] [role=group]", side: "bottom" },
+    ],
+  },
+  {
+    id: "A17-52", title: "A screen opened from a step, with the way back", as: "Owner",
+    path: "/settings/rates/taxes?setup=taxes",
+    steps: [{ waitFor: "text:Back to setup", ms: 60000 }, LOADED, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Setting up this hotel", side: "bottom" },
+      { n: 2, at: "text:Back to setup", side: "bottom" },
+      { n: 3, at: "label:Close the setup bar", side: "bottom" },
+    ],
+  },
+  {
+    id: "A17-53", title: "Ready to go live: a summary that changes nothing", as: "Owner",
+    path: "/settings/property/set-up-this-hotel?step=go-live",
+    steps: [{ waitFor: "text:Still to do (", ms: 60000 }, LOADED, { wait: 800 },
+      { eval: "document.querySelector('[data-ready], [data-not-ready]').scrollIntoView({ block: 'start' })" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[data-ready], [data-not-ready]", side: "right" },
+      { n: 2, at: "text:Still to do (", side: "left" },
+      { n: 3, at: "text:Done (", side: "right" },
+    ],
+  },
+  {
+    id: "A17-56", title: "Several rooms: From, To, and the count on the button (not saved)", as: "Owner",
+    path: "/settings/rooms/room-types",
+    steps: [{ click: "text:Add a room" }, { waitFor: DIALOG }, { click: "text:Several rooms" }, { wait: 400 },
+      { type: ["css:input[placeholder='101']", "401"] }, { type: ["css:input[placeholder='109']", "409"] },
+      { type: ["css:[role=dialog] input[inputmode=numeric]", "4"] }, { waitFor: "text:Add 9 rooms" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:Several rooms", side: "right" },
+      { n: 2, at: "css:input[placeholder='101']", side: "left" },
+      { n: 3, at: "css:[role=dialog] input[inputmode=numeric]", side: "right" },
+      { n: 4, at: "text:Add 9 rooms", side: "top" },
+    ],
+  },
 ];
