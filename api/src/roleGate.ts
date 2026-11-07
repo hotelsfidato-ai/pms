@@ -1024,7 +1024,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/repairable-equipment`]: REPAIRS,
   [`GET ${H}/checklists`]: see("inventory", "the housekeeping checklists"),
   [`GET ${H}/housekeeping/checklist-runs`]: see("inventory", "a room's checklists"),
-  [`GET ${H}/minibar`]: see(["inventory", "invoice"], "the minibar"),
+  [`GET ${H}/minibar`]: see(["reservation", "invoice"], "the minibar"),
   [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`GET ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
   [`GET ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
