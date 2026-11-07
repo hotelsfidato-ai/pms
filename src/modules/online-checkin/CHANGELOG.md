@@ -12,6 +12,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Two sections behind the code: the survey after check-out, and the guest's own preferences (D27-383 item 10, built under D27-396)
+
+**Shipped, by rule 8 (nothing earlier widened):** `SurveySection.tsx` + `api/src/routes/guestSurvey.ts` (`GET/POST /api/guest/:token/survey`, definers `app.guest_survey` / `app.guest_survey_answer`, migration 278) and `PreferencesSection.tsx` + `api/src/routes/guestPreferences.ts` (`GET/PUT /api/guest/:token/preferences`, definers `app.guest_preferences` / `app.guest_preferences_save`, migration 277), each mounted with one line in `guestDoor.ts` and placed with one line in `Behind`, each hiding itself when it has nothing. Data calls in `data/guestCare.ts`. The survey is first on the page (only after check-out, where the hotel's `feedback_survey` module is on, once); the preferences after the ID photo, with guests' own `PreferenceFields`.
+
+**Decided under D27-396:** both behind the code (the door's rules, not a link-alone write); the preferences go straight to the guest's record (not the legal register, so D21-8's desk confirmation does not apply); `api/test/roleGate.test.ts`'s pin of the person-less doors gains `POST /api/guest/:token/survey` and `PUT /api/guest/:token/preferences`.
+
+**Proved:** OCI-5 for all four definers in the database (`db/tests/modules/guests.sql`, `reputation.sql`: the link's hash with no unlock, and another stay's unlock); the door in `api/test/modules/guests/guestCare.test.ts`; the sections in `guestCare.test.tsx`. Seen at 375px in the headless shots A5-F1 to A5-F3: the survey sent through the real door with the page's unlock, then "Thank you".
+
+---
+
 ## 2026-10-26 · The guest's proforma bill is the desk's, whole (the owner's D27-365 (5))
 
 **Asked for:** "make the guest's proforma identical to the desk's" - the stay's facts, the payments and the HSN/SAC, which the guest's page left out because it reads through a no-session function (root CHANGELOG, 19 October, "Left open").

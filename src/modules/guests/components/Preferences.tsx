@@ -19,7 +19,8 @@ import { TEXTS } from "../../../../api/src/modules/guests/preferenceRules.ts";
    Shown where they help, each from this file through the front door:
      PreferenceMark      a small mark on the stay lists (StayTable) and
                          Assign room - "Allergy" in red, else "Preferences"
-     GuestPreferences    the details, on the stay panel and Guest 360
+     GuestPreferences    the details, on the stay panel (and read only in
+                         Assign room)
      RoomPreferences     one line: the arriving guest's on the housekeeping
                          board, an in-house guest's food and allergy on the
                          restaurant's order
@@ -106,8 +107,8 @@ export function RoomPreferences({ hotelId, room, who }: {
   );
 }
 
-/** The details on the stay panel and Guest 360, with Edit preferences for
-    whoever may edit the guest. */
+/** The details on the stay panel, with Edit preferences for whoever may
+    edit the guest. */
 export function GuestPreferences({ hotelId, guestId, editable = true }: {
   hotelId: string; guestId?: string | undefined;
   /** False inside another window (Assign room): read only there. */

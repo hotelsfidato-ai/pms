@@ -12,6 +12,33 @@ what it is, and what it still waits on, is in `MODULE.md`.
 
 ---
 
+## 2026-11-07 · The feedback survey and Guest feedback (D27-383 item 10, built under D27-396)
+
+**Asked for:** after check-out, a short survey on the guest's own page (overall 1-5, room, cleanliness, food, staff, a comment), per hotel switched on in Settings, once a stay; offered through the guest's page and, where the hotel sends review requests, in the same message; results per hotel by month with the comments; a low score (1-2) to the GM in Notifications; never review gating.
+
+**Shipped:**
+- Migration **278** "the feedback survey" (the master renumbers): the `feedback_survey` module (178's way; an absent row reads OFF), `guest_feedback` (one row per stay by its own unique key, scores 1-5 with overall required, a comment of 1-1000; FORCE row security; staff SELECT only, written only by the definer), `app.test_hotel_classes()` patched in place with `pg_get_functiondef`/`replace` (trading), and the guest's definers `app.guest_survey` / `app.guest_survey_answer` ('saved', or 'locked', 'off', 'not_yet', 'answered').
+- The door: `api/src/routes/guestSurvey.ts` (rule 8; mounted with one line in `guestDoor.ts`) and online check-in's `SurveySection.tsx`.
+- `api/src/modules/reputation/feedback.ts` - `GET /:code/feedback` for `FEEDBACK_ROLES` (`feedbackRoles.ts`, imported by the server and the menu); `pages/Feedback.tsx`, "Guest feedback" in Guests & CRM (order 45): scores by month (12, a dash where nobody scored a part), the latest 100 answers with guest, booking, room and comment, a low one in red, and a card saying when the hotel is not asking.
+- The bell (`api/src/routes/notifications.ts`, the core's): an answer with a 1 or 2, overall or in any part, in the last 7 days, for `FEEDBACK_ROLES`, linking to Guest feedback. `lowScore()` is the one rule.
+- `reputation.ts`'s ask: where the module is on and the stay has not answered, `data.feedback` carries a fresh link to the guest's page (`surveyLinkFor`: the desk's kind of link, `app.guest_link_expires`). The `data` keys stay `link` and `reference` otherwise.
+- The switch: admin's `SWITCHABLE` and `MODULE_COPY` ("Feedback survey").
+
+**Decided under D27-396** (the owner reviews later):
+- **Off by default** at every hotel (the brief says so): a module switch, Settings, Property, Modules, owner and Admin, as every other switch.
+- **Who reads the results and gets the bell: the owner, an Admin and the GM** (the brief says "the GM"; the owner and an Admin see everything as always). Not the hotel manager or the desk: the comments are about the staff.
+- **"Low" is a 1 or 2 overall OR in any part** - the stricter reading, so a cleanliness 1 under an overall 3 still reaches the GM. Shown in the bell for 7 days (derived, never stored, as the bell is).
+- **Months are the month the guest answered** (the hotel's own day), the last 12.
+- **Behind the code**, like every part of the guest's page (rule 8): a forwarded link cannot answer for the guest. After check-out the guest proves it is them with the code as before.
+- **The survey's link in the review request** is a new link made at the ask, alive until 11:00 the morning after the stay and never less than a day (D18-9's rule), with origin `desk` (a clerk pressed the button), and not added once the stay has answered.
+- **No review gating:** the answer reads the same for any score, the page never mentions a review, and the review request never reads a score.
+
+**⚠ The owner's step (n8n on the live server - not done, never touched by this helper):** the review request's wording lives in n8n. Once a hotel switches the survey on, its review messages carry `data.feedback`, a link to the guest's page. In the n8n workflow that sends `kind: "review"` (WhatsApp template and email), add one optional line that prints only when `{{ $json.data.feedback }}` is there, for example "Tell us how your stay was: {{ $json.data.feedback }}". A WhatsApp template with a new variable needs Meta's approval first; until then the email carries it and WhatsApp sends what it sends today. Nothing else changes: no new kind of message.
+
+**Proved:** API `api/test/modules/guests/guestCare.test.ts` (the survey half): off (409), before check-out (409), the link alone (404, the one sentence), scores not 1-5 (409), one answer then a second refused (409, one row), the same answer whatever the score, an expired page (404, nothing written), the results for the GM and 403 for reception, the low score in the GM's bell and not reception's, the review request sent with a low score, carrying the survey link while unanswered and not when switched off. DB `db/tests/modules/reputation.sql` (+15, "feedback"). Web `feedback.test.tsx` (2). The A10 and A5 pictures were taken from the screens. Final numbers are in the report.
+
+---
+
 ## 2026-09-24 · A group is asked once, at its lead guest's room (D22-10, REV-3)
 
 **Asked for:** the owner's D22-10 - one review request per group, at the

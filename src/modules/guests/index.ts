@@ -36,7 +36,7 @@ export {
 export { StayCompanions } from "./components/StayCompanions";
 
 /* D27-383 item 10: a guest's preferences - the mark for the stay lists and
-   Assign room (front desk), the details for the stay panel and Guest 360, one
+   Assign room (front desk), the details for the stay panel, one
    line for the housekeeping board and the restaurant's order, and the form
    for the guest's own page (online check-in). */
 export {
