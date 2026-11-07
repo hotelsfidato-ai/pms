@@ -6561,6 +6561,18 @@ copy will see of theirs.**
 
 ---
 
+### 472 · A helper's: "a removed record is frozen" froze it only after the removal (7 November)
+
+The D27-398 Backfill guard (`app.backfill_guard`, 266) refused any change to a row already removed. On the removal
+itself it set who and when and returned `new` as written. So one `update ... set removed_at = now(), removed_reason =
+'x', rate = 1` removed the stay and changed its rate in the same write, with no correction reason. The screen never
+sends that, so the gap was the database's alone, and the audit log would have shown it. I found it in review at the
+merge. Fixed with `new := old`, then the reason, who and when. The db test now makes that write and expects the rate
+kept: the old guard failed 1 of 24, the fixed one passes 24 of 24. Nothing reached production. **The rule:** a guard
+that freezes a row must also freeze the write that does the freezing. Build the frozen row from `old`, not `new`.
+
+---
+
 ### 471 · MINE: my commit in the main checkout closed the other master's merge (7 November)
 
 Two master chats share `D:\fidato pms`. The build-all master had its stock merge staged there (MERGE_HEAD set, 81
