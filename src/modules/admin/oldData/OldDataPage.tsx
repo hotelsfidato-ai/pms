@@ -4,7 +4,7 @@ import { FileUp, Undo2 } from "lucide-react";
 import { useUi } from "@/lib/ui";
 import { dateShort, dateTime } from "@/lib/format";
 import {
-  Page, PageHeader, Card, CardHeader, CardBody, Button, Input, NativeSelect, Field, Segmented,
+  Page, PageHeader, Card, CardHeader, CardBody, Button, Input, NativeSelect, Field, Segmented, Checkbox,
   fieldProps, StatusPill, DataTable, type Column, Dialog, DialogContent, Skeleton, ErrorState, EmptyState, toast,
 } from "@/components/ui";
 import {
@@ -59,6 +59,9 @@ export default function OldDataPage() {
   const [choices, setChoices] = useState<Record<string, ImportChoice>>({});
   /** The columns or a choice changed since the last check. */
   const [stale, setStale] = useState(false);
+  /* "Send each guest our booking voucher": off unless ticked (the master,
+     under D27-396) - the old system confirmed these bookings already. */
+  const [sendVouchers, setSendVouchers] = useState(false);
   const [busy, setBusy] = useState<"check" | "save" | null>(null);
   const [undoing, setUndoing] = useState<ImportRecord | null>(null);
   const [refusedOf, setRefusedOf] = useState<ImportRecord | null>(null);
@@ -79,12 +82,15 @@ export default function OldDataPage() {
   const lastSystem = v.imports?.[0]?.system ?? "";
   const systemName = system || lastSystem;
 
-  const reset = () => { setFile(null); setCheck(null); setProblem(null); setColumns({}); setChoices({}); setStale(false); };
+  const reset = () => {
+    setFile(null); setCheck(null); setProblem(null); setColumns({}); setChoices({}); setStale(false);
+  };
 
   const ask = async (f: File, save: boolean, cols?: Record<string, string>) => {
     if (!systemName.trim()) { setProblem("Say which system the file came from first (IDS, eZee, a spreadsheet)."); return; }
     setBusy(save ? "save" : "check"); setProblem(null);
-    const out = await sendImport(hotelId, { kind, file: f, system: systemName.trim(), columns: cols, choices }, save);
+    const out = await sendImport(hotelId,
+      { kind, file: f, system: systemName.trim(), columns: cols, choices, sendVouchers }, save);
     setBusy(null);
     if (save && out.ok) {
       const c = out.counts;
@@ -94,6 +100,7 @@ export default function OldDataPage() {
             .filter(Boolean).join(", ")
         : undefined);
       reset();
+      setSendVouchers(false);
       void qc.invalidateQueries();
       return;
     }
@@ -162,6 +169,7 @@ export default function OldDataPage() {
       <div><p className="font-medium">{d.fileName}</p><p className="text-sm text-grey-600">{KIND_WORDS[d.kind]} from {d.system}</p></div>
     ) },
     { key: "who", header: "By", hideBelow: "md", cell: (d) => d.madeBy ?? "-" },
+    { key: "voucher", header: "Vouchers", hideBelow: "lg", cell: (d) => d.kind === "guests" ? "-" : d.sendVouchers ? "Sent" : "Not sent" },
     { key: "in", header: "Rows in", numeric: true, cell: (d) => <span className="tabular">{d.rowsIn}</span> },
     { key: "refused", header: "Refused", numeric: true, cell: (d) => d.rowsRefused === 0
       ? <span className="tabular">0</span>
@@ -187,7 +195,7 @@ export default function OldDataPage() {
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-grey-700">What the file holds</span>
-              <Segmented<ImportKind> value={kind} onChange={(k) => { setKind(k); reset(); }}
+              <Segmented<ImportKind> value={kind} onChange={(k) => { setKind(k); reset(); setSendVouchers(false); }}
                 options={[{ value: "guests", label: KIND_WORDS.guests }, { value: "bookings", label: KIND_WORDS.bookings }]} />
             </div>
             <Field label="The old system" required>
@@ -209,11 +217,18 @@ export default function OldDataPage() {
               ? "Name, phone, email, address, nationality, ID type and number (only its last four are kept), date of birth, company and GSTIN, notes. A guest already on file by phone or email is shown, and you choose: keep, merge (only empty fields are filled) or skip."
               : `Bookings to come become ordinary confirmed bookings, never overbooked; a rate left blank is a dash, set at the desk before arrival. An advance becomes a payment on the booking, dated the day it was paid (before ${dateShort(v.firstDay)}), never an invoice. A stay already over comes in as history only: no bill, no tax, no report changes.`}
           </p>
-          {kind === "bookings" && v.voucherOn && (
-            <p className="text-sm rounded-md border border-brand-yellow-100 bg-brand-yellow-50 px-3 py-2">
-              Each booking&rsquo;s guest with an email is sent the hotel&rsquo;s voucher, as every booking is. To bring
-              them in quietly, switch the voucher off first (Settings, Messages), and on again after.
-            </p>
+          {kind === "bookings" && (
+            <div className="space-y-1">
+              <Checkbox checked={sendVouchers} onCheckedChange={setSendVouchers}
+                disabled={!v.voucherOn} label="Send each guest our booking voucher" />
+              <p className="text-sm text-grey-600 pl-6">
+                {!v.voucherOn
+                  ? "The booking voucher is switched off at this hotel (Settings, Messages), so none goes."
+                  : sendVouchers
+                    ? "Each booking's guest with an email is sent this hotel's voucher, with its new reference, once it is brought in."
+                    : "Off: their old system confirmed them, so no message goes to these guests now. Later messages follow the hotel's settings, as for any booking."}
+              </p>
+            </div>
           )}
           {problem && (
             <p className="text-sm rounded-md border border-brand-red-100 bg-brand-red-50 px-3 py-2 text-ink-900" role="alert">{problem}</p>

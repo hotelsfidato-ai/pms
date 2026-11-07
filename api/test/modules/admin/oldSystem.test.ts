@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
-import { closePool } from "../../../src/db.ts";
+import { closePool, withUser } from "../../../src/db.ts";
+import { owedNow, LIMITS } from "../../../src/modules/guest-messaging/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BRINGING IN AN OLD SYSTEM'S GUESTS AND BOOKINGS (D27-383 item 7;
@@ -65,6 +66,14 @@ const send = async (kind: "guests" | "bookings", lines: string[], extra: Record<
 
 const book = (ref: string, guest: string, phone: string, from: number, to: number, rest: string) =>
   `${ref},${TAG} ${guest},${phone},${ahead(from)},${ahead(to)},${rest}`;
+
+/** What the guest-messages sweep would send now at 5EL, asked as the sweep
+    (nobody signed in) and taken back, so nothing it records stays. */
+const sweepWouldSend = () => withUser("", async (client) => {
+  await client.query("savepoint look");
+  try { return (await owedNow(client, LIMITS, hotel)).map((d) => d.reservationId); }
+  finally { await client.query("rollback to savepoint look"); }
+});
 
 const GUEST_HEAD = "Guest Name,Mobile,Email,City,Nationality,ID Proof,ID No,DOB,Company,GSTIN,Remarks";
 const BOOK_HEAD = "Booking No,Guest,Mobile,Arrival,Departure,Room Type,Room No,Rate,Plan,Adults,Source,Advance,Paid On,Payment Mode";
@@ -270,6 +279,36 @@ describe("the bookings' file", () => {
     expect(v!.n).toBe(1);
   });
 
+  it("sends the guests nothing by default; only the import's tick sends the voucher (the master, D27-396)", async () => {
+    /* The hotel's own voucher switch on for this test, as it was after. */
+    const [was] = await sql<{ is_on: boolean }>(
+      "select is_on from guest_message_settings where hotel_id = $1 and kind = 'booking-voucher'", [hotel]);
+    await sql(
+      `insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'booking-voucher', true)
+       on conflict (hotel_id, kind) do update set is_on = true`, [hotel]);
+    try {
+      const quiet = await send("bookings", [BOOK_HEAD,
+        book("OSI-Q1", "Quiet", "9811100861", 330, 332, `Osi Suite,,3000,EP,2,${source},,,`)]);
+      expect(quiet.status).toBe(200);
+      const loud = await send("bookings", [BOOK_HEAD,
+        book("OSI-Q2", "Told", "9811100862", 334, 336, `Osi Suite,,3000,EP,2,${source},,,`)], { sendVouchers: true });
+      expect(loud.status).toBe(200);
+      const [q] = await sql<{ id: string }>("select id::text from reservations where notes like '%(OSI-Q1)%'");
+      const [l] = await sql<{ id: string }>("select id::text from reservations where notes like '%(OSI-Q2)%'");
+      const owed = await sweepWouldSend();
+      expect(owed).not.toContain(q!.id);
+      expect(owed).toContain(l!.id);
+      const recorded = await sql<{ file_name: string; send_vouchers: boolean }>(
+        "select file_name, send_vouchers from data_imports where id = any($1) order by made_at",
+        [[quiet.body.importId, loud.body.importId]]);
+      expect(recorded.map((r) => r.send_vouchers)).toEqual([false, true]);
+      expect(await sql("select 1 from messages_sent where about_id = any($1)", [[q!.id, l!.id]])).toHaveLength(0);
+    } finally {
+      if (was) await sql("update guest_message_settings set is_on = $2 where hotel_id = $1 and kind = 'booking-voucher'", [hotel, was.is_on]);
+      else await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'booking-voucher'", [hotel]);
+    }
+  });
+
   it("the same booking is never brought in twice", async () => {
     const out = await send("bookings", [BOOK_HEAD,
       book("OSI-1", "Ravi", "9811100831", 300, 303, `Osi Suite,,3500,EP,2,${source},,,`)]);
@@ -281,12 +320,13 @@ describe("the bookings' file", () => {
 describe("the undo", () => {
   it("is refused once anything it brought in has been touched, and changes nothing", async () => {
     const [imp] = await sql<{ id: string }>(
-      "select id::text from data_imports where kind = 'bookings' and file_name = $1 and undone_at is null", [`${TAG}-bookings.csv`]);
+      `select d.id::text from data_imports d join data_import_items i on i.import_id = d.id and i.kind = 'booking'
+         join reservations r on r.id = i.row_id::uuid where r.notes like 'Brought in from IDS (OSI-4).%'`);
     await sql("update reservations set special_request = 'Late arrival' where notes like 'Brought in from IDS (OSI-4).%'");
     const out = await call(people["owner"]!, "POST", `/imports/${imp!.id}/undo`);
     expect(out.status).toBe(409);
     expect(((await out.json()) as { reason: string }).reason).toMatch(/^Nothing was undone: FH-.* changed since it came in/);
-    expect(await sql("select 1 from reservations where notes like 'Brought in from IDS (OSI-%'")).toHaveLength(2);
+    expect(await sql("select 1 from reservations where notes like 'Brought in from IDS (OSI-1)%' or notes like 'Brought in from IDS (OSI-4)%'")).toHaveLength(2);
   });
 
   it("takes everything back while untouched: guests, bookings, rooms, advances and past stays", async () => {

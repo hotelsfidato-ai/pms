@@ -44,6 +44,8 @@ export interface ImportCheck {
 export interface ImportRecord {
   id: string; kind: ImportKind; system: string; fileName: string;
   rowsIn: number; rowsRefused: number; refused: { line: number; reason: string }[];
+  /** "Send each guest our booking voucher" was ticked (off by default). */
+  sendVouchers: boolean;
   madeAt: string; madeBy: string | null; undoneAt: string | null; undoneBy: string | null;
   guests: number; filled: number; bookings: number; stays: number; advances: number;
 }
@@ -54,7 +56,7 @@ export interface ImportsView {
   businessDate?: string;
   /** The hotel's first day here: an advance brought in is from before it. */
   firstDay?: string;
-  /** Booking vouchers go to guests (Settings, Messages). */
+  /** The hotel's booking voucher is switched on (Settings, Messages). */
   voucherOn?: boolean;
   imports?: ImportRecord[];
   /** Bookings brought in with no rate, still to be priced. */
@@ -96,6 +98,8 @@ export interface ImportAsk {
   kind: ImportKind; file: File; system: string;
   columns?: Record<string, string>;
   choices?: Record<string, ImportChoice>;
+  /** Off unless ticked: the old system confirmed these bookings already. */
+  sendVouchers?: boolean;
 }
 
 /** Checked, nothing saved (`save` false); or saved, all of it or none. */
@@ -104,7 +108,7 @@ export async function sendImport(hotelId: string, ask: ImportAsk, save: boolean)
     return await api<ImportCheck>(`/api/hotels/${hotelId}/imports/${ask.kind}${save ? "" : "/check"}`, {
       method: "POST",
       body: JSON.stringify({ name: ask.file.name, data: await base64(ask.file), system: ask.system,
-                             columns: ask.columns, choices: ask.choices }),
+                             columns: ask.columns, choices: ask.choices, sendVouchers: ask.sendVouchers === true }),
     });
   } catch (error) { return said(error); }
 }

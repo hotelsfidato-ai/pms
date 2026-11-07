@@ -1878,6 +1878,12 @@ begin
     end;
     res := res || jsonb_build_object('n', 'and its guest is never deleted outside it',
       'ok', v like 'A guest is never deleted%', 'd', v);
+    res := res || jsonb_build_object('n', 'unticked, the sweep is told it sends its booking no voucher',
+      'ok', (select array_agg(x) from app.quietly_imported(array[stay]) x) = array[stay]);
+    update data_imports set send_vouchers = true where id = imp;
+    res := res || jsonb_build_object('n', 'ticked "Send each guest our booking voucher", it is owed as any booking',
+      'ok', not exists (select 1 from app.quietly_imported(array[stay])));
+    update data_imports set send_vouchers = false where id = imp;
 
     -- ---------- Guest 360, the visits, the resets ----------
     res := res || jsonb_build_object('n', 'a past stay brought in is a visit',

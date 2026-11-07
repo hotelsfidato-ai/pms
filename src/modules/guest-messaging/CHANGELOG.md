@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · The sweep sends no voucher to a booking brought in from an old system, unless its import said so (D27-383 item 7, by the build-all helper)
+
+The master's decision under D27-396: admin's Bring in old data sends the guests of the bookings it brings in nothing
+at import time - their old system confirmed them - unless the import ticked "Send each guest our booking voucher".
+`owedNow` (the sweep's door, `jobs.ts`) asks `app.quietly_imported` (migration 280, security definer: the sweep has
+no staff session) and drops those bookings; `dueFromDatabase`, which the desk's Send voucher and the unreachable list
+read, is unchanged, so the desk can still send one. The front door exports `owedNow` and `LIMITS` for admin's test.
+The whole account: admin's `CHANGELOG.md`.
+
 ## 2026-11-02 · A cancelled day's daily reports, sent again marked Corrected (the owner's D27-390)
 
 **Asked for:** the owner, through the main chat: "when a cancelled day is run again, SEND IT AGAIN, marked Corrected in the subject and at the top, to the same addresses."

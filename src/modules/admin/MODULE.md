@@ -275,7 +275,10 @@ properties and people.
   `reservations.agreed_rate` be null before arrival only, and front desk's
   check-in refuses it); its advance a `payment` posting dated the day it was
   paid, before the first day, `source_type` 'import', never an invoice or a
-  drawer. A past stay is `imported_stays` only: a visit (`app.guest_visits`)
+  drawer. Its guest is sent nothing at import time unless the import ticked
+  "Send each guest our booking voucher" (`data_imports.send_vouchers`, off;
+  guest messaging's sweep asks `app.quietly_imported`; the master, under
+  D27-396). A past stay is `imported_stays` only: a visit (`app.guest_visits`)
   and "Brought in" on Guest 360 (`app.guest_360`, crm's word). Each import:
   `data_imports` (who, when, file, rows in, rows refused and why) and
   `data_import_items` (what it made or filled); the undo is

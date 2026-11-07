@@ -62,8 +62,15 @@ without asking (D27-396), helper copy `agent-aa96a3641a5fcd3a2`, migrations 280 
   count it, and no invoice. It is on the GST on advances report of the month it was paid (CGST Act s.13(2)), and in
   11B when its invoice is issued; **for the CA:** an advance the old system reported in the go-live month must be
   counted once.
-- Imported bookings are sent the hotel's voucher by email like every booking (the owner's D21-33), never WhatsApp
-  (no agreement on file); the page warns and points at the voucher's switch.
+- **The master's decision, under D27-396 (replacing my first choice, the voucher as for every booking):** an import
+  sends its guests no message at all at import time - the old system confirmed them. A tick on a bookings import,
+  "Send each guest our booking voucher", off by default and recorded with it (`data_imports.send_vouchers`), sends
+  the hotel's voucher by email as for any booking. The sweep (guest messaging's `owedNow`) asks
+  `app.quietly_imported` and skips the others; the desk's Send voucher still sends one when somebody chooses to, and
+  later messages follow the hotel's settings. The list of imports says Sent or Not sent. Tested: an import sends
+  nothing by default, the tick makes it owed (`oldSystem.test.ts`), the database's answer both ways (`admin.sql`),
+  the tick starts off (`oldData.test.tsx`). Touched outside admin: `guest-messaging/jobs.ts` (`owedNow`) and its
+  front door (exports `owedNow`, `LIMITS` for the test).
 - A past stay is any row that ended by the business date; one in the house today is refused (checked in at the desk).
 - Undo is all or nothing and deletes (as the owner's full reset does, through the guards' own allowance), refused
   once anything it brought in is later than the import or has anything hanging off it.

@@ -20,6 +20,7 @@
 --                              only while nothing has touched it
 --   7 Guest 360 and the visit count read the past stays
 --   8 a test hotel's trade; the full reset keeps what came in
+--   9 no voucher unless the import's tick says so
 --
 -- Re-runnable.
 -- ════════════════════════════════════════════════════════════════════
@@ -69,6 +70,9 @@ create table if not exists data_imports (
   rows_refused  int not null check (rows_refused >= 0 and rows_refused <= rows_in),
   -- Each refused or skipped row: {line, reason}.
   refused       jsonb not null default '[]',
+  -- "Send each guest our booking voucher" (the master, under D27-396): off
+  -- unless ticked - the old system confirmed these bookings already.
+  send_vouchers boolean not null default false,
   made_by       uuid references staff(id) default app.current_user_id(),
   made_at       timestamptz not null default now(),
   undone_by     uuid references staff(id),
@@ -101,7 +105,7 @@ create policy data_imports_count on data_imports for update
 -- cannot set who undid it, or when, or in which transaction.
 revoke all on data_imports from pms_app;
 grant select on data_imports to pms_app;
-grant insert (hotel_id, kind, system, file_name, columns, rows_in, rows_refused, refused)
+grant insert (hotel_id, kind, system, file_name, columns, rows_in, rows_refused, refused, send_vouchers)
   on data_imports to pms_app;
 grant update (rows_refused, refused) on data_imports to pms_app;
 
@@ -468,3 +472,36 @@ begin
                       where i.kind = ''guest'' and i.row_id = g.id::text and d.undone_at is null)');
   end if;
 end $$;
+
+
+-- =============================================================================
+-- 9 · NO VOUCHER UNLESS THE IMPORT'S TICK SAYS SO
+-- =============================================================================
+-- Every future booking is owed the hotel's voucher (the owner's D21-33), and
+-- the guest-messages sweep sends it within a minute. A booking brought in from
+-- an old system was confirmed there already, so its guest is sent nothing at
+-- import time unless the import ticked "Send each guest our booking voucher"
+-- (the master, under D27-396). The sweep asks this and skips them; the desk's
+-- own Send voucher still sends one when somebody chooses to, and every later
+-- message follows the hotel's settings as for any booking. A job has no staff
+-- session and the import's rows are row-secured: hence security definer.
+-- A re-run of this file (re-runnable) adds the column to a table made before it.
+alter table data_imports add column if not exists send_vouchers boolean not null default false;
+
+create or replace function app.quietly_imported(p_reservations uuid[])
+returns setof uuid
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select i.row_id::uuid
+    from data_import_items i
+    join data_imports d on d.id = i.import_id
+   where i.kind = 'booking' and not d.send_vouchers and d.undone_at is null
+     and i.row_id = any (select x::text from unnest(p_reservations) x);
+$$;
+
+comment on function app.quietly_imported(uuid[]) is
+  'D27-383 item 7: of these bookings, the ones an import brought in without its "Send each guest '
+  'our booking voucher" tick - the guest-messages sweep sends them no voucher.';
+
+grant execute on function app.quietly_imported(uuid[]) to pms_app;

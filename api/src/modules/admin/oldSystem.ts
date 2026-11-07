@@ -35,7 +35,10 @@ import { makeBooking, fileRows, fileDate } from "../reservations/index.ts";
    are saved together.
 
    A FUTURE BOOKING is an ordinary confirmed booking, made by makeBooking
-   (the desk's and the channel manager's one act) and never overbooked. No
+   (the desk's and the channel manager's one act) and never overbooked. Its
+   guest is sent nothing at import time - the old system confirmed it -
+   unless the import ticks "Send each guest our booking voucher" (the
+   master, under D27-396; the sweep asks app.quietly_imported). No
    rate: a dash, listed here until the desk sets it; check-in refuses it.
    Its advance is a payment on its bill, dated the day it was paid, "brought
    in from <system>": never an invoice, never in a drawer, and only from
@@ -632,10 +635,11 @@ async function bookingsRun(
 
 /* ── The routes ────────────────────────────────────────────────────── */
 
-interface Body { name?: unknown; data?: unknown; system?: unknown; columns?: unknown; choices?: unknown }
+interface Body { name?: unknown; data?: unknown; system?: unknown; columns?: unknown; choices?: unknown; sendVouchers?: unknown }
 
 function readBody(input: Body):
-  { ok: true; name: string; bytes: Buffer; system: string; columns: Record<string, unknown> | null; choices: Record<string, Choice> }
+  { ok: true; name: string; bytes: Buffer; system: string; columns: Record<string, unknown> | null;
+    choices: Record<string, Choice>; sendVouchers: boolean }
   | { ok: false; reason: string } {
   const name = typeof input.name === "string" ? input.name.trim() : "";
   const bytes = Buffer.from(typeof input.data === "string" ? input.data : "", "base64");
@@ -656,7 +660,8 @@ function readBody(input: Body):
       }
     }
   }
-  return { ok: true, name, bytes, system, columns, choices };
+  /* Off unless ticked (the master, under D27-396). */
+  return { ok: true, name, bytes, system, columns, choices, sendVouchers: input.sendVouchers === true };
 }
 
 /** The check and the save: one path. `save` false rolls everything back. */
@@ -694,9 +699,10 @@ async function run(subject: string, code: string, kind: string, raw: Body, save:
     let importId: string | null = null;
     if (save) {
       const { rows: [d] } = await client.query<{ id: string }>(
-        `insert into data_imports (hotel_id, kind, system, file_name, columns, rows_in, rows_refused)
-         values ($1, $2, $3, $4, $5, $6, 0) returning id::text`,
-        [here.id, kind, input.system, input.name, JSON.stringify(columns), rowsIn]);
+        `insert into data_imports (hotel_id, kind, system, file_name, columns, rows_in, rows_refused, send_vouchers)
+         values ($1, $2, $3, $4, $5, $6, 0, $7) returning id::text`,
+        [here.id, kind, input.system, input.name, JSON.stringify(columns), rowsIn,
+         kind === "bookings" && input.sendVouchers]);
       importId = d!.id;
     }
     const rows = kind === "guests"
@@ -778,7 +784,7 @@ oldSystem.get("/:code/imports", async (c) => {
     if (!here.may) return { may: false as const, reason: IMPORT_REFUSED };
     const { rows: imports } = await client.query(
       `select d.id::text, d.kind, d.system, d.file_name as "fileName", d.rows_in as "rowsIn",
-              d.rows_refused as "rowsRefused", d.refused, d.made_at as "madeAt",
+              d.rows_refused as "rowsRefused", d.refused, d.send_vouchers as "sendVouchers", d.made_at as "madeAt",
               mb.full_name as "madeBy", d.undone_at as "undoneAt", ub.full_name as "undoneBy",
               (select count(*) from data_import_items i where i.import_id = d.id and i.kind = 'guest')::int as guests,
               (select count(*) from data_import_items i where i.import_id = d.id and i.kind = 'guest_filled')::int as filled,

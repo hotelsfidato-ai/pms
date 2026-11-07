@@ -28,9 +28,9 @@ const VIEW: ImportsView = {
   imports: [
     { id: "i2", kind: "bookings", system: "IDS", fileName: "ids-reservations.csv", rowsIn: 6, rowsRefused: 2,
       refused: [{ line: 4, reason: "This hotel has no room type \"Suite\": Superior, Deluxe." }, { line: 7, reason: "In the house today" }],
-      madeAt: "2026-11-07T09:15:43Z", madeBy: "Group Owner", undoneAt: null, undoneBy: null,
+      sendVouchers: false, madeAt: "2026-11-07T09:15:43Z", madeBy: "Group Owner", undoneAt: null, undoneBy: null,
       guests: 2, filled: 0, bookings: 1, stays: 1, advances: 1 },
-    { id: "i1", kind: "guests", system: "IDS", fileName: "ids-guests.csv", rowsIn: 3, rowsRefused: 0, refused: [],
+    { id: "i1", kind: "guests", system: "IDS", fileName: "ids-guests.csv", rowsIn: 3, rowsRefused: 0, refused: [], sendVouchers: false,
       madeAt: "2026-11-07T09:14:46Z", madeBy: "Group Owner", undoneAt: "2026-11-07T09:14:56Z", undoneBy: "Group Owner",
       guests: 3, filled: 0, bookings: 0, stays: 0, advances: 0 },
   ],
@@ -99,9 +99,17 @@ describe("the page", () => {
     expect(within(gone).getByText(/Undone 7 Nov 2026 by Group Owner/)).toBeTruthy();
   });
 
-  it("warns that a booking's voucher goes to its guest, as every booking's does", async () => {
+  it("sends the guests no voucher unless ticked: the tick starts off (the master, D27-396)", async () => {
     show();
     (await screen.findByRole("tab", { name: "Bookings and past stays" })).click();
-    expect(await screen.findByText(/sent the hotel.s voucher, as every booking is/)).toBeTruthy();
+    const tick = await screen.findByRole("checkbox", { name: "Send each guest our booking voucher" });
+    expect(tick.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByText(/no message goes to these guests now/)).toBeTruthy();
+  });
+
+  it("records on each bookings import whether vouchers were sent", async () => {
+    show();
+    const live = (await screen.findAllByText("ids-reservations.csv")).map((e) => e.closest("tr")).find(Boolean)!;
+    expect(within(live).getByText("Not sent")).toBeTruthy();
   });
 });
