@@ -97,7 +97,7 @@ export default function GroupReportsPage() {
       heading="Group reports"
       group
       title={doc?.title ?? report.title}
-      property={doc?.property.name}
+      property={doc?.property.name ?? "All properties"}
       period={period}
       meta={doc ? factsLine(doc.facts) : undefined}
       controls={controls}

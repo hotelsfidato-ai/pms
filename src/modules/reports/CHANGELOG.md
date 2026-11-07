@@ -11,6 +11,58 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Group reports: several properties in one report (D27-383 item 6)
+
+Branch `worktree-agent-a06c4473ec734a6e0`, copy `.claude\worktrees\agent-a06c4473ec734a6e0`, on cp6 at `9f4f1532`.
+The rate change across properties, the same item's second half, is in the inventory CHANGELOG.
+
+**Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), item 6, built under D27-396:
+the main reports (Manager report, Monthly statistics, Money owed by age, room revenue and occupancy, the
+restaurant's sales) for a chosen set of the properties a person may open, each property's line and a group
+total, as screen, PDF and Excel; never a property's figures to somebody who may not open it; a total of like
+with like only; a missing figure a dash and the total saying it is incomplete.
+
+**Shipped.**
+- `api/src/modules/reports/group.ts`: `GET /api/group/reports/:key?hotels=&asOn=|month=|from=` and the same as
+  `.pdf`, `.xlsx`, `.csv` (the shared renderer). Five keys: `manager`, `monthly-statistics`, `room-revenue`,
+  `dues-by-age`, `restaurant-sales`. Mounted at `/api` (no hotel in the address); roleGate `own`.
+- **A property's line is its own report's.** Manager report, Money owed by age and Restaurant sales are read off
+  the property's own document (`buildReport`, the row by its label); Monthly statistics and Room revenue and
+  occupancy from the same `dailyFigures` + `figuresRow` (now exported from `builders/statistics.ts`, with `GRID`).
+- **Who.** At every property named, the person's role there (a group administrator: the owner) must pass the
+  one-property report's own read rule (`READ_RULES["GET /api/hotels/:code/reports/<key>"]`, `allows`): money owed
+  is `invoice` view (D27-147), the rest `report`. A file asks `report` export too. One property that fails, and
+  NOTHING comes back: the refusal names it. A property not worked at and one that does not exist read the same.
+  A test hotel is refused (D27-296 (11)).
+- `src/modules/reports/pages/GroupReports.tsx` at `/group-reports`, menu "Group reports" under Across properties
+  (`nav.ts`; shown only to a role that reads reports at more than one real property: `groupHotels.ts`
+  `hotelsWhere`, which the inventory's Group rate change uses too, through the front door). The report, its
+  date, month or days, and the properties as ticks; drawn by `ReportView` inside `ReportShell`, which takes two
+  new props: `heading` (the page's own) and `group` (never marked as a test hotel's).
+
+**Decided under D27-396** (for the owner to review):
+- **The total adds like with like:** money only over properties in one currency (a "Total, INR" each where there
+  are two); tax only within one GST state (the GSTIN's first two digits, else the state): across states the
+  total's Tax is a dash and a footnote names the states, because GST is filed per GSTIN - each property's line
+  keeps its own; counts added; occupancy, ADR and RevPAR worked out again from the totals, never averaged.
+  Because: adding INR to another currency, or one state's GST to another's, is a figure nobody files.
+- **A figure missing at one property:** that figure's total is a dash, the row reads "Total - incomplete" and a
+  footnote names who has none. Because: a partial sum looks like the whole group's (the stricter reading).
+- **No date asked:** the earliest business date of the properties chosen. Because: no property is reported past
+  its own day.
+- **Nothing owed at a property is ₹0.00 on its line**, not a dash: its own report says nobody owed anything.
+- **The Manager report's group form is its headline figures** (Today, PTD, YTD each: rooms, occupancy, ADR,
+  RevPAR, room and extra charges, POS and total revenue, tax, payments), not its 70 lines a property: each
+  property's own report keeps every line. Restaurant sales is the Manager report's POS Summary, every outlet.
+- **No Email button** on a group report: the email routes are one property's (item 5). Added when asked.
+
+**Frozen files touched:** `api/src/roleGate.ts` (four `own` rules: the two group report routes, the rate change's
+GET and POST). The reports `document.ts` (both copies) widens `report` by `` `group-${string}` ``.
+
+**Proved.** (filled in below when the suites have run)
+
+**Left open.** The pictures A16-18 to A16-20 and the web suite wait for the PC (the master's release run).
+
 ## 2026-11-07 · Email any report, and reports on a schedule (D27-383 item 5)
 
 Branch `worktree-agent-a0bf00ca95f207bdb`, copy `.claude\worktrees\agent-a0bf00ca95f207bdb`, on cp6 at `c12c58af`.
