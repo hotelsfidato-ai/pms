@@ -47,7 +47,17 @@ price must be above 0 (a free room is ticked Free on the property's own Rates, D
 property's (`pricing_basis.meal_plan`, else EP), as `set_base_price` writes it; no label on the row, as the
 Rates dialog writes none.
 
-**Proved.** (filled in below when the suites have run)
+**Proved.** `api/test/modules/inventory/groupRates.test.ts`, 9 tests, on four properties of its own (April 2029), exit 0
+with the group reports and roleGate files (103 tests, 15:18, 7 Nov). It sees: a property not worked at refused with
+nothing written; a role that may not set prices at one of two (named); a property without the room type skipped and
+listed; one that is its base type plus a difference skipped; a plus where two days have no price skipped, naming them;
+a save after a price moved refused with nothing written; a save failing at the second property (a trigger made to
+refuse it) leaving the first as it was; a save of three writing two, skipping the third, every row `created_by` the
+person, the day after the run keeping its old price; a 0 change, a 0 price and no `seen` refused. A percent of -7.5 on
+₹3,000 is ₹2,775. **On screen:** as the Owner, Deluxe +₹500 on 20-25 Nov at 5EL, Shimla and Agra: 5EL ₹3,699 to ₹4,199,
+Shimla ₹4,200 to ₹4,700, Agra "No room type called Deluxe here: skipped."; saved, and 5EL's own pricing read 4199
+"typed" on exactly 20-25 Nov and 3699 on the 19th and 26th; -10% at 375 px (₹3,699 to ₹3,329); as the revenue
+manager over 5EL and Shimla only those two offered.
 
 ## 2026-11-07 · Rooms left shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
 

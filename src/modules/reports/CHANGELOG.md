@@ -59,7 +59,20 @@ with like only; a missing figure a dash and the total saying it is incomplete.
 **Frozen files touched:** `api/src/roleGate.ts` (four `own` rules: the two group report routes, the rate change's
 GET and POST). The reports `document.ts` (both copies) widens `report` by `` `group-${string}` ``.
 
-**Proved.** (filled in below when the suites have run)
+**Proved.** `api/test/modules/reports/groupReports.test.ts`, 14 tests, through `.local/dbq.sh` + with-test-db.sh with
+`inventory/groupRates.test.ts` and `roleGate.test.ts`: 3 files, 103 tests, exit 0 (15:18, 7 Nov). It sees each refusal:
+a GM at 5EL naming AGR (403, the sentence, no sections), a code that does not exist (the same words), the revenue
+manager asking money owed (D27-147), a housekeeping role at one of two properties (named), a Viewer's download, an
+empty `hotels`, an unknown key and `toString`. 5EL's Manager report line equals its own Manager report's Sold Room,
+Room Charges, ADR and Tax on all three periods, its Monthly statistics line equals its own Total row cell for cell,
+and the total adds Maharashtra's tax and dashes it across Maharashtra and Uttar Pradesh. `lineUp` alone: a figure
+missing ("Total - incomplete: B has no Tax."), a rate missing an input, two currencies, two GST states. Both tsc clean.
+**On screen** (API 8810, web 5190, own database `fidato_group` with Shimla and Agra from `docs/manual/shots/a16-group.sql`):
+as the Owner, all five reports for three properties (the Manager report's three periods, Tax dashed in the Total with
+the MH, UP, HP note; the occupancy chart; Money owed ₹0.00 a line), the PDF of the Manager report (landscape, one page,
+every column); as the revenue manager (5EL and Shimla) only those two offered, Money owed by age "You read this report
+at no property"; as a GM at one property, not in the menu and "This page is not part of your role"; at 375 px, no
+sideways page.
 
 **Left open.** The pictures A16-18 to A16-20 and the web suite wait for the PC (the master's release run).
 
