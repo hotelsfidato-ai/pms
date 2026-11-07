@@ -59,8 +59,15 @@ with like only; a missing figure a dash and the total saying it is incomplete.
 **Frozen files touched:** `api/src/roleGate.ts` (four `own` rules: the two group report routes, the rate change's
 GET and POST). The reports `document.ts` (both copies) widens `report` by `` `group-${string}` ``.
 
-**Proved.** `api/test/modules/reports/groupReports.test.ts`, 14 tests, through `.local/dbq.sh` + with-test-db.sh with
-`inventory/groupRates.test.ts` and `roleGate.test.ts`: 3 files, 103 tests, exit 0 (15:18, 7 Nov). It sees each refusal:
+**Found, and fixed before merging.** A figure was read off the row whose `label` cell matched, and Money owed by age's
+first column is `account`: every property owed money would have printed ₹0.00 (a nought defaulted). `off()` now reads
+the section's own first column, and a Total owed not found is a dash; nought only where the property's own report has
+no account. Found by reading, not by a failing test; the test on a property that is owed (GRP, 1,000 in 31-60 days,
+equal bucket for bucket to its own report) was written after the fix.
+
+**Proved.** `api/test/modules/reports/groupReports.test.ts`, 15 tests, through `.local/dbq.sh` + with-test-db.sh: with
+`inventory/groupRates.test.ts` and `roleGate.test.ts` 3 files, 103 tests, exit 0 (15:18, 7 Nov; 14 of these then), and
+after the fix above the two files again, 24 tests, exit 0 (15:40). It sees each refusal:
 a GM at 5EL naming AGR (403, the sentence, no sections), a code that does not exist (the same words), the revenue
 manager asking money owed (D27-147), a housekeeping role at one of two properties (named), a Viewer's download, an
 empty `hotels`, an unknown key and `toString`. 5EL's Manager report line equals its own Manager report's Sold Room,
