@@ -70,9 +70,11 @@ interface Spec {
 }
 
 /** One figure off a property's own document: the row whose first cell is `label`. */
-const off = (doc: ReportDoc, section: string, label: string, column: string): Cell =>
-  doc.sections.find((s) => s.key === section)?.rows
-    .find((r) => r.kind !== "band" && r.cells["label"] === label)?.cells[column] ?? null;
+const off = (doc: ReportDoc, section: string, label: string, column: string): Cell => {
+  const s = doc.sections.find((x) => x.key === section);
+  const first = s?.columns[0]?.key ?? "label";
+  return s?.rows.find((r) => r.kind !== "band" && r.cells[first] === label)?.cells[column] ?? null;
+};
 
 const PERIODS = [["today", "Today"], ["ptd", "PTD (month to date)"], ["ytd", "YTD (year to date)"]] as const;
 /** A rate, from the figures it is made of. */
@@ -211,9 +213,12 @@ export const GROUP_SPECS = {
     }],
     line: async (client, h, p) => {
       const doc = await buildReport(client, h.id, "dues-by-age", { asOn: p.asOn });
-      /* Nothing owed is a real nought here: the property's own report says
-         "No company, agent or booking site owed anything on this date." */
-      const at = (k: string) => off(doc, "aged", "Total owed", k) ?? 0;
+      /* Nothing owed is a real nought only where the property's own report
+         has no account at all ("No company, agent or booking site owed
+         anything on this date."); otherwise the figure is its Total owed, and
+         a Total owed not found is a dash, never a nought. */
+      const none = doc.sections.find((s) => s.key === "aged")?.rows.length === 0;
+      const at = (k: string) => (none ? 0 : off(doc, "aged", "Total owed", k));
       return { aged: { label: h.name, d30: at("d30"), d60: at("d60"), d90: at("d90"),
         over90: at("over90"), ahead: at("ahead"), total: at("total") } };
     },

@@ -110,6 +110,12 @@ describe("each property's line is its own report", () => {
         expect(s.rows.map((r) => r.kind), `${key} ${s.key}`).toEqual(["row", "row", "total"]);
       }
     }
+    /* Money owed: 5EL's line is its own report's Total owed, or 0 only where that report has no account. */
+    const own = (await (await ask(owner, `/api/hotels/5EL/reports/dues-by-age?asOn=${asOn}`)).json()) as ReportDoc;
+    const theirs = own.sections[0]!.rows.find((r) => r.cells["account"] === "Total owed")?.cells["total"]
+      ?? (own.sections[0]!.rows.length === 0 ? 0 : "not found");
+    const { body } = await group(owner, "dues-by-age", `hotels=5EL,PUN&asOn=${asOn}`);
+    expect(rowOf(body, "aged", own.property.name).cells["total"]).toBe(theirs);
   });
 
   it("downloads as a PDF, an .xlsx and a CSV", async () => {
@@ -118,6 +124,45 @@ describe("each property's line is its own report", () => {
       expect(res.status, ext).toBe(200);
       expect(res.headers.get("content-disposition")).toContain(`GROUP-manager-${asOn}.${ext}`);
     }
+  });
+});
+
+describe("Money owed by age: a property's line is its own Total owed", () => {
+  /* GRP, this file's own: one company bill of 1,000 sent to the city ledger 40
+     days before B, nothing paid. Its own report: 1,000 in 31-60 days. */
+  const B = "2026-08-31";
+  beforeAll(async () => {
+    const one = async (text: string, v: unknown[] = []) => (await sql(text, v)).rows[0] as Record<string, string>;
+    const hotel = (await one(`insert into hotels (code, name, city, state, gstin) values ('GRP', 'Group dues test', 'Test', 'MH', '27GRPAA0000A1Z5')
+                              on conflict (code) do update set is_active = true returning id::text`)).id;
+    const type = (await one(`insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy) values ($1, 'STD', 'Standard', 2, 3)
+                             on conflict do nothing returning id::text`, [hotel]))?.id
+      ?? (await one("select id::text from room_types where hotel_id = $1 and code = 'STD'", [hotel])).id;
+    const company = (await one(`insert into companies (name, kind, credit_allowed, credit_days) values ('GRP Corporate', 'corporate', true, 30)
+                                on conflict do nothing returning id::text`))?.id
+      ?? (await one("select id::text from companies where name = 'GRP Corporate'")).id;
+    const guest = (await one("insert into guests (full_name) values ('GRP Guest') returning id::text")).id;
+    const stay = (await one(`insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status, company_id)
+                             values ($1, app.next_reference($1), $2, $3, '2026-07-21', '2026-07-22', 1000, 'checked_out', $4) returning id::text`,
+      [hotel, guest, type, company])).id;
+    const folio = (await one(`insert into folios (hotel_id, reservation_id, bill_to, company_id) values ($1, $2, 'company', $3) returning id::text`,
+      [hotel, stay, company])).id;
+    await sql(`insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+               values ($1, $2, '2026-07-22', 'room', 'Room', 1000, 0, 0)`, [hotel, folio]);
+    const posting = (await one(`insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+                                values ($1, $2, '2026-07-22', 'payment', 'Bill to company', -1000) returning id::text`, [hotel, folio])).id;
+    await sql("insert into payments (hotel_id, posting_id, method, amount) values ($1, $2, 'city_ledger', 1000)", [hotel, posting]);
+  });
+  afterAll(() => sql("update hotels set is_active = false where code = 'GRP'"));
+
+  it("is the Total owed of its own Money owed by age, bucket for bucket", async () => {
+    const own = (await (await ask(owner, `/api/hotels/GRP/reports/dues-by-age?asOn=${B}`)).json()) as ReportDoc;
+    const theirs = own.sections[0]!.rows.find((r) => r.cells["account"] === "Total owed")!.cells;
+    expect(theirs["d60"]).toBe(1000);
+    const { status, body } = await group(owner, "dues-by-age", `hotels=GRP,5EL&asOn=${B}`);
+    expect(status).toBe(200);
+    const line = rowOf(body, "aged", "Group dues test").cells;
+    for (const k of ["d30", "d60", "d90", "over90", "ahead", "total"]) expect(line[k], k).toBe(theirs[k]);
   });
 });
 

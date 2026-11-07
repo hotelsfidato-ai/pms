@@ -68,7 +68,7 @@ const save = async (who: string, hotels: string[], seen: unknown, q: Record<stri
 
 beforeAll(async () => {
   owner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
-  for (const [code, state, gstin] of [["GRA", "MH", "27GRA"], ["GRB", "UP", "09GRB"], ["GRC", "MH", "27GRC"], ["GRD", "MH", "27GRD"]]) {
+  for (const [code, state, gstin] of [["GRA", "MH", "27GRA"], ["GRB", "UP", "09GRB"], ["GRC", "MH", "27GRC"], ["GRD", "MH", "27GRD"]] as const) {
     const { rows } = await sql(
       `insert into hotels (code, name, city, state, gstin) values ($1, $2, 'Test', $3, $4)
        on conflict (code) do update set name = excluded.name returning id::text`,
@@ -97,6 +97,8 @@ beforeAll(async () => {
 afterAll(async () => {
   await sql("drop trigger if exists grr_fail on rates");
   await sql("drop function if exists public.grr_fail()");
+  /* Out of every list of open properties; a hotel is never deleted (hotels_no_delete). */
+  await sql("update hotels set is_active = false where code = any($1)", [["GRA", "GRB", "GRC", "GRD"]]);
   await sql("delete from staff_hotels where staff_id = any($1)", [people]);
   await sql("update staff set is_active = false where id = any($1)", [people]);
   await closePool();
