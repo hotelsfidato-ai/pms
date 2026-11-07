@@ -224,4 +224,37 @@ export const SHOTS = [
           .querySelector('a').click()` },
       { waitFor: "css:[data-invoice-sheet]", ms: SLOW }, { wait: 2500 }],
   },
+
+  /* ── The book's own A5-02 and A5-08 (7 Nov 2026, D27-396) ─────────────
+     Both windows are opened and never confirmed. A5-02 is Priya Menon's
+     (a made-up demo guest in house, room 205, an unpaid bill with paise):
+     Settle, Method Cash, then nothing pressed. A5-08 is A5 Test Rane's
+     (in house, bill paid, booked to leave 13 Oct): Check out opens the
+     window that asks about leaving early; "Not yet" is left unpressed. */
+  {
+    id: "A5-02", title: "Settle bill in cash: the cash to take, and the round-off", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, ...OPEN_BILL("Priya Menon"),
+      { click: "text:Settle" }, { waitFor: "text:Take payment", ms: SLOW }, { wait: 1500 },
+      SET("Method", "Cash"), { wait: 1200 }],
+    marks: [
+      { n: 1, at: "text:Method", side: "left" },
+      { n: 2, at: "css:[role=dialog] input[inputmode=decimal]", side: "left" },
+      { n: 3, at: "text:Cash to take", side: "left" },
+      { n: 4, at: "text:Round-off", side: "right" },
+      { n: 5, at: "text:Take payment", side: "top" },
+    ],
+  },
+  {
+    id: "A5-08", title: "Leaving early: the nights not stayed, and why", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, ...OPEN_BILL("A5 Test Rane"),
+      { click: "css:[data-checkout]" }, { waitFor: "text:Not yet", ms: 30000 }, { wait: 2000 },
+      { eval: `(() => { ${FIND} try { put(find('Why are they leaving early?'), 'Plans changed'); } catch {} })()` }, { wait: 600 },
+      { eval: "[...document.querySelectorAll('[role=dialog] button, [role=alertdialog] button')].filter((b) => b.textContent.trim() === 'Check out').pop().setAttribute('data-m', 'co')" }],
+    marks: [
+      { n: 1, at: "text:Booked to leave", side: "left" },
+      { n: 2, at: "text:Nights not stayed", side: "left" },
+      { n: 3, at: "text:Why are they leaving early?", side: "left" },
+      { n: 4, at: "css:[data-m=co]", side: "top" },
+    ],
+  },
 ];

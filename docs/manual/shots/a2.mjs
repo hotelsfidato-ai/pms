@@ -366,7 +366,9 @@ export const SHOTS = [
   },
   {
     id: "A2-26", title: "A new policy (not saved)", as: "Owner",
+    path: "/h/5EL/cancellation-terms",
     steps: [
+      { clickIf: "text:Got it" }, { waitFor: "text:No terms written down" },
       { click: "text:New policy" }, { wait: 400 },
       { type: ["css:input[placeholder='Flexible, Non-refundable, Peak season']", "Flexible"] },
       { type: ["css:input[placeholder='24']", "24"] }, { wait: 300 },
@@ -374,8 +376,8 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:Name", nth: 0, side: "left" },
       { n: 2, at: "text:Free cancellation until", side: "left" },
-      { n: 3, at: "text:A cancellation retains", side: "top" },
-      { n: 4, at: "text:A no-show retains", side: "top" },
+      { n: 3, at: "text:A CANCELLATION RETAINS", side: "left" },
+      { n: 4, at: "text:A NO-SHOW RETAINS", side: "left" },
       { n: 5, at: "text:Save policy", side: "top" },
     ],
   },
@@ -392,7 +394,8 @@ export const SHOTS = [
   },
   {
     id: "A2-28", title: "A source's commission here (not saved)", as: "Owner",
-    steps: [{ click: "text:Commission", nth: 0 }, { waitFor: "text:Agoda - commission here" }],
+    path: "/h/5EL/booking-sources",
+    steps: [{ waitFor: "text:Agoda" }, { click: "text:Commission", nth: 0 }, { waitFor: "text:Agoda - commission here" }],
     marks: [
       { n: 1, at: "css:[role=dialog] input", side: "left" },
       { n: 2, at: "text:Blank means no rate has been agreed.", side: "left" },

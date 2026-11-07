@@ -317,4 +317,46 @@ export const SHOTS = [
     path: "/h/5EL/stays/91745c52-001c-4308-a596-8eea37725f12/registration-card",
     steps: [{ waitFor: "css:[data-registration-card]", ms: SLOW }, { wait: 2500 }],
   },
+
+  /* ── The book's own A3-02 and A3-12 (7 Nov 2026, D27-396) ──────────────
+     "Imran Shaikh" (a made-up demo guest due in today, room 208, clean) is
+     the guest; his window is opened and never saved. The run happens in the
+     small hours, so against the property's clock every check-in is an early
+     arrival. A3-02 is the plain window, so "Rooms ready from" is set to 00:00
+     first (A3-S0) and put back to 14:00 straight after (A3-S9); A3-12 is taken
+     with 14:00 back, which is the early arrival. If a run stops between the two,
+     run A3-S9 by name: ... a3 A3-S9 */
+  { id: "A3-S0", title: "set-up: Rooms ready from 00:00 (for A3-02 only; A3-S9 puts 14:00 back)", as: "Owner", noShot: true,
+    path: "/settings/front-desk/times-and-rules",
+    steps: [{ waitFor: "text:Rooms ready from", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
+      SET("Rooms ready from", "00:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
+  {
+    id: "A3-02", title: "The Check in window: the room and ID on the left, the stay on the right", as: "Reception",
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("Imran Shaikh"),
+      { wait: 2500 }, TAGF("Document", "doc"), TAGF("Number", "num"),
+      { eval: "(() => { const b = [...document.querySelectorAll('[role=dialog] button')].filter((x) => x.textContent.trim() === 'Check in').pop(); if (!b) throw new Error('No footer Check in'); b.parentElement.setAttribute('data-m', 'foot'); })()" }],
+    marks: [
+      { n: 1, at: "css:[data-checkin-room]", side: "left" },
+      { n: 2, at: "css:[data-m=doc]", side: "left" },
+      { n: 3, at: "css:[data-m=num]", side: "left" },
+      { n: 4, at: "css:[data-checkin-stay]", side: "left" },
+      { n: 5, at: "css:[data-m=foot]", side: "top" },
+    ],
+  },
+  { id: "A3-S9", title: "set-up: Rooms ready from 14:00 put back", as: "Owner", noShot: true,
+    path: "/settings/front-desk/times-and-rules",
+    steps: [{ waitFor: "text:Rooms ready from", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
+      SET("Rooms ready from", "14:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
+  {
+    id: "A3-12", title: "Arriving before the hotel's check-in time", as: "General Manager",
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("Imran Shaikh"),
+      { waitFor: "text:Rooms are ready from", ms: 60000 }, TAGF("Why the room is being given early", "why"),
+      TAGRE("/Rooms are ready from/", "box"),
+      { eval: "(() => { const b = document.querySelector('[data-m=box]'); b.parentElement.setAttribute('data-m', 'box'); b.scrollIntoView({ block: 'center' }); })()" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[data-m=box]", side: "left" },
+      { n: 2, at: "css:[data-m=why]", side: "left" },
+      { n: 3, at: "css:[data-checkin-blocked]", side: "right" },
+    ],
+  },
 ];

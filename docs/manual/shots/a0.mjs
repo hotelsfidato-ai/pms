@@ -123,7 +123,7 @@ export const SHOTS = [
       { n: 1, at: "text:FRONT DESK", side: "right" },
       { n: 2, at: "label:Find a screen", side: "right" },
       { n: 3, at: "label:Spaces", side: "bottom" },
-      { n: 4, at: "label:Notifications", side: "bottom" },
+      { n: 4, at: "css:button[aria-label^=Notifications]", side: "bottom" },
       { n: 5, at: "label:Account and property", side: "bottom" },
       { n: 6, at: "text:BUSINESS DATE", side: "right" },
       { n: 7, at: "text:Collapse", side: "right" },

@@ -409,7 +409,7 @@ const RAW = [
     steps: [{ waitFor: "text:LD-0002", ms: 240000 }, { click: "text:LD-0002" }, { waitFor: "text:Record what came back" }, { settle: true }],
     marks: [
       { n: 1, at: "text:WHOSE IT IS", side: "left" },
-      { n: 2, at: "text:It is counted out and counted back and it is never charged to anybody", side: "bottom" },
+      { n: 2, at: "text:Counted out and back, never charged to anybody.", side: "bottom" },
       { n: 3, at: "text:Record what came back", side: "bottom" },
     ],
   },
