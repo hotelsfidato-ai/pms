@@ -1,10 +1,11 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban, Wallet, Percent,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine, HandCoins, Ban, Wallet, Percent, Files,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
+import { hotelsWhere } from "@/modules/reports/groupHotels";
 
 /* Money owed and money taken: the server asks `invoice` view of these
    three reports (roleGate MONEY_REPORT), and so does the menu - the owner's
@@ -35,6 +36,11 @@ export const nav: ServiceNavEntry[] = [
     label: "Dashboard", to: "/", icon: LayoutDashboard, resource: "dashboard" },
   /* Every property on one page, for the owner (D27-243): who adds properties. */
   { section: "across-properties", order: 5, label: "All properties", to: "/all-properties", icon: Hotel, resource: "report", canSee: (role) => can(role, "create", "hotel"), keywords: ["group", "every property", "every hotel"] },
+  /* Several properties in one report (D27-383 item 6): for whoever reads
+     reports at more than one real property - the owner, or a manager over two. */
+  { section: "across-properties", order: 7, label: "Group reports", to: "/group-reports", icon: Files, resource: "report",
+    canSee: (role) => can(role, "view", "report") && hotelsWhere((r) => can(r, "view", "report")).length > 1,
+    keywords: ["consolidated", "every property", "group manager report", "all hotels", "group total"] },
   /* The index first — it is the taxonomy, and the seven below are
      the shortcuts a manager pins for themselves. */
   { section: "reports", order: 20,

@@ -2,6 +2,8 @@ import { Navigate, Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
 import CancellationTermsPage from "@/modules/inventory/pages/CancellationTerms";
 import RatesPage from "@/modules/inventory/pages/Rates";
+import GroupRatesPage from "@/modules/inventory/pages/GroupRates";
+import { RequireAccess } from "@/components/app/RequireAccess";
 
 /* Inventory and rates' screen addresses. Mounted by App.tsx inside the
    signed-in shell. */
@@ -20,6 +22,11 @@ export const routes = (
     <Route
       path="/h/:code/rates"
       element={<><PropertyScope /><RatesPage /></>}
+    />
+    {/* One price change at several properties (D27-383 item 6): above any one hotel. */}
+    <Route
+      path="/group-rates"
+      element={<RequireAccess path="/group-rates" resource="rate"><GroupRatesPage /></RequireAccess>}
     />
     {/* The four screens it replaced: their addresses open it. */}
     <Route path="/h/:code/grids" element={<Navigate to="../rates" relative="path" replace />} />

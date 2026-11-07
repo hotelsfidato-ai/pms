@@ -4,6 +4,7 @@ import { reports } from "./reports.ts";
 import { documents } from "./documents.ts";
 import { dueOut } from "./dueOut.ts";
 import { emails } from "./emails.ts";
+import { groupReports } from "./group.ts";
 
 /* The front door of the reports service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -18,6 +19,8 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", dueOut],
   /* Email a report, and reports on a schedule (D27-383 item 5). */
   ["/api/hotels", emails],
+  /* Several properties in one report (D27-383 item 6): above any one hotel. */
+  ["/api", groupReports],
 ];
 
 export { buildReport, BUILT_KEYS, paramsProblem, switchedOff } from "./build.ts";

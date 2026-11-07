@@ -55,7 +55,7 @@ const dayLabel = (iso: string) => {
   return `${d.getUTCDate()} ${WEEKDAYS[d.getUTCDay()]}`;
 };
 
-const GRID = (first: ReportColumn): ReportColumn[] => [
+export const GRID = (first: ReportColumn): ReportColumn[] => [
   first,
   col("available", "Available Rooms", "count"),
   col("sold", "Night Sold", "count"),
@@ -72,7 +72,7 @@ const GRID = (first: ReportColumn): ReportColumn[] => [
 ];
 
 /** One line of the grid, from any run of days. */
-function figuresRow(first: string, f: Omit<DayFigures, "date">) {
+export function figuresRow(first: string, f: Omit<DayFigures, "date">) {
   return {
     label: first,
     available: f.available,

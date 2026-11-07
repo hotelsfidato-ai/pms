@@ -54,7 +54,13 @@ export function ReportShell({
   download,
   /** Its Email button (D27-383 item 5), beside the files. */
   email,
+  /** The page's heading where it is not the report's title (Group reports). */
+  heading,
+  /** Of several real hotels (a group report): never marked as a test hotel's. */
+  group: ofGroup,
 }: {
+  heading?: string;
+  group?: boolean;
   title: string;
   property?: string;
   period: string;
@@ -86,7 +92,7 @@ export function ReportShell({
   const ranBy = identity.user ?? DASH;
   /* A test hotel's report (the owner's D27-296 (8)): TEST · NOT VALID on
      the report itself, on screen and on paper. */
-  const test = useIsTestHotel();
+  const test = useIsTestHotel() && !ofGroup;
 
   const stamp = new Date().toLocaleString("en-IN", {
     day: "2-digit", month: "2-digit", year: "numeric",
@@ -98,7 +104,7 @@ export function ReportShell({
       {/* Chrome — never printed. The header names the tab too. */}
       <PageHeader
         className="no-print"
-        title={title}
+        title={heading ?? title}
         description={period}
         actions={
           <>
