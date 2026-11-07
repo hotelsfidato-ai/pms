@@ -467,7 +467,62 @@
   </div>
 
   <!-- A5.11 -->
-  <h2 id="a5-11"><span class="n">A5.11</span>Check-out in short</h2>
+  <h2 id="a5-11"><span class="n">A5.11</span>After check-out: the guest's page asks for feedback</h2>
+  <p>Where the hotel has switched on the <span class="ui">Feedback survey</span> (Settings, <span class="ui">Property</span>, <span class="ui">Modules</span>; off to start), the guest's own page asks, once they are checked out: <span class="msg">“How was your stay?”</span>. The guest opens the page from the link they already have - their booking's link, or the review request's message, which carries it while they have not answered (A10.10) - and proves it is them with the code, as before arriving.</p>
+
+  <figure class="shot phone" id="fig-A5-F1">
+    <img src="img/A5-F1.png" alt="The guest's page on a phone after check-out: How was your stay?, Your stay overall 1 to 5, The room, Cleanliness, Food and Staff, each optional, a comment and Send my feedback">
+    <figcaption><b>Figure A5-F1.</b> The guest's page after check-out: the survey.</figcaption>
+    <ol class="callouts">
+      <li>Your stay overall: 1 to 5, the one score that must be given</li>
+      <li>The room, Cleanliness, Food and Staff: each optional; a second tap on a score clears it</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Under the scores: <span class="ui">Anything you would like to tell us?</span>, up to 1,000 characters, <span class="msg">“Optional. The hotel's managers read it.”</span> Then <span class="ui">Send my feedback</span>, grey until the overall score is chosen.</li>
+    <li>Sent, the page says <span class="msg">“Thank you. Your answer reached 5 Elements Akkalkot.”</span> and asks nothing more for that stay.</li>
+    <li>What came back is on <span class="ui">Guest feedback</span>, for the GM, the owner and an Admin; a 1 or a 2 goes to their Notifications (A10.12).</li>
+  </ul>
+
+  <figure class="shot phone" id="fig-A5-F2">
+    <img src="img/A5-F2.png" alt="The guest's page after the survey is answered: Your feedback, Thank you. Your answer reached 5 Elements Akkalkot.">
+    <figcaption><b>Figure A5-F2.</b> Answered: thank you, and nothing more.</figcaption>
+    <ol class="callouts">
+      <li>Once a stay: the survey is not asked again</li>
+    </ol>
+  </figure>
+
+  <h3>The guest's own preferences, on the same page</h3>
+  <p>Before and during the stay, and after it, the guest's page has <span class="ui">Your preferences</span>: <span class="msg">“How you like your room and your food. We keep them with your details for your next stay too.”</span> The guest taps <span class="ui">Tell us your preferences</span> (or <span class="ui">Change my preferences</span>), chooses as the desk would (A10.11), and taps <span class="ui">Save my preferences</span>. The desk sees them on the booking at once. The page shows only the guest's own.</p>
+
+  <figure class="shot phone" id="fig-A5-F3">
+    <img src="img/A5-F3.png" alt="The guest's page: Your preferences, Allergy: Peanuts in red, the preferences in words, and Change my preferences">
+    <figcaption><b>Figure A5-F3.</b> The guest's page: their own preferences.</figcaption>
+    <ol class="callouts">
+      <li>An allergy, in red, as the desk sees it</li>
+      <li>Change my preferences</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Never before check-out:</b> a guest still in the room is not asked. <span class="msg">“The survey opens once you have checked out.”</span></li>
+      <li><b>Once a stay:</b> a second answer is refused, <span class="msg">“You have already answered for this stay. Thank you.”</span></li>
+      <li>The page lives until 11:00 the morning after the stay, or a day from the review request's link. After that it reads <span class="msg">“This link is not usable. Ask the desk for a new one.”</span>, and nothing can be answered.</li>
+      <li>Switched off, the page does not ask: <span class="msg">“This hotel is not asking for feedback on its page.”</span></li>
+      <li><b>Not a request for a review:</b> whatever the scores, the page thanks the guest the same way and never sends them to Google. The review request (A10.10) goes to every guest who left, whatever they answered.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A short survey after check-out on the guest's own page, once a stay, a hotel's choice, and preferences given by the guest too: <span class="d">D27-383</span> (item 10). Off to start, behind the guest's code like every part of their page, and in the review request's own message: built under <span class="d">D27-396</span>. A survey that asked only happy guests for a review would be review gating, which Google's rules forbid.</p>
+  </div>
+
+  <!-- A5.12 -->
+  <h2 id="a5-12"><span class="n">A5.12</span>Check-out in short</h2>
   <table>
     <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
@@ -481,6 +536,7 @@
       <tr><td>A guest from abroad</td><td>Type the Next destination first.</td><td>A5.8</td></tr>
       <tr><td>Checked out</td><td>The tax invoice prints by itself, two copies; Print again if the printer missed it. Where the hotel chose otherwise: Issue tax invoice, or Invoices, Issue.</td><td>A5.9</td></tr>
       <tr><td>End of the day</td><td>Nobody left showing due out, or the night audit will not run.</td><td>A5.10</td></tr>
+      <tr><td>The guest has left</td><td>Where the hotel asks, their page asks for feedback, once; the answers are on Guest feedback.</td><td>A5.11</td></tr>
     </tbody>
   </table>
 </section>

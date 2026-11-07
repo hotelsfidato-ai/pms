@@ -38,6 +38,9 @@ export const SWITCHABLE = [
   "loyalty",
   /* D27-367, 26 October: Bar stock, per property, ON until turned off (239). */
   "bar_stock",
+  /* D27-383 item 10: the feedback survey after check-out, per property, off
+     until turned on (migration "the feedback survey"; decided under D27-396). */
+  "feedback_survey",
 ] as const;
 
 

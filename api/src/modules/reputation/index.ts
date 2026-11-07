@@ -1,5 +1,10 @@
 import type { Mount } from "../../mount.ts";
 import { reputation } from "./reputation.ts";
+import { feedback } from "./feedback.ts";
+
+/* Guest feedback (D27-383 item 10): who reads it, and what a low answer is -
+   for the bell (routes/notifications.ts). */
+export { FEEDBACK_ROLES, lowScore } from "./feedback.ts";
 
 /* The front door of this service on the server - the only file the core or
    another service may import (src/test/boundaries.test.ts).
@@ -12,4 +17,5 @@ import { reputation } from "./reputation.ts";
    reached into that same day because its door did not exist yet. */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", reputation],
+  ["/api/hotels", feedback],
 ];

@@ -7,6 +7,7 @@ import {
   DataTable, StatusPill, Input, type Column, type Tone,
 } from "@/components/ui";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
+import { PreferenceMark } from "@/modules/guests";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -66,7 +67,11 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
     key: "guest", header: "Guest",
     cell: (s) => (
       <div className="min-w-0">
-        <p className="truncate">{s.guest}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="truncate">{s.guest}</p>
+          {/* D27-383 item 10: the guest's preferences, a small mark; the details on the stay. */}
+          <PreferenceMark hotelId={s.hotelId} guestId={s.guestId} />
+        </div>
         <p className="text-2xs text-grey-500 tabular">{s.reference}</p>
       </div>
     ),
@@ -207,7 +212,10 @@ function StayCards({ rows, columns, onOpen }: {
               </span>
             </div>
             <p className="mt-1 text-sm font-medium text-ink-900 truncate">{s.guest}</p>
-            <p className="text-xs tabular text-grey-500">{s.reference}</p>
+            <p className="text-xs tabular text-grey-500 flex items-center gap-1.5">
+              {s.reference}
+              <PreferenceMark hotelId={s.hotelId} guestId={s.guestId} />
+            </p>
 
             {/* Labelled values as rows, label left and value right (the
                 Data Rule): two 160px columns turned "Booking.com" into

@@ -27,6 +27,7 @@ import { MinibarFlow } from "@/modules/housekeeping/flows/MinibarFlow";
 import {
   getChecklists, getMinibar, checklistFor, type Checklist, type MinibarItem,
 } from "@/modules/housekeeping/data/housekeeping";
+import { RoomPreferences } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW E — housekeeping, on a phone
@@ -541,6 +542,8 @@ function RoomCard({
         <p className="text-sm text-grey-500 truncate mt-1">
           {room.occupied ? room.guest ?? "In house" : `Floor ${room.floor}`}
         </p>
+        {/* D27-383 item 10: what the guest arriving in this room today likes, an allergy in red. */}
+        <RoomPreferences hotelId={hotelId} room={room.number} who="arriving" />
         {pending && (
           <p className="text-2xs text-brand-yellow-800 mt-1" data-hk-pending>
             Queued: mark {pending.state}

@@ -83,6 +83,7 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/orders",
       "POST /api/guest/:token/orders/:id/cancel",
       "POST /api/guest/:token/requests",
+      "POST /api/guest/:token/survey",              // the feedback survey after check-out (D27-383 item 10)
       "POST /api/guest/:token/tables",              // a table at the restaurant (D27-224)
       "POST /api/guest/:token/tables/:id/cancel",
       "POST /api/guest/:token/verify",
@@ -93,6 +94,7 @@ describe("every write the server mounts", () => {
       "POST /api/guest/digilocker/finish",
       "POST /api/pos/tickets",
       "POST /api/pos/tickets/:ref/void",
+      "PUT /api/guest/:token/preferences",          // the guest's own preferences (D27-383 item 10)
     ]);
     /* The channel manager's OWN settings start with the same letters and
        need a person (MEMORY 295). */

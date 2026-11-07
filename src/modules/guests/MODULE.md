@@ -113,6 +113,16 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 | PUT | `/:code/stays/:id/companions/:guestId` | correct them, unless their Form III is filed |
 | DELETE | `/:code/stays/:id/companions/:guestId` | `app.remove_companion`: the link, their answers and their ID go; refused once filed; their `guests` row stays, as every guest's does |
 
+**`api/src/modules/guests/preferences.ts`** (D27-383 item 10; reads `see("reservation", ..., ["pos", "bar"])`, the write roleGate's `GUEST`, customer edit, as Edit guest)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/guest-preferences` | every stay still to come or in house here (confirmed, tentative, checked in) whose guest has a preference: the stay, the guest, `app.stay_room`, `arriving` (due in on the business date), `inHouse`; and `smokingOffered`. The lists' mark, Assign room, the housekeeping board and the till read this one answer |
+| GET | `/:code/guests/:id/preferences` | one guest who has stayed here: their preferences and `smokingOffered` |
+| PUT | `/:code/guests/:id/preferences` | set them: `cleanPreferences` (`preferenceRules.ts`, imported by the website's form too), then `app.preferences_kept` (smoking kept where the hotel has no smoking room); "No such guest here." for a guest with no stay here |
+
+An allergy is never lost to a CRM join: the reads add the allergy of every record joined into the guest (`WITH_ALLERGIES`).
+
 `formIII.ts` holds the rule (`formIIIRefusal`: the law's fields for a foreign
 guest; none of the visa for Nepal or Bhutan or an ID skipped), the savers
 (`saveIdentity`, `saveVisit`, `saveCompanionsDeparture`) and `maskedId` (an
@@ -138,6 +148,7 @@ in `api/test/modules/guests/companions.test.ts`.
 | `bookingSources.ts` | the list and its kinds (`SOURCE_KINDS`, `kindLabel`), add, amend, set a commission — null is not zero anywhere in it |
 | `formC.ts` | `getFormC` (the register), `recordFormC` (a filing happened, arrival or departure), `completeFormIII` |
 | `companions.ts` | `getCompanions`, `addCompanion`, `saveCompanion`, `removeCompanion` |
+| `preferences.ts` | `listPreferences`, `getPreferences`, `savePreferences` (D27-383 item 10) |
 
 ## Database
 
@@ -145,7 +156,7 @@ Tables this service owns, and the migrations that made or changed them:
 
 | Table | What it holds | Migrations |
 |---|---|---|
-| `guests` | one person, belonging to the group — no `hotel_id` | created `004_guests.sql`; `013_policies.sql` (passport and ID fields moved out to `guest_documents`), `015_edge_cases.sql` (a guest is never deleted), `043_indicators.sql` (`is_vip`) |
+| `guests` | one person, belonging to the group — no `hotel_id` | created `004_guests.sql`; `013_policies.sql` (passport and ID fields moved out to `guest_documents`), `015_edge_cases.sql` (a guest is never deleted), `043_indicators.sql` (`is_vip`); "a guest's preferences" (D27-383 item 10: `preferences` jsonb, `app.guest_preferences_ok`, `app.hotel_offers_smoking`, `app.preferences_kept`, the page's `app.guest_preferences` and `app.guest_preferences_save`) |
 | `companies` | corporate accounts, agents | created `004_guests.sql`; no endpoint writes to it (grep of `api/src`, 15 September) |
 | `guest_documents` | passport or ID number, expiry, visa, address | created `013_policies.sql` (read only at a property with a booking, or with the person on a stay, "every adult in a room"); `014_simulation_fixes.sql` (S2 — any active staff may record one), `026_identity_capture.sql` (who recorded it and when; a number must be present) |
 | `form_c_filings` | a Form III filing's portal number, arrival or departure, naming the person | created `025_invoices_form_c.sql`; `147_form_iii.sql` (`kind`; unique per stay, kind and number) |
@@ -178,6 +189,10 @@ What `index.ts` exports, and who uses each (grep of `@/modules/guests`,
 | `phoneKey`, `emailKey`, `refusesOffers`, type `NoOffers` | nobody yet - for marketing's gate (`src/modules/crm/MODULE.md`, Requests) |
 | `BookingSiteBlacklist` | front desk (`pages/Arrivals.tsx`, `flows/CheckInFlow.tsx`) - CRM-3, a booking site's guest who matches a blacklisted guest, 22 September (D22-8) |
 | `StayCompanions` | front desk (`flows/CheckInFlow.tsx`, `flows/StayDrawer.tsx`), reservations (`flows/BookedCard.tsx`) - every adult in the room, D27-382 |
+| `PreferenceMark` | front desk (`components/StayTable.tsx` - every stay list, table and cards; `flows/StayDrawer.tsx`; `flows/AssignRoomFlow.tsx`) - D27-383 item 10 |
+| `GuestPreferences` | front desk (`flows/StayDrawer.tsx`, Stay tab; `flows/AssignRoomFlow.tsx`, read only) |
+| `RoomPreferences` | housekeeping (`pages/Housekeeping.tsx`, the arriving guest), pos (`pages/Till.tsx` - a room-service order and Charge to room; `components/GuestOrders.tsx`) |
+| `PreferenceFields`, `preferenceWords`, type `Preferences` | online check-in (`PreferencesSection.tsx`, the guest's own page) |
 
 **21 September - the Central CRM, phase 1.** One guest, one record: the
 returning-guest suggestion, joins, the blacklist, "no offers" and Guest 360.

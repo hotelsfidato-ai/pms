@@ -157,6 +157,8 @@ describe("each person's menu", () => {
     const section = sidebarFor("gm", "5EL", ALL_ON).find((s) => s.label === "Guests & CRM");
     expect(section?.items.map((i) => i.label)).toEqual([
       "Guests", "Companies and agents", "Guest messages", "Reviews",
+      /* D27-383 item 10: what guests answered after check-out, for the GM. */
+      "Guest feedback",
       /* The CRM's screens join it as they are built (D21-79): 21 September,
          for the owner, an administrator and the GM only (D21-4). */
       "Guest 360", "Possible same person",

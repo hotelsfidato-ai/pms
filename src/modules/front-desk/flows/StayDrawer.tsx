@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { getFolio, useStayDue } from "@/modules/finance";
 import { queryKeys, type Stay } from "@/data/repositories";
-import { setGuestVip, EditGuestFlow, StayCompanions } from "@/modules/guests";
+import { setGuestVip, EditGuestFlow, StayCompanions, GuestPreferences, PreferenceMark } from "@/modules/guests";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
@@ -171,6 +171,7 @@ function StayBody({
         <div className="flex flex-wrap items-center gap-2">
           {status && <StatusPill tone={status.tone} dot>{status.label}</StatusPill>}
           <StayMarks stay={stay} />
+          <PreferenceMark hotelId={hotelId} guestId={stay.guestId} />
           {/* The toggle, not a mark — it CHANGES the guest rather than
               reporting them, so it sits beside the marks, not in them. */}
           {stay.guestId && can(role, "edit", "customer") && (
@@ -230,6 +231,8 @@ function StayBody({
           <TabsContent value="stay">
             <div className="flex flex-col gap-6">
               <StayFacts stay={stay} />
+              {/* D27-383 item 10: the guest's preferences, an allergy in red. */}
+              <GuestPreferences hotelId={hotelId} guestId={stay.guestId} />
               {/* D27-382: every adult in the room, and who is still to record. */}
               <StayCompanions hotelId={hotelId} stayId={stay.id} today={businessDate} />
               {/* D27-168: the CRS number, salesperson, company and any change

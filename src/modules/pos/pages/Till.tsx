@@ -13,6 +13,7 @@ import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
+import { RoomPreferences } from "@/modules/guests";
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { can } from "@/lib/permissions";
@@ -1422,6 +1423,10 @@ function OrderPanel({
           hotelId={hotelId}
           onChanged={onChanged}
         />
+        {/* D27-383 item 10: a room-service order's guest - their food and any allergy, in red. */}
+        {order.orderType === "room_service" && (
+          <RoomPreferences hotelId={hotelId} room={order.table?.replace(/^Room\s+/i, "")} who="in-house" />
+        )}
         {!settled && (
           <FunctionPicker
             className="pb-3"
@@ -1740,6 +1745,8 @@ function OrderPanel({
                 Charge to room
               </Button>
             </div>
+            {/* D27-383 item 10: the room's guest - their food and any allergy, in red. */}
+            <RoomPreferences hotelId={hotelId} room={room} who="in-house" />
 
             {order.payable > 100000 && <CashIdFields value={cashId} onChange={setCashId} />}
             {/* A TIP (260): money for the staff, taken the same way as the

@@ -1,5 +1,6 @@
-import { Star } from "lucide-react";
+import { MessageSquareHeart, Star } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { FEEDBACK_ROLES } from "../../../api/src/modules/reputation/feedbackRoles.ts";
 
 /* Reviews — BUILT, 19 September (D18-14). Its entry left the Coming soon
    section and took its place in "Front desk", beside Arrivals, In house and
@@ -30,4 +31,10 @@ export const nav: ServiceNavEntry[] = [
   { section: "guests-crm", order: 40,
     label: "Reviews", to: "/h/:code/reviews", icon: Star, resource: "customer",
     keywords: ["reputation", "google reviews", "tripadvisor", "feedback", "ratings", "review link"] },
+  /* D27-383 item 10: what guests answered after check-out - for the owner, an
+     administrator and the GM, the server's own list (feedbackRoles.ts). */
+  { section: "guests-crm", order: 45,
+    label: "Guest feedback", to: "/h/:code/feedback", icon: MessageSquareHeart, resource: "customer",
+    canSee: (role) => FEEDBACK_ROLES.includes(role),
+    keywords: ["survey", "feedback survey", "guest scores", "comments", "satisfaction"] },
 ];

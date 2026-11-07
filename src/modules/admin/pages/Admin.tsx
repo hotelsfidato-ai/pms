@@ -511,6 +511,12 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
     note: "Members earn points on their stays here and use them on their room " +
       "charges. Off means nobody joins, earns or uses points at this property.",
   },
+  /* D27-383 item 10: off at every property until turned on (decided under D27-396). */
+  feedback_survey: {
+    label: "Feedback survey",
+    note: "After check-out the guest's own page asks for scores out of 5 and a comment, once a stay, " +
+      "and a review request carries the link. Off means nobody is asked.",
+  },
   channel_manager: {
     label: "Channel manager",
     note: "Rooms, rates and bookings shared with Booking.com, Agoda and the " +

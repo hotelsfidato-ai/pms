@@ -165,3 +165,92 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+-- =============================================================================
+-- THE FEEDBACK SURVEY (D27-383 item 10)
+-- =============================================================================
+-- Refers to its migration by what it does - "the feedback survey". Off to
+-- start; after check-out only; once a stay; the guest's two functions with
+-- and without the unlock (OCI-5); staff read the answers and write none.
+do $$
+declare
+  h uuid; guest uuid; stay uuid; link uuid; clerk uuid;
+  said text; n int; failed boolean; d date;
+  tok text := repeat('f', 64); unl text := repeat('g', 64);
+begin
+  h := app.provision_property_unchecked('RVF','Feedback Test','Nowhere');
+  d := app.business_date(h);
+  insert into staff (email, full_name) values ('rvf-gm@fidato.in', 'Feedback GM')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  delete from staff_hotels where staff_id = clerk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (clerk, h, 'gm');
+  insert into guests (full_name) values ('Feedback Guest') returning id into guest;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1), d - 2, d, 2000, 'checked_in')
+  returning id into stay;
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, stay, tok, now() + interval '1 day') returning id into link;
+  insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
+  values (link, stay, unl, now() + interval '1 hour');
+
+  perform test.ok('feedback', 'a property does not ask until it is switched on',
+    not app.module_enabled(h, 'feedback_survey'));
+  perform test.ok('feedback', 'the module is one the database knows',
+    (select pg_get_constraintdef(oid) like '%''feedback_survey''%' from pg_constraint where conname = 'hotel_modules_known'));
+  perform test.ok('feedback', 'a test hotel clears the answers with its trade',
+    exists (select 1 from app.test_hotel_classes() where table_name = 'guest_feedback' and class = 'trading'));
+
+  said := app.guest_survey_answer(tok, unl, 5, null, null, null, null, null);
+  perform test.ok('feedback', 'switched off: refused', said = 'off', said);
+  insert into hotel_modules (hotel_id, module, is_enabled) values (h, 'feedback_survey', true);
+
+  said := app.guest_survey_answer(tok, unl, 5, null, null, null, null, null);
+  perform test.ok('feedback', 'before check-out: refused', said = 'not_yet', said);
+  update reservations set status = 'checked_out' where id = stay;
+
+  said := app.guest_survey_answer(tok, 'nope', 1, null, null, null, null, 'link alone');
+  perform test.ok('feedback', 'the link alone answers nothing', said = 'locked', said);
+  perform test.ok('feedback', 'nor reads whether it is offered',
+    not exists (select 1 from app.guest_survey(tok, 'nope')));
+  perform test.ok('feedback', 'offered with the unlock, after check-out',
+    (select offered and not answered from app.guest_survey(tok, unl)));
+
+  said := app.guest_survey_answer(tok, unl, 2, 1, null, 3, 4, '  The AC was loud.  ');
+  perform test.ok('feedback', 'one answer is kept', said = 'saved', said);
+  said := app.guest_survey_answer(tok, unl, 5, 5, 5, 5, 5, 'second');
+  select count(*) into n from guest_feedback where reservation_id = stay;
+  perform test.ok('feedback', 'never a second', said = 'answered' and n = 1, said || ', ' || n || ' rows');
+  perform test.ok('feedback', 'the first stands, its comment trimmed',
+    (select overall = 2 and comment = 'The AC was loud.' from guest_feedback where reservation_id = stay));
+  perform test.ok('feedback', 'and it is no longer offered',
+    (select not offered and answered from app.guest_survey(tok, unl)));
+
+  failed := false;
+  begin
+    insert into guest_feedback (hotel_id, reservation_id, overall) values (h, stay, 1);
+  exception when unique_violation then failed := true;
+  end;
+  perform test.ok('feedback', 'the database itself keeps one a stay', failed, 'a second row went in');
+  failed := false;
+  begin
+    update guest_feedback set overall = 6 where reservation_id = stay;
+  exception when check_violation then failed := true;
+  end;
+  perform test.ok('feedback', 'a score is 1 to 5', failed, 'a 6 was kept');
+
+  perform test.ok('feedback', 'staff read the answers and write none',
+    has_table_privilege('pms_app', 'guest_feedback', 'select')
+    and not has_table_privilege('pms_app', 'guest_feedback', 'insert')
+    and not has_table_privilege('pms_app', 'guest_feedback', 'update')
+    and not has_table_privilege('pms_app', 'guest_feedback', 'delete'));
+
+  -- ---------- clean up ----------
+  delete from guest_unlocks where link_id = link;
+  delete from guest_links where hotel_id = h;
+  delete from hotel_modules where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  delete from staff_hotels where staff_id = clerk;
+  update staff set is_active = false where id = clerk;
+end $$;

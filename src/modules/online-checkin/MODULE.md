@@ -217,6 +217,23 @@ Coming soon page and its address are gone.
   offers, how many, a note; the restaurant confirms or says why not; cancel
   while it waits. Hidden when nothing is offered and nothing is booked. The
   POS module's notes have the rest.
+- **The feedback survey (D27-383 item 10)** - by rule 8: `SurveySection.tsx`,
+  `api/src/routes/guestSurvey.ts`, the definers `app.guest_survey` and
+  `app.guest_survey_answer` (migration "the feedback survey"). First on the
+  page, only after check-out, only where the hotel has the `feedback_survey`
+  module on (off to start), once a stay: overall 1-5 (needed), the room,
+  cleanliness, food and staff (each optional), a comment of 1,000 at most;
+  then "Thank you. Your answer reached ..." and nothing more. The answer is
+  the same whatever the scores, and nothing asks for a review (no gating).
+  Refusals: off, not yet checked out, a second answer (409 with a sentence);
+  the link alone, an expired page (the one sentence, 404).
+- **"Your preferences" (D27-383 item 10)** - by rule 8: `PreferencesSection.tsx`,
+  `api/src/routes/guestPreferences.ts`, the definers `app.guest_preferences`
+  and `app.guest_preferences_save` (migration "a guest's preferences"). The
+  stay's own guest's record and nobody else's; guests' `PreferenceFields`, so
+  the guest and the desk are offered the same choices; smoking only where the
+  hotel has a smoking room. Written straight to the record: a preference is
+  not the legal register (D21-8 is about documents).
 - **The privacy notice (D21-61)** has its place before the first question
   (`privacyNotice.ts`) and **shows nothing** until the advisor has approved
   its words: the draft still has blanks only the owner and the advisor can
@@ -278,6 +295,8 @@ list each unread message has "Reply", to its booking's list.
 | GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too, with the desk's `replies` and `canReply`) or every booking's unread; each with its `reservationId` |
 | GET | `/api/guest/:token/messages` | **refused** | the guest's thread (D27-224, `guestMessages.ts`): their messages and the desk's replies, newest first; a reply is `from: "desk"`, never a name |
 | POST | `/api/hotels/:code/online-checkin/messages/:reservationId/reply` | staff | the desk replies (D27-224, `guestMessages.ts`): 1 to 500 characters; marks the stay's unread messages handled; refused once the guest has checked out |
+| GET/PUT | `/api/guest/:token/preferences` | **refused** | the stay's own guest's preferences / set them (D27-383 item 10, `guestPreferences.ts`) |
+| GET/POST | `/api/guest/:token/survey` | **refused** | whether the survey is offered or answered / the one answer (D27-383 item 10, `guestSurvey.ts`) |
 | GET | `/api/guest/:token/logo` | answers | the hotel's logo, else the group's (D27-223, `guestLogo.ts`): the picture only, `private, max-age=3600`, a tag per picture (304 for it, once the link opens); no logo or a dead link: the one sentence |
 | POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
 | POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |

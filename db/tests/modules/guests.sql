@@ -329,3 +329,87 @@ begin
   delete from hotels where id = h;
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
+-- =============================================================================
+-- A GUEST'S PREFERENCES (D27-383 item 10)
+-- =============================================================================
+-- Refers to its migration by what it does - "a guest's preferences". The shape
+-- the database keeps, the smoking choice a hotel with no smoking room keeps,
+-- and the guest's page's two functions with and without the unlock (OCI-5).
+-- Builds a property of its own and removes it.
+do $$
+declare
+  h uuid; guest uuid; other uuid; stay uuid; ostay uuid; link uuid; olink uuid;
+  p jsonb; ok boolean; failed boolean; d date;
+  tok text := repeat('p', 64); unl text := repeat('q', 64);
+  otok text := repeat('r', 64); ounl text := repeat('s', 64);
+begin
+  h := app.provision_property_unchecked('GPF','Preferences Test','Nowhere');
+  perform app.bulk_create_rooms(h, 'STD', 1::smallint, 101, 102);
+  d := app.business_date(h);
+  insert into guests (full_name) values ('Preferences Guest') returning id into guest;
+  insert into guests (full_name, preferences) values ('Preferences Other', '{"food": "veg"}') returning id into other;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1), d, d + 2, 2000, 'confirmed')
+  returning id into stay;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), other, (select id from room_types where hotel_id = h limit 1), d, d + 2, 2000, 'confirmed')
+  returning id into ostay;
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, stay, tok, now() + interval '1 day') returning id into link;
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, ostay, otok, now() + interval '1 day') returning id into olink;
+
+  -- ---------- the shape ----------
+  perform test.ok('guests', 'preferences: a new guest has none ({})',
+    (select preferences = '{}'::jsonb from guests where id = guest));
+  foreach p in array array['{"floor": "penthouse"}', '{"quiet": false}', '{"allergies": ""}',
+                           '{"smoking": "yes"}', '{"wifi": "fast"}', '[]']::jsonb[] loop
+    failed := false;
+    begin
+      update guests set preferences = p where id = guest;
+    exception when check_violation then failed := true;
+    end;
+    perform test.ok('guests', 'preferences: refused ' || p::text, failed, 'stored');
+    update guests set preferences = '{}' where id = guest;
+  end loop;
+  perform test.ok('guests', 'preferences: the full shape is kept',
+    app.guest_preferences_ok('{"floor": "high", "bed": "twin", "quiet": true, "smoking": true, "food": "jain",
+      "allergies": "peanuts", "pillow": "firm", "newspaper": "The Hindu", "notes": "late"}'));
+
+  -- ---------- smoking, only where the hotel has a smoking room ----------
+  perform test.ok('guests', 'preferences: no smoking room, no smoking choice', not app.hotel_offers_smoking(h));
+  perform test.ok('guests', 'preferences: a save there keeps what the record said',
+    app.preferences_kept('{"quiet": true}', '{"smoking": true}', h) = '{"quiet": true, "smoking": true}'::jsonb
+    and app.preferences_kept('{"smoking": true}', '{}', h) = '{}'::jsonb);
+  update rooms set smoking = true where hotel_id = h and number = '102';
+  perform test.ok('guests', 'preferences: with a smoking room, the save is what was chosen',
+    app.hotel_offers_smoking(h) and app.preferences_kept('{"quiet": true}', '{"smoking": true}', h) = '{"quiet": true}'::jsonb);
+
+  -- ---------- the guest's page: the link alone reads and writes nothing ----------
+  insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
+  values (link, stay, unl, now() + interval '1 hour'), (olink, ostay, ounl, now() + interval '1 hour');
+  perform test.ok('guests', 'preferences: the page reads nothing without the unlock',
+    not exists (select 1 from app.guest_preferences(tok, 'nope')));
+  ok := app.guest_preferences_save(tok, 'nope', '{"bed": "twin"}');
+  perform test.ok('guests', 'preferences: the page writes nothing without the unlock',
+    not ok and (select preferences = '{}'::jsonb from guests where id = guest));
+  perform test.ok('guests', 'preferences: another stay''s unlock opens nothing here',
+    not exists (select 1 from app.guest_preferences(tok, ounl)) and not app.guest_preferences_save(tok, ounl, '{}'));
+  ok := app.guest_preferences_save(tok, unl, '{"bed": "twin", "allergies": "peanuts"}');
+  perform test.ok('guests', 'preferences: with it, the guest saves their own record and only theirs',
+    ok and (select preferences ->> 'bed' = 'twin' from guests where id = guest)
+       and (select preferences = '{"food": "veg"}'::jsonb from guests where id = other));
+  perform test.ok('guests', 'preferences: and reads them back',
+    (select preferences ->> 'allergies' = 'peanuts' and smoking_offered from app.guest_preferences(tok, unl)));
+
+  -- ---------- clean up ----------
+  delete from guest_unlocks where link_id in (link, olink);
+  delete from guest_links where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
