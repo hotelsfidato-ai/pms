@@ -50,6 +50,52 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-07 · Backfill data merged, and release 21 prepared (D27-398; the main chat)
+
+**Asked for:** the owner, 7 November: a Settings section to backfill bookings, POS and cash from before the hotel's
+first day, with the guest and a choice to send or not. Built by an Opus helper from `.local/build-all/backfill.md`.
+Then a release.
+
+**Shipped**
+- Merged into cp6 at e77c41a8: migration 266 (after cp6's 265; no gap). The admin service's CHANGELOG has what was
+  built and every decision.
+- **Fixed at the merge:** `app.backfill_guard` builds a removal from `old`. Before, a removal could change a figure in
+  the same write (MEMORY 472).
+- **The rest of the merge:**
+  - the pictures moved to A17-57 to A17-59, because cp6's A17-56 is "Several rooms";
+  - the manual is rebuilt;
+  - `pms-send-crs.json` keeps both the `report` email and the `backfill-bill` email.
+- The demo `fidato` migrated to 266 through dbq. Backup: `.local/backups/fidato-before-migrate-266-7nov.dump`.
+- Release 21, `release/r21` = e77c41a8. Website `index-CCfjHX6L.js`. Steps in `.local/release-21-steps.md`, with A0
+  the n8n paste `.local/n8n/paste-7nov-r21/read-the-message.js`.
+
+**Found**
+- MEMORY 472: the freeze did not cover the removing write itself. Found in review.
+- The full gates on this disk time out under load:
+  - run 1 (the other chat merging and migrating): n8n-backup at 20 s;
+  - run 2: purchasing's 3 s wait, and guestDoorByRoom's 8 s wait for the code.
+  - Each passed alone, and run 3 was green.
+- The other chat's 265 GST comparison over a null: checked, deliberate ("a missing figure is never a difference").
+
+**Proved** (run here)
+- **Fail-first:** the db test's removal also writes `rate = 1`. The old guard failed 1 of 24; the fixed guard passed
+  24 of 24.
+- **On the merged branch:**
+  - tsc web and api: exit 0;
+  - web: migrationNumbers, backfill and crm, 16 of 16;
+  - API: backfill, workflows, roleGate and resetOrder, 131 of 131.
+- **Full gates `r21`, run 3 (45 min):** web 1,575, API 3,173, db 2,017, replay 266, PG16, restore 1, to minute. Exit 0.
+
+**Left open**
+- The owner types A0-A8 of release 21. Then check it read-only, and recycle `release-r21` (and `release-r20` if 20 was
+  skipped).
+- The other chat lengthens purchasing.test.tsx's 3 s waits after release 21.
+- The owner's "one more thing" after Backfill.
+
+**Commits:** e77c41a8 (merge), 3fd00434 (MEMORY 472), and this one.
+
+---
+
 ## 2026-11-06/07 · Build all, don't ask (D27-396): the approved features and the videos, so far
 
 **Asked for:** the owner, 6 November: "don't ask me permission, build all of them and I will take a look at it".

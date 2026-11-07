@@ -818,6 +818,24 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **7 November, evening: RELEASE 21 READY, the owner's to type.** `release/r21` = **e77c41a8** (copy
+> `.claude/worktrees/release-r21`). It contains release 20, so if the owner has not started 20 they can run 21 instead.
+> It adds Backfill data (D27-398, migration 266) and the build-all chat's report emails (263), stock expiry (264) and
+> bill matching (265). Website `index-CCfjHX6L.js` (release.mjs ran once). Steps are in `.local/release-21-steps.md`.
+> - **A0 is an n8n paste, before A1:** `.local/n8n/paste-7nov-r21/read-the-message.js`. It is paste-7nov plus the
+>   `backfill-bill` email.
+> - **Gates:** green on the third full run (45 min): web 1,575, API 3,173, db 2,017, replay 266, PG16, restore 1, to
+>   minute. Runs 1 and 2 each had one or two different load timeouts, with the other chat merging during run 1; each
+>   passed alone (n8n-backup, purchasing, guestDoorByRoom).
+> - **At the merge:** the Backfill guard now freezes a removal as it stood (MEMORY 472). Backfill's pictures are
+>   A17-57 to A17-59. The demo `fidato` is at 266 (backup `.local/backups/fidato-before-migrate-266-7nov.dump`); the
+>   other chat has since taken it to 271.
+> - **After the owner's A1-A7:** check read-only (the bundle, the server at e77c41a8, the database at 266, no API
+>   errors). Then recycle `release-r21`, and `release-r20` if 20 was skipped, junctions out first.
+> - **Next free migration: 272.** cp6 now has the other chat's rooming lists, allotments and waitlist (267-269) and
+>   minibar and checklists (270-271); they go in release 22. The Backfill copy is recycled.
+> - **The owner's "one more thing"** after Backfill is still to come.
+>
 > **7 November, later: RELEASE 20 READY, the owner's to type.** `release.mjs` ran once; website `index-DKNUD7VZ.js`;
 > steps `.local/release-20-steps.md` (sent). After A1-A7: check read-only (site bundle, server at 1c3db06d, database
 > at 262, no API errors), then recycle `release-r20`. Backfill's migration is now 266 (the build-all chat takes
