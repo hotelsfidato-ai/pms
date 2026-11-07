@@ -243,8 +243,8 @@ properties and people.
   guard asks it too, with one room a night (an exclusion constraint), a reason
   for every correction and a removed row frozen. The guest is the desk's
   suggestion (`ReturningGuest`, checked by `app.use_returning_guest`) or a new
-  guest record; Guest 360 lists the stay as "Backfilled" (`app.guest_360`,
-  crm's word and its dash). The send tick, on Add only: one email, kind
+  guest record; it counts as a visit (`app.guest_visits`) and Guest 360 lists
+  the stay as "Backfilled" (`app.guest_360`, crm's word and its dash). The send tick, on Add only: one email, kind
   `backfill-bill` (the CRS workflow's draft, `deploy/n8n/pms-send-crs.json`:
   the hotel's bill number, never "tax invoice"), through `sending.ts`, so in
   `messages_sent` about `backfill-stay`. ID and visa numbers go to the writers

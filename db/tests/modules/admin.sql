@@ -1762,6 +1762,8 @@ begin
       'ok', not (g = any (coalesce(owner_reset.orphans(other), '{}'))));
 
     -- ---------- Guest 360 ----------
+    res := res || jsonb_build_object('n', 'the desk counts the backfilled stay as a visit, not the removed one',
+      'ok', app.guest_visits(g) = 1, 'd', app.guest_visits(g)::text);
     perform set_config('app.user_id', owner::text, true);
     res := res || jsonb_build_object('n', 'Guest 360 lists the backfilled stay, not the removed one, with no zero',
       'ok', (select count(*) from jsonb_array_elements(app.guest_360(g) -> 'stays') x

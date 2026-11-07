@@ -379,11 +379,34 @@ $fn$;
 
 
 -- =============================================================================
--- 6 · GUEST 360 LISTS A BACKFILLED STAY
+-- 6 · A RETURNING GUEST IS RECOGNISED, AND GUEST 360 LISTS THE STAY
 -- =============================================================================
+-- 122's visits, plus each backfilled stay not removed: the desk's "Stayed with
+-- the group once" for a guest whose only stay was before the first day (the
+-- owner's "so a returning guest is recognised"). Nothing else counts it.
+create or replace function app.guest_visits(p_guest uuid, p_except uuid default null)
+returns integer
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select (select count(distinct coalesce(r.group_id, r.id))::int
+            from reservations r
+           where r.guest_id = p_guest
+             and r.status in ('checked_in', 'checked_out')
+             and coalesce(r.group_id, r.id) is distinct from
+                 (select coalesce(x.group_id, x.id) from reservations x where x.id = p_except))
+       + (select count(*)::int from backfill_stays b where b.guest_id = p_guest and b.removed_at is null)
+$$;
+
+comment on function app.guest_visits(uuid, uuid) is
+  'Checked-in visits at any hotel of the group, several rooms booked together '
+  'counted once (the owner, 21 September), and each backfilled stay (D27-398). A count only (D21-13).';
+
 -- 212's function, with one change: the list of stays also holds the person's
--- backfilled stays (not removed), status "backfilled". The totals above it -
--- nights, charged, first and last stay, visits - stay the live stays' alone.
+-- backfilled stays (not removed), status "backfilled". Visits count them (above);
+-- nights, charged, first and last stay stay the live stays' alone.
 create or replace function app.guest_360(p_guest uuid)
 returns jsonb
 language sql

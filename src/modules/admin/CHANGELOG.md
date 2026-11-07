@@ -25,9 +25,10 @@ Built without asking (D27-396).
   correction needs its reason, a removed row is frozen, who and when are the database's. One room a night is an
   exclusion constraint. `app.backfill_first_day` (the earlier of `hotels.business_date` and the first night audit)
   and `app.backfill_refusal` (the one date rule, in words). Patched in place: `app.test_hotel_classes` (the three as
-  a test hotel's trade, 262's way). Replaced: `owner_reset.orphans` (253's, plus one line: a guest with a backfilled
-  stay is kept, or the full reset would stop on the new key) and `app.guest_360` (212's, plus the backfilled stays in
-  its list as `backfilled`; its totals stay the live stays'). No column on `hotels`.
+  a test hotel's trade, 262's way). Replaced whole: `owner_reset.orphans` (253's, plus one line: a guest with a
+  backfilled stay is kept, or the full reset would stop on the new key), `app.guest_visits` (122's, plus the
+  backfilled stays) and `app.guest_360` (212's, plus the backfilled stays in its list as `backfilled`; its nights and
+  charged stay the live stays'). No column on `hotels`.
 - `api/src/modules/admin/backfill.ts`: `GET /:code/backfill`, `POST /:code/backfill/:kind`, `PUT
   /:code/backfill/:kind/:id`, `POST /:code/backfill/:kind/:id/remove`; roleGate rules `BACKFILL` (`reservation`
   approve) and `BACKFILL_READ` (`invoice` approve). Activity names the three tables.
@@ -54,8 +55,10 @@ Built without asking (D27-396).
 - **The guest:** the desk's own suggestion (`ReturningGuest`, "Same person" is the person's choice, D21-2) checked
   by `app.use_returning_guest`; otherwise a new guest record (name, phone, email, nationality). A correction changes
   the register only; the guest record is corrected on Guest 360.
-- **Visits are not changed:** `app.guest_visits` (the desk's "stayed with the group N times") still counts live stays
-  only, because the brief keeps live screens exactly as they are; Guest 360's list shows the backfilled stay.
+- **A backfilled stay is a visit:** `app.guest_visits` (the desk's "Stayed with the group N times", Guest 360's
+  Visits) counts each backfilled stay not removed, because Guest 360 said "Has not stayed with the group yet" above
+  the guest's backfilled stay (seen in the pane), and the owner asked that a returning guest be recognised. Nights,
+  Charged, First and Last stay stay the live stays' alone.
 - **One payment per stay** (amount and method), because the brief asks "what was paid and how"; the method is one of
   the hotel's payment methods, stored by its word.
 - **Restaurant bills:** amount, GST and total are typed as on the paper bill and not checked against each other
