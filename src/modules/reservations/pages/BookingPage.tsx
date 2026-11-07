@@ -1472,7 +1472,7 @@ function RoomLine({
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <span className={cn(over ? "text-warning-dark font-medium" : "text-grey-600")}>
+        <span className={cn(over ? "text-warning-dark font-medium" : "text-grey-600")} data-left>
           {left === null ? "-" : `${left} left`}
           {over && " · this books more than that"}
         </span>

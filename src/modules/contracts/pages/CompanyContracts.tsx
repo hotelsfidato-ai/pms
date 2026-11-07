@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { Plus } from "lucide-react";
-import { moneyPrecise, dateShort } from "@/lib/format";
+import { addDays, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
@@ -192,15 +192,6 @@ function Allotments({ k, data, keeper, mayBook, hotelId, onHold }: {
                 <span className="text-grey-600 tabular">
                   {dateShort(a.firstNight)} to {dateShort(a.lastNight)}
                 </span>
-                <span className="ml-auto flex gap-2">
-                  {mayBook && left !== null && left > 0 && (
-                    <Button size="sm" variant="primary"
-                      onClick={() => navigate(`/h/${hotelId}/book?allotment=${a.id}`)}>
-                      Book from it
-                    </Button>
-                  )}
-                  {keeper && <Button size="sm" onClick={() => onHold(a)}>Change</Button>}
-                </span>
               </div>
               <p className="text-grey-600">
                 Released {a.releaseDays} {a.releaseDays === 1 ? "day" : "days"} before each night
@@ -213,6 +204,16 @@ function Allotments({ k, data, keeper, mayBook, hotelId, onHold }: {
               </p>
               <p className="text-grey-600">Rate: <span className="tabular">{rate(a)}</span></p>
               {a.notes && <p className="text-grey-600">{a.notes}</p>}
+              {(keeper || (mayBook && left !== null && left > 0)) && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {mayBook && left !== null && left > 0 && (
+                    <Button size="sm" onClick={() => navigate(`/h/${hotelId}/book?allotment=${a.id}`)}>
+                      Book from it
+                    </Button>
+                  )}
+                  {keeper && <Button size="sm" onClick={() => onHold(a)}>Change</Button>}
+                </div>
+              )}
             </li>
           );
         })}
@@ -221,6 +222,4 @@ function Allotments({ k, data, keeper, mayBook, hotelId, onHold }: {
   );
 }
 
-const addDays = (iso: string, n: number) =>
-  new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 

@@ -87,7 +87,7 @@ export default function WaitlistPage() {
             {mayBook && (
               <span className="flex gap-2">
                 {canBook && (
-                  <Button size="sm" variant="primary"
+                  <Button size="sm"
                     onClick={() => navigate(`/h/${hotelId}/book?waitlist=${e.id}`)}>
                     Book
                   </Button>

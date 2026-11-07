@@ -272,11 +272,11 @@ export const SHOTS = [
     steps: [{ waitFor: "text:Demo Travels", ms: 15000 }, { click: "text:Demo Travels" },
       { waitFor: "text:Booked from it", ms: 15000 }, { scroll: "text:Allotments" }, { wait: 800 }],
     marks: [
-      { n: 1, at: "text:Hold rooms", side: "left" },
+      { n: 1, at: "text:Hold rooms", side: "top" },
       { n: 2, at: "css:[data-allotment] span.font-medium", side: "top" },
       { n: 3, at: "text:Released", nth: 0, side: "left" },
       { n: 4, at: "text:Booked from it", side: "bottom" },
-      { n: 5, at: "text:Book from it", side: "top" },
+      { n: 5, at: "text:Book from it", side: "bottom" },
     ],
   },
 ];

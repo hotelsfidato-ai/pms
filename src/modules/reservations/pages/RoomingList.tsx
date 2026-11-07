@@ -208,7 +208,7 @@ export default function RoomingListPage() {
                   return (
                     <tr key={r.reservationId} className="border-b border-grey-100 last:border-b-0 [&>td]:align-middle">
                       <td className="px-4 py-2.5">
-                        <span className="tabular text-sm">{r.reference}</span>
+                        <span className="tabular text-sm whitespace-nowrap">{r.reference}</span>
                         {r.status !== "confirmed" && (
                           <span className="block"><StatusPill tone="neutral">{STATUS_WORD[r.status] ?? r.status}</StatusPill></span>
                         )}

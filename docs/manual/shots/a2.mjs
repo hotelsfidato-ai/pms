@@ -468,7 +468,7 @@ export const SHOTS = [
     ],
     marks: [
       { n: 1, at: "text:Nothing was saved", side: "left" },
-      { n: 2, at: "css:[data-rooming-problems] li", side: "bottom" },
+      { n: 2, at: "css:[data-rooming-problems] li", side: "left" },
     ],
   },
   {
@@ -476,11 +476,12 @@ export const SHOTS = [
     path: "/contracts",
     steps: [{ waitFor: "text:Demo Travels", ms: 15000 }, { click: "text:Demo Travels" },
       { waitFor: "text:Book from it", ms: 15000 }, { click: "text:Book from it" },
-      { waitFor: "css:[data-from-allotment]", ms: 20000 }, ...FORM, TOP],
+      { waitFor: "css:[data-from-allotment]", ms: 20000 }, ...FORM,
+      { scroll: "text:Room" }, { wait: 500 }],
     marks: [
-      { n: 1, at: "css:[data-from-allotment]", side: "bottom" },
-      { n: 2, at: "text:left", nth: 0, side: "left" },
-      { n: 3, at: "text:Contract: Demo Travels", side: "left" },
+      { n: 1, at: "text:Room type", nth: 0, side: "top" },
+      { n: 2, at: "css:[data-left]", side: "bottom" },
+      { n: 3, at: "text:Contract: Demo Travels", side: "right" },
     ],
   },
   {
@@ -490,7 +491,7 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:Put a guest on the waitlist", side: "left" },
       { n: 2, at: "text:A room is free now", side: "right" },
-      { n: 3, at: "text:Book", nth: 0, side: "left" },
+      { n: 3, at: "text:Book", nth: 0, side: "bottom" },
       { n: 4, at: "text:Still full", nth: 0, side: "right" },
     ],
   },
