@@ -26,7 +26,11 @@ project, still goes in the root `CHANGELOG.md`.
 - Anyone who reads bookings may download the list; filling it in is whoever may change a booking.
 - The waitlist may be added to whether or not the type is full (the desk decides); Waitlist is search-only for reception (the working menu is pinned by the core's navigation test - the master's call), with All bookings' notice and New booking's button as the desk's way in.
 
-**Proved.** See the contracts entry of the same day for the run as a whole.
+**Proved.**
+- API (scratch databases): `roomingList.test.ts` 8/8 (a CSV with five problems listed by row and nothing saved; an Excel file matched by type and dates; too many rows refused; .jpg and .xls refused in words; all or none on Save, a viewer refused; an arrived room refused; PDF, Excel and CSV with names and no phone; day-first dates), `waitlist.test.ts` 4/4 (each refusal and a viewer's, nothing written; oldest first with `free`, which falls by one after a booking; the phone withheld from housekeeping; booked through New booking, a second booking refused with no guest left behind; removed with its reason).
+- Database: `reservations.sql` waitlist 6/6 on this copy's database (departure on the arrival refused, booked without a booking and removed without a close refused, the app deletes nothing).
+- Web: the whole suite, 1539 of 1540; the one failure is `migrationNumbers.test.ts`'s gap (257-270 are other helpers'), the master's at the merge.
+- Screens, on this copy's demo: the Kulkarni Wedding's Rooming list (four rooms); a CSV with two bad rows showed "Nothing was saved" with "Row 3: no guest name." and "Row 4: no Deluxe room of this group from 15 Nov 2026 to 16 Nov 2026 is left to name.", nothing filled; a good one filled three names ("3 bookings will take the name typed"), Save wrote three new guests (checked in the database); the Waitlist empty ("Nobody is waiting"), then Farah Khan added through its window and "Still full"; two Nair Conference rooms cancelled and All bookings said "1 guest on the waitlist can have a room now"; Book opened New booking with her name, phone, 25-27 Nov, Deluxe and "1 left", and saving marked her booked; New booking at 0 left offered Put on the waitlist with the name and nights carried over. At 375 px the Waitlist, the Rooming list and the company page were 375 wide.
 
 **Left open.** Reception's working menu does not carry Waitlist (the master's call). The rooming list does not add rooms to a group (that is New booking).
 

@@ -18,6 +18,22 @@ None.
 
 ## Fixed
 
+### CON-5 · New tables left off the two reset lists (numbered for now; a lesson for the root MEMORY too)
+
+**Found** 7 November, by `db/tests/run.sh` before the branch was handed over:
+migrations 271 and 272 added `allotments`, `allotment_releases` and `waitlist`,
+and test-hotels.sql said "in no class: allotment_releases, allotments,
+waitlist". Reading why showed the second list: `owner_reset.steps()` clears
+`reservations`, and a booked waitlist entry points at its booking with no
+cascade, so the owner's full reset would have stopped on that key
+(`api/test/resetOrder.test.ts`, "leaves nothing behind that still points at
+what it clears"). **Fixed** by migration 273, which adds the three to
+`app.test_hotel_classes()` as trading and `waitlist` to the reset before
+`reservations`, each in place beside an entry every version carries (as cp6's
+262 and 266 do), so no other migration's entries are lost. **The rule:** a
+new hotel-scoped table joins `app.test_hotel_classes()`; one that points at
+something the owner's reset clears joins `owner_reset.steps()` ahead of it.
+
 ### CON-4 · A company already on file twice could not be edited (numbered for now)
 
 **Found** 30 September, on the screen: `fidato_s41` holds three of each
