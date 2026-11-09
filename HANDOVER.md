@@ -828,6 +828,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **10 November: CODE AND SECURITY AUDIT DONE, read-only** (`docs/audits/2026-11-10-code-and-security-audit.md`).
+> Nothing was removed and the code's protections hold. Nothing was changed. Waiting for the owner:
+> - **Theirs to do:** the bucket and archiving (release 15 Parts B and C; live backups are still `uploaded=no`), one
+>   server restart for the kernel fixes, two-step sign-in switched on, three SSH keys confirmed.
+> - **Their yes, then build (audit items 5-11):** the API on 127.0.0.1, the script policy enforced, a request limit on
+>   `/api/` and `/api/pos`, encrypted backup files, `npm audit fix`, the function permissions, the upload limits.
+
 > **7 November, evening: RELEASE 21, NOW LIVE (§ 2, checked 18:52 onwards; both release copies recycled).** `release/r21` = **e77c41a8** (copy
 > `.claude/worktrees/release-r21`). It contains release 20, so if the owner has not started 20 they can run 21 instead.
 > It adds Backfill data (D27-398, migration 266) and the build-all chat's report emails (263), stock expiry (264) and

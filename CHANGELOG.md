@@ -50,6 +50,26 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-10 · Code and security audit, read-only (the main chat)
+
+**Asked for:** the owner, 10 November: audit what is in the codebase, say what can go wrong, and check whether any
+security protection was removed.
+
+**Done:** `docs/audits/2026-11-10-code-and-security-audit.md`. Read only, on this PC and on live (release 21).
+- Nothing security-related was removed since 28 September. The code's protections hold: sign-in on every route, the
+  role gate, row security on all 187 tables, no typed text in SQL, no secrets in the repository.
+- Live probes: port 8787 blocked from outside, a stranger's website refused, the test sign-in header ignored.
+- `npm audit`: 4 packages with fixes published, none reachable in how the PMS uses them.
+
+**Left open (nothing was changed):**
+- The owner's: backups still `uploaded=no` and archiving off (release 15 Parts B and C), a server restart for the
+  kernel fixes (up 69 days), two-step sign-in off with nobody enrolled, three SSH keys to confirm.
+- Code, waiting for the owner's yes: the API on 127.0.0.1, the script policy enforced, a request limit on `/api/` and
+  `/api/pos`, encrypted backup files, the package updates, the function permissions, the 10/20 MB upload limits.
+- Not reviewed one by one: the 184 routes that decide access themselves.
+
+---
+
 ## 2026-11-07 · Backfill data merged, and release 21 prepared (D27-398; the main chat)
 
 **Asked for:** the owner, 7 November: a Settings section to backfill bookings, POS and cash from before the hotel's
