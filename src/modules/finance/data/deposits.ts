@@ -1,4 +1,4 @@
-import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders, billTooBig } from "@/lib/api";
 
 /* Cash deposits (the owner's D27-190, D27-191): each closed day's cash to
    deposit per cash point, the deposits recorded against it, and who
@@ -80,6 +80,8 @@ export const explainDay = (hotelId: string, date: string, reason: string) =>
  * it always sends JSON, and a photo cannot be held offline to send later.
  */
 export async function attachSlip(hotelId: string, depositId: string, file: File): Promise<Result> {
+  const tooBig = billTooBig(file);
+  if (tooBig) return { ok: false, reason: tooBig };
   const form = new FormData();
   form.set("table", "cash_deposits");
   form.set("id", depositId);

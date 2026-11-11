@@ -198,6 +198,16 @@ export async function authHeaders(): Promise<HeadersInit> {
   return base;
 }
 
+/** A bill's photo or PDF is at most 9 MB, as the API says (api/src/storage.ts).
+    Checked before sending: nginx stops a larger body at 10 MB with no answer the
+    browser may read, which used to show as "needs the connection" (audit item 11). */
+export const BILL_MOST_BYTES = 9 * 1024 * 1024;
+export const billTooBig = (file: File): string | null =>
+  file.size > BILL_MOST_BYTES
+    ? `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 9 MB - ` +
+      `photograph the bill rather than scanning it at full resolution.`
+    : null;
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const base = await apiBase();
 

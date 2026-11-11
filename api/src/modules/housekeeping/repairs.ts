@@ -91,9 +91,9 @@ repairs.post("/:code/repair-costs", async (c) => {
   if (note.length > 500) return c.json(refuse("Keep the note under 500 letters."), 409);
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const contentType = file.type || "application/octet-stream";
+  const contentType = storage.typeOf(bytes) ?? (file.type || "application/octet-stream");
   try {
-    storage.checkAcceptable(contentType, bytes.byteLength);
+    storage.checkAcceptable(contentType, bytes);
   } catch (error) {
     if (error instanceof StorageRefused) return c.json(refuse(error.message), 409);
     throw error;
