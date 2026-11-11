@@ -191,7 +191,10 @@ const fingerprint = (plans: Plan[]) =>
 
 /** A write that failed at one property: named, so the refusal says where. */
 class Failed extends Error {
-  constructor(readonly at: string, readonly reason: string) { super(reason); }
+  /* Longhand: the server strips types and cannot run a parameter property. */
+  readonly at: string;
+  readonly reason: string;
+  constructor(at: string, reason: string) { super(reason); this.at = at; this.reason = reason; }
 }
 
 function askFrom(input: Record<string, unknown>): Ask {
