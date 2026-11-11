@@ -59,7 +59,8 @@ interface StayRow {
   children: number;
   status: string;
   is_day_use: boolean;
-  agreed_rate: string;
+  /** NULL: brought in from an old system with no rate (D27-383 item 7). */
+  agreed_rate: string | null;
   /** NULL when the room type has no rate yet (032). */
   base_rate: string | null;
   is_complimentary: boolean;
@@ -230,7 +231,8 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
        column's CHECK allows 0 too, so the screen cannot tell the two
        apart once this line has flattened them. Defect 246. */
     rackTariff: row.base_rate === null ? null : Number(row.base_rate),
-    offeredTariff: Number(row.agreed_rate),
+    /* NULL, a dash, never ₹0: a booking brought in with no rate (D27-383 item 7). */
+    offeredTariff: row.agreed_rate === null ? null : Number(row.agreed_rate),
     ...(row.group_id
       ? {
           groupId: row.group_id,

@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · Check-in refuses a booking brought in with no rate; a dash for a stay with none (D27-383 item 7, by the build-all helper)
+
+A booking brought in from an old system with no rate (admin's Bring in old data, migration 280) is refused at
+check-in in words (`operations.ts`: "This booking came in from the old system with no rate. Set its rate first:
+Change rate, on its bill."), behind the database's own `reservations_rate_by_arrival`. `stays.ts` sends
+`offeredTariff` null for it, and `StayTable`, `StayDrawer`, `StayView`, `CheckInFlow`, `AmendStayFlow` and
+`MoveRoomFlow` show a dash, never ₹0. The whole account: admin's `CHANGELOG.md`.
+
 ## 2026-11-06 · After check-in: the GM undoes, cancels, voids and changes; the front desk asks (the owner's D27-397)
 
 **Asked for.** The owner, 6 November: "After the check-in ... we can't cancel the booking or settle out ... we need an option where the GM doesn't have the lock, which is there for the reception and the front desk, but not for the GM. It's an option in the settings." And: "Remove the restriction on change and void for GM. But it needs to be there for front desk. If the front desk needs to do, they need to get approval ... from the GM." Their answers: both Undo check-in and Cancel/Void on a guest in house; the arrival date, Change rate from the guest's menu, the room type, "the rate or methods or things in general"; the switch on Front desk rules, on at every hotel. Brief: `.local/build-all/after-check-in.md`.

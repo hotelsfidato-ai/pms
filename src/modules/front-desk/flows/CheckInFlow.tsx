@@ -130,21 +130,25 @@ export function CheckInFlow({
   const bigMove = day(stay.arrival) - day(businessDate) > 1;
   const movedNights = day(stay.departure) - day(businessDate);
   const [confirming, setConfirming] = useState(false);
+  /* Null: brought in from an old system with no rate (D27-383 item 7); the
+     server refuses its check-in until the rate is set. */
+  const tariff = stay.offeredTariff;
   const gst = useQuery({
-    queryKey: ["tax-rate", hotelId, "room", stay.offeredTariff],
-    queryFn: () => getTaxRate(hotelId, "room", stay.offeredTariff),
-    enabled: open && bigMove && !stay.isComplimentary && stay.offeredTariff > 0,
+    queryKey: ["tax-rate", hotelId, "room", tariff],
+    queryFn: () => getTaxRate(hotelId, "room", tariff ?? 0),
+    enabled: open && bigMove && !stay.isComplimentary && tariff !== null && tariff > 0,
   });
   const paise = (n: number) => Math.round(n * 100);
   /* GST a night as the night audit posts it, rounded to the paisa. */
-  const taxNight = gst.data?.rate == null ? null
-    : Math.round(paise(stay.offeredTariff) * gst.data.rate / 100) / 100;
+  const taxNight = gst.data?.rate == null || tariff === null ? null
+    : Math.round(paise(tariff) * gst.data.rate / 100) / 100;
   const moved = `This moves the arrival from ${dateShort(stay.arrival)} to ${dateShort(businessDate)}: `
     + `${movedNights} nights, `
     + (stay.isComplimentary ? "complimentary."
+      : tariff === null ? "no rate set yet."
       : taxNight === null
-        ? `${moneyPrecise(stay.offeredTariff * movedNights)} before GST (no GST rule for this rate).`
-        : `${moneyPrecise((paise(stay.offeredTariff) + paise(taxNight)) * movedNights / 100)} with GST.`);
+        ? `${moneyPrecise(tariff * movedNights)} before GST (no GST rule for this rate).`
+        : `${moneyPrecise((paise(tariff) + paise(taxNight)) * movedNights / 100)} with GST.`);
 
   const allowed = (permitted.data?.allowed ?? false) || earlyByDate;
   const reason = permitted.data?.reason;
@@ -478,7 +482,7 @@ export function CheckInFlow({
             <div className="pt-2 border-t border-grey-200 space-y-1.5">
               {/* A dash when the room type has no rate - never ₹0 (defect 246). */}
               <Line label="Rack rate" value={stay.rackTariff === null ? "-" : money(stay.rackTariff)} muted />
-              <Line label="Offered" value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)} bold />
+              <Line label="Offered" value={stay.isComplimentary ? "Complimentary" : stay.offeredTariff === null ? "-" : money(stay.offeredTariff)} bold />
             </div>
           </aside>
         </div>

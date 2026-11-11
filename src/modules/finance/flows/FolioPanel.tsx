@@ -410,7 +410,9 @@ export interface ToCome {
 function useChargesToCome(
   hotelId: string, stay: Stay, lines: BillLine[], balance: number | null, nights: number,
 ): ToCome | null {
-  const rate = stay.offeredTariff;
+  /* Null - brought in from an old system with no rate (D27-383 item 7) -
+     shows nothing to come, never ₹0. */
+  const rate = stay.offeredTariff ?? 0;
   const shown = nights > 0 && !stay.isComplimentary && rate > 0
     && ["due-in", "in-house", "due-out"].includes(stay.status);
   const gst = useQuery({
@@ -914,7 +916,7 @@ export function ChangeRateDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         title="Change the rate"
-        description={`${stay.guest} · now ${stay.isComplimentary ? "complimentary" : `${money(stay.offeredTariff)} a night`}`}
+        description={`${stay.guest} · now ${stay.isComplimentary ? "complimentary" : stay.offeredTariff === null ? "no rate yet" : `${money(stay.offeredTariff)} a night`}`}
         size="sm"
         footer={
           <div className="flex gap-2 w-full justify-end">
