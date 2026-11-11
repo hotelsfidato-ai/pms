@@ -1,4 +1,4 @@
-import { apiBase, authHeaders } from "@/lib/api";
+import { apiBase, authHeaders, billTooBig } from "@/lib/api";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PETTY CASH BOOK (the owner's D27-370) - the screens' half
@@ -20,6 +20,8 @@ export const expensePhotoPath = (hotelId: string, place: "desk" | "till", id: st
 
 /** The photo of the bill, as a form, never held offline. */
 export async function attachExpensePhoto(path: string, file: File): Promise<Result> {
+  const tooBig = billTooBig(file);
+  if (tooBig) return { ok: false, reason: tooBig };
   const form = new FormData();
   form.set("file", file);
   const headers = new Headers(await authHeaders());

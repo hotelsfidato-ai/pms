@@ -128,6 +128,51 @@ describe("a bill on a record", () => {
     expect(body.reason).toContain("photo or a PDF");
   });
 
+  /* Audit, 10 Nov: the type came from the browser's label. Now from the bytes. */
+  it("refuses a file labelled a photo that is not one", async () => {
+    const res = await upload(
+      ownerUid, "AGR", "purchase_invoices", randomUUID(),
+      Buffer.from("<html><script>alert(1)</script></html>"), "image/png", "bill.png",
+    );
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toContain("not the photo or PDF");
+  });
+
+  it("keeps a real photo the browser did not label, as what it is", async () => {
+    const bytes = Buffer.concat([PNG, Buffer.from(`unlabelled ${randomUUID()}`)]);
+    const put = await upload(ownerUid, "AGR", "purchase_invoices", randomUUID(), bytes, "", "bill");
+    expect(put.status).toBe(200);
+    const { id } = (await put.json()) as { id: string };
+    const got = await app.request(`/api/hotels/AGR/attachments/${id}/file`, {
+      headers: { "x-dev-staff-id": ownerUid },
+    });
+    expect(got.headers.get("content-type")).toBe("image/png");
+  });
+
+  it("stops a body over 10 MB before reading it, in a sentence (item 11)", async () => {
+    const big = Buffer.concat([PNG, Buffer.alloc(11 * 1024 * 1024)]);
+    const res = await upload(ownerUid, "AGR", "purchase_invoices", randomUUID(), big, "image/png", "big.png");
+    expect(res.status).toBe(413);
+    expect(((await res.json()) as { reason: string }).reason).toContain("over 10 MB");
+  });
+
+  it("refuses a bill between 9 and 10 MB in a sentence, not nginx's page", async () => {
+    const big = Buffer.concat([PNG, Buffer.alloc(9.5 * 1024 * 1024)]);
+    const res = await upload(ownerUid, "AGR", "purchase_invoices", randomUUID(), big, "image/png", "big.png");
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toContain("The limit is 9 MB");
+  });
+
+  it("knows each kind of bill by its first bytes", () => {
+    expect(storage.typeOf(PNG)).toBe("image/png");
+    expect(storage.typeOf(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0]))).toBe("image/jpeg");
+    expect(storage.typeOf(Buffer.from("RIFF\0\0\0\0WEBPVP8 "))).toBe("image/webp");
+    expect(storage.typeOf(Buffer.from("\0\0\0\x18ftypheic\0\0\0\0", "latin1"))).toBe("image/heic");
+    expect(storage.typeOf(Buffer.from("%PDF-1.7\n"))).toBe("application/pdf");
+    expect(storage.typeOf(Buffer.from("MZ\x90\0"))).toBeNull();
+    expect(storage.typeOf(Buffer.from("<svg onload=alert(1)>"))).toBeNull();
+  });
+
   it("treats the same bytes twice as a retry, and leaves no orphan", async () => {
     const subject = randomUUID();
     const first = await upload(

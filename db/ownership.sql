@@ -38,3 +38,27 @@ begin
   end loop;
 end
 $$;
+
+-- ── A privileged function is the API's to run, not anybody's (audit, 10 Nov,
+-- item 10) ────────────────────────────────────────────────────────────────────
+-- Postgres lets EVERY login run a new function. For a security definer that
+-- means any login at all ran with pms_migrate's rights: 80 of them on 10 Nov.
+-- Harmless while pms_app is the only login that reaches them, but the preflight's
+-- reader, the reset login and any login added later had them too. pms_app keeps
+-- each one it could run (granted here first, so nothing it does changes);
+-- everybody else loses them. Here, not in a migration, so a function a LATER
+-- migration makes is closed the same way without anybody remembering to.
+do $$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as sig
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'app' and p.prosecdef
+       and has_function_privilege('public', p.oid, 'execute')
+  loop
+    execute format('grant execute on function %s to pms_app', f.sig);
+    execute format('revoke execute on function %s from public', f.sig);
+  end loop;
+end
+$$;
