@@ -336,13 +336,16 @@ Connection health reads (D27-377).
 
 At 03:15 **the files uploaded into the PMS** (bill photos, petty-cash
 receipts, repair and bar bills: every attachment, `/var/lib/fidato/uploads`)
-that are not yet in the bucket are copied to it, under `uploads/fidato/`
+that are not yet in the bucket are copied to **a bucket of their own,
+`pms-uploads`**, under `uploads/fidato/`
 (`fidato-uploads-backup`, `db/uploads-backup.sh`, D27-377). It runs as
 `fidato`, the API's own account, whose folder it is. What it has copied is
 listed in `/var/lib/fidato/uploads.sent`, so each night sends only the new
 ones; its result is one line in `/var/lib/fidato/uploads.status`
 (`uploads-backup <time> ok|failed|off sent=… waiting=…`). **These never
-expire from the bucket** (step 1.4): a bill must outlive a month. Guests' ID
+expire**: `pms-uploads` has no delete rule at all (step 1.6, the owner's yes of
+12 November: two buckets, so no filter typed by hand stands between a bill and
+the database copies' 31-day delete). Guests' ID
 photos from online check-in are not among them: they are kept encrypted in
 Google Drive and never on this server (D27-209).
 
@@ -370,12 +373,13 @@ logins go. Step 3 copies the line across.
 
 The uploaded files' copy reads a link of its own, for the same reason, from
 `/etc/fidato-uploads.env` (written by root, readable by `fidato` alone; made
-empty by `launch.sh`). That link can write under `uploads/` only (step 1.6):
-the API's account faces the internet, so it is given nothing more.
+empty by `launch.sh`). That link can only add files to `pms-uploads` (step
+1.6): the API's account faces the internet, so it is given nothing more, and
+it cannot reach the database copies at all.
 
 ### Setting it up, once
 
-**1 · The bucket:** *the Oracle console, in your browser, signed in to
+**1 · The two buckets:** *the Oracle console, in your browser, signed in to
 Fidato's account*
 
 1. **Storage → Buckets → Create Bucket.** Name `pms-backups`, in the same
@@ -390,29 +394,29 @@ Fidato's account*
    `ap-mumbai-1`; use your home region's identifier if it is another):
    `Allow service objectstorage-ap-mumbai-1 to manage object-family in tenancy`
    Without it the next step's rule never runs, and nothing says so.
-4. **The bucket → Lifecycle Policy Rules → Create Rule.** Name
+4. **`pms-backups` → Lifecycle Policy Rules → Create Rule.** Name
    `delete-after-31-days`, target Objects, action Delete, **31 days** (a day
-   after the retention rule lets go). Under **Object name filters** add one
-   filter: type **Exclude**, pattern `uploads/*`. **The uploaded files (bills)
-   must never expire**: without the filter the rule deletes each one 31 days
-   after it was copied, and the nightly copy, which has already sent it, never
-   sends it again. *If the rule already exists*: the rule's ⋮ menu → Edit, add
-   the filter, Save. Check: the rule's details list the exclude filter
-   `uploads/*`. If the console offers no exclude filter, stop here and tell the
-   master chat; do not make step 6's link.
+   after the retention rule lets go). No filter: nothing in this bucket is
+   kept longer. The bills are not here (step 6).
 5. **The bucket → Pre-Authenticated Requests → Create.** Name `nightly-upload`,
    target **Bucket**, access **Permit object writes**, expiry **a year from
    today**. Copy the URL: it is shown once. It can add files and nothing else:
    it cannot read, list or delete them. When it expires the nightly backup
    fails and you are told; make a new one and put it in both files of step 3.
    Note the expiry date in your calendar a week before.
-6. **Only after step 4's filter. The bucket → Pre-Authenticated Requests →
-   Create** again, for the uploaded files. Name `uploads-upload`, target
-   **Objects with prefix**, prefix `uploads/`, access **Permit object
-   writes**, expiry **a year from today**. Copy the URL: shown once, ending in
-   `/o/`. It can add files under `uploads/` and nothing else. Its expiry goes
-   in your calendar too; when it expires, the Backups row turns red the next
-   morning, and the new one goes into `/etc/fidato-uploads.env` (step 3).
+6. **The bills' own bucket. Storage → Buckets → Create Bucket.** Name
+   `pms-uploads`, same compartment, Standard tier, Oracle-managed keys,
+   **object versioning off**, private. **No lifecycle rule, ever**: a bill
+   must outlive any month. Then **`pms-uploads` → Retention rules → Create
+   rule**, name `keep-8-years`, time-bound, **8 years**, not locked: nothing
+   can delete or overwrite a bill for 8 years (GST asks for records kept 72
+   months after the year's annual return). Then **`pms-uploads` →
+   Pre-Authenticated Requests → Create**: name `uploads-upload`, target
+   **Bucket**, access **Permit object writes**, expiry **a year from today**.
+   Copy the URL: shown once, ending in `/o/`. It can add files to this bucket
+   and nothing else. Its expiry goes in your calendar too; when it expires,
+   the Backups row turns red the next morning, and the new one goes into
+   `/etc/fidato-uploads.env` (step 3).
 
 **2 · The alert:** *n8n, in your browser, n8n.fidatohotels.com*
 
@@ -532,8 +536,8 @@ is, a few minutes for each GB:
 sudo -u fidato /usr/local/bin/fidato-uploads-backup /var/lib/fidato/uploads fidato; cat /var/lib/fidato/uploads.status
 ```
 
-It should print `uploads-backup … ok sent=<how many> waiting=0`, and the
-bucket should show `uploads/fidato/` with one folder per hotel. A second run
+It should print `uploads-backup … ok sent=<how many> waiting=0`, and
+`pms-uploads` should show `uploads/fidato/` with one folder per hotel. A second run
 should print `sent=0`. If it says `failed`, the line under it says why; copy
 both to the master chat. *The PMS, in your browser*: Settings → Connection
 health → **Backups** should read *"Backed up and copied off the server"*
@@ -557,8 +561,9 @@ them on a new server, `IF-THE-SERVER-DIES.md`). The database names every file
 it holds; this fetches each one missing from the folder, and leaves alone what
 is there:
 
-1. *The Oracle console*: a read link, as in "Getting a minute back", step 2
-   (target **Bucket**, **Permit object reads**, expiry **tomorrow**).
+1. *The Oracle console*: a read link **on `pms-uploads`**, as in "Getting a
+   minute back", step 2 (target **Bucket**, **Permit object reads**, expiry
+   **tomorrow**).
 2. *The server, over ssh as `opc`*, with that URL:
 
    ```bash
