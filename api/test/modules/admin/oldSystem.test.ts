@@ -104,6 +104,33 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  /* Everything it brought in goes, or every later file at 5EL finds the Osi
+     Suite among its room types and the advances in its receipts. The
+     ledger's guards are off only for these deletes. */
+  const guests = `select id from guests where full_name like '${TAG} %'`;
+  const bookings = (await sql<{ id: string }>(
+    `select id::text from reservations where hotel_id = $1
+        and (guest_id in (${guests}) or room_type_id in (select id from room_types where hotel_id = $1 and code = '${TAG}'))`,
+    [hotel])).map((r) => r.id);
+  const postings = `select id from folio_postings where reservation_id = any($1::uuid[])
+     or folio_id in (select id from folios where reservation_id = any($1::uuid[]))`;
+  await sql("alter table folio_postings disable trigger user");
+  await sql("alter table guests disable trigger guests_no_delete");
+  try {
+    await sql(`delete from payments where posting_id in (${postings})`, [bookings]);
+    await sql(`delete from folio_postings where id in (${postings})`, [bookings]);
+    await sql("delete from folios where reservation_id = any($1::uuid[])", [bookings]);
+    await sql("delete from room_assignments where reservation_id = any($1::uuid[])", [bookings]);
+    await sql("delete from reservations where id = any($1::uuid[])", [bookings]);
+    await sql(`delete from imported_stays where guest_id in (${guests})`);
+    await sql(`delete from guest_documents where guest_id in (${guests})`);
+    await sql(`delete from guests where id in (${guests})`);
+  } finally {
+    await sql("alter table folio_postings enable trigger user");
+    await sql("alter table guests enable trigger guests_no_delete");
+  }
+  await sql(`delete from rooms where hotel_id = $1 and number = '${TAG}1'`, [hotel]);
+  await sql(`delete from room_types where hotel_id = $1 and code = '${TAG}'`, [hotel]);
   const ids = Object.entries(people).filter(([r]) => r !== "owner").map(([, id]) => id);
   await sql("delete from staff_hotels where staff_id = any($1)", [ids]);
   await sql("update staff set is_active = false where id = any($1)", [ids]);
