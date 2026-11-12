@@ -231,7 +231,7 @@ export function AmendStayFlow({
               ) : (
                 <span className="text-ink-900 font-medium">
                   {was} → {nights} {nights === 1 ? "night" : "nights"}
-                  {stay.offeredTariff > 0 && (
+                  {stay.offeredTariff !== null && stay.offeredTariff > 0 && (
                     <span className="font-normal text-grey-600">
                       {" "}· {money(stay.offeredTariff * nights)} of room charges
                       at {money(stay.offeredTariff)} a night

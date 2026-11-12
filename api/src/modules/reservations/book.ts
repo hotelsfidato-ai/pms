@@ -35,6 +35,11 @@ export interface BookingLineInput {
   /** A complimentary room (020): booked at ₹0, and the night audit posts
       nothing for it. Only COMP_ROLES may give one (the owner, 27 Sep). */
   complimentary?: boolean;
+  /** Brought in from an old system that gave no rate (migration "old system
+      import", D27-383 item 7): kept empty - a dash, never a price looked up
+      or a zero - and the desk sets it before arrival; check-in refuses it
+      until then. Only the import sends it. */
+  rateNotKnown?: boolean;
 }
 
 /** Who may give a complimentary room (the owner, 27 September). A group
@@ -145,7 +150,8 @@ export interface BookingMade {
   guest: string;
   /** `id` is the stay's: New booking hands it to front desk's doors (Phase 1).
       A repeat answers the same ids as the first time (RES-3). */
-  bookings: Array<{ id: string; reference: string; roomType: string; rate: number }>;
+  /** `rate` null: brought in with none (rateNotKnown). */
+  bookings: Array<{ id: string; reference: string; roomType: string; rate: number | null }>;
   nightly: number;
   /** 'tentative' when the desk booked it as Waiting. */
   status: "confirmed" | "tentative";
@@ -587,7 +593,8 @@ export async function makeBooking(
        the second room type must find nothing of the first on file. */
     const planned: {
       line: BookingLineInput; typeName: string; adults: number; children: number;
-      rate: number;
+      /** Null only for a line brought in with no rate (rateNotKnown). */
+      rate: number | null;
     }[] = [];
 
     for (const line of lines) {
@@ -645,6 +652,13 @@ export async function makeBooking(
          filled in, never a zero. Any role that may book may type it. */
       if (dayUse && line.complimentary !== true && !(rate !== null && rate > 0)) {
         return refuse("Type the day-use price.");
+      }
+      /* BROUGHT IN WITH NO RATE (old system import, D27-383 item 7): none is
+         looked up and none invented - the booking keeps a dash until the desk
+         sets it. Every other rule above and below still applies. */
+      if (rate === null && line.rateNotKnown === true) {
+        planned.push({ line, typeName: rt[0].name, adults, children, rate: null });
+        continue;
       }
       /* The contract's own figure priced this line (D27-233): before GST. */
       let byContract = false;
@@ -783,7 +797,7 @@ export async function makeBooking(
       groupId = g[0]!.id;
     }
 
-    const made: { id: string; reference: string; roomType: string; rate: number }[] = [];
+    const made: { id: string; reference: string; roomType: string; rate: number | null }[] = [];
     /* The rows themselves, for a caller in process: the channel manager
        records which reservations a pushed booking became, so the inbox can
        say what happened to it (D17-79). Over HTTP they are not sent - a
@@ -884,7 +898,7 @@ export async function makeBooking(
            values ($1, $2, 'open') returning id::text`,
           [hotelId, booked[0]!.id]);
         made.push({ id: booked[0]!.id, reference: ref[0]!.reference, roomType: typeName,
-                    rate: Number(rate) });
+                    rate });
         reservationIds.push(booked[0]!.id);
         folioIds.push(folio[0]!.id);
       }
@@ -955,7 +969,8 @@ export async function makeBooking(
          confirmed one - that is whose booking it now is. */
       guest: guestName,
       bookings: made,
-      nightly: made.reduce((sum, m) => sum + m.rate, 0),
+      /* ponytail: a rate brought in empty adds nothing here; only the import sends one, and it reads no nightly. */
+      nightly: made.reduce((sum, m) => sum + (m.rate ?? 0), 0),
       reservationIds,
       folioIds,
       guestId,

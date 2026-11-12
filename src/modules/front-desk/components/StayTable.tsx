@@ -117,7 +117,7 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
       s.isComplimentary ? (
         <span className="text-grey-500">Comp</span>
       ) : (
-        <span className="font-medium">{money(s.offeredTariff)}</span>
+        <span className="font-medium">{s.offeredTariff === null ? "-" : money(s.offeredTariff)}</span>
       ),
   },
   balance: {

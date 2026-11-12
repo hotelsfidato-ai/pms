@@ -252,6 +252,41 @@ properties and people.
   a backfilled stay (`owner_reset.orphans`); a test hotel's Reset clears the
   three (its trade). Tests: `backfill.test.tsx`; `api/test/modules/admin/backfill.test.ts`;
   `db/tests/modules/admin.sql` ("backfill data").
+- **Bring in old data (D27-383 item 7, built under D27-396).** An old system's
+  guests, bookings to come and past stays from an Excel or CSV file, at
+  `/settings/property/old-data` (`oldData.settings.ts`, after Backfill data;
+  `oldData/OldDataPage.tsx`; owner and Admin only, `switchesModules`). Calls
+  `data/oldSystem.ts`; server `api/src/modules/admin/oldSystem.ts`: `GET
+  /:code/imports` (the imports, the bookings still without a rate, the voucher
+  switch), `POST /:code/imports/:kind/check` (nothing saved), `POST
+  /:code/imports/:kind` (one transaction), `POST /:code/imports/:id/undo` (kind
+  guests or bookings; roleGate `own`; the route and the database ask
+  `app.imports_old_data`: the owner or an Admin at the hotel, or a group
+  administrator). ONE PATH: the check runs the save inside a savepoint and
+  rolls it back. The file is read by reservations' `fileRows`/`fileDate`; the
+  columns are matched on screen and kept on the import (`data_imports.columns`,
+  the hotel's last of that kind). A fault in the file saves nothing; a guest
+  on file by phone or email (`app.guest_suggestions`) waits for keep, merge
+  (blanks filled, never overwritten) or skip. An ID number is its last four, in
+  the guest's notes with the company and GSTIN, never `guest_documents`. A
+  booking to come goes through reservations' `makeBooking` with
+  `refuseWhenFull` (refused, listed, the rest saved), its rate empty when the
+  file has none (`rateNotKnown`; migration "old system import" lets
+  `reservations.agreed_rate` be null before arrival only, and front desk's
+  check-in refuses it); its advance a `payment` posting dated the day it was
+  paid, before the first day, `source_type` 'import', never an invoice or a
+  drawer. Its guest is sent nothing at import time unless the import ticked
+  "Send each guest our booking voucher" (`data_imports.send_vouchers`, off;
+  guest messaging's sweep asks `app.quietly_imported`; the master, under
+  D27-396). A past stay is `imported_stays` only: a visit (`app.guest_visits`)
+  and "Brought in" on Guest 360 (`app.guest_360`, crm's word). Each import:
+  `data_imports` (who, when, file, rows in, rows refused and why) and
+  `data_import_items` (what it made or filled); the undo is
+  `app.undo_data_import` (security definer: all or nothing, refused once
+  anything is later than the import or hangs off its bookings; the append-only
+  and guest guards let exactly its rows go). Tests: `oldData.test.tsx`;
+  `api/test/modules/admin/oldSystem.test.ts`; `db/tests/modules/admin.sql`
+  ("old system import").
 
 ---
 

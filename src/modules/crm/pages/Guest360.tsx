@@ -100,6 +100,8 @@ const STAY_WORD: Record<string, string> = {
   cancelled: "Cancelled", no_show: "No show", void: "Void", tentative: "Waiting for the hotel",
   /* A stay from before the hotel's first day, from Settings → Backfill data (D27-398). */
   backfilled: "Backfilled",
+  /* A past stay from an old system, from Settings → Bring in old data (D27-383 item 7). */
+  imported: "Brought in",
 };
 
 const STAY_COLUMNS: Column<StayRow>[] = [

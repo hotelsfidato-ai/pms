@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    472 pictures, 8 still to be taken. Built from the chapters in docs/manual/chapters.
+    475 pictures, 8 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -10854,7 +10854,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:20%">Group</th><th>Pages (↗ opens a Front office screen)</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
-      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Backfill data</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
+      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Backfill data</span>, <span class="ui">Bring in old data</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
       <tr><td>Rooms</td><td><span class="ui">Room types</span></td><td>A17.5</td></tr>
       <tr><td>Rates and tax</td><td><span class="ui">Rates</span> ↗ (A15), <span class="ui">Rate plans</span>, <span class="ui">Meal plans</span>, <span class="ui">Taxes</span></td><td>A17.6, A17.7</td></tr>
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Room discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
@@ -10869,7 +10869,7 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>Who sees what</h3>
   <ul>
     <li><b>The owner and an Admin</b> see every page.</li>
-    <li><b>The GM</b> sees the same, except <span class="ui">Roles and permissions</span>, <span class="ui">Sign-ins and devices</span>, <span class="ui">Modules</span> and <span class="ui">Integrations</span> (Figure A17-50).</li>
+    <li><b>The GM</b> sees the same, except <span class="ui">Bring in old data</span>, <span class="ui">Roles and permissions</span>, <span class="ui">Sign-ins and devices</span>, <span class="ui">Modules</span> and <span class="ui">Integrations</span> (Figure A17-50).</li>
     <li>Nobody else has the Settings space.</li>
   </ul>
 
@@ -11100,6 +11100,107 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>Backfill data as a Settings section, its essentials, the send tick and the hotel's own bill number: <span class="d">D27-398</span>. No tax invoice for a past day keeps the invoice series in order (CGST Rules, rule 46). Where the owner did not say (the register of its own, the first day's rule, a stay's figures on its last night, the email only): <span class="d">D27-396</span>.</p>
+  </div>
+
+  <h3>Bring in old data: an old system's guests and bookings</h3>
+  <p>A hotel that used another system (IDS, WinHMS, eZee, or a spreadsheet) brings its guest list, its bookings still to come and its past stays from a file that system can save: Excel (.xlsx) or CSV. <span class="ui">Bring in old data</span> is in the Property group of the Settings menu, under <span class="ui">Backfill data</span>, for the owner and an Admin only. The GM and everybody else do not see it, and the server refuses them in words: <span class="msg">“Bringing in an old system's guests and bookings is for the owner or an administrator. Ask one of them.”</span></p>
+  <p>Nothing is saved until every row has been checked and shown. Then all of it is saved together, or none of it.</p>
+
+  <h4>To bring in a file</h4>
+  <ol class="steps">
+    <li>Choose what the file holds: <span class="ui">Guests</span>, or <span class="ui">Bookings and past stays</span>.</li>
+    <li>Type the old system's name in <span class="ui">The old system</span> (IDS, eZee, our spreadsheet). It goes on every booking's note, <span class="msg">“Brought in from IDS (IDS-1001).”</span>, and the next file starts from it.</li>
+    <li>For a bookings file, leave <span class="ui">Send each guest our booking voucher</span> off unless the guests should hear from the hotel now (below).</li>
+    <li>Tap <span class="ui">Choose the file</span> and pick it. The file is read and every row checked at once; nothing is saved yet.</li>
+    <li>Check <span class="ui">The file's columns</span>: each field shows the file's heading matched to it. Change any that is wrong, or pick <span class="ui">Not in the file</span>. The fields with a star must be matched. The match is kept for the hotel's next file of the same kind.</li>
+    <li>Read <span class="ui">Every row, before anything is saved</span> (below). Correct the file for every row marked <span class="ui">Fault in the file</span>, then choose it again. For a guest marked <span class="ui">Already on file</span>, choose what to do (below).</li>
+    <li>After changing a column or a choice, tap <span class="ui">Check again</span>. Then tap <span class="ui">Bring in</span>; it says how many rows. A message says what came in.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A17-60">
+    <img src="img/A17-60.png" alt="Bring in old data with a guests file checked: the file's columns matched to their headings, and every row with what it becomes: a new guest, guests already on file with their keep, merge or skip choice, and a fault in the file">
+    <figcaption><b>Figure A17-60.</b> A guests file, checked. Nothing is saved yet.</figcaption>
+    <ol class="callouts">
+      <li>The file's columns, matched by their headings</li>
+      <li>Check again, and Bring in</li>
+      <li>A guest already on file: keep, merge or skip</li>
+      <li>A fault in the file: nothing is saved until it is corrected</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:24%">The guests file</th><th>What happens to each column</th></tr></thead>
+    <tbody>
+      <tr><td>Guest name (needed), phone, email, nationality</td><td>The guest's record. A nationality is two letters (IN, GB, US), or India; blank is IN.</td></tr>
+      <tr><td>Address, city, state, pincode, country, date of birth</td><td>The guest's address and date of birth, as check-in records them.</td></tr>
+      <tr><td>ID type and ID number</td><td>Only the last four characters of the number are kept, never the whole number: the guest's notes read <span class="msg">“ID in IDS: Aadhaar ending 0123”</span>. It is not a document anybody here has seen, so check-in still takes the guest's ID.</td></tr>
+      <tr><td>Company, GSTIN, notes</td><td>The guest's notes, where the desk reads them: <span class="msg">“Company: Shah Traders · GSTIN 27AAPFU0939F1ZV”</span>. A GSTIN is checked like everywhere else.</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>A guest already on file.</b> A row whose phone or email belongs to a guest the system already has is shown as <span class="ui">Already on file</span>, and never joined by itself. Choose, for each one, or for all of them at once:</p>
+  <ul>
+    <li><span class="ui">Keep</span>: a new guest record, beside the one on file.</li>
+    <li><span class="ui">Merge with</span> the guest named: only the fields that are empty on file are filled in from the file. Nothing on file is changed.</li>
+    <li><span class="ui">Skip this row</span>: not brought in. It is listed among the rows refused.</li>
+  </ul>
+
+  <h4>Bookings and past stays</h4>
+  <p>The bookings file has a row a booking: the old reference, the guest's name (needed), phone and email, the arrival and departure (needed), the room type, the room, the rate, the plan, adults and children, the source, and an advance with its date and how it was paid. A date is written 12/11/2026, 2026-11-12 or 12 Nov 2026, or is an Excel date. Each row becomes one of these:</p>
+  <table>
+    <thead><tr><th style="width:22%">Becomes</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Booking</span></td><td>A booking still to come: an ordinary confirmed booking, made as New booking makes one, with its own reference, and never overbooked. Its guest is the one on file with that phone or email, where exactly one has it; otherwise a new guest. The room, if given, is held for it when it is free and of that room type; otherwise the booking comes in without a room, and the row says why.</td></tr>
+      <tr><td><span class="ui">Past stay</span></td><td>A stay that ended by today: history only. It shows on the guest's Guest 360 as <span class="ui">Brought in</span> and counts as a visit, so the desk recognises the guest. It is never a bill, an invoice, revenue, tax or a Night audit day, so no report and no GST return changes. Its money stays in the old system.</td></tr>
+      <tr><td><span class="ui">Refused</span></td><td>A row the hotel cannot take, with the reason: no such room type here, no room free on those nights, a source not on the hotel's Booking sources list, a guest in the house today (check them in at the desk), or a booking already brought in. The rest of the file is still brought in; the refused rows are kept with the import.</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-A17-61">
+    <img src="img/A17-61.png" alt="A bookings file checked: a booking with no rate, its room held and its advance; a booking; a past stay of the same guest, history only; and a row refused because the hotel has no such room type">
+    <figcaption><b>Figure A17-61.</b> A bookings file, checked.</figcaption>
+    <ol class="callouts">
+      <li>What would come in, and what not</li>
+      <li>A booking with no rate, its room held and its advance on its bill</li>
+      <li>A past stay: history only</li>
+      <li>Refused, with the reason</li>
+    </ol>
+  </figure>
+
+  <p><b>No rate.</b> A booking whose rate is blank in the file comes in with no rate: a dash, never a price looked up and never a zero. It is listed under <span class="ui">Bookings with no rate yet</span> until somebody sets its rate (<span class="ui">Change rate</span>, on its bill, A4). Check-in refuses it until then: <span class="msg">“This booking came in from the old system with no rate. Set its rate first: Change rate, on its bill.”</span> A rate in the file is per night, before GST.</p>
+  <p><b>The advance.</b> An advance becomes a payment on the booking's bill, dated the day it was paid, with the words <span class="msg">“Advance - Cash, brought in from IDS”</span>. No invoice is made, and no cash drawer or day's takings here counts it. It must have been paid before the hotel's first day in the system; one paid since is taken at the desk, on its day.</p>
+
+  <h4>What was brought in, and Undo</h4>
+  <p><span class="ui">Brought in here</span> lists every file: when, the file and the old system, who brought it in, the rows in, the rows refused (tap the number to see each one and why) and what came in.</p>
+  <figure class="shot" id="fig-A17-62">
+    <img src="img/A17-62.png" alt="Bookings with no rate yet, and Brought in here: each file with when, who, rows in, rows refused and what came in, Undo on one still standing, and one already undone">
+    <figcaption><b>Figure A17-62.</b> The bookings still without a rate, and the list of imports.</figcaption>
+    <ol class="callouts">
+      <li>Bookings with no rate yet: the rate is a dash</li>
+      <li>Rows refused: tap to see them</li>
+      <li>Undo</li>
+      <li>An import undone, and by whom</li>
+    </ol>
+  </figure>
+  <ol class="steps">
+    <li>To take a file back, tap <span class="ui">Undo</span> on its line, then <span class="ui">Undo it</span>.</li>
+    <li>Every guest, booking, room held, advance and past stay it brought in goes, and the empty fields it filled are empty again. All of it, or nothing.</li>
+  </ol>
+  <p>Undo is refused, with nothing changed, once anything it brought in has been touched: a booking changed, given a room or checked in, a guest's record edited, another booking made for one of its guests, a charge or payment on one of its bills, a guest's request or online check-in (<span class="msg">“Nothing was undone: FH-5EL-2611-5032 changed since it came in. Change or cancel it at the desk instead.”</span>). Then each record is changed or cancelled on its own screen.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A fault in the file saves nothing:</b> a row with no name or no dates, a date that is not one, a phone, email or GSTIN that is not right, a plan or payment method the hotel does not have, an advance with no date or method, or the same guest or reference twice. <span class="msg">“2 rows have a fault in the file. Nothing was saved: correct the file and check it again.”</span></li>
+      <li><b>No message goes to the guests of the bookings brought in</b>: their old system confirmed them already. Tick <span class="ui">Send each guest our booking voucher</span> to send each guest with an email this hotel's voucher, with its new reference, once the file is brought in (never by WhatsApp: the file does not say the guest agreed to it). The tick starts off, and the list of imports says <span class="ui">Sent</span> or <span class="ui">Not sent</span>. It is grey when the hotel's voucher is switched off (A17.12). Later messages follow the hotel's settings, as for any booking, and <span class="ui">Send voucher</span> on a booking still sends one when the desk chooses to.</li>
+      <li>An old Excel file (.xls) is not read: save it as .xlsx or CSV. At most 5,000 rows and 5 MB a file; split a bigger one.</li>
+      <li>The hotel's Guests list counts bookings at the hotel; a guest brought in without a booking is found by the desk by phone or email, and on Guest 360 (A10).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Bringing in an old system's guests and bookings is the owner's approved list, item 7 (<span class="d">D27-383</span>); past stays as history only, and no money of the past in the live books, as Backfill data (<span class="d">D27-398</span>). No default prices: a rate not in the file is a dash. An Aadhaar is kept as its last four only (UIDAI's rules on storing an Aadhaar number; D25-37). Where the owner did not say (keep, merge or skip; the notes for the company, GSTIN and ID; the advance on its own day and only from before the first day; who may): <span class="d">D27-396</span>. No voucher unless the import's tick says so: the master's decision, under <span class="d">D27-396</span>.</p>
   </div>
 
   <h3>To change the hotel's details</h3>
@@ -11988,6 +12089,7 @@ figure.shot.phone img { max-width: 72mm; }
     <tbody>
       <tr><td>See what a new hotel still needs</td><td>Property › Profile: the yellow checklist</td><td>A17.2</td></tr>
       <tr><td>Take a new hotel to its first booking</td><td>Property › Set up this hotel</td><td>A17.2</td></tr>
+      <tr><td>Bring in an old system's guests and bookings</td><td>Property › Bring in old data, Choose the file</td><td>A17.2</td></tr>
       <tr><td>Fix the address, GSTIN or phone</td><td>Property › Profile, Edit</td><td>A17.2</td></tr>
       <tr><td>Put the logo on the bills</td><td>Property › Logo and photos, Upload</td><td>A17.3</td></tr>
       <tr><td>Say what the hotel has</td><td>Property › Amenities: switch it on</td><td>A17.3</td></tr>

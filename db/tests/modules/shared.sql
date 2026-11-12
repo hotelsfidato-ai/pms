@@ -302,6 +302,23 @@ begin
     stray_functions is null, coalesce(stray_functions, ''));
 end $$;
 
+-- No login but the ones named may run a privileged app function (audit, 10 Nov,
+-- item 10): Postgres's default lets every login run each new one.
+do $$
+declare open_to_all text; preflight_may boolean;
+begin
+  select string_agg(p.proname, ', ') into open_to_all
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'app' and p.prosecdef
+     and has_function_privilege('public', p.oid, 'execute');
+  perform test.ok('ownership', 'no privileged app function is open to every login',
+    open_to_all is null, coalesce(open_to_all, ''));
+  perform test.ok('ownership', 'the API keeps the functions it runs',
+    has_function_privilege('pms_app', 'app.auth_hotel_ids()', 'execute'));
+  perform test.ok('ownership', 'a spare login cannot run one (pms_readonly)',
+    not has_function_privilege('pms_readonly', 'app.auth_hotel_ids()', 'execute'));
+end $$;
+
 
 -- =============================================================================
 -- EVERY HOTEL TABLE HAS A WRITTEN RULE (200, the owner, 4 October)

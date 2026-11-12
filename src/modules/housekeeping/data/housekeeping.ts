@@ -2,7 +2,7 @@ import { fetchStays, getHouseNow } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
-import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders, billTooBig } from "@/lib/api";
 import { noteReachable, noteUnreachable } from "@/lib/offline";
 /* The housekeeping board, whose rooms are whose, and work orders.
 
@@ -330,6 +330,8 @@ export async function recordRepairCost(
   hotelId: string,
   input: { workOrderId: string; amount: string; note: string; file: File | null },
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const tooBig = input.file ? billTooBig(input.file) : null;
+  if (tooBig) return { ok: false, reason: tooBig };
   const form = new FormData();
   form.set("workOrderId", input.workOrderId);
   form.set("amount", input.amount);

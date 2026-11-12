@@ -1091,7 +1091,7 @@ function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
             {dateShort(bar.stay.arrival)} → {dateShort(bar.stay.departure)} · {nights}
           </p>
           <p className="tabular">
-            {bar.stay.isComplimentary ? "Complimentary" : money(bar.stay.offeredTariff)}
+            {bar.stay.isComplimentary ? "Complimentary" : bar.stay.offeredTariff === null ? "-" : money(bar.stay.offeredTariff)}
             {/* No balance for a role given no bills (D27-143). */}
             {bar.balance !== undefined && <> · balance {money(bar.balance)}</>}
           </p>

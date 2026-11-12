@@ -16,6 +16,38 @@ const LOADED = { eval: `new Promise((done) => {
   setTimeout(() => { clearInterval(t); done(); }, 30000);
 })` };
 
+/* Bring in old data: a file of the old system's, handed to the page's file
+   input. Checked only - the page saves nothing until Bring in, never pressed. */
+const OLD_FILE = (kind) => `(async () => {
+  const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return [d.getDate(), d.getMonth() + 1, d.getFullYear()].map((x) => String(x).padStart(2, "0")).join("/"); };
+  let csv;
+  if (${JSON.stringify(kind)} === "guests") {
+    const { api } = await import("/src/lib/api.ts");
+    const stays = await api("/api/hotels/5EL/stays");
+    const known = stays.find((s) => s.phone) ?? { guest: "Ravi Kumar", phone: "9811100711" };
+    csv = ["Guest Name,Mobile No,Email ID,City,Nationality,ID Proof,ID No,DOB,Company,GSTIN,Remarks",
+      "Asha Rao,9811100901,asha.rao@example.com,Pune,Indian,Aadhaar,2345 6789 0123,14/02/1985,,,Prefers a high floor",
+      known.guest.replace(/ \\[DH\\]$/, "") + "," + known.phone + ",,Delhi,IN,,,,Kumar Exports,27AAPFU0939F1ZV,",
+      "Priya Sen,98111,,Kolkata,IN,,,21/02/1990,,,"].join("\\n");
+  } else {
+    const first = (document.body.innerText.match(/before (\\d+ \\w+ \\d{4})\\)/) ?? [])[1];
+    const f = first ? new Date(first + " 12:00") : new Date();
+    f.setDate(f.getDate() - 9);
+    const paid = [f.getDate(), f.getMonth() + 1, f.getFullYear()].map((x) => String(x).padStart(2, "0")).join("/");
+    csv = ["Res No,Guest Name,Mobile,Check In,Check Out,Category,Room,Tariff,Plan,Pax,Source,Advance,Advance Date,Mode",
+      "IDS-3001,Farhan Ali,9811100941," + day(40) + "," + day(42) + ",Deluxe,303,,EP,2,Website,1000," + paid + ",Cash",
+      "IDS-3002,Leela Menon,9811100942," + day(46) + "," + day(49) + ",Superior,,3800,CP,2,Booking.com,,,",
+      "IDS-2901,Farhan Ali,9811100941," + day(-90) + "," + day(-88) + ",Deluxe,301,4100,EP,2,Walk-in,,,",
+      "IDS-3003,Omar Khan,9811100943," + day(50) + "," + day(52) + ",Executive,,5200,EP,2,Website,,,"].join("\\n");
+  }
+  const input = document.querySelector('input[type=file][aria-label="The old system\\'s file"]');
+  const dt = new DataTransfer();
+  dt.items.add(new File([csv], "ids-" + ${JSON.stringify(kind)} + ".csv", { type: "text/csv" }));
+  input.files = dt.files;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+})()`;
+
 export const SHOTS = [
   /* ── The space and its menu ──────────────────────────────────────── */
   {
@@ -530,6 +562,51 @@ export const SHOTS = [
       { n: 1, at: "text:Export CSV", side: "bottom" },
       { n: 2, at: "css:table tbody tr", side: "left" },
       { n: 3, at: "text:Total", side: "left" },
+    ],
+  },
+
+  /* ── Bring in old data (D27-383 item 7) ──────────────────────────────
+     A file is handed to the page's own file input and CHECKED: nothing is
+     saved. The guests file names a guest the demo already has (read from the
+     hotel's own stays, through the app's api), so a row shows "Already on
+     file" and its choice. The bookings file's dates are counted from today,
+     and its advance from the first day the page itself says. */
+  {
+    id: "A17-60", title: "Bring in old data: a guests file, checked", as: "Owner", size: "tall",
+    path: "/settings/property/old-data",
+    steps: [{ waitFor: "text:Brought in here" }, LOADED, { type: ["css:input[maxlength='60']", "IDS"] },
+            { eval: OLD_FILE("guests") }, { waitFor: "text:Every row, before anything is saved" }, LOADED,
+            { scroll: "text:Every row, before anything is saved" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:The file's columns", side: "right" },
+      { n: 2, at: "text:Check again", side: "bottom" },
+      { n: 3, at: "css:select[aria-label^='Row ']", side: "left" },
+      { n: 4, at: "text:Fault in the file", side: "left" },
+    ],
+  },
+  {
+    id: "A17-61", title: "Bring in old data: a bookings file, checked", as: "Owner", size: "tall",
+    path: "/settings/property/old-data",
+    steps: [{ waitFor: "text:Brought in here" }, LOADED, { click: "text:Bookings and past stays" },
+            { type: ["css:input[maxlength='60']", "IDS"] }, { eval: OLD_FILE("bookings") },
+            { waitFor: "text:Every row, before anything is saved" }, LOADED,
+            { scroll: "text:Every row, before anything is saved" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:Every row, before anything is saved", side: "right" },
+      { n: 2, at: "text:No rate: a dash until the desk sets it", side: "left" },
+      { n: 3, at: "text:History only", side: "left" },
+      { n: 4, at: "text:Refused", nth: 0, side: "left" },
+    ],
+  },
+  {
+    id: "A17-62", title: "Bring in old data: the bookings with no rate, and the imports", as: "Owner", size: "tall",
+    path: "/settings/property/old-data",
+    steps: [{ waitFor: "text:Brought in here" }, LOADED, { scroll: "text:Brought in here" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:Bookings with no rate yet", side: "right" },
+      { n: 2, at: "label:rows refused", side: "left" },
+      { n: 3, at: "text:Undo", nth: 0, side: "left" },
+      { n: 4, at: "text:Undone", nth: 0, side: "left" },
     ],
   },
 

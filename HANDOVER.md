@@ -48,6 +48,11 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **12 November: RELEASE 22 READY, NOT LIVE (19e02bd4).** Release 21 (e77c41a8) is still what runs. Release 22 is on
+> cp6 and in the copy `.claude/worktrees/release-r22`; nothing pushed, nothing deployed. It holds migrations 267-274
+> (groups, guest care, group-wide, Bring in old data) and the security fixes of the 10 November audit, items 5, 6, 7,
+> 9, 10 and 11 (item 8, encrypted backups, skipped by the owner). Next free migration: **275**.
+
 > **7 November, 18:52 IST: RELEASE 21 IS LIVE (e77c41a8), with all of release 20.** The owner typed A0-A7; I checked
 > them by reading only.
 > - The server's code is on e77c41a8. The site loads `index-CCfjHX6L.js`.
@@ -827,6 +832,28 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **12 November: RELEASE 22, READY FOR THE OWNER.** `release/r22` = **19e02bd4** (copy `.claude/worktrees/release-r22`,
+> api/node_modules a real install, web node_modules a junction). Website `index-BFhsxh4v.js` (release.mjs ran once).
+> Steps A1-A8 and Part B (now TWO buckets, `pms-backups` and `pms-uploads`, the owner's yes of 12 November) are in
+> `.local/release-22-steps.md`; no n8n paste.
+> - **Gates:** green on the second full run (55 min): web 241 files / 1,600, API 256 / 3,281, db 2,114, replay, PG16,
+>   restore 1, to minute. Run 1 failed on two test faults, fixed in 19e02bd4 (MEMORY 476, 477).
+> - **Security, in the release:** API listens on 127.0.0.1 in production; the CSP enforced; nginx limits on `/api/` and
+>   `/api/pos`; npm audit fix; the 80 privileged functions closed to PUBLIC (`db/ownership.sql`); uploads 9 MB and
+>   checked by content (`api/src/storage.ts`), the screen checking size first.
+> - **After the owner's A1-A7, read-only:** the bundle; the server at 19e02bd4; the database at 274; `ss` shows
+>   127.0.0.1:8787; no API errors after the restart. Then recycle `release-r22` and `security-r22` (junctions out
+>   first; both api/node_modules are real folders).
+> - The peer chat "Video viewer modifications" waited for these merges; its copies `agent-a347aa75c92a8af93` and
+>   `agent-ab4eb6e6859f2b2b3` are its own.
+
+> **10 November: CODE AND SECURITY AUDIT DONE, read-only** (`docs/audits/2026-11-10-code-and-security-audit.md`).
+> Nothing was removed and the code's protections hold. Nothing was changed. Waiting for the owner:
+> - **Theirs to do:** the bucket and archiving (release 15 Parts B and C; live backups are still `uploaded=no`), one
+>   server restart for the kernel fixes, two-step sign-in switched on, three SSH keys confirmed.
+> - **Their yes, then build (audit items 5-11):** the API on 127.0.0.1, the script policy enforced, a request limit on
+>   `/api/` and `/api/pos`, encrypted backup files, `npm audit fix`, the function permissions, the upload limits.
 
 > **7 November, evening: RELEASE 21, NOW LIVE (§ 2, checked 18:52 onwards; both release copies recycled).** `release/r21` = **e77c41a8** (copy
 > `.claude/worktrees/release-r21`). It contains release 20, so if the owner has not started 20 they can run 21 instead.

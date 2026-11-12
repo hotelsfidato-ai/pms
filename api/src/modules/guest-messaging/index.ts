@@ -32,6 +32,9 @@ export const mounts: readonly Mount[] = [
    `guest_links` are FORCE row-secured on `app.auth_hotel_ids()`. */
 export {
   jobs, runOnce, channelFor, messageFor, KIND, CONFIRM_WITHIN_HOURS, MOST_ATTEMPTS,
+  /* What the sweep would send now: admin's old-system import test asks it
+     that an import sends nothing by default (D27-383 item 7). */
+  owedNow, LIMITS,
   type Due, type Limits, type ListDue, type MakeLink,
   type MessageKind, type SweepResult,
 } from "./jobs.ts";

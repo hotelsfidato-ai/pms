@@ -1780,3 +1780,170 @@ begin
   select 'backfill data', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
     from jsonb_array_elements(res) x;
 end $$;
+
+
+-- =============================================================================
+-- AN OLD SYSTEM'S GUESTS AND BOOKINGS (D27-383 item 7; migration "old system import")
+-- =============================================================================
+-- The owner and an Admin only; the record written once and its undo the
+-- database's; a booking to come may be without a rate, a guest in the house
+-- never; the ledgers' guards still refuse outside an undo; a past stay a
+-- visit on Guest 360 with nothing charged; the undo all or nothing, only
+-- while untouched. Built and undone.
+-- =============================================================================
+do $$
+declare
+  res jsonb := '[]';
+  h uuid; rt uuid; owner uuid; adm uuid; gm uuid; g uuid; keep_g uuid;
+  imp uuid; imp2 uuid; stay uuid; fol uuid; post bigint; v text;
+begin
+  begin
+    select id into owner from staff where email = 'owner@fidato.in';
+    perform set_config('app.user_id', owner::text, true);
+    h := app.provision_property_unchecked('OSI', 'Old System Test', 'Nowhere');
+    select id into rt from room_types where hotel_id = h and code = 'STD';
+    insert into rooms (hotel_id, room_type_id, number) values (h, rt, '101');
+    insert into staff (email, full_name) values ('osi-admin@fidato.in', 'Import Admin') returning id into adm;
+    insert into staff (email, full_name) values ('osi-gm@fidato.in', 'Import GM') returning id into gm;
+    insert into staff_hotels (staff_id, hotel_id, role) values (adm, h, 'admin'), (gm, h, 'gm');
+    perform set_config('app.hotel_code', 'OSI', true);
+
+    -- ---------- who may ----------
+    perform set_config('app.user_id', adm::text, true);
+    res := res || jsonb_build_object('n', 'an Admin at the hotel may bring an old system in', 'ok', app.imports_old_data(h));
+    perform set_config('app.user_id', gm::text, true);
+    res := res || jsonb_build_object('n', 'the GM may not', 'ok', not app.imports_old_data(h));
+    v := null;
+    set local role pms_app;
+    begin
+      insert into data_imports (hotel_id, kind, system, file_name, rows_in, rows_refused)
+      values (h, 'guests', 'IDS', 'g.csv', 1, 0);
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'nor record an import as the application', 'ok', v = '42501', 'd', v);
+
+    -- ---------- the record, as the Admin ----------
+    perform set_config('app.user_id', adm::text, true);
+    set local role pms_app;
+    insert into data_imports (hotel_id, kind, system, file_name, rows_in, rows_refused)
+    values (h, 'bookings', 'IDS', 'b.csv', 2, 0) returning id into imp;
+    v := null;
+    begin
+      update data_imports set undone_at = now(), undone_by = adm where id = imp;
+    exception when others then v := sqlstate;
+    end;
+    reset role;
+    res := res || jsonb_build_object('n', 'the application never marks an import undone itself',
+      'ok', v = '42501', 'd', v);
+    res := res || jsonb_build_object('n', 'and its maker is the database''s',
+      'ok', (select made_by = adm from data_imports where id = imp));
+    insert into guests (full_name, phone) values ('Imported Guest', '9000000280') returning id into g;
+    insert into data_import_items (import_id, kind, row_id) values (imp, 'guest', g::text);
+    insert into imported_stays (hotel_id, import_id, guest_id, arrival, departure, room_type, reference)
+    values (h, imp, g, current_date - 40, current_date - 38, 'Deluxe', 'IDS-0901');
+
+    -- ---------- a booking to come with no rate ----------
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, 'OSI-NR', g, rt, current_date + 30, current_date + 32, null, 'confirmed') returning id into stay;
+    res := res || jsonb_build_object('n', 'a booking to come may keep no rate (a dash)',
+      'ok', (select agreed_rate is null from reservations where id = stay));
+    v := null;
+    begin
+      update reservations set status = 'checked_in' where id = stay;
+    exception when others then v := sqlstate || ': ' || sqlerrm;
+    end;
+    res := res || jsonb_build_object('n', 'a guest is never checked in without one',
+      'ok', v like '23514:%reservations_rate_by_arrival%', 'd', v);
+    delete from reservations where id = stay;
+
+    -- ---------- the guards outside an undo ----------
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, 'OSI-A', g, rt, current_date + 30, current_date + 32, 3000, 'confirmed') returning id into stay;
+    insert into folios (hotel_id, reservation_id, status) values (h, stay, 'open') returning id into fol;
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, source_type)
+    values (h, fol, current_date - 50, 'payment', 'Advance - Cash, brought in from IDS', -500, 'import') returning id into post;
+    insert into data_import_items (import_id, kind, row_id) values (imp, 'booking', stay::text), (imp, 'payment', post::text);
+    v := null;
+    begin
+      delete from folio_postings where id = post;
+    exception when others then v := sqlerrm;
+    end;
+    res := res || jsonb_build_object('n', 'an advance it brought in is append-only outside its undo',
+      'ok', v like '%append-only%', 'd', v);
+    v := null;
+    begin
+      delete from guests where id = g;
+    exception when others then v := sqlerrm;
+    end;
+    res := res || jsonb_build_object('n', 'and its guest is never deleted outside it',
+      'ok', v like 'A guest is never deleted%', 'd', v);
+    res := res || jsonb_build_object('n', 'unticked, the sweep is told it sends its booking no voucher',
+      'ok', (select array_agg(x) from app.quietly_imported(array[stay]) x) = array[stay]);
+    update data_imports set send_vouchers = true where id = imp;
+    res := res || jsonb_build_object('n', 'ticked "Send each guest our booking voucher", it is owed as any booking',
+      'ok', not exists (select 1 from app.quietly_imported(array[stay])));
+    update data_imports set send_vouchers = false where id = imp;
+
+    -- ---------- Guest 360, the visits, the resets ----------
+    res := res || jsonb_build_object('n', 'a past stay brought in is a visit',
+      'ok', app.guest_visits(g) = 1, 'd', app.guest_visits(g)::text);
+    perform set_config('app.user_id', owner::text, true);
+    res := res || jsonb_build_object('n', 'Guest 360 lists it, brought in, with nothing charged',
+      'ok', exists (select 1 from jsonb_array_elements(app.guest_360(g) -> 'stays') x
+                     where x ->> 'status' = 'imported' and x ->> 'reference' = 'IDS-0901'
+                       and x -> 'charged' = 'null'::jsonb),
+      'd', (app.guest_360(g) -> 'stays')::text);
+    res := res || jsonb_build_object('n', 'the three are a test hotel''s trade',
+      'ok', (select count(*) from app.test_hotel_classes() c
+              where c.table_name in ('data_imports', 'data_import_items', 'imported_stays') and c.class = 'trading') = 3);
+    insert into guests (full_name) values ('Kept Guest') returning id into keep_g;
+    insert into data_import_items (import_id, kind, row_id) values (imp, 'guest', keep_g::text);
+    res := res || jsonb_build_object('n', 'another hotel''s full reset keeps a guest an import brought in',
+      'ok', not (keep_g = any (coalesce(owner_reset.orphans((select id from hotels where code = '5EL')), '{}'))));
+    delete from data_import_items where import_id = imp and row_id = keep_g::text;
+
+    -- ---------- the undo ----------
+    perform set_config('app.user_id', gm::text, true);
+    res := res || jsonb_build_object('n', 'the GM cannot undo it',
+      'ok', app.undo_data_import(imp) like 'Bringing in an old system%', 'd', app.undo_data_import(imp));
+    perform set_config('app.user_id', adm::text, true);
+    -- Changed later than the import: its own transaction's time is earlier.
+    update data_imports set made_at = now() - interval '1 minute' where id = imp;
+    update reservations set notes = 'Touched' where id = stay;
+    v := app.undo_data_import(imp);
+    res := res || jsonb_build_object('n', 'a booking changed since refuses the whole undo, and nothing goes',
+      'ok', v like 'Nothing was undone: OSI-A changed since it came in.%'
+            and exists (select 1 from folio_postings where id = post)
+            and exists (select 1 from guests where id = g)
+            and (select undone_at is null from data_imports where id = imp), 'd', v);
+
+    -- A second import, untouched: everything of it goes.
+    insert into data_imports (hotel_id, kind, system, file_name, rows_in, rows_refused)
+    values (h, 'bookings', 'IDS', 'c.csv', 1, 0) returning id into imp2;
+    insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, 'OSI-B', keep_g, rt, current_date + 40, current_date + 42, 3000, 'confirmed') returning id into stay;
+    insert into folios (hotel_id, reservation_id, status) values (h, stay, 'open') returning id into fol;
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, source_type)
+    values (h, fol, current_date - 50, 'payment', 'Advance - Cash, brought in from IDS', -700, 'import') returning id into post;
+    insert into payments (hotel_id, posting_id, method, method_label, amount) values (h, post, 'cash', 'Cash', 700);
+    insert into data_import_items (import_id, kind, row_id)
+    values (imp2, 'booking', stay::text), (imp2, 'payment', post::text), (imp2, 'guest', keep_g::text);
+    v := app.undo_data_import(imp2);
+    res := res || jsonb_build_object('n', 'untouched, the undo takes its guest, booking, bill and advance',
+      'ok', v is null and not exists (select 1 from reservations where id = stay)
+            and not exists (select 1 from folio_postings where id = post)
+            and not exists (select 1 from guests where id = keep_g)
+            and (select undone_by = adm and undone_tx is not null from data_imports where id = imp2), 'd', v);
+    res := res || jsonb_build_object('n', 'and is refused a second time',
+      'ok', app.undo_data_import(imp2) = 'This import was undone already.');
+
+    raise exception using errcode = 'OS001', message = 'undo';
+  exception when sqlstate 'OS001' then
+    null;
+  end;
+
+  insert into test.results (suite, name, passed, detail)
+  select 'old system import', x ->> 'n', coalesce((x ->> 'ok')::boolean, false), x ->> 'd'
+    from jsonb_array_elements(res) x;
+end $$;

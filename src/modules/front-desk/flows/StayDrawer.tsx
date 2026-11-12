@@ -300,7 +300,7 @@ function StayFacts({ stay: s }: { stay: Stay }) {
       <FactGroup title="Rate">
         <Fact label="Rate plan">{s.ratePlan}</Fact>
         <Fact label="Per night" tabular>
-          {s.isComplimentary ? "Complimentary" : money(s.offeredTariff)}
+          {s.isComplimentary ? "Complimentary" : s.offeredTariff === null ? "-" : money(s.offeredTariff)}
         </Fact>
         <Fact label="Rack rate" tabular>
           {/* A dash when the room type has no rate set — never ₹0.
