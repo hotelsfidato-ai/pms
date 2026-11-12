@@ -60,7 +60,11 @@ export function ReportShell({
   heading,
   /** Of several real hotels (a group report): never marked as a test hotel's. */
   group: ofGroup,
+  /** Why this person may not take the CSV: the files' own refusal, said
+      beside them by ExportButtons (D27-396). Null or absent: they may. */
+  csvRefusal,
 }: {
+  csvRefusal?: string | null;
   heading?: string;
   group?: boolean;
   title: string;
@@ -128,6 +132,8 @@ export function ReportShell({
               <Button
                 variant="secondary"
                 size="sm"
+                disabled={!!csvRefusal}
+                title={csvRefusal ?? undefined}
                 onClick={() => {
                   const { headers, rows } = csv();
                   downloadCsv(

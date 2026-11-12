@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { ROLES, can, type Role } from "../../permissions.ts";
-import { ADMIN_READ_ROLES } from "../admin/grants.ts";
 import { READ_RULES, allows, refusalFor } from "../../roleGate.ts";
 import { renderPdf, renderXlsx } from "../../reportRender.ts";
 import { heading, propertyFor } from "./figures.ts";
@@ -10,17 +9,6 @@ import {
   EXPORT_KINDS, LIST_SCREENS, MAX_EXPORT_ROWS, exportRefusal, maskId, namesAnId, whoOf,
   type ExportKind, type ListScreen, type ListScreenKey,
 } from "./listExports.ts";
-import { SEE as DEPOSIT_READERS } from "../finance/deposits.ts";
-import { DESK, teamsFor } from "../guest-services/requests.ts";
-import { LOST_LOGGERS } from "../guest-services/wakeAndLost.ts";
-import { VIEW_ROLES as MESSAGE_READERS } from "../guest-messaging/messages.ts";
-import { VIEW_ROLES as REVIEW_READERS } from "../reputation/reputation.ts";
-import { FEEDBACK_ROLES } from "../reputation/feedbackRoles.ts";
-import { DESK_ROLES } from "../../routes/guestDoorKit.ts";
-import { STOCK_ROLES } from "../stores/stockGrants.ts";
-import { VIEW_ROLES as PURCHASING_READERS } from "../purchasing/purchasingGrants.ts";
-import { SPA_READ_ROLES } from "../spa/spa.ts";
-import { EQUIPMENT_GRANTS } from "../equipment/grants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    POST /api/hotels/:code/exports/<screen>.(pdf|xlsx) - a list as a file
@@ -47,27 +35,37 @@ import { EQUIPMENT_GRANTS } from "../equipment/grants.ts";
 
 /* A screen whose read rule is `own` - its route asks a list of its own -
    is asked that same list here (D27-383 item 1, second part): an `own`
-   rule lets everybody past the gate, and the file must not. Each line is
-   the list the screen's GET route asks; api/test/listFiles.test.ts fails
-   when an `own` screen has none. */
+   rule lets everybody past the gate, and the file must not.
+
+   ⚠ COPIES, because a service is reached only through its front door
+   (src/test/boundaries.test.ts): each is the list the screen's GET route
+   asks, named beside it. api/test/listFiles.test.ts holds every copy equal
+   to its original and fails when an `own` screen has none. */
+const DESK = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+const STOCK_VIEW = ["owner", "admin", "gm", "hotel_manager", "stores", "kitchen_manager",
+  "chef", "housekeeping", "finance", "read_only"];
+const SPA = ["owner", "admin", "gm", "hotel_manager", "front_desk", "housekeeping"];
+const MANAGERS = ["owner", "admin", "gm"];
 export const OWN_READERS: Partial<Record<ListScreenKey, readonly string[]>> = {
-  "cash-deposits": DEPOSIT_READERS,
-  "wake-up-calls": DESK,
-  "lost-property": LOST_LOGGERS,
-  "guest-messages": MESSAGE_READERS,
-  "reviews": REVIEW_READERS,
-  "feedback": FEEDBACK_ROLES,
-  "online-checkin": DESK_ROLES,
-  "store": STOCK_ROLES.view,
-  "kitchen-stock": STOCK_ROLES.view,
-  "purchasing": PURCHASING_READERS,
-  "spa-diary": SPA_READ_ROLES,
-  "spa-treatments": SPA_READ_ROLES,
-  "equipment": EQUIPMENT_GRANTS.view,
-  /* A team sees its own requests; the desk every team's. */
-  "requests": ROLES.filter((r) => teamsFor(r).length > 0),
-  "audit-log": ADMIN_READ_ROLES.audit_log,
-  "activity": ADMIN_READ_ROLES.audit_log,
+  "cash-deposits": [...MANAGERS, "finance", "read_only"],                 // finance/deposits.ts SEE
+  "wake-up-calls": DESK,                                                  // guest-services/requests.ts DESK
+  "lost-property": [...DESK, "housekeeping"],                             // guest-services LOST_LOGGERS
+  "guest-messages": [...DESK, "finance", "read_only"],                    // guest-messaging VIEW_ROLES
+  "reviews": [...DESK, "finance", "read_only"],                           // reputation VIEW_ROLES
+  "feedback": MANAGERS,                                                   // reputation FEEDBACK_ROLES
+  "online-checkin": DESK,                                                 // routes/guestDoorKit.ts DESK_ROLES
+  "store": STOCK_VIEW,                                                    // stores STOCK_ROLES.view
+  "kitchen-stock": STOCK_VIEW,                                            // stores STOCK_ROLES.view
+  "purchasing": [...MANAGERS, "hotel_manager", "kitchen_manager", "stores",
+    "housekeeping", "finance", "read_only"],                              // purchasing VIEW_ROLES
+  "spa-diary": SPA,                                                       // spa SPA_READ_ROLES
+  "spa-treatments": SPA,                                                  // spa SPA_READ_ROLES
+  "equipment": [...MANAGERS, "hotel_manager", "kitchen_manager", "chef",
+    "front_desk", "stores", "housekeeping", "finance", "read_only"],      // equipment EQUIPMENT_GRANTS.view
+  /* A team sees its own requests; the desk every team's (requests.ts teamsFor). */
+  "requests": [...DESK, "housekeeping", "stores", "kitchen_manager", "chef", "pos", "bar"],
+  "audit-log": MANAGERS,                                                  // admin ADMIN_READ_ROLES.audit_log
+  "activity": MANAGERS,                                                   // admin ADMIN_READ_ROLES.audit_log
   /* Row security then shows each only the people they may manage. */
   "people": ROLES.filter((r) => can(r, "view", "user")),
   /* app.devices_of: the owner anybody's, an Admin their hotel's people. */
