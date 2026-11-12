@@ -34,9 +34,14 @@ export function MinibarFlow({
   const [disputed, setDisputed] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* ONE TAKE, ONE KEY (D27-396): minted when the window opens and sent with
+     every tap of Record, so a double tap or a resend is answered with the
+     first record, never charged twice. */
+  const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
   useEffect(() => {
     if (!open) return;
     setRoom(fixedRoom ?? ""); setCount({}); setDisputed(false); setSaid(null);
+    setBusy(false); setPressKey(crypto.randomUUID());
   }, [open, fixedRoom]);
 
   const shown = items.filter((i) => i.active);
@@ -49,15 +54,16 @@ export function MinibarFlow({
   const save = async () => {
     if (why) return setSaid(why);
     setBusy(true);
-    const res = await recordMinibar(hotelId, { room: room.trim(), lines, disputed });
-    setBusy(false);
-    if (!res.ok) return setSaid(res.reason);
+    const res = await recordMinibar(hotelId, { room: room.trim(), lines, disputed }, pressKey);
+    if (!res.ok) { setBusy(false); return setSaid(res.reason); }
     const n = room.trim().toUpperCase();
     toast.success(res.data?.status === "charged" ? `On room ${n}'s bill. The refill is out of the store.`
       : res.data?.waitingWhy === "after_checkout" ? `Room ${n}'s guest has left: the desk decides.`
       : `Sent to the desk to confirm.`);
-    await qc.invalidateQueries({ queryKey: ["minibar"] });
+    /* Closed BEFORE the list is read again: the button stays disabled until
+       the window is gone, so a second tap has nothing to press. */
     onOpenChange(false);
+    void qc.invalidateQueries({ queryKey: ["minibar"] });
   };
 
   return (

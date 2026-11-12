@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { useSession } from "@/lib/session";
 import type { Role } from "@/lib/permissions";
-import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel } from "@/test/app";
+import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel, waitLong } from "@/test/app";
 import PurchasingPage from "@/modules/purchasing/pages/Purchasing";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -107,7 +107,7 @@ describe("Purchasing · Bar (D27-354)", () => {
     expect(check.textContent).toBe("The lines, handling and TCS make ₹7,897.20 · matches the bill");
     fireEvent.click(screen.getByRole("button", { name: "Save the bill" }));
 
-    await vi.waitFor(() => expect(sent.bills).toEqual([{
+    await waitLong(() => expect(sent.bills).toEqual([{
       supplierId: "sup-bharat", billNo: "B-311", billDate: "2026-10-21", tpNo: "TP 9001",
       handling: 120, tcs: 77.2, total: 7897.2,
       lines: [
@@ -137,7 +137,7 @@ describe("Purchasing · Bar (D27-354)", () => {
     /* D27-372: the bill date + 30 days is offered; the clerk keeps it or changes it. */
     expect(field("Due on").value).toBe("2026-11-20");
     fireEvent.click(screen.getByRole("button", { name: "Save the bill" }));
-    await vi.waitFor(() => expect(sent.bills).toHaveLength(1));
+    await waitLong(() => expect(sent.bills).toHaveLength(1));
     expect(sent.bills[0]).toMatchObject({ billNo: "B-312", total: 8000, dueOn: "2026-11-20" });
   });
 

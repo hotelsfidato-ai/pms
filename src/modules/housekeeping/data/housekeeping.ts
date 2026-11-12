@@ -406,9 +406,13 @@ export async function proofAddress(
 
 type Answer<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string };
 
-async function careCall<T = unknown>(path: string, method: string, body?: unknown): Promise<Answer<T>> {
+async function careCall<T = unknown>(
+  path: string, method: string, body?: unknown, headers?: Record<string, string>,
+): Promise<Answer<T>> {
   try {
-    return await api<Answer<T>>(path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    return await api<Answer<T>>(path, {
+      method, ...(body === undefined ? {} : { body: JSON.stringify(body) }), ...(headers ? { headers } : {}),
+    });
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;
@@ -456,10 +460,13 @@ export const changeMinibarItem = (
   hotelId: string, id: string, input: { price?: string; storeId?: string; active?: boolean },
 ) => careCall(`/api/hotels/${hotelId}/minibar/items/${id}`, "PATCH", input);
 
+/** One `pressKey` per take, kept until it lands: a second tap, or a resend,
+    is answered with the first record and never recorded twice (D27-396). */
 export const recordMinibar = (
   hotelId: string, input: { room: string; lines: { itemId: string; quantity: number }[]; disputed: boolean },
+  pressKey: string,
 ) => careCall<{ id: string; status: MinibarRecord["status"]; waitingWhy: MinibarRecord["waitingWhy"] }>(
-  `/api/hotels/${hotelId}/minibar/records`, "POST", input);
+  `/api/hotels/${hotelId}/minibar/records`, "POST", input, { "idempotency-key": pressKey });
 
 export const decideMinibar = (hotelId: string, id: string, input: { charge: boolean; note?: string }) =>
   careCall(`/api/hotels/${hotelId}/minibar/records/${id}/decide`, "POST", input);

@@ -24,7 +24,7 @@ import { registerKotDesign, kotDesignOf } from "./kotDesign.ts";
      that prints that KOT's kind and prints there, marked REPRINT
      (D27-329; table pos_kot_reprints, 225).
    - THE BILL PRINTER: Print bill anywhere asks it here and it prints
-     silently - INTERIM BILL, BILL, BILL · DUPLICATE. With none chosen,
+     silently - BILL (before and after payment, D27-334), BILL · DUPLICATE. With none chosen,
      the bill opens on the device as before; offline, "Print here".
 
    Who: Restaurant setup's people and the kitchen manager set it up

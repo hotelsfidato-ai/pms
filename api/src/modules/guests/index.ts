@@ -15,6 +15,8 @@ export {
 
 /* A guest's preferences (D27-383 item 10): the one rule, for the guest's page's door. */
 export { cleanPreferences, type Preferences } from "./preferenceRules.ts";
+/* The in-house guest's allergy, for the KOT and the Kitchen screen (D27-396). */
+export { inHouseAllergies } from "./preferences.ts";
 
 /* The front door of the guests and companies service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).

@@ -50,6 +50,45 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-12 · The small faults of the build-all (D27-396)
+
+**Asked for:** the eight small faults found during the build-all, each the smallest fix that is right.
+
+**Shipped**
+- The book says BILL where the slip says BILL: A8.12, B3 and B6 (D27-334); `api/src/modules/pos/kotSection.ts`'s comment.
+- The book gives the Inventory Manager's menu as the screen has it, with Inventory: A9.1 and B2.
+- The book's bell agrees with the code (`api/src/routes/notifications.ts`): requests waiting for your decision are one
+  notice with their count - A12.3's Watch out, A12.8, A12.9's table and Watch out.
+- The Kitchen screen says "1 dish working" - `src/modules/pos/pages/Kitchen.tsx` (its only count with a noun).
+- Supplier dues' columns each have their own padding, a date or a figure never wraps, the bill takes the room left,
+  the buttons wrap, and on a phone the table scrolls in its card, as Purchase request's does - `components/SupplierDues.tsx`;
+  A9-46 retaken on this copy.
+- `waitLong` in `src/test/app.ts`: vitest's waitFor with 8 s (its own default is 1 s); the 34 `vi.waitFor` waits in
+  the 6-7 November tests of purchasing, stores and pos use it. Their `findBy`s already wait 15 s (setup.ts).
+- THE ALLERGY ON THE KOT: a room-service order whose in-house guest has an allergy prints "ALLERGY: Peanuts" boxed on
+  every slip, whatever the KOT's design shows, and its Kitchen screen tickets say it in red. One server read,
+  `inHouseAllergies` (guests' front door, the same joined-record rule as the order screen), used by the docket and
+  the board - so a chef, who may not read guests' preferences, still gets it. A8.4, A8.5, A10.11.
+- ONE MINIBAR TAKE, ONE RECORD: the window mints a key when it opens and sends it as `idempotency-key` with every
+  tap; the server takes a turn on the key and answers a repeat with the first record (finance's pattern for a repeated
+  payment). Record stays disabled until the answer, and on success the window closes before the list is read again
+  (the old code re-enabled it during that read). A6.12.
+
+**Decided under D27-396**
+- A repeated minibar take is answered with the first record (200, `duplicate`), not refused: a resend whose first
+  answer was lost must read as done, or the person records it again under a new key. As work orders do (062).
+- The key is the record's id (no migration). Same take from two devices (two keys) is still two records: the desk's
+  Not charged handles it.
+- The allergy prints on room-service orders only: a dine-in order has no room until Charge to room, after its KOT.
+
+**Proved** - each guard failed with its fix taken out: the docket's allergy (API), the minibar double tap (API, two
+taps at once: two refills and two charges), 1 dish working, the ticket's and the slip's allergy, the minibar key (web).
+
+**Left open** - the virtual printer (`.local/virtual-printer/printer.mjs`, the main checkout's) draws its own copy of
+the KOT and has no ALLERGY line; the real path (KOT station and Fidato Printer) prints DocketSlip, which has it.
+
+---
+
 ## 2026-11-12 · Security fixes, upload checks, and release 22
 
 **Asked for:** what is fundamentally pending; the audit's items 5-11; input checks on document uploads and forms before

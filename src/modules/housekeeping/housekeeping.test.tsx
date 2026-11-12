@@ -36,6 +36,11 @@ const board = vi.hoisted(() => ({
   ticks: [] as unknown[],
   records: 0,
   reads: 0,
+  /* The minibar's Record (D27-396): each tap's key, an answer held until the
+     test lets it go, and the answer itself. */
+  keys: [] as string[],
+  recordHold: null as null | Promise<void>,
+  recordAnswer: null as null | { ok: false; reason: string },
 }));
 vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/modules/housekeeping/data/housekeeping")>();
@@ -59,7 +64,11 @@ vi.mock("@/modules/housekeeping/data/housekeeping", async (importOriginal) => {
       return (board.minibar ?? real.getMinibar(...args)) as Awaited<ReturnType<typeof real.getMinibar>>;
     },
     tickChecklist: async (_hotel: string, input: unknown) => { board.ticks.push(input); return { ok: true, data: { passed: false, state: "dirty" } }; },
-    recordMinibar: async () => { board.records += 1; return { ok: true, data: { id: "r", status: "charged", waitingWhy: null } }; },
+    recordMinibar: async (_hotel: string, _input: unknown, key: string) => {
+      board.records += 1; board.keys.push(key);
+      if (board.recordHold) await board.recordHold;
+      return board.recordAnswer ?? { ok: true as const, data: { id: "r", status: "charged" as const, waitingWhy: null } };
+    },
     listWorkOrders: async (...args: Parameters<typeof real.listWorkOrders>) => {
       if (!board.orders) return real.listWorkOrders(...args);
       return {
@@ -294,7 +303,10 @@ describe("checklists and the minibar on the room card (D27-383 item 10, D27-396)
     required, roomTypes: [], mayKeep: false,
     checklists: [{ id: "c1", job: "inspection", roomTypeId: null, roomType: null, items: ["Linen", "Bathroom"] }],
   });
-  const reset = () => { board.lists = null; board.minibar = null; board.marks = 0; board.ticks = []; board.records = 0; };
+  const reset = () => {
+    board.lists = null; board.minibar = null; board.marks = 0; board.ticks = []; board.records = 0;
+    board.keys = []; board.recordHold = null; board.recordAnswer = null;
+  };
   const item = (id: string, name: string, price: number | null) => ({
     id, stockItemId: id, name, unit: "bottle", price, storeId: "s", store: "Main store", alcohol: false, active: true, onHand: 5 });
   const MINIBAR = (mayRecord: boolean) => ({ items: [item("w", "Water", 60), item("c", "Cola", null)], records: [],
@@ -365,6 +377,34 @@ describe("checklists and the minibar on the room card (D27-383 item 10, D27-396)
       fireEvent.click(within(dialog).getByRole("button", { name: "One more Water" }));
       fireEvent.click(within(dialog).getByRole("button", { name: "Record what was taken" }));
       await waitFor(() => expect(board.records).toBe(1));
+    } finally { reset(); }
+  });
+
+  it("Record waits for the answer, and a second tap after a refusal sends the same take's key (D27-396)", async () => {
+    board.minibar = MINIBAR(true);
+    let release!: () => void;
+    board.recordHold = new Promise<void>((r) => { release = r; });
+    board.recordAnswer = { ok: false, reason: "Water: the store holds none." };
+    try {
+      const room = await open();
+      fireEvent.click(room.getByRole("button", { name: "Record the minibar in room 202" }));
+      const dialog = await screen.findByRole("dialog", { name: "Minibar · Room 202" });
+      fireEvent.click(within(dialog).getByRole("button", { name: "One more Water" }));
+      const record = within(dialog).getByRole("button", { name: "Record what was taken" });
+      fireEvent.click(record);
+      await waitFor(() => expect(board.records).toBe(1));
+      expect(record.hasAttribute("disabled"), "Record could be tapped again before the answer").toBe(true);
+      fireEvent.click(record);
+      expect(board.records).toBe(1);
+
+      await act(async () => { release(); await board.recordHold; });
+      expect(await within(dialog).findByText("Water: the store holds none.")).toBeDefined();
+      board.recordHold = null; board.recordAnswer = null;
+      fireEvent.click(record);
+      await waitFor(() => expect(board.records).toBe(2));
+      expect(board.keys[0]).toMatch(/^[0-9a-f-]{36}$/);
+      expect(board.keys[1], "the second tap was a new take").toBe(board.keys[0]);
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     } finally { reset(); }
   });
 

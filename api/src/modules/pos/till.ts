@@ -27,6 +27,13 @@ import { registerOwnerAllowance, allowancePlan, setDiscount, maySettleAllowance,
 import { registerTableMoves } from "./tableMoves.ts";
 import { registerDishProfit } from "./dishProfit.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
+/* The in-house guest's allergy, on the KOT and the Kitchen screen (D27-396). */
+import { inHouseAllergies } from "../guests/index.ts";
+
+/** The room a room-service order is for, as the order screen reads it
+    ("Room 204" or "204"): upper case, for inHouseAllergies. */
+const roomOf = (type: string, table: string | null) =>
+  type === "room_service" && table ? table.trim().replace(/^Room\s+/i, "").toUpperCase() || null : null;
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -6541,10 +6548,17 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
       [orderId, kotNo, kind?.id ?? null],
     );
 
+    /* THE GUEST'S ALLERGY (D27-396): a room-service order whose in-house
+       guest has one recorded prints it on every slip, whatever the KOT's
+       design shows - the order screen shows it, so the kitchen must too. */
+    const room = roomOf(head[0].order_type, head[0].table_ref);
+    const allergy = room ? (await inHouseAllergies(client, hotelId, [room])).get(room) ?? null : null;
+
     return {
       kotNo,
       /* Which slip (D27-292): its name heads the paper, "BAR KOT 14". */
       kind,
+      allergy,
       orderNo: head[0].order_no,
       table: head[0].table_ref,
       orderType: head[0].order_type,
@@ -6681,6 +6695,11 @@ till.get("/:code/kitchen", async (c) => {
       [hotelId, await businessDateFor(client, hotelId)],
     );
 
+    /* The in-house guest's allergy on a room-service ticket (D27-396), as
+       the KOT prints it. One read for the board. */
+    const allergies = await inHouseAllergies(client, hotelId,
+      [...new Set(rows.flatMap((r) => roomOf(r.order_type, r.table_ref) ?? []))]);
+
     return {
       lines: rows.map((r) => ({
         id: r.id,
@@ -6688,6 +6707,7 @@ till.get("/:code/kitchen", async (c) => {
         table: r.table_ref,
         orderType: r.order_type,
         outlet: r.outlet,
+        allergy: allergies.get(roomOf(r.order_type, r.table_ref) ?? "") ?? null,
         /* The dish, with its numbered add-ons under it (D27-289), as the
            docket prints them - one ticket, the "+ Kebab" not lost in a name. */
         name: r.numbered_addons?.dish ?? r.name,

@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-12 · The allergy on the KOT, and "1 dish working" (D27-396)
+
+A room-service order's in-house guest's allergy prints boxed on every KOT slip (`DocketSlip`, no design setting hides
+it) and in red on its Kitchen screen tickets; the docket and the board read it from guests' `inHouseAllergies`. The
+Kitchen screen says "1 dish working". Tests `kitchenAllergy.test.tsx`, `api/test/modules/pos/kotAllergy.test.ts`, each
+seen failing without its fix. Decided under D27-396: room-service orders only, because a dine-in order has no room
+until Charge to room. The whole session is in the root `CHANGELOG.md`.
+
+---
+
 ## 2026-11-06 · Outside table bookings, a voluntary service charge and tips, coupons, profit per dish (D27-383 item 9, built under D27-396)
 
 **Asked for.** Item 9 of the owner's approved HMS-audit list: table booking for outside diners; service charge and tips; coupons; profit per dish. The owner (D27-396, 6 November): build all, no questions; undecided points take the safest, simplest choice, written here.

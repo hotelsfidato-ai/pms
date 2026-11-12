@@ -72,6 +72,15 @@ export function DocketSlip({ d, design = KOT_TODAY }: { d: Docket; design?: KotD
           )}
         </>
       )}
+      {/* THE GUEST'S ALLERGY (D27-396), boxed and bold, before the dishes:
+          the order screen shows it in red, and a thermal roll has no red.
+          No design setting hides it. */}
+      {d.allergy && (
+        <p className="mt-1.5 border-2 border-ink-900 px-1.5 py-1 text-center font-bold"
+           style={{ fontSize: TABLE_PX[design.numberSize] }} data-kot-allergy>
+          ALLERGY: {d.allergy}
+        </p>
+      )}
       {((show.waiter && d.waiter) || (show.covers && d.covers)) && (
         <p className="text-center">
           {[show.waiter && d.waiter ? `Waiter: ${d.waiter}` : null,

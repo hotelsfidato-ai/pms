@@ -70,7 +70,7 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
         <Card key={g.supplierId ?? g.name} className="overflow-x-auto">
           <CardBody className="space-y-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <p className="text-base font-semibold text-ink-900 flex-1 min-w-0">{g.name}</p>
+              <p className="text-base font-semibold text-ink-900 flex-1 min-w-[10rem]">{g.name}</p>
               {g.supplierId && (
                 <>
                   <Link className="text-sm underline" to={`/reports/supplier-statement?supplier=${g.supplierId}`}>Statement</Link>
@@ -82,14 +82,19 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
               )}
               <span className="text-base font-medium tabular text-ink-900" data-supplier-total>{money(owedOf(g))}</span>
             </div>
+            {/* SPACED AND UNBROKEN (D27-396): at 1280 the dates broke over two
+                lines and the amount ran into Left ("7 Nov 20267 Dec 2026"). Each
+                cell has its own padding, a date or a figure never wraps, and the
+                bill takes the room left; on a phone the table scrolls inside its
+                card, as Purchase request's does (the page never scrolls sideways). */}
             <table className="w-full text-sm">
               <thead className="border-b border-grey-200 text-2xs font-semibold uppercase tracking-[0.025em] text-grey-500 whitespace-nowrap">
                 <tr>
-                  <th className="h-9 text-left">Bill</th>
-                  <th className="h-9 text-left">Bill date</th>
-                  <th className="h-9 text-left">Due</th>
-                  <th className="h-9 text-right">Amount</th>
-                  <th className="h-9 text-right">Left</th>
+                  <th className="h-9 pr-3 text-left">Bill</th>
+                  <th className="h-9 px-3 text-left">Bill date</th>
+                  <th className="h-9 px-3 text-left">Due</th>
+                  <th className="h-9 px-3 text-right">Amount</th>
+                  <th className="h-9 px-3 text-right">Left</th>
                   <th className="h-9" />
                 </tr>
               </thead>
@@ -112,7 +117,7 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
                   ];
                   return [
                     <tr key={b.id} data-bill={b.billNo}>
-                      <td className="py-2">
+                      <td className="py-2 pr-3 min-w-[12rem]">
                         {b.billNo}
                         <span className="text-grey-500">
                           {" · "}
@@ -127,24 +132,28 @@ export function SupplierDues({ hotelId }: { hotelId: string }) {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 tabular">{dateShort(b.billDate)}</td>
-                      <td className={overdue ? "py-2 tabular text-brand-red-700 font-medium" : "py-2 tabular"}
+                      <td className="py-2 px-3 tabular whitespace-nowrap">{dateShort(b.billDate)}</td>
+                      <td className={overdue ? "py-2 px-3 tabular whitespace-nowrap text-brand-red-700 font-medium" : "py-2 px-3 tabular whitespace-nowrap"}
                         data-overdue={overdue || undefined}>
                         {dateShort(b.dueOn)}{overdue ? " · overdue" : ""}
                       </td>
-                      <td className="py-2 text-right tabular">{money(Number(b.amount))}</td>
-                      <td className="py-2 text-right tabular" data-left>
+                      <td className="py-2 px-3 text-right tabular whitespace-nowrap">{money(Number(b.amount))}</td>
+                      <td className="py-2 px-3 text-right tabular whitespace-nowrap" data-left>
                         {money(Number(b.owed))}
                         {b.status === "part-paid" && <span className="block text-2xs text-grey-500">Part-paid</span>}
                       </td>
-                      <td className="py-2 pl-3 text-right whitespace-nowrap space-x-1">
-                        <Button size="sm" variant="secondary" onClick={() => setPaying(b)}>Record payment</Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={() => setCrediting({ bill: b, supplierId: b.supplierId ?? "", supplier: b.supplier })}>
-                          Credit note
-                        </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={() => setReversing({ kind: "bill", id: b.id, what: `bill ${b.billNo}` })}>Reverse</Button>
+                      <td className="py-2 pl-3">
+                        {/* The three buttons wrap under each other rather than
+                            push the figures off a 1280 screen. */}
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <Button size="sm" variant="secondary" onClick={() => setPaying(b)}>Record payment</Button>
+                          <Button size="sm" variant="ghost"
+                            onClick={() => setCrediting({ bill: b, supplierId: b.supplierId ?? "", supplier: b.supplier })}>
+                            Credit note
+                          </Button>
+                          <Button size="sm" variant="ghost"
+                            onClick={() => setReversing({ kind: "bill", id: b.id, what: `bill ${b.billNo}` })}>Reverse</Button>
+                        </div>
                       </td>
                     </tr>,
                     ...entries.map((e) => (

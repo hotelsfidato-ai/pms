@@ -222,11 +222,27 @@ minibar.post("/:code/minibar/records", async (c) => {
     return c.json(refuse("Each item once, with how many."), 409);
   }
 
+  /* ONE TAKE, ONE RECORD (D27-396): the window's key, minted when it opened
+     and sent with every tap, is the record's id. A double tap or a resend
+     waits its turn, then is answered with the first record - never a second
+     refill or charge - as finance answers a repeated payment. */
+  const key = c.req.header("idempotency-key") ?? "";
+  const pressed = UUID.test(key) ? key.toLowerCase() : null;
+
   try {
     const result = await withSession(c.get("subject"), async (client, session) => {
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return null;
       if (!may(await roleAt(client, hotelId), MINIBAR_RECORDERS)) return { forbidden: true as const };
+      if (pressed) {
+        await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`minibar-take:${pressed}`]);
+        const { rows: done } = await client.query<{ status: string; why: string | null }>(
+          "select status, waiting_why as why from minibar_records where id = $1 and hotel_id = $2",
+          [pressed, hotelId]);
+        if (done[0]) {
+          return { ok: true as const, duplicate: true, data: { id: pressed, status: done[0].status, waitingWhy: done[0].why } };
+        }
+      }
 
       const { rows: rm } = await client.query<{ id: string; number: string }>(
         "select id::text, number from rooms where hotel_id = $1 and upper(number) = $2 and is_active",
@@ -271,7 +287,7 @@ minibar.post("/:code/minibar/records", async (c) => {
 
       const status = inRoom[0] && !input.disputed ? "charged" : "waiting";
       const why = status === "charged" ? null : inRoom[0] ? "disputed" : "after_checkout";
-      const id = randomUUID();
+      const id = pressed ?? randomUUID();
 
       /* The refill, from each item's store. */
       const lines: Line[] = [];
