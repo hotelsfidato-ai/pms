@@ -106,6 +106,11 @@ describe("which screens, and who", () => {
     }
   });
 
+  it("gives every screen a title Excel takes as a sheet's name", () => {
+    /* Excel refuses : \ / ? * [ ] in a sheet's name: a 500 on Marketing, seen 12 November. */
+    for (const [key, s] of Object.entries(LIST_SCREENS)) expect(s.title, key).toMatch(/^[^:\\/?*[\]]+$/);
+  });
+
   it("holds each own screen's role list equal to the list its route asks", () => {
     const same = (key: keyof typeof OWN_READERS, original: readonly string[]) =>
       expect([...OWN_READERS[key]!].sort(), key).toEqual([...original].sort());

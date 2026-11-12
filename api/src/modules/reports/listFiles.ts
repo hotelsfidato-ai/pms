@@ -6,7 +6,7 @@ import { renderPdf, renderXlsx } from "../../reportRender.ts";
 import { heading, propertyFor } from "./figures.ts";
 import type { Cell, CellKind, ReportDoc } from "./document.ts";
 import {
-  EXPORT_KINDS, LIST_SCREENS, MAX_EXPORT_ROWS, exportRefusal, maskId, namesAnId, whoOf,
+  EXPORT_KINDS, LIST_SCREENS, MAX_EXPORT_ROWS, exportRefusal, maskId, namesAnId, forWhom,
   type ExportKind, type ListScreen, type ListScreenKey,
 } from "./listExports.ts";
 
@@ -172,7 +172,7 @@ listFiles.post("/:code/exports/:file{[a-z0-9-]+\\.(?:pdf|xlsx)}", async (c) => {
       const roles = OWN_READERS[key as ListScreenKey];
       if (!roles) throw new Error(`listFiles.ts: ${key} has an own read rule and no OWN_READERS line`);
       if (!roles.includes(role)) {
-        return { status: 403 as const, error: `The ${screen.title.toLowerCase()} is for ${whoOf(roles)}. Ask one of them.` };
+        return { status: 403 as const, error: `The ${screen.title.toLowerCase()} ${forWhom(roles)}` };
       }
     }
     const refused = exportRefusal(role, screen);

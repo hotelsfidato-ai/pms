@@ -93,8 +93,8 @@ export const LIST_SCREENS = {
   /* Members and their points, worth a rupee each. */
   "loyalty": { title: "Loyalty", read: `${H}/loyalty`, holds: "guests" },
   "leads": { title: "Leads and WhatsApp", read: `${H}/leads`, holds: "guests" },
-  "marketing-campaigns": { title: "Marketing: campaigns", read: `${H}/marketing/numbers`, holds: "money" },
-  "marketing-sources": { title: "Marketing: by booking source", read: `${H}/marketing/numbers`, holds: "money" },
+  "marketing-campaigns": { title: "Marketing campaigns", read: `${H}/marketing/numbers`, holds: "money" },
+  "marketing-sources": { title: "Marketing by booking source", read: `${H}/marketing/numbers`, holds: "money" },
   /* ID numbers (masked in the file), addresses. */
   "online-checkin": { title: "Online check-in", read: `${H}/online-checkin`, holds: "guests" },
   "crs-bookings": { title: "CRS bookings", read: `${H}/crs/bookings` },
@@ -119,7 +119,7 @@ export const LIST_SCREENS = {
   "spa-treatments": { title: "Spa treatments", read: `${H}/spa/treatments` },
   /* A function's agreed price is its price, read by whoever reads bookings. */
   "banquet": { title: "Banquet diary", read: `${H}/banquet` },
-  "night-audit-runs": { title: "Night audit: closed days", read: `${H}/night-audit/runs`, holds: "money" },
+  "night-audit-runs": { title: "Night audit closed days", read: `${H}/night-audit/runs`, holds: "money" },
   "equipment": { title: "Equipment register", read: `${H}/equipment`, right: { action: "export", resource: "equipment" } },
   /* Prices and terms, as the rest. */
   "rates": { title: "Rates", read: `${H}/pricing` },
@@ -155,15 +155,16 @@ const NAMED: Readonly<Record<Role, string>> = {
   automation: "an automation account",
 };
 
-/** These roles in words, in the matrix's order. */
-export function whoOf(roles: readonly string[]): string {
+/** "is for X. Ask one of them." - these roles in words, in the matrix's order. */
+export function forWhom(roles: readonly string[]): string {
   const names = ROLES.filter((r) => r !== "automation" && roles.includes(r)).map((r) => NAMED[r]);
-  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+  const who = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+  return `is for ${who}. Ask ${names.length === 1 ? "them" : "one of them"}.`;
 }
 
 /** Who holds a right, in words, from the matrix itself. */
 const whoCan = (action: Action, resource: Resource): string =>
-  whoOf(ROLES.filter((r) => can(r, action, resource)));
+  forWhom(ROLES.filter((r) => can(r, action, resource)));
 
 /** Why this role may not export this screen, or null when it may. Only the
     `holds` part: that the role may open the screen is the read rule's. */
@@ -171,7 +172,7 @@ export function exportRefusal(role: Role, screen: ListScreen): string | null {
   if (screen.right) {
     const { action, resource } = screen.right;
     return can(role, action, resource) ? null
-      : `Exporting the ${screen.title.toLowerCase()} is for ${whoCan(action, resource)}. Ask one of them.`;
+      : `Exporting the ${screen.title.toLowerCase()} ${whoCan(action, resource)}`;
   }
   if (!screen.holds || can(role, "export", "report")) return null;
   return `A file of ${screen.holds === "money" ? "money" : "guests' details"} is for those who `

@@ -229,10 +229,10 @@ export default function EquipmentRegisterPage() {
           </div>
         }
       >
-        {(!mayCreate || !mayExport) && (
+        {/* Who may export is said beside PDF and Excel (ExportButtons), the same right as CSV. */}
+        {!mayCreate && (
           <p className="text-sm text-grey-600 leading-relaxed">
-            {!mayCreate && `Adding and changing equipment is for the ${whoMay("create")}. `}
-            {!mayExport && `Exporting it is for the ${whoMay("export")}.`}
+            {`Adding and changing equipment is for the ${whoMay("create")}.`}
           </p>
         )}
       </PageHeader>

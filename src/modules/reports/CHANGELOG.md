@@ -11,6 +11,85 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-12 · PDF and Excel on the remaining lists (D27-383 item 1, second part)
+
+Branch `worktree-agent-a838d2e3d1d5f61a7`, copy `.claude\worktrees\agent-a838d2e3d1d5f61a7`, on cp6 at `8129a130`. No migration.
+
+**Asked for.** The ~45 lists the first part left open, the same way (a column list, one `ExportButtons`, one
+`LIST_SCREENS` line); the Guest ledger's and Cashier shift's CSV to ask the files' download right; the Equipment
+register through the registry with its own export right; picture A8-46 retaken; tests that see the new refusals.
+
+**Shipped** (each: PDF and Excel of what the screen shows, its filters as words on the file).
+- Front office: Booking sources, Cancellation terms, CRS bookings, Online check-in (details waiting; ID and visa
+  numbers masked by kind `id`), Cash deposits (the deposits log), Night audit's closed days.
+- Housekeeping and guest services: Work orders (open or closed), Minibar (the fortnight's records), Checklists (each
+  room's record), Guest requests (the team chosen), Wake-up calls, Lost property.
+- Guests: Guest 360 (a search's guests), Possible same person (the pairs), Guest messages, Reviews, Guest feedback,
+  Loyalty (in house), Leads (read so far; the file says when more wait), Marketing (both tables, two keys).
+- Restaurant: Table bookings, Menu (dishes by section), Charges to rooms.
+- Store and purchasing: Store (the shelf, place and tile), Kitchen stock (the day sheet, which is also Inventory's
+  Restaurant tab), Purchasing (Restaurant and hotel), Equipment register (CSV kept, renamed CSV beside them).
+- Laundry dockets and price list, Spa diary and treatments, Banquet diary.
+- Rates (the fortnight's base prices, a day a column), Revenue outlook (ninety nights).
+- Administration: People, Users, Sign-ins (one person's), Audit log and Activity (the page shown), Properties.
+- `listExports.ts`: `right` on a screen (an export right of its own, asked INSTEAD of the reports'), its sentence
+  built from the matrix (`forWhom`); `listFiles.ts`: `OWN_READERS` - a screen whose read rule is `own` is asked the
+  role list its own GET route asks (the gate lets an `own` rule through for everybody). They are copies, because a
+  service is reached only through its front door; the test holds each equal to its original.
+- `ReportShell` takes `csvRefusal`; the Guest ledger and Cashier shift pass `exportRefusal(...)`: their CSV is greyed
+  for a role without the reports' download right, with the sentence as its title (the files' sentence is beside it).
+- Equipment register: the page's own "Exporting it is for ..." line went: ExportButtons says it once.
+- `finance/deposits.ts`: `SEE` exported, for the test only.
+
+**Decided under D27-396** (for the owner to review).
+- **A service with an `export` right of its own in the matrix, whose list carries its costs or takings, asks that
+  right** instead of the reports': the Store (`stock`: owner, Admin, GM, Inventory Manager, accountant), Purchasing,
+  Laundry dockets, the Spa diary, the Equipment register (as the master decided). People, Users and Sign-ins ask
+  `export` on `user`, which the matrix gives the owner alone: the staff's own emails and phones. Because: the
+  matrix already says who takes each service's data out; a second rule would disagree with it.
+- **Money**: Cash deposits, Minibar, Night audit's closed days, Charges to rooms, Marketing, Contracts (credit
+  limits), the Audit log. **Guests' details**: Guest messages, Guest 360, Possible same person, Reviews, Guest
+  feedback, Loyalty (points worth a rupee each), Leads, Online check-in, Table bookings (an outside diner's phone),
+  Activity. Open to whoever opens them: a guest's name and room without their contact (Requests, Wake-up calls, CRS
+  bookings), prices and terms (Booking sources' commission %, Menu, Rates, Cancellation terms, Laundry prices, Spa
+  treatments, a banquet's agreed price - as the first part treated a room rate), quantities (Kitchen stock), and
+  Work orders WITHOUT their repair costs (those stay on the order; a cost column would make it a list of money).
+- **A list read a page at a time** (Audit log, Activity, Leads) saves the page shown, and says which entries.
+- **Not added, and why**: Cashiering (the open drawer being counted, not a list; its record is the Cashier shift
+  report, which has PDF and Excel); Rooming list (already PDF, Excel and CSV of its own, D27-383 item 8); Bar stock
+  and Inventory's Bar tab (the Bar stock report is the same sheet, with PDF and Excel; Inventory links to it);
+  Supplier dues (the Supplier dues report has PDF and Excel). The first part's table called the Rooming list "none":
+  it was not.
+- **The Form III register's CSV keeps passport numbers whole** (the master, D27-396): it is the FRRO filing extract.
+  Its PDF and Excel stay masked. The manual's A11.2 says so.
+- The Guest ledger's and Cashier shift's CSV are made in the browser from rows the person already reads: the
+  greyed button is the rule as asked, not a server guard (there is no CSV route to guard).
+
+**Found.** Excel refuses `:` in a sheet's name: "Marketing: campaigns" answered 500. Titles changed; a test holds
+every title to Excel's rule.
+
+**Proved.** `api/test/listFiles.test.ts` 15/15 (exit 0): every screen names a real read rule and every `own` one
+has its role list; each copy equals its original; refused by the read rule (front desk: Marketing; housekeeping:
+Cash deposits, Audit log, Guest messages, by the own lists), by the download right (front desk: Minibar, Guest
+messages, Closed days, Table bookings), by a screen's own right (front desk: Equipment, with the sentence;
+housekeeping: Store); given (front desk Wake-up calls, housekeeping Work orders and Lost property; GM Equipment).
+`listExport.test.tsx` 5/5: reception's Guest ledger CSV greyed with the sentence; the Equipment right named.
+In the browser (5194, my own database): as the GM every new screen's PDF/Excel answered 200 with a file (Excel
+pressed on each, PDF on Marketing, Menu, Store, Equipment, Rates); Leads greyed (not connected); Users greyed "for
+the owner. Ask them."; as the owner People, Users, Sign-ins 200; Guest 360 searched "an": 50 shown = 50 sent, the
+toast "Excel saved 5EL-guest-360-2026-11-12.xlsx"; as reception the Guest ledger's PDF, Excel and CSV greyed and the
+Equipment register's with "Exporting the equipment register is for the owner, an administrator, the general manager
+or the accountant. Ask one of them." Laundry, spa and banquet were switched on in my database to see theirs.
+
+**Manual.** A line under each screen in A1, A2, A4, A6, A7, A8, A9, A10, A13, A14, A15, A16, A17; A11.2's list and
+its "Who may"; A8-46 retaken (six bills settled in my database: the demo has none closed); A9-37's callout and its
+mark now name CSV. **A9-37's picture is not retaken**: it needs the chapter's run from the first equipment item to
+the waiting request (A9-30 onwards), on an empty register; left for the next full `a9` run.
+
+**Left open.** A9-37's picture (above). The CSV on the Guest ledger and Cashier shift is a browser rule (above).
+
+---
+
 ## 2026-11-12 · PDF and Excel on the list screens (D27-383 item 1)
 
 Branch `worktree-agent-ab4eb6e6859f2b2b3`, copy `.claude\worktrees\agent-ab4eb6e6859f2b2b3`, cp6 merged at `92a4b9fe`.
