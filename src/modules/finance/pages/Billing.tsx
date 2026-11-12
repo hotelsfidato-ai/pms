@@ -15,7 +15,7 @@ import { getCompanyPayments } from "@/modules/finance/data/companyPayments";
 import { RecordCompanyPayment, PaymentsReceived } from "@/modules/finance/flows/CompanyPayments";
 import { listPayments, paymentsByMethod, type PaymentRow } from "@/modules/finance/data/billing";
 import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
-import { getReport } from "@/modules/reports";
+import { getReport, ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    PAYMENTS · INVOICES · CITY LEDGER
@@ -77,6 +77,19 @@ const PAYMENT_COLUMNS: Column<PaymentRow>[] = [
   },
 ];
 
+/* The list in a file (D27-383 item 1): every receipt, reversals marked. */
+const PAYMENT_EXPORT: ExportColumn<PaymentRow>[] = [
+  { label: "Taken", value: (p) => p.at, kind: "datetime" },
+  { label: "Guest", value: (p) => p.guest },
+  { label: "Room", value: (p) => p.roomNumber },
+  { label: "Reference", value: (p) => p.reference },
+  { label: "Method", value: (p) => p.method },
+  { label: "Reversed", value: (p) => (p.reversed ? "Reversed" : null) },
+  { label: "Narration", value: (p) => p.description },
+  { label: "Taken by", value: (p) => p.user },
+  { label: "Amount", value: (p) => p.amount, kind: "money" },
+];
+
 export function PaymentsPage() {
   const hotelId = useHotel();
 
@@ -97,6 +110,8 @@ export function PaymentsPage() {
       <PageHeader
         title="Payments"
         description="Every receipt against a folio, newest first. Reversed receipts stay on the list."
+        actions={<ExportButtons screen="payments" rows={rows.data} columns={PAYMENT_EXPORT}
+          facts={[["Showing", "every receipt, newest first"]]} />}
       />
 
       {byMethod.isLoading ? (
@@ -186,6 +201,14 @@ const LEDGER_COLUMNS: Column<LedgerRow>[] = [
     ) },
 ];
 
+const LEDGER_EXPORT: ExportColumn<LedgerRow>[] = [
+  { label: "Account", value: (r) => r.account },
+  { label: "Opening", value: (r) => r.opening, kind: "money" },
+  { label: "Sent to the account", value: (r) => r.debit, kind: "money" },
+  { label: "Received", value: (r) => r.credit, kind: "money" },
+  { label: "Balance", value: (r) => r.closing, kind: "money" },
+];
+
 export function PropertyCityLedgerPage() {
   const hotelId = useHotel();
   const role = useRole();
@@ -223,11 +246,15 @@ export function PropertyCityLedgerPage() {
         title="Company accounts"
         description={`What each company or booking site owes and paid, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
         badge={data ? <StatusPill tone={owed > 0 ? "warning" : "success"}>{money(owed)} owed</StatusPill> : undefined}
-        actions={mayRecord && paid.data ? (
-          <Button variant="primary" className="h-11" onClick={() => setRecording(true)}>
-            <Plus className="size-4" /> Record payment
-          </Button>
-        ) : undefined}
+        actions={<>
+          <ExportButtons screen="company-accounts" rows={data ? rows : undefined} columns={LEDGER_EXPORT}
+            facts={[["Period", `${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}`]]} />
+          {mayRecord && paid.data && (
+            <Button variant="primary" className="h-11" onClick={() => setRecording(true)}>
+              <Plus className="size-4" /> Record payment
+            </Button>
+          )}
+        </>}
       />
       <Card>
         <DataTable<LedgerRow>

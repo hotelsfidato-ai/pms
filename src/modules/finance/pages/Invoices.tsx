@@ -15,6 +15,7 @@ import { describeError } from "@/components/ui/States";
 import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, listVatBills, type BillableRow, type IssuedInvoice, type IssuedVatBill } from "@/modules/finance/data/billing";
 import { TaxRulesCard } from "@/modules/finance/flows/TaxRulesCard";
 import { IssueInvoiceDialog } from "@/modules/finance/flows/IssueInvoiceDialog";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    INVOICES
@@ -194,6 +195,16 @@ function vatColumns(hotelId: string): Column<IssuedVatBill>[] {
     },
   ];
 }
+
+/* The Issued list in a file (D27-383 item 1): every number, as on screen. */
+const ISSUED_EXPORT: ExportColumn<IssuedInvoice>[] = [
+  { label: "Number", value: (i) => i.number },
+  { label: "Billed to", value: (i) => i.recipient },
+  { label: "Issued", value: (i) => i.issuedAt },
+  { label: "Tax", value: (i) => i.taxTotal, kind: "money" },
+  { label: "Total", value: (i) => i.total, kind: "money" },
+  { label: "State", value: (i) => (i.isCreditNote ? "Credit note" : i.creditedBy ? `Cancelled by ${i.creditedBy}` : null) },
+];
 
 export default function InvoicesPage() {
   const hotelId = useHotel();
@@ -422,7 +433,11 @@ export default function InvoicesPage() {
           screen's name). */}
       <div className="mt-5 mb-3">
         <h2 className="text-md font-semibold text-ink-900">Issued</h2>
-        <p className="text-sm text-grey-500 mt-0.5">Every number allocated at this property, newest first. A credit note sits beside the invoice it cancels.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-0.5">
+          <p className="text-sm text-grey-500">Every number allocated at this property, newest first. A credit note sits beside the invoice it cancels.</p>
+          <ExportButtons screen="invoices" rows={invoices.data} columns={ISSUED_EXPORT}
+            facts={[["Showing", "every number issued, newest first"]]} />
+        </div>
       </div>
 
       <Card>

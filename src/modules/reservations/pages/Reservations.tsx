@@ -194,6 +194,12 @@ export default function ReservationsPage() {
         error={error}
         onRetry={() => refetch()}
         columns={COLUMNS}
+        exportAs={{ screen: "all-bookings", facts: [
+          ["Showing", active.label],
+          ["Search", search.trim()],
+          [asked ? "Searched" : "Leaving from", asked ? "every booking" : dateLong(since)],
+          ["Sorted", "arrival, latest first"],
+        ] }}
         offerCheckIn
         /* One search on this screen, the one in the title row (the owner,
            27 September). */

@@ -8,6 +8,7 @@ import {
   DoorOpen, Users, LogOut, ChevronRight, GlassWater,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { dateLong } from "@/lib/format";
 import { HeldError } from "@/lib/api";
 import {
   isOnline, watchConnection, list as outboxList, subscribe as outboxSubscribe,
@@ -28,6 +29,7 @@ import {
   getChecklists, getMinibar, checklistFor, type Checklist, type MinibarItem,
 } from "@/modules/housekeeping/data/housekeeping";
 import { RoomPreferences } from "@/modules/guests";
+import { ExportButtons } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW E — housekeeping, on a phone
@@ -290,6 +292,10 @@ export default function HousekeepingPage() {
       ? all.filter((r) => r.occupied)
       : all.filter((r) => !r.occupied && r.housekeeping === key);
 
+  /* The board in a file (D27-383 item 1): its groups in order, the sheet
+     chosen above (a housekeeper's own, or everyone's). */
+  const exported = GROUPS.flatMap((g) => bucket(g.key).map((room) => ({ room, state: g.label })));
+
   const queuedFor = (number: string) => held.filter((q) => q.roomNumber === number);
 
   /* A count at the top jumps to its group (the owner, 28 September). The
@@ -316,7 +322,18 @@ export default function HousekeepingPage() {
         /* Connectivity, read from the browser rather than asserted: a pill
            in the title row (the owner, 27 September); the held changes are
            said under the title while there are some. */
-        actions={
+        actions={<>
+          <ExportButtons screen="housekeeping" rows={rooms.data ? exported : undefined}
+            columns={[
+              { label: "Room", value: (r) => r.room.number },
+              { label: "Type", value: (r) => r.room.type },
+              { label: "Floor", value: (r) => r.room.floor, kind: "count" },
+              { label: "State", value: (r) => r.state },
+              { label: "Guest", value: (r) => r.room.guest },
+              { label: "Due out", value: (r) => (r.room.dueOut ? "Yes" : null) },
+              { label: "Housekeeper", value: (r) => assignedTo.get(r.room.number)?.staffName },
+            ]}
+            facts={[["Date", dateLong(BUSINESS_DATE)], ["Sheet", only === null ? "every room" : only === UNASSIGNED ? "rooms nobody has" : sheetOwner]]} />
           <span className={cn(
             "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-semibold ring-1 ring-inset",
             online
@@ -326,7 +343,7 @@ export default function HousekeepingPage() {
             {online ? <RefreshCw className="size-3.5" aria-hidden /> : <CloudOff className="size-3.5" aria-hidden />}
             {online ? "Online" : "Offline"}
           </span>
-        }
+        </>}
       />
       {held.length > 0 && (
         <p className="-mt-3 mb-5 text-sm font-medium text-brand-yellow-800 tabular" data-queue-count>

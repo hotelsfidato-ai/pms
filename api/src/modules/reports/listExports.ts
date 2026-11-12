@@ -42,8 +42,9 @@ export const LIST_SCREENS = {
   /* Front desk: one stay list (StayTable), five screens. */
   "arrivals": { title: "Arrivals", read: `${H}/stays` },
   "upcoming-arrivals": { title: "Upcoming arrivals", read: `${H}/stays` },
-  "in-house": { title: "In house", read: `${H}/stays` },
-  "due-out": { title: "Due out", read: `${H}/stays` },
+  /* These two carry each guest's balance: money (decided under D27-396). */
+  "in-house": { title: "In house", read: `${H}/stays`, holds: "money" },
+  "due-out": { title: "Due out", read: `${H}/stays`, holds: "money" },
   "walk-ins": { title: "Walk-ins", read: `${H}/stays` },
   "all-bookings": { title: "All bookings", read: `${H}/stays` },
   /* Money. */
@@ -51,8 +52,11 @@ export const LIST_SCREENS = {
   "invoices": { title: "Invoices", read: `${H}/invoices`, holds: "money" },
   "payments": { title: "Payments", read: `${H}/payments`, holds: "money" },
   "company-accounts": { title: "Company accounts", read: `${H}/reports/city-ledger`, holds: "money" },
-  /* Guests. */
+  /* Guests, and where the business came from (revenue and what is owed: money). */
   "guests": { title: "Guests", read: `${H}/guests`, holds: "guests" },
+  "companies": { title: "Companies and agents", read: `${H}/companies`, holds: "money" },
+  /* Housekeeping: the board's rooms, who is in them and who cleans them. */
+  "housekeeping": { title: "Housekeeping", read: `${H}/housekeeping/assignments` },
   /* The four reports that were CSV only. */
   "gst-sales": { title: "GST sales register", read: `${H}/reports/gst-sales`, holds: "money" },
   "c-form": { title: "Form III register", read: `${H}/reports/c-form`, holds: "guests" },

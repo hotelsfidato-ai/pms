@@ -101,6 +101,9 @@ export default function ArrivalsPage() {
         error={active.error}
         onRetry={() => active.refetch()}
         columns={COLUMNS}
+        exportAs={upcoming
+          ? { screen: "upcoming-arrivals", facts: [["Expected", `${dateLong(addDays(BUSINESS_DATE, 1))} to ${dateLong(addDays(BUSINESS_DATE, 14))}`]] }
+          : { screen: "arrivals", facts: [["Expected", dateLong(BUSINESS_DATE)]] }}
         offerCheckIn={!upcoming}
         emptyTitle={upcoming ? "Nothing booked in the next fortnight" : "No arrivals today"}
         emptyBody={

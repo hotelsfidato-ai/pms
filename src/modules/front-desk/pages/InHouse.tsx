@@ -145,6 +145,9 @@ export default function InHousePage() {
         error={kept ? undefined : active.error}
         onRetry={() => active.refetch()}
         columns={COLUMNS}
+        exportAs={dueOut
+          ? { screen: "due-out", facts: [["Departing", dateLong(BUSINESS_DATE)]] }
+          : { screen: "in-house", facts: [["In house on", dateLong(BUSINESS_DATE)]] }}
         defaultTab={dueOut ? "folio" : "stay"}
         emptyTitle={dueOut ? "Nobody departing today" : "Nobody in house"}
         emptyBody={
