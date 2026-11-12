@@ -11,6 +11,7 @@ import {
 import {
   listRequests, raiseRequest, actOnRequest, type GuestRequest, type Team, type InHouse,
 } from "@/modules/guest-services/data/requests";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    GUEST REQUESTS (D27-178, the owner's D27-181)
@@ -38,6 +39,25 @@ export const minutes = (m: number) =>
     : `${Math.floor(m / 1440)} d ${Math.floor((m % 1440) / 60)} h`;
 
 type View = "open" | "done";
+
+/* The list in a file (D27-383 item 1): the team chosen, as shown. */
+const REQUEST_STATUS: Record<GuestRequest["status"], string> = {
+  open: "Open", in_progress: "Being done", done: "Done", cancelled: "Cancelled",
+};
+const REQUEST_EXPORT: ExportColumn<GuestRequest>[] = [
+  { label: "Team", value: (r) => TEAM_LABEL[r.team] },
+  { label: "Room", value: (r) => r.room },
+  { label: "Guest", value: (r) => r.guest },
+  { label: "What", value: (r) => r.what },
+  { label: "When wanted", value: (r) => r.when },
+  { label: "Status", value: (r) => REQUEST_STATUS[r.status] },
+  { label: "From", value: (r) => (r.fromGuest ? "The guest" : r.raisedBy) },
+  { label: "Raised", value: (r) => r.raisedAt, kind: "datetime" },
+  { label: "Taken by", value: (r) => r.takenBy },
+  { label: "Closed", value: (r) => r.closedAt, kind: "datetime" },
+  { label: "Minutes", value: (r) => r.minutes, kind: "count" },
+  { label: "What was done", value: (r) => r.resolution },
+];
 
 export default function RequestsPage() {
   const params = useParams();
@@ -71,11 +91,14 @@ export default function RequestsPage() {
       <PageHeader
         title="Guest requests"
         description="What guests in house have asked for, and who is doing it."
-        actions={
+        actions={<>
+          <ExportButtons screen="requests" rows={list.data ? shown : undefined} columns={REQUEST_EXPORT}
+            facts={[["Showing", view === "open" ? "open" : "done, last 24 h"],
+              ["Team", team !== "all" && TEAM_LABEL[team]]]} />
           <Button variant="primary" className="h-11" onClick={() => setRaising(true)}>
             <Plus className="size-4" /> New request
           </Button>
-        }
+        </>}
       />
 
       <div className="mb-5 flex flex-wrap gap-3">

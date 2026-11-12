@@ -1,4 +1,4 @@
-import { can, type Role } from "../../permissions.ts";
+import { can, type Action, type Resource, type Role } from "../../permissions.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A LIST SCREEN AS A FILE - which screens, and who (D27-383 item 1)
@@ -34,6 +34,9 @@ export interface ListScreen {
   readonly read: string;
   /** Money, or guests' details: also the reports' download right. */
   readonly holds?: "money" | "guests";
+  /** A screen with an export right of its own asks it INSTEAD of the
+      reports' (the Equipment register: `export` on `equipment`). */
+  readonly right?: { readonly action: Action; readonly resource: Resource; readonly who: string };
 }
 
 const H = "GET /api/hotels/:code";
@@ -67,6 +70,26 @@ export const LIST_SCREENS = {
   "c-form": { title: "Form III register", read: `${H}/reports/c-form`, holds: "guests" },
   "guest-ledger": { title: "Guest ledger", read: `${H}/reports/guest-ledger`, holds: "money" },
   "cashier-shift": { title: "Cashier shift", read: `${H}/reports/cashier-shift`, holds: "money" },
+
+  /* ── The second part (D27-383 item 1, 12 November) ── */
+  /* A commission agreed is a term, like a rate: not money owed. */
+  "booking-sources": { title: "Booking sources", read: `${H}/booking-sources` },
+  "cash-deposits": { title: "Cash deposits", read: `${H}/cash-deposits`, holds: "money" },
+  /* Without the repairs' costs, which stay on the screen. */
+  "work-orders": { title: "Work orders", read: `${H}/work-orders` },
+  "minibar": { title: "Minibar", read: `${H}/minibar`, holds: "money" },
+  "checklist-runs": { title: "Housekeeping checklists", read: `${H}/housekeeping/checklist-runs` },
+  /* A guest's name and room, as Arrivals carries them: not their details. */
+  "requests": { title: "Guest requests", read: `${H}/requests` },
+  "wake-up-calls": { title: "Wake-up calls", read: `${H}/wake-up-calls` },
+  "lost-property": { title: "Lost property", read: `${H}/lost-property` },
+  /* Phones and emails. */
+  "guest-messages": { title: "Guest messages", read: `${H}/guest-messages`, holds: "guests" },
+  "guest-360": { title: "Guest 360", read: `${H}/crm/guests`, holds: "guests" },
+  "same-person": { title: "Possible same person", read: `${H}/crm/same-person`, holds: "guests" },
+  "reviews": { title: "Reviews", read: `${H}/reviews`, holds: "guests" },
+  /* What a named guest said of their stay. */
+  "feedback": { title: "Guest feedback", read: `${H}/feedback`, holds: "guests" },
 } as const satisfies Record<string, ListScreen>;
 
 export type ListScreenKey = keyof typeof LIST_SCREENS;
@@ -82,6 +105,10 @@ const DOWNLOADERS = "the owner, an administrator, the general manager, the hotel
 /** Why this role may not export this screen, or null when it may. Only the
     `holds` part: that the role may open the screen is the read rule's. */
 export function exportRefusal(role: Role, screen: ListScreen): string | null {
+  if (screen.right) {
+    return can(role, screen.right.action, screen.right.resource) ? null
+      : `Exporting the ${screen.title.toLowerCase()} is for ${screen.right.who}. Ask one of them.`;
+  }
   if (!screen.holds || can(role, "export", "report")) return null;
   return `A file of ${screen.holds === "money" ? "money" : "guests' details"} is for those who `
     + `download reports: ${DOWNLOADERS}. Ask one of them.`;

@@ -14,6 +14,21 @@ import {
   type GuestCard, type SamePersonPair,
 } from "@/modules/crm/data/crm";
 import { stayedWords } from "@/modules/guests";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The pairs to look at, in a file (D27-383 item 1). Whether an ID is on
+   file, never the ID itself, as the cards show. */
+const side = (k: "a" | "b", n: string): ExportColumn<SamePersonPair>[] => [
+  { label: `Guest ${n}`, value: (p) => p[k].name },
+  { label: `Phone ${n}`, value: (p) => p[k].phone },
+  { label: `Email ${n}`, value: (p) => p[k].email },
+  { label: `Stays ${n}`, value: (p) => p[k].visits, kind: "count" },
+  { label: `Last stay ${n}`, value: (p) => p[k].lastStay, kind: "date" },
+];
+const PAIR_EXPORT: ExportColumn<SamePersonPair>[] = [
+  ...side("a", "1"), ...side("b", "2"),
+  { label: "Share", value: (p) => [p.samePhone && "phone", p.sameEmail && "email"].filter(Boolean).join(" and ") },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    POSSIBLE SAME PERSON — the old duplicates, worked through by a manager
@@ -62,6 +77,7 @@ export default function SamePersonPage() {
         badge={pairs.data
           ? <StatusPill tone="neutral">{pairs.data.length} to look at</StatusPill>
           : undefined}
+        actions={<ExportButtons screen="same-person" rows={pairs.data} columns={PAIR_EXPORT} />}
       />
 
       {/* Cards 12px apart; the three parts of the page 20px (the Rhythm Rule). */}

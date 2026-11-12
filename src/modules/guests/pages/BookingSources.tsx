@@ -12,6 +12,17 @@ import {
 import { listBookingSources, addBookingSource, amendBookingSource, setBookingSourceCommission, SOURCE_KINDS, kindLabel, type BookingSource, type BookingSourceKind } from "@/modules/guests/data/bookingSources";
 /* D27-183: the channel code is picked from SU's own list, not typed. */
 import { SU_CHANNELS, suChannelName } from "@/modules/channel-manager";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The list in a file (D27-383 item 1). No commission agreed is a dash. */
+const SOURCE_EXPORT: ExportColumn<BookingSource>[] = [
+  { label: "Source", value: (s) => s.name },
+  { label: "Kind", value: (s) => kindLabel(s.kind) },
+  { label: "Channel", value: (s) => suChannelName(s.channelCode) ?? s.channelCode },
+  { label: "In use", value: (s) => (s.isActive ? "Yes" : "No") },
+  { label: "Commission", value: (s) => s.commissionPct, kind: "percent" },
+  { label: "Bookings", value: (s) => s.bookings, kind: "count" },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    WHERE THE BOOKINGS COME FROM
@@ -190,11 +201,12 @@ export default function BookingSourcesPage() {
             ? "Nothing yet. A source is where a booking arrived from."
             : `${live} in use · ${priced} with a commission agreed here`
         }
-        actions={
+        actions={<>
+          <ExportButtons screen="booking-sources" rows={q.data} columns={SOURCE_EXPORT} />
           <Button variant="primary" onClick={() => setAdding(true)}>
             <Plus className="size-4" /> Add a source
           </Button>
-        }
+        </>}
       />
 
       {/* ── Which half is which ────────────────────────────────────

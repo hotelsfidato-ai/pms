@@ -13,6 +13,7 @@ import {
 import { listWorkOrders, updateWorkOrder, type WorkOrder } from "@/modules/housekeeping/data/housekeeping";
 import { RepairFlow } from "@/modules/housekeeping/flows/RepairFlow";
 import { RepairCosts } from "@/modules/housekeeping/flows/RepairCosts";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    WORK ORDERS
@@ -56,6 +57,29 @@ const PRIORITY: Record<string, { label: string; tone: "neutral" | "info" | "warn
 
 type View = "open" | "closed";
 
+/* The list in a file (D27-383 item 1). No costs: they are for whoever sees
+   money, on the order itself, and would make this a list of money. */
+const STATUS_WORD: Record<string, string> = {
+  open: "Open", in_progress: "Being fixed", done: "Fixed", cancelled: "Not needed",
+};
+const ORDER_EXPORT: ExportColumn<WorkOrder>[] = [
+  { label: "Room", value: (o) => o.room },
+  { label: "What", value: (o) => o.title },
+  { label: "Detail", value: (o) => o.detail },
+  { label: "Category", value: (o) => o.category },
+  { label: "Priority", value: (o) => PRIORITY[o.priority]?.label ?? o.priority },
+  { label: "Status", value: (o) => STATUS_WORD[o.status] ?? o.status },
+  { label: "Equipment", value: (o) => (o.equipment ? `${o.equipment.name} (${o.equipment.tag})` : null) },
+  { label: "Takes the room out", value: (o) => (o.blocksRoom ? "Yes" : "No") },
+  { label: "Raised by", value: (o) => o.raisedBy },
+  { label: "Raised", value: (o) => o.raisedAt, kind: "datetime" },
+  { label: "Assigned to", value: (o) => o.assignedTo },
+  { label: "Days open", value: (o) => o.daysOpen, kind: "count" },
+  { label: "Closed by", value: (o) => o.closedBy },
+  { label: "Closed", value: (o) => o.closedAt, kind: "datetime" },
+  { label: "What was done", value: (o) => o.resolution },
+];
+
 export default function WorkOrdersPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
@@ -89,11 +113,13 @@ export default function WorkOrdersPage() {
       <PageHeader
         title="Work orders"
         description="What needs fixing. Most of it does not take a room out of service."
-        actions={
+        actions={<>
+          <ExportButtons screen="work-orders" rows={work.data?.orders} columns={ORDER_EXPORT}
+            facts={[["Showing", view === "open" ? "open" : "closed"]]} />
           <Button variant="primary" className="h-11" onClick={() => setRaising(true)}>
             <Plus className="size-4" /> Raise one
           </Button>
-        }
+        </>}
       />
 
       <Segmented<View>

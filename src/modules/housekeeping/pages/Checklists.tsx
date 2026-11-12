@@ -10,8 +10,19 @@ import {
 } from "@/components/ui";
 import {
   getChecklists, setChecklistsRequired, saveChecklist, removeChecklist, listChecklistRuns,
-  JOB_LABELS, type Checklist, type ChecklistJob, type ChecklistSetup,
+  JOB_LABELS, type Checklist, type ChecklistJob, type ChecklistSetup, type ChecklistRun,
 } from "@/modules/housekeeping/data/housekeeping";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* Each room's record in a file (D27-383 item 1), as listed. */
+const RUN_EXPORT: ExportColumn<ChecklistRun>[] = [
+  { label: "Room", value: (r) => r.room },
+  { label: "Job", value: (r) => JOB_LABELS[r.job] },
+  { label: "Result", value: (r) => (r.passed ? (r.job === "inspection" ? "Passed" : "Done") : "Failed") },
+  { label: "Ticked by", value: (r) => r.doneBy },
+  { label: "When", value: (r) => r.doneAt, kind: "datetime" },
+  { label: "What failed", value: (r) => r.failed.map((f) => (f.note ? `${f.item} - ${f.note}` : f.item)).join("; ") },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    HOUSEKEEPING CHECKLISTS (D27-383 item 10, D27-396) - /h/:code/checklists
@@ -122,7 +133,9 @@ function History({ hotelId }: { hotelId: string }) {
   return (
     <section>
       <Card>
-        <CardHeader title="Each room's record" description="Who ticked which list, when, and what an inspection failed." />
+        <CardHeader title="Each room's record" description="Who ticked which list, when, and what an inspection failed."
+          actions={<ExportButtons screen="checklist-runs" rows={runs.data?.runs} columns={RUN_EXPORT}
+            facts={[["Room", asked.toUpperCase() || "every room"]]} />} />
         <CardBody className="border-b border-grey-100">
           <Field label="Room" hint="Empty: every room">
             {({ id }) => <Input id={id} className="max-w-40" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="204" />}
