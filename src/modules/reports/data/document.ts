@@ -90,8 +90,9 @@ export interface ReportDoc {
   /* ⚠ Kept identical to the server's copy, as the note at the top of both
      files insists. Widened by one word for purchasing (D18-3): a purchase
      order is drawn by the shared renderer rather than a second one, and it
-     is NOT in REPORT_KEYS because it is not a report anybody runs. */
-  report: ReportKey | "purchase-order" | "list";
+     is NOT in REPORT_KEYS because it is not a report anybody runs.
+     A group's rooming list likewise (D27-383 item 8). A list screen's file too (D27-383 item 1). */
+  report: ReportKey | "purchase-order" | "rooming-list" | `group-${string}` | "list";
   title: string;
   property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
   orientation: "portrait" | "landscape";
@@ -141,3 +142,28 @@ export async function getReport(
     throw error;
   }
 }
+
+/* ── Several properties in one report (D27-383 item 6) ──────────────── */
+
+/** The group reports, in the order the screen offers them, and what each asks. */
+export const GROUP_REPORTS = [
+  { key: "manager", title: "Manager report", asks: "date", money: false },
+  { key: "monthly-statistics", title: "Monthly statistics", asks: "month", money: false },
+  { key: "room-revenue", title: "Room revenue and occupancy", asks: "range", money: false },
+  { key: "dues-by-age", title: "Money owed by age", asks: "date", money: true },
+  { key: "restaurant-sales", title: "Restaurant sales", asks: "date", money: false },
+] as const;
+export type GroupReportKey = (typeof GROUP_REPORTS)[number]["key"];
+
+/** The question as the server takes it: the properties by code, and the dates. */
+export function groupQuery(hotels: string[], query: ReportQuery): string {
+  const params = new URLSearchParams({ hotels: hotels.join(",") });
+  if (query.asOn) params.set("asOn", query.asOn);
+  if (query.month) params.set("month", query.month);
+  if (query.from) params.set("from", query.from);
+  return params.toString();
+}
+
+/** One group report. A refusal throws, with the server's sentence naming the property. */
+export const getGroupReport = (key: GroupReportKey, hotels: string[], query: ReportQuery) =>
+  api<ReportDoc>(`/api/group/reports/${key}?${groupQuery(hotels, query)}`);

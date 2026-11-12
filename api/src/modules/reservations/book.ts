@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
 import { countProblem, countryProblem, dateProblem, gstinProblem, MAX_NIGHTS } from "../../validate.ts";
 import { roomRateBeforeGst, overCreditLimit } from "../finance/index.ts";
+import { allotmentPickup } from "../contracts/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -34,6 +35,11 @@ export interface BookingLineInput {
   /** A complimentary room (020): booked at ₹0, and the night audit posts
       nothing for it. Only COMP_ROLES may give one (the owner, 27 Sep). */
   complimentary?: boolean;
+  /** Brought in from an old system that gave no rate (migration "old system
+      import", D27-383 item 7): kept empty - a dash, never a price looked up
+      or a zero - and the desk sets it before arrival; check-in refuses it
+      until then. Only the import sends it. */
+  rateNotKnown?: boolean;
 }
 
 /** Who may give a complimentary room (the owner, 27 September). A group
@@ -126,6 +132,12 @@ export interface BookingRequest {
       invoice for the guest's bill is addressed to it; the guest still pays.
       Not a `companies` row, and not companyId (Bill to company). */
   guestCompany?: GuestCompany;
+  /** Taken from this allotment (267): its company, its contract, and its
+      held rooms rather than the hotel's free ones. Checked by contracts'
+      `allotmentPickup`. The desk's only, like guestId. */
+  allotmentId?: string;
+  /** Booked for this waitlist entry (268), which then says "booked". */
+  waitlistId?: string;
 }
 
 export interface GuestCompany { name?: string; gstin?: string; address?: string }
@@ -138,7 +150,8 @@ export interface BookingMade {
   guest: string;
   /** `id` is the stay's: New booking hands it to front desk's doors (Phase 1).
       A repeat answers the same ids as the first time (RES-3). */
-  bookings: Array<{ id: string; reference: string; roomType: string; rate: number }>;
+  /** `rate` null: brought in with none (rateNotKnown). */
+  bookings: Array<{ id: string; reference: string; roomType: string; rate: number | null }>;
   nightly: number;
   /** 'tentative' when the desk booked it as Waiting. */
   status: "confirmed" | "tentative";
@@ -411,8 +424,10 @@ async function deskTerms(
 /* ── The booking itself ───────────────────────────────────────────── */
 
 export async function makeBooking(
-  client: Client, request: BookingRequest,
+  client: Client, asked: BookingRequest,
 ): Promise<BookingResult> {
+  /* A pickup is made for the allotment's company, set below once checked. */
+  let request = asked;
   const lines = request.lines.filter((l) => l.roomTypeId);
   const externalRef = request.externalRef ?? null;
   const fingerprint = externalRef ? fingerprintOf(request) : null;
@@ -476,9 +491,25 @@ export async function makeBooking(
      on by default, as D17-43 had it; off, the desk's booking - a group's
      too, whole or not at all - is refused past a full house like a
      machine's. */
+  /* FROM AN ALLOTMENT (267): its rooms are held for it, so the hotel's free
+     rooms are not asked; the allotment's own held rooms are, under its lock. */
+  if (request.allotmentId) {
+    const pickup = await allotmentPickup(client, hotelId, request.allotmentId, {
+      companyId: request.companyId, checkIn: request.checkIn, checkOut: request.checkOut, lines });
+    if ("reason" in pickup) return refuse(pickup.reason);
+    request = { ...request, companyId: pickup.companyId };
+  }
+  /* FOR A WAITLIST ENTRY (268): still waiting, at this hotel. */
+  if (request.waitlistId) {
+    const { rows } = await client.query(
+      `select 1 from waitlist where id::text = $1 and hotel_id = $2 and status = 'waiting'`,
+      [request.waitlistId, hotelId]);
+    if (!rows[0]) return refuse("That guest is no longer on the waitlist. Reload it.");
+  }
+
   const deskMayOverbook = request.refuseWhenFull ? false : (await client.query<{ yes: boolean }>(
     "select desk_may_overbook as yes from hotels where id = $1", [request.hotelId])).rows[0]?.yes ?? true;
-  if (request.refuseWhenFull || !deskMayOverbook) {
+  if (!request.allotmentId && (request.refuseWhenFull || !deskMayOverbook)) {
     const full = await noRoomFor(client, { ...request, lines });
     if (full) return { ok: false, kind: "no_room", reason: full };
   }
@@ -562,7 +593,8 @@ export async function makeBooking(
        the second room type must find nothing of the first on file. */
     const planned: {
       line: BookingLineInput; typeName: string; adults: number; children: number;
-      rate: number;
+      /** Null only for a line brought in with no rate (rateNotKnown). */
+      rate: number | null;
     }[] = [];
 
     for (const line of lines) {
@@ -620,6 +652,13 @@ export async function makeBooking(
          filled in, never a zero. Any role that may book may type it. */
       if (dayUse && line.complimentary !== true && !(rate !== null && rate > 0)) {
         return refuse("Type the day-use price.");
+      }
+      /* BROUGHT IN WITH NO RATE (old system import, D27-383 item 7): none is
+         looked up and none invented - the booking keeps a dash until the desk
+         sets it. Every other rule above and below still applies. */
+      if (rate === null && line.rateNotKnown === true) {
+        planned.push({ line, typeName: rt[0].name, adults, children, rate: null });
+        continue;
       }
       /* The contract's own figure priced this line (D27-233): before GST. */
       let byContract = false;
@@ -758,7 +797,7 @@ export async function makeBooking(
       groupId = g[0]!.id;
     }
 
-    const made: { id: string; reference: string; roomType: string; rate: number }[] = [];
+    const made: { id: string; reference: string; roomType: string; rate: number | null }[] = [];
     /* The rows themselves, for a caller in process: the channel manager
        records which reservations a pushed booking became, so the inbox can
        say what happened to it (D17-79). Over HTTP they are not sent - a
@@ -859,7 +898,7 @@ export async function makeBooking(
            values ($1, $2, 'open') returning id::text`,
           [hotelId, booked[0]!.id]);
         made.push({ id: booked[0]!.id, reference: ref[0]!.reference, roomType: typeName,
-                    rate: Number(rate) });
+                    rate });
         reservationIds.push(booked[0]!.id);
         folioIds.push(folio[0]!.id);
       }
@@ -872,6 +911,21 @@ export async function makeBooking(
       await client.query(
         "update reservations set campaign = $1 where id = any($2::uuid[])",
         [campaign, reservationIds]);
+    }
+
+    /* FROM AN ALLOTMENT (267): every room of it is one of the allotment's. */
+    if (request.allotmentId) {
+      await client.query(
+        "update reservations set allotment_id = $1 where id = any($2::uuid[])",
+        [request.allotmentId, reservationIds]);
+    }
+    /* THE WAITLIST ENTRY (268) is booked: its first room names the booking. */
+    if (request.waitlistId) {
+      await client.query(
+        `update waitlist set status = 'booked', reservation_id = $2, closed_at = now(),
+                closed_by = app.current_user_id()
+          where id::text = $1 and status = 'waiting'`,
+        [request.waitlistId, reservationIds[0]]);
     }
 
     /* THE GUEST'S COMPANY (D27-371), on every room of it - its own statement,
@@ -915,7 +969,8 @@ export async function makeBooking(
          confirmed one - that is whose booking it now is. */
       guest: guestName,
       bookings: made,
-      nightly: made.reduce((sum, m) => sum + m.rate, 0),
+      /* ponytail: a rate brought in empty adds nothing here; only the import sends one, and it reads no nightly. */
+      nightly: made.reduce((sum, m) => sum + (m.rate ?? 0), 0),
       reservationIds,
       folioIds,
       guestId,

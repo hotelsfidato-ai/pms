@@ -37,8 +37,8 @@
 # and reading it here would let that account choose where the hotel's files
 # go (n8n has its own for the same reason, deploy/n8n.sh).
 #
-# THEY NEVER EXPIRE FROM THE BUCKET: the lifecycle rule that deletes the
-# database's copies after 31 days leaves uploads/ out (Backups, step 1.4).
+# THEY NEVER EXPIRE FROM THE BUCKET: they go to a bucket of their own,
+# pms-uploads, with no delete rule (deploy/README.md, Backups, step 1.6).
 # =============================================================================
 set -uo pipefail
 export LC_ALL=C                 # one sort order for the folder and the record

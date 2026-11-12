@@ -5,6 +5,7 @@ import { money } from "@/lib/format";
 import { toast } from "@/components/ui";
 import { AskDialog, type Ask } from "@/modules/pos/components/AskDialog";
 import { listGuestOrders, acceptGuestOrder, declineGuestOrder } from "@/modules/pos/data/till";
+import { RoomPreferences } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    GUESTS' ROOM-SERVICE ORDERS, ON THE TERMINAL (D27-224, D27-225)
@@ -67,6 +68,8 @@ export function GuestOrders({ hotelId, onAccepted }: {
             </div>
             <p className="text-base text-ink-900 mt-1">{o.lines.map((l) => `${l.qty} × ${l.name}`).join(", ")}</p>
             {o.note && <p className="text-sm text-brand-orange-700 mt-0.5">{o.note}</p>}
+            {/* D27-383 item 10: the guest's food and any allergy, in red, before it is accepted. */}
+            <RoomPreferences hotelId={hotelId} room={o.room} who="in-house" />
             <div className="flex gap-2 mt-2">
               <button type="button" disabled={busy === o.id} onClick={() => void accept(o.id)}
                       className="press flex-1 h-12 rounded-full bg-brand-orange text-white text-base font-semibold cursor-pointer disabled:opacity-50">

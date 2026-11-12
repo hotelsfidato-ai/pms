@@ -11,6 +11,36 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · Allotments: rooms held under a contract (D27-383 item 8, built under D27-396; C-12 now built)
+
+**Asked for.** The master's build-all brief, item 8: a block of rooms of a type held for a company or travel agent over dates, at their contract rate, with a release (days before arrival) after which unpicked rooms go back on sale at the night audit, recorded; a pickup is a booking against it; Availability and the Calendar show held rooms as held, never as sold; an allotment never overbooks the hotel. With the rooming list and the waitlist (reservations' entry of the same day).
+
+**Shipped.**
+- Migration **267** (`267_allotments.sql`; 271 in the helper's copy, renumbered at the merge): `allotments` (one contract, one room type, first and last night both held, rooms, release days, notes; kept by `app.keeps_companies()` as contracts are, C-6), `allotment_releases` (one row per allotment and night: rooms back on sale, the closing day, who), `reservations.allotment_id`; `app.allotment_held` (each night's rooms, picked, held - 0 once released); `app.inventory_grid` keeps 044's columns and its `available` is now less what is held (`occupied` and `sold` unchanged); `app.release_allotments(hotel, closing day)`, idempotent by `ON CONFLICT DO NOTHING`.
+- Migration **269**: the three new tables join `app.test_hotel_classes()` (trading) and `waitlist` joins `owner_reset.steps()` before `reservations`, each patched in place (CON-5).
+- `api/src/modules/contracts/allotments.ts`: `GET /allotments/:id`, `POST /allotments`, `PUT /allotments/:id` (change, or `active: false` to stop holding), under one advisory lock per hotel; `allotmentPickup` for book.ts, through the front door. The company's contracts answer carries `allotments`; a contract's dates may not be moved past one of its allotments.
+- `pages/CompanyContracts.tsx`: each contract's **Allotments** (rooms and nights, release and the next one, booked from it, still held, back on sale, the contract's rate for the type or a dash), **Hold rooms**, **Change** (with **Stop holding**), **Book from it**; `components/AllotmentDialog.tsx`.
+- Elsewhere, each the smallest line: the night audit calls `app.release_allotments` before it closes and answers `allotmentRoomsReleased`, shown on its result line; `/inventory` cells carry `held` and Rates' Rooms left shows "n held"; `/calendar-prices` carries `held` and the Calendar takes it off each type's free count and shows "+3h" with a key.
+
+**Decided under D27-396** (the owner reviews later):
+- An allotment belongs to one contract and its nights lie inside it, so "their contract rate" is never in doubt (C-3's contract in force on arrival is that contract); with no figure for its room type, the rate reads a dash and a booking takes the day's price (C-4).
+- The release is rolling: each night's rooms nobody booked go back on sale at the audit closing (that night - release days), the industry's usual meaning; a hold whose first release would already be past is refused rather than released tonight.
+- A booking from an allotment is made for its company (as Bill to company), priced by its contract; another room type, nights outside it, more rooms than it holds, a released night or a day use are refused by name. It takes held rooms even where the desk may not overbook.
+- An undone night audit does not take a release back: the rooms may have been sold since. Stopping an allotment puts what it holds back on sale at once; its bookings stand.
+- Kept by the owner, an administrator or the GM (as contracts, C-6); read by whoever reads companies or bookings; booked from by whoever may book.
+
+**Proved** (this copy, `fidato_groups` and the API's scratch databases):
+- Database: `db/tests/run.sh` on a scratch database, all 1913 assertions passed (allotments 15, waitlist 6, test hotels with the three classed) - its first run, before 269, failed "in no class: allotment_releases, allotments, waitlist" (CON-5). `contracts.sql` allotments 15/15 (held off availability and not sold; a pickup moves availability once; the audit of 7 Jan releases nothing, of 8 Jan 2 rooms, the same day again 0 with one row; reception refused; 0 rooms refused) and `reservations.sql` waitlist 6/6, run on this copy's database with the harness.
+- API, one scratch database for the services this touches (reservations, contracts, night-audit, inventory, channel-manager, calendarPrices, leavingEarly, roleGate, reportFiles): 34 files, 420 of 428; `allotments.test.ts` 9/9 (who holds; nights inside the contract; a release already past; never an overbooking, naming the night; a pickup's five refusals with nothing written; made for the company at ₹2,100 contract rate with the hotel otherwise full and the desk barred from overbooking; a released night refused with its audit's date; never fewer than booked, type kept, stopping; a contract not shortened past an allotment; the night audit at Pune releasing 2 and its second press refused, one row kept), roleGate 80/80 with the D27-383 pin. The 8 failures: `suAvailability.test.ts`'s 7 timed out on this loaded PC and passed alone, 12/12; `calendarPrices.test.ts`'s exact-shape check now carries `held: 0` (changed), 5/5 alone. The whole API suite was started twice and did not finish: the PC restart stopped the first, the second ran 4 files in 15 minutes and was stopped.
+- Guards seen failing: with the overbooking check, the pickup check and the rooming list's all-or-none each switched off, 5 allotment tests and 3 rooming-list tests failed; restored from git. With `ON CONFLICT` taken out of `app.release_allotments` the database test stopped on a duplicate release; with 044's `inventory_grid` back, "availability is less the rooms held" and "moves availability once" failed; 267 re-applied.
+- After 269: `resetOrder` 5/5, `ownerReset` 15/15, `testHotels` 69/69, `calendarPrices` 5/5 (exit 0); `db/tests/rerun.sh` "all 259 migrations are re-runnable" (exit 0).
+- A year of `app.inventory_grid` at 5EL, warm: 149 ms against 044's 150 ms.
+- Screens, as the GM on this copy's demo: Demo Travels' contract → Hold rooms 20 Deluxe refused ("Only 7 Deluxe rooms are free on 20 Nov 2026 … never overbooks the hotel"), 3 held; the allotment line read "Booked from it 0 · Still held 3 … Rate: EP ₹3,200.00 / ₹3,600.00"; the Calendar's Deluxe 20 Nov "4 +3h" with "17 → 14" in the footer; Book from it → New booking "From the allotment of Demo Travels …", "3 left", ₹3,600 contract price; saved FH-5EL-2611-5031 with `allotment_id`, Demo Travels, ₹3,600, 10% commission.
+
+**Left open.** Nothing sends an allotment's release to the booking sites by itself beyond the channel manager's own push of `available` (which now reads held rooms as not for sale).
+
+---
+
 ## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
 
 **Shipped:** the contract window (`components/ContractDialog.tsx`): "Taken off

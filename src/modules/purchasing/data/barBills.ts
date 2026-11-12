@@ -1,4 +1,4 @@
-import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders, billTooBig } from "@/lib/api";
 import type { Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -79,6 +79,8 @@ export async function recordBarBill(hotelId: string, bill: {
 /** The bill's photo, through the bar bill's own door (the Bar role holds no
     grant on the shared attachments): a form, never JSON, never held offline. */
 export async function attachBarBillPhoto(hotelId: string, billId: string, file: File): Promise<Result> {
+  const tooBig = billTooBig(file);
+  if (tooBig) return { ok: false, reason: tooBig };
   const form = new FormData();
   form.set("file", file);
   const headers = new Headers(await authHeaders());

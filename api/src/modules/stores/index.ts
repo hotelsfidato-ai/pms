@@ -42,3 +42,6 @@ export { deliveryFactsProblem } from "./stores.ts";
 /* What is near or past its use-by and still on a shelf (D27-383 item 11): the
    bell reads it, for whoever corrects the Store's counts. */
 export { expiryAlerts, type ExpiryAlert } from "./expiry.ts";
+/* The minibar's refill (housekeeping, D27-383 item 10): an issue, by the
+   Store's own checks and insert. */
+export { issueFromStore } from "./stores.ts";

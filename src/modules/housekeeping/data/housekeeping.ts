@@ -2,7 +2,7 @@ import { fetchStays, getHouseNow } from "@/modules/front-desk";
 import { listAllRooms, setHousekeeping } from "@/data/repositories/rooms";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
-import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders, billTooBig } from "@/lib/api";
 import { noteReachable, noteUnreachable } from "@/lib/offline";
 /* The housekeeping board, whose rooms are whose, and work orders.
 
@@ -330,6 +330,8 @@ export async function recordRepairCost(
   hotelId: string,
   input: { workOrderId: string; amount: string; note: string; file: File | null },
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const tooBig = input.file ? billTooBig(input.file) : null;
+  if (tooBig) return { ok: false, reason: tooBig };
   const form = new FormData();
   form.set("workOrderId", input.workOrderId);
   form.set("amount", input.amount);
@@ -386,3 +388,126 @@ export async function proofAddress(
     return { ok: false, reason: "The proof needs the connection to open." };
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   THE MINIBAR, AND HOUSEKEEPING CHECKLISTS (D27-383 item 10, D27-396)
+
+   The minibar: the hotel's list (a Store item, the price it typed - null
+   until typed, and then it cannot be charged - and the store its refill
+   comes from), and what was taken from a room. The server charges the
+   guest in the room through finance's door and issues the refill from the
+   store; a disputed one, or one found after check-out, waits for the desk.
+
+   Checklists: per job and room type; with the hotel's switch on, a room is
+   marked clean or inspected by ticking its checklist. A tick is under
+   /housekeeping/, so with the line down it is held like the board's taps
+   (it may throw HeldError); everything else is refused offline.
+   ══════════════════════════════════════════════════════════════════ */
+
+type Answer<T = unknown> = { ok: true; data?: T } | { ok: false; reason: string };
+
+async function careCall<T = unknown>(path: string, method: string, body?: unknown): Promise<Answer<T>> {
+  try {
+    return await api<Answer<T>>(path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+export interface MinibarItem {
+  id: string; stockItemId: string; name: string; unit: string;
+  /** Null: nobody has typed a price, so it cannot be charged (a dash, never ₹0). */
+  price: number | null;
+  storeId: string; store: string;
+  /** A drink in the excise registers: billed as VAT, never GST. */
+  alcohol: boolean; active: boolean; onHand: number;
+}
+export interface MinibarLine { item: string; name: string; quantity: number; price: number; alcohol: boolean }
+export interface MinibarRecord {
+  id: string; room: string; recordedAt: string; recordedBy: string | null;
+  status: "charged" | "waiting" | "not_charged";
+  waitingWhy: "disputed" | "after_checkout" | null;
+  lines: MinibarLine[];
+  reference: string | null; guest: string | null; stayStatus: string | null;
+  decidedBy: string | null; decidedAt: string | null; decidedNote: string | null;
+  /** What reached the bill with its tax; null when nothing did. */
+  charged: number | null;
+  /** A line of it was taken off the bill (the bill's own Reverse). */
+  reversed: boolean;
+}
+export interface Minibar {
+  items: MinibarItem[]; records: MinibarRecord[];
+  stock: { id: string; name: string; unit: string; alcohol: boolean }[];
+  stores: { id: string; name: string; bar: boolean }[];
+  mayKeep: boolean; mayRecord: boolean; mayDecide: boolean;
+}
+
+/** The list and the last fortnight's records, waiting ones first. Throws on failure. */
+export const getMinibar = (hotelId: string) => api<Minibar>(`/api/hotels/${hotelId}/minibar`);
+
+export const addMinibarItem = (hotelId: string, input: { stockItemId: string; price: string; storeId: string }) =>
+  careCall(`/api/hotels/${hotelId}/minibar/items`, "POST", input);
+
+export const changeMinibarItem = (
+  hotelId: string, id: string, input: { price?: string; storeId?: string; active?: boolean },
+) => careCall(`/api/hotels/${hotelId}/minibar/items/${id}`, "PATCH", input);
+
+export const recordMinibar = (
+  hotelId: string, input: { room: string; lines: { itemId: string; quantity: number }[]; disputed: boolean },
+) => careCall<{ id: string; status: MinibarRecord["status"]; waitingWhy: MinibarRecord["waitingWhy"] }>(
+  `/api/hotels/${hotelId}/minibar/records`, "POST", input);
+
+export const decideMinibar = (hotelId: string, id: string, input: { charge: boolean; note?: string }) =>
+  careCall(`/api/hotels/${hotelId}/minibar/records/${id}/decide`, "POST", input);
+
+export type ChecklistJob = "checkout" | "stayover" | "deep" | "inspection";
+export const JOB_LABELS: Record<ChecklistJob, string> = {
+  checkout: "Checkout clean", stayover: "Stay-over", deep: "Deep clean", inspection: "Inspection",
+};
+export interface Checklist {
+  id: string; job: ChecklistJob; roomTypeId: string | null;
+  /** Null: every room type without a list of its own. */
+  roomType: string | null; items: string[];
+}
+export interface ChecklistSetup {
+  required: boolean; checklists: Checklist[]; roomTypes: { id: string; name: string }[]; mayKeep: boolean;
+}
+export interface ChecklistRun {
+  id: string; room: string; job: ChecklistJob; doneAt: string; doneBy: string | null;
+  passed: boolean; failed: { item: string; note: string | null }[];
+}
+
+/** The lists, the switch and the room types. Throws on failure. */
+export const getChecklists = (hotelId: string) => api<ChecklistSetup>(`/api/hotels/${hotelId}/checklists`);
+
+/** A room's list for a job: its own type's, else the one for every type. */
+export const checklistFor = (lists: Checklist[], roomType: string, job: ChecklistJob) =>
+  lists.find((c) => c.job === job && c.roomType === roomType)
+  ?? lists.find((c) => c.job === job && c.roomType === null);
+
+export const setChecklistsRequired = (hotelId: string, required: boolean) =>
+  careCall(`/api/hotels/${hotelId}/checklists/required`, "PUT", { required });
+
+export const saveChecklist = (
+  hotelId: string, input: { id?: string; job: ChecklistJob; roomTypeId: string | null; items: string[] },
+) => input.id
+  ? careCall(`/api/hotels/${hotelId}/checklists/${input.id}`, "PUT", { items: input.items })
+  : careCall(`/api/hotels/${hotelId}/checklists`, "POST", input);
+
+export const removeChecklist = (hotelId: string, id: string) =>
+  careCall(`/api/hotels/${hotelId}/checklists/${id}`, "DELETE");
+
+/** One ticking in a room. May throw HeldError: held on this phone. */
+export const tickChecklist = (
+  hotelId: string,
+  input: { room: string; job: ChecklistJob; results: { item: string; ok: boolean; note?: string }[] },
+) => careCall<{ passed: boolean; state: string }>(`/api/hotels/${hotelId}/housekeeping/checklist-runs`, "POST", input);
+
+/** The last hundred tickings, of one room or every room, newest first. Throws on failure. */
+export const listChecklistRuns = (hotelId: string, room?: string) =>
+  api<{ runs: ChecklistRun[] }>(
+    `/api/hotels/${hotelId}/housekeeping/checklist-runs${room ? `?room=${encodeURIComponent(room)}` : ""}`);

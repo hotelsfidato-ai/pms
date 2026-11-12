@@ -50,6 +50,134 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-12 · Security fixes, upload checks, and release 22
+
+**Asked for:** what is fundamentally pending; the audit's items 5-11; input checks on document uploads and forms before
+the storage bucket is split; the critical security fixes; then "yes to both, go ahead with release 22" (two buckets,
+and the release) and "send me the steps when the checks pass".
+
+**Shipped**
+- The API listens on 127.0.0.1 in production - `api/src/server.ts`; a 10 MB body limit on `/api/*`, answered in words.
+- Uploads: at most 9 MB, and the file's real type read from its bytes, not its name - `api/src/storage.ts` and the
+  four bill routes; the screens check the size before sending - `billTooBig` in `src/lib/api.ts`.
+- nginx request limits on `/api/` and `/api/pos` - `deploy/nginx.conf`; the CSP enforced - `firebase.json`.
+- `npm audit fix` (lock files only); the 80 privileged database functions closed to PUBLIC - `db/ownership.sql`.
+- Two buckets in the backup instructions - `deploy/README.md`, `db/uploads-backup.sh`.
+- Release 22 merged (old data, security, the two-bucket docs) and cp6 fast-forwarded to it; steps in
+  `.local/release-22-steps.md`.
+
+**Found** - MEMORY 476 (a test leaving its room type at 5EL; the group-rates strip fault), 477 (the web test mock
+missing `billTooBig`). All fixed.
+
+**Proved** - the five new upload tests failed on the old code; full gates green on 19e02bd4: web 1,600, API 3,281,
+db 2,114, replay, PG16, restore, to minute.
+
+**Left open** - the owner's A1-A8 and Part B; item 8 (encrypted backups) skipped by the owner; an xlsx import's
+decompressed size is not capped (admin-only, minor).
+
+**Commits:** `cd0322e7 51dd45c9 5f432b09 24dc7cc3 703360e2 19e02bd4`
+
+---
+
+## 2026-11-10 · Code and security audit, read-only (the main chat)
+
+**Asked for:** the owner, 10 November: audit what is in the codebase, say what can go wrong, and check whether any
+security protection was removed.
+
+**Done:** `docs/audits/2026-11-10-code-and-security-audit.md`. Read only, on this PC and on live (release 21).
+- Nothing security-related was removed since 28 September. The code's protections hold: sign-in on every route, the
+  role gate, row security on all 187 tables, no typed text in SQL, no secrets in the repository.
+- Live probes: port 8787 blocked from outside, a stranger's website refused, the test sign-in header ignored.
+- `npm audit`: 4 packages with fixes published, none reachable in how the PMS uses them.
+
+**Left open (nothing was changed):**
+- The owner's: backups still `uploaded=no` and archiving off (release 15 Parts B and C), a server restart for the
+  kernel fixes (up 69 days), two-step sign-in off with nobody enrolled, three SSH keys to confirm.
+- Code, waiting for the owner's yes: the API on 127.0.0.1, the script policy enforced, a request limit on `/api/` and
+  `/api/pos`, encrypted backup files, the package updates, the function permissions, the 10/20 MB upload limits.
+- Not reviewed one by one: the 184 routes that decide access themselves.
+
+---
+
+## 2026-11-07 · Backfill data merged, and release 21 prepared (D27-398; the main chat)
+
+**Asked for:** the owner, 7 November: a Settings section to backfill bookings, POS and cash from before the hotel's
+first day, with the guest and a choice to send or not. Built by an Opus helper from `.local/build-all/backfill.md`.
+Then a release.
+
+**Shipped**
+- Merged into cp6 at e77c41a8: migration 266 (after cp6's 265; no gap). The admin service's CHANGELOG has what was
+  built and every decision.
+- **Fixed at the merge:** `app.backfill_guard` builds a removal from `old`. Before, a removal could change a figure in
+  the same write (MEMORY 472).
+- **The rest of the merge:**
+  - the pictures moved to A17-57 to A17-59, because cp6's A17-56 is "Several rooms";
+  - the manual is rebuilt;
+  - `pms-send-crs.json` keeps both the `report` email and the `backfill-bill` email.
+- The demo `fidato` migrated to 266 through dbq. Backup: `.local/backups/fidato-before-migrate-266-7nov.dump`.
+- Release 21, `release/r21` = e77c41a8. Website `index-CCfjHX6L.js`. Steps in `.local/release-21-steps.md`, with A0
+  the n8n paste `.local/n8n/paste-7nov-r21/read-the-message.js`.
+
+**Found**
+- MEMORY 472: the freeze did not cover the removing write itself. Found in review.
+- The full gates on this disk time out under load:
+  - run 1 (the other chat merging and migrating): n8n-backup at 20 s;
+  - run 2: purchasing's 3 s wait, and guestDoorByRoom's 8 s wait for the code.
+  - Each passed alone, and run 3 was green.
+- The other chat's 265 GST comparison over a null: checked, deliberate ("a missing figure is never a difference").
+
+**Proved** (run here)
+- **Fail-first:** the db test's removal also writes `rate = 1`. The old guard failed 1 of 24; the fixed guard passed
+  24 of 24.
+- **On the merged branch:**
+  - tsc web and api: exit 0;
+  - web: migrationNumbers, backfill and crm, 16 of 16;
+  - API: backfill, workflows, roleGate and resetOrder, 131 of 131.
+- **Full gates `r21`, run 3 (45 min):** web 1,575, API 3,173, db 2,017, replay 266, PG16, restore 1, to minute. Exit 0.
+
+**Left open**
+- The owner types A0-A8 of release 21. Then check it read-only, and recycle `release-r21` (and `release-r20` if 20 was
+  skipped).
+- The other chat lengthens purchasing.test.tsx's 3 s waits after release 21.
+- The owner's "one more thing" after Backfill.
+
+**Commits:** e77c41a8 (merge), 3fd00434 (MEMORY 472), and this one.
+
+---
+
+## 2026-11-06/07 · Build all, don't ask (D27-396): the approved features and the videos, so far
+
+**Asked for:** the owner, 6 November: "don't ask me permission, build all of them and I will take a look at it".
+
+**Built and merged on cp6** (each by a helper in its own copy; the master merged, renumbered and migrated `fidato`):
+- Safety (D27-384): two-step sign-in in our own API, off until switched on (257); SHI and AMR locked against any reset
+  by the server (258); `docs/go-live/STAGING.md` and `STANDBY.md`, steps only (they need the owner's Oracle account).
+- Accounts (item 2-4): money owed by age, company statements, commission owed, GSTR-1 JSON, input tax credit, GST on
+  advances. Seven questions for the CA in reports' CHANGELOG.
+- Restaurant (item 9): outside diners' table bookings, a voluntary service charge (CCPA 2022), tips, coupons, profit
+  per dish (259-261).
+- Report emails (item 5): Email on every report, scheduled reports (263). **Needs the owner's n8n paste:**
+  `deploy/n8n/OWNER-STEPS.md` part 7, file `.local/n8n/paste-7nov/read-the-message.js`.
+- Stock (item 11): use-by alerts, the supplier's bill checked against its order before payment (264-265).
+- Groups (item 8): rooming lists, allotments released at the night audit, the waitlist (267-269).
+- Guest care (item 10, half): the minibar on the room bill (VAT for alcohol), housekeeping checklists (270-271).
+- The book: 33 of its 44 missing pictures taken; A13-22 and A13-25 retaken.
+
+**Videos, in `D:\fidato\final videos` (old finals in `.local\old-finals`):** A0, A1, A3, A7, A9, A12, A13, A14.
+
+**Found:** the full reset deleted orders before the bookings pointing at them (fixed in 259); shared lists copied from
+old versions would have lost later work (MEMORY 475); merges before migrating the demo broke the local API (473);
+nothing used the database queue (474). Another chat's commit closed one of my staged merges (MEMORY 471, content
+intact).
+
+**Proved:** wave 1's full gate run (only resetOrder failed, fixed). Each later merge: type check, migration numbers,
+manual, database tests and its own API tests on scratch databases. **No full gate run since wave 1.**
+
+**Left open:** guest preferences and the feedback survey, importing an old system, group-wide reports and one rate change
+(being built); exports everywhere; UPI QR, payment links and payroll plans; the A8 update and the other chapters.
+
+---
+
 ## 2026-10-31 · All of A9 remade: 18 videos with the bar, Supplier dues and recipes (C:\videos)
 
 **Asked for:** the owner: "Remake A9": the same way as A8, each task checked against today's book and pictures.

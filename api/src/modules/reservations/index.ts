@@ -1,6 +1,8 @@
 import type { Mount } from "../../mount.ts";
 import { groups } from "./groups.ts";
 import { desk } from "./desk.ts";
+import { rooming } from "./roomingList.ts";
+import { waitlist } from "./waitlist.ts";
 
 /* The front door of the reservations service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -9,6 +11,9 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", groups],
   /* New booking's two lists, and confirming a waiting booking (Phase 1). */
   ["/api/hotels", desk],
+  /* A group's rooming list, and the waitlist (D27-383 item 8; 268). */
+  ["/api/hotels", rooming],
+  ["/api/hotels", waitlist],
 ];
 
 /* ── For a machine, in process ─────────────────────────────────────
@@ -21,6 +26,12 @@ export const mounts: readonly Mount[] = [
 /* D27-397: a guest in house cancelled, once the front desk's check-in is
    undone in the same transaction (front-desk/afterCheckIn.ts). */
 export { cancelBooking } from "./desk.ts";
+
+/* D27-383 item 7: an old system's bookings brought in (admin's oldSystem.ts)
+   are made by the one act every booking is, with its refusals, never
+   overbooked; and its file is read as a rooming list's is. */
+export { makeBooking, type BookingRequest } from "./book.ts";
+export { fileRows, fileDate } from "./roomingList.ts";
 
 export {
   createChannelBooking, cancelChannelBooking, channelBookingAlreadyHere,

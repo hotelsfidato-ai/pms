@@ -31,6 +31,14 @@ const onCard = (email, words) => ({ eval: `(() => {
   [...card.querySelectorAll("button")].find((b) => b.innerText.trim() === ${JSON.stringify(words)}).click();
 })()` });
 
+/* Set a form control the way a person typing would (React hears the event). */
+const setValue = (css, nth, value) => ({ eval: `(() => {
+  const e = document.querySelectorAll(${JSON.stringify(css)})[${nth}];
+  const proto = e instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(e, ${JSON.stringify(value)});
+  e.dispatchEvent(new Event(e instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+})()` });
+
 /* Scroll the page just far enough that a button's foot is on the picture (the card's Test hotel
    section is at its foot). */
 const footOn = (words, bottom) => ({ eval: `(() => {
@@ -247,6 +255,56 @@ export const SHOTS = [
       { n: 1, at: "text:Where they work", side: "left" },
       { n: 2, at: "text:Doing what", side: "left" },
       { n: 3, at: "text:They see this property only. Only the owner can make somebody an Admin.", side: "left" },
+    ],
+  },
+
+  /* ── Group reports and the Group rate change (D27-383 item 6) ─────────
+     These three need more than one property: load shots/a16-group.sql into
+     the database first (Shimla with a Deluxe, Agra without). NOTHING IS
+     SAVED: the rate change is shown, never saved. Taken alone:
+     node docs/manual/tools/shoot.mjs a16 A16-18 A16-19 A16-20 */
+  {
+    id: "A16-18", title: "Group reports: the Manager report for three properties", as: "Owner",
+    path: "/group-reports",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:PTD (month to date)", ms: 30000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Report", side: "left" },
+      { n: 2, at: "text:As on", side: "right" },
+      { n: 3, at: "css:main legend", side: "left" },
+      { n: 4, at: "text:5 Elements Akkalkot", nth: 1, side: "left" },
+      { n: 5, at: "text:Total", side: "left" },
+      { n: 6, at: "text:PDF", side: "bottom" },
+    ],
+  },
+  {
+    id: "A16-19", title: "Group reports: the total adds like with like", as: "Owner", size: "tall",
+    path: "/group-reports",
+    /* Restaurant sales: four figures a period, so the Tax column is on the page. */
+    steps: [{ waitFor: "text:PTD (month to date)", ms: 30000 }, setValue("select", 0, "restaurant-sales"),
+      { waitFor: "text:Tax is not added across GST states", ms: 30000 }, { wait: 800 },
+      { scroll: "text:Tax is not added across GST states" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:TAX", side: "top" },
+      { n: 2, at: "text:Total", nth: 2, side: "left" },
+      { n: 3, at: "text:Tax is not added across GST states", side: "bottom" },
+      { n: 4, at: "text:A total adds up only like with like", side: "left" },
+    ],
+  },
+  {
+    id: "A16-20", title: "Group rate change: every property's old and new price, before saving", as: "Owner", size: "tall",
+    path: "/group-rates",
+    steps: [{ waitFor: "text:The change", ms: 20000 }, { wait: 2500 }, setValue("select", 0, "Deluxe"),
+      setValue("input[type=date]", 0, "2026-12-01"), setValue("input[type=date]", 1, "2026-12-07"),
+      { click: "text:By ₹" }, setValue("input[type=number]", 0, "500"),
+      { waitFor: "text:Save at 2 properties", ms: 20000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:main legend", side: "left" },
+      { n: 2, at: "css:select", side: "bottom" },
+      { n: 3, at: "text:From", side: "top" },
+      { n: 4, at: "text:By ₹", side: "bottom" },
+      { n: 5, at: "text:Deluxe (DLX)", side: "left" },
+      { n: 6, at: "text:No room type called Deluxe here: skipped.", side: "bottom" },
+      { n: 7, at: "text:Save at 2 properties", side: "top" },
     ],
   },
 ];

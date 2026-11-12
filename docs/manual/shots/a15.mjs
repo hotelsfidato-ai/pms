@@ -263,4 +263,20 @@ export const SHOTS = [
       { n: 5, at: "text:Add company", nth: 2, side: "top" },
     ],
   },
+  /* D27-383 item 8. ⚠ SET UP FIRST, made-up data on the demo's copy: the
+     travel agent "Demo Travels" with a contract here and an allotment under
+     it (the build-all run of 7 November made them). Nothing is saved. */
+  {
+    id: "A15-20", title: "An allotment under its contract", as: "Owner",
+    path: "/contracts",
+    steps: [{ waitFor: "text:Demo Travels", ms: 15000 }, { click: "text:Demo Travels" },
+      { waitFor: "text:Booked from it", ms: 15000 }, { scroll: "text:Allotments" }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Hold rooms", side: "top" },
+      { n: 2, at: "css:[data-allotment] span.font-medium", side: "top" },
+      { n: 3, at: "text:Released", nth: 0, side: "left" },
+      { n: 4, at: "text:Booked from it", side: "bottom" },
+      { n: 5, at: "text:Book from it", side: "bottom" },
+    ],
+  },
 ];

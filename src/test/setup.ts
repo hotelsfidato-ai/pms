@@ -82,6 +82,10 @@ vi.mock("@/lib/api", () => ({
   /* A screen's Download button: the real one is proved in src/lib/download.test.ts. */
   downloadFile: async () => "stub-file",
   filenameFrom: () => null,
+  /* A bill photo's size check: every test's file is small. The 9 MB limit
+     itself is api/test/attachments.test.ts. Missing, it stopped every
+     photo upload in the petty cash tests before it was sent. */
+  billTooBig: () => null,
 
   getSession: async () => ({
     scope: {

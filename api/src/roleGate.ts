@@ -160,6 +160,13 @@ const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 const ROOM_STATE = grant("inventory", "edit", "Changing a room's status");
 const OUT_OF_SERVICE = grant("inventory", "edit", "Taking a room out of service, or back");
 const HOUSEKEEPING_ROUNDS = grant("inventory", "edit", "Giving rooms to housekeeping");
+/* D27-383 item 10: ticking a room's checklist marks it, as the tap does; the
+   lists, their switch and the minibar's prices are the hotel's setup; the desk
+   decides a waiting minibar charge, as anyone who adds to a bill. */
+const CHECKLIST_TICK = grant("inventory", "edit", "Ticking a room's checklist");
+const CHECKLISTS = grant("room_config", "edit", "Setting the housekeeping checklists");
+const MINIBAR_LIST = grant("room_config", "edit", "Setting the minibar's items and prices");
+const MINIBAR_DECIDE = grant("invoice", "create", "Deciding a waiting minibar charge");
 
 /* Setting the hotel up: `room_config`, which the matrix gives the owner, an
    administrator and the GM (the owner's D22-30, in the matrix itself). */
@@ -321,6 +328,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/groups/:id/lead`]: CHANGE_BOOKING,
   [`POST ${H}/stays/:id/routing`]: CHANGE_BILL,
   [`POST ${H}/bookings`]: BOOK,
+  /* D27-383 item 8: a group's rooming list is filled in by whoever may change
+     its bookings (reading a file saves nothing, but is part of it); the
+     waitlist is the desk's, whoever may make a booking. */
+  [`POST ${H}/groups/:id/rooming-list/read`]: CHANGE_BOOKING,
+  [`PUT ${H}/groups/:id/rooming-list`]: CHANGE_BOOKING,
+  [`POST ${H}/waitlist`]: grant("reservation", "create", "Putting a guest on the waitlist"),
+  [`POST ${H}/waitlist/:id/remove`]: grant("reservation", "create", "Taking a guest off the waitlist"),
   /* Phase 1 (the owner, 27 Sep): whoever may make a booking confirms one that
      was waiting for the hotel, and sends its one voucher (D27-35). The two
      lists are kept by the owner, an administrator or the GM - asked in
@@ -383,6 +397,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/backfill/:kind`]: BACKFILL,
   [`PUT ${H}/backfill/:kind/:id`]: BACKFILL,
   [`POST ${H}/backfill/:kind/:id/remove`]: BACKFILL,
+  /* D27-383 item 7: an old system's guests and bookings - the owner or an
+     administrator at the hotel (the module switches' pair). */
+  [`POST ${H}/imports/:kind/check`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
+  [`POST ${H}/imports/:kind`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
+  [`POST ${H}/imports/:id/undo`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
   /* The Accountant, the GM, the owner and an Admin (D27-382): who may export. */
   [`PUT ${H}/accounting/tally-ledgers`]: own("accounting/routes.ts: MAY_EXPORT (D27-382)"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
@@ -414,6 +433,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/guests/:id/vip`]: GUEST,
   /* GU-1 (round D): correcting a guest's name, phone, email, address, nationality. */
   [`PATCH ${H}/guests/:id`]: GUEST,
+  /* D27-383 item 10: a guest's preferences, by whoever may edit the guest. */
+  [`PUT ${H}/guests/:id/preferences`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   /* D27-382: the other adults in a room, by the people who record the lead's. */
@@ -562,6 +583,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* admin */
   [`POST ${H}/modules/:module`]: own("admin/moduleSwitches.ts: the owner or an administrator"),
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
+  /* One price change across properties (D27-383 item 6): each property's PUT pricing/base rule. */
+  [`POST /api/group/rate-change`]: own("inventory/groupRates.ts: each property's price rule, all or none"),
   [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: app.manages_hotel - a group administrator, or owner, GM or Admin at that hotel; the name a group administrator only (D27-214)"),
   [`PUT ${H}/fssai`]: FSSAI,
   [`PUT ${H}/group/name`]: GROUP_NAME,
@@ -716,6 +739,15 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/work-orders/:id`]: own("housekeeping/repairRoles.ts: REPAIR_UPDATERS"),
   [`POST ${H}/repair-costs`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
   [`POST ${H}/repair-costs/:id/cancel`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
+  [`POST ${H}/housekeeping/checklist-runs`]: CHECKLIST_TICK,
+  [`PUT ${H}/checklists/required`]: CHECKLISTS,
+  [`POST ${H}/checklists`]: CHECKLISTS,
+  [`PUT ${H}/checklists/:id`]: CHECKLISTS,
+  [`DELETE ${H}/checklists/:id`]: CHECKLISTS,
+  [`POST ${H}/minibar/items`]: MINIBAR_LIST,
+  [`PATCH ${H}/minibar/items/:id`]: MINIBAR_LIST,
+  [`POST ${H}/minibar/records`]: own("housekeeping/minibar.ts: MINIBAR_RECORDERS"),
+  [`POST ${H}/minibar/records/:id/decide`]: MINIBAR_DECIDE,
   /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
   [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
@@ -753,6 +785,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/companies/:id`]: grant("company", "edit", "Changing a company"),
   [`POST ${H}/contracts`]: grant("company", "edit", "Setting a company's contract"),
   [`PUT ${H}/contracts/:id`]: grant("company", "edit", "Setting a company's contract"),
+  /* Allotments (D27-383 item 8, 267): kept as contracts are (C-6). */
+  [`POST ${H}/allotments`]: grant("company", "edit", "Holding rooms in an allotment"),
+  [`PUT ${H}/allotments/:id`]: grant("company", "edit", "Changing an allotment"),
 
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
@@ -896,6 +931,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,
   [`GET ${H}/groups/:id`]: STAYS,
+  /* D27-383 item 8: a group's rooming list (and its files), and the waitlist. */
+  [`GET ${H}/groups/:id/rooming-list`]: STAYS,
+  [`GET ${H}/waitlist`]: STAYS,
   [`GET ${H}/guests/blacklist-warnings`]: STAYS,
   [`GET ${H}/sales-people`]: STAYS,
   [`GET ${H}/room-promotions`]: STAYS,
@@ -936,6 +974,13 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/report-schedules`]: see("room_config", "the reports sent on a schedule"),
   [`GET ${H}/reports/:key/email`]: own("reports/emails.ts: the report's own read rule (READ_RULES)"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
+  /* D27-383 item 10: what guests answered after check-out, for the GM. */
+  [`GET ${H}/feedback`]: own("reputation/feedback.ts: FEEDBACK_ROLES"),
+  /* D27-383 item 10: guests' preferences, where they help - whoever reads
+     stays (the lists, the panel, Assign room, the housekeeping board) and the
+     till by name, for an in-house guest's allergy on the restaurant's order. */
+  [`GET ${H}/guest-preferences`]: see("reservation", "guests' preferences", ["pos", "bar"]),
+  [`GET ${H}/guests/:id/preferences`]: see("reservation", "guests' preferences", ["pos", "bar"]),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,
   [`GET ${H}/leads/:ref`]: GUESTS,
@@ -1029,6 +1074,12 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The GST on purchase bills: the readers of what is owed to suppliers (D27-370). */
   [`GET ${H}/reports/input-tax-credit`]: SUPPLIER_DUES,
   [`GET ${H}/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("routes/reportFiles.ts: REPORT_EXPORTERS, and `invoice` for the money reports"),
+  /* Several properties in one report (D27-383 item 6): no hotel in the address,
+     so the route asks each property's own report rule (READ_RULES above) itself. */
+  [`GET /api/group/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}`]: own("reports/group.ts: each property's report rule, and `report` export"),
+  [`GET /api/group/reports/:key`]: own("reports/group.ts: each property's report rule"),
+  /* One price change across properties (D27-383 item 6): each property's PUT pricing/base rule. */
+  [`GET /api/group/rate-change`]: own("inventory/groupRates.ts: each property's price rule"),
   [`GET ${H}/statistics/daily`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/statistics/period`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/statistics/snapshot`]: see(["report", "rate"], "occupancy and ADR"),
@@ -1060,12 +1111,17 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/setup`]: see("setting", "the hotel's setup steps"),
   /* Backfill data (D27-398): the owner, an administrator, the GM and the accountant. */
   [`GET ${H}/backfill`]: BACKFILL_READ,
+  /* D27-383 item 7: what was brought in from an old system. */
+  [`GET ${H}/imports`]: own("admin/oldSystem.ts: the owner or an administrator (app.imports_old_data)"),
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),
   [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
+  [`GET ${H}/checklists`]: see("inventory", "the housekeeping checklists"),
+  [`GET ${H}/housekeeping/checklist-runs`]: see("inventory", "a room's checklists"),
+  [`GET ${H}/minibar`]: see(["reservation", "invoice"], "the minibar"),
   [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`GET ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
   [`GET ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
@@ -1158,6 +1214,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/company-records`]: see("company", "companies"),
   [`GET ${H}/companies/:id/contracts`]: see("company", "companies"),
   [`GET ${H}/contract-price`]: see(["reservation", "rate"], "a stay's price"),
+  /* An allotment (267): whoever reads companies, or books from it. */
+  [`GET ${H}/allotments/:id`]: see(["company", "reservation"], "an allotment"),
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
@@ -1199,6 +1257,9 @@ export const WITHHELD: Readonly<Record<string, { keys: readonly string[]; unless
   [`GET ${H}/stays/:id`]: { keys: ["phone", "email"], unless: "customer" },
   [`GET ${H}/groups`]: { keys: ["masterBalance", "guestBalance"], unless: "invoice" },
   [`GET ${H}/groups/:id`]: { keys: ["balance", "guestBalance", "master"], unless: "invoice" },
+  /* D27-383 item 8: a guest's phone on the rooming list and the waitlist. */
+  [`GET ${H}/groups/:id/rooming-list`]: { keys: ["phone"], unless: "customer" },
+  [`GET ${H}/waitlist`]: { keys: ["phone"], unless: "customer" },
   /* A function's bill (round E, BQ-1): with no folioId the page draws no
      Bill card at all (banquet/pages/BanquetEvent.tsx). */
   [`GET ${H}/banquet/events/:id`]: { keys: ["folioId", "bill", "invoice"], unless: "invoice" },

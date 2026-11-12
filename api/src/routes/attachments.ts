@@ -95,12 +95,12 @@ attachments.post("/:code/attachments", async (c) => {
   if (!(file instanceof File)) return c.json(refuse("No file was sent."), 409);
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const contentType = file.type || "application/octet-stream";
+  const contentType = storage.typeOf(bytes) ?? (file.type || "application/octet-stream");
 
   /* Checked BEFORE the database is touched, so a refusal costs nothing
      and reads as one sentence rather than a failed transaction. */
   try {
-    storage.checkAcceptable(contentType, bytes.byteLength);
+    storage.checkAcceptable(contentType, bytes);
   } catch (error) {
     if (error instanceof StorageRefused) return c.json(refuse(error.message), 409);
     throw error;

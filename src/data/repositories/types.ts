@@ -61,7 +61,9 @@ export interface Stay {
   /** Per night, before discount. NULL when the room type has no rate
       set — shown as a dash, never ₹0 (defect 246). */
   rackTariff: number | null;
-  offeredTariff: number;    // per night, after discount
+  /** Per night, after discount. NULL only for a booking brought in from an
+      old system with no rate (D27-383 item 7): a dash until the desk sets it. */
+  offeredTariff: number | null;
   groupId?: string;
   /** The booking this room belongs to, when it is one of several sold
       together. Absent for an ordinary single-room stay — a wedding is

@@ -215,6 +215,8 @@ export interface NightAuditResult {
   noShows?: number;
   retentionCharged?: number;
   noShowsWithoutTerms?: number;
+  /** Allotment rooms nobody booked, back on sale from the next day (267). */
+  allotmentRoomsReleased?: number;
   blockers?: Array<{ id: string; reason: string; rooms: string[] }>;
 
   /** The restaurant's day, READ from settled orders — the audit does

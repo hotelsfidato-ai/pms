@@ -32,7 +32,7 @@ const call = (path: string, method = "GET", body?: unknown) =>
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
-type Night = { type: string; date: string; price: number | null };
+type Night = { type: string; date: string; price: number | null; held: number };
 const nights = async () => {
   const res = await call("/calendar-prices?from=2026-08-26&days=3");
   expect(res.status, await res.clone().text()).toBe(200);
@@ -87,7 +87,8 @@ describe("D27-271 item 3 · the Calendar's price is the night's own", () => {
   it("no price at all is null, a dash - never a zero", async () => {
     const all = await nights();
     for (const date of ["2026-08-26", "2026-08-27", "2026-08-28"]) {
-      expect(on(all, "Deluxe", date), date).toEqual({ type: "Deluxe", date, price: null });
+      /* `held`: what an allotment holds that night (267) - none here, 0. */
+      expect(on(all, "Deluxe", date), date).toEqual({ type: "Deluxe", date, price: null, held: 0 });
     }
   });
 

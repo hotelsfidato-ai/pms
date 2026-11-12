@@ -246,7 +246,7 @@ export function MoveRoomFlow({
                   {...fieldProps(f)}
                   type="number" inputMode="decimal" min={0}
                   value={rate} onChange={(e) => setRate(e.target.value)}
-                  placeholder={String(stay.offeredTariff)}
+                  placeholder={stay.offeredTariff === null ? "" : String(stay.offeredTariff)}
                   className="h-12 text-base tabular"
                 />
               )}
@@ -260,7 +260,7 @@ export function MoveRoomFlow({
               {stay.roomNumber || "that room"} for them. A new rate applies
               from tonight forward; to change a night already billed, adjust
               it on the folio so there is a reason beside it.
-              {stay.offeredTariff > 0 && (
+              {stay.offeredTariff !== null && stay.offeredTariff > 0 && (
                 <> Currently {money(stay.offeredTariff)} a night.</>
               )}
             </p>

@@ -496,12 +496,21 @@ rates.get("/:code/inventory", async (c) => {
       [hotelId, from, to],
     );
 
+    /* HELD, NOT SOLD (267, D27-383 item 8): what allotments hold, already
+       taken off `available`; shown beside it so a held room reads as held. */
+    const { rows: held } = await client.query<{ room_type_id: string; night: string; held: number }>(
+      `select room_type_id::text, night::text, sum(held)::int as held
+         from app.allotment_held($1, $2, $3) group by room_type_id, night`,
+      [hotelId, from, to]);
+    const heldAt = new Map(held.map((h) => [`${h.room_type_id}/${h.night}`, h.held]));
+
     return {
       from, to,
       cells: rows.map((r) => ({
         roomTypeId: r.room_type_id,
         roomType: r.room_type,
         date: r.for_date,
+        held: heldAt.get(`${r.room_type_id}/${r.for_date}`) ?? 0,
         sellable: r.sellable,
         /* Both, deliberately. `occupied` is what a revenue manager must
            subtract — a comped room cannot be sold to anybody else —

@@ -10,6 +10,7 @@ import {
 import { fetchStays } from "@/modules/front-desk/data/stays";
 import { listAllRooms, blockedFor, BUSINESS_DATE, type Stay, type Room } from "@/data/repositories";
 import { assignRoom } from "@/modules/front-desk/data/operations";
+import { GuestPreferences, PreferenceMark } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    ASSIGN A ROOM
@@ -172,6 +173,7 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
                           {s.guest}
                         </span>
                         <StatusPill tone="neutral">{s.roomType}</StatusPill>
+                        <PreferenceMark hotelId={hotelId} guestId={s.guestId} />
                       </div>
                       <p className="text-2xs text-grey-500 tabular mt-0.5">
                         {dateLong(s.arrival)} → {dateLong(s.departure)}
@@ -183,6 +185,8 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
               </ul>
             </div>
 
+            {/* D27-383 item 10: what the guest likes, before the room is chosen. */}
+            {chosen && <GuestPreferences hotelId={hotelId} guestId={chosen.guestId} editable={false} />}
             {chosen && (
               <label className="block">
                 <span className="block text-2xs uppercase tracking-wide text-grey-500 mb-1">

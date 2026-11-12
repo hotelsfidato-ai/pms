@@ -6,6 +6,7 @@ import { pricing } from "./pricing.ts";
 import { inventorySetup } from "./inventorySetup.ts";
 import { planSettings } from "./planSettings.ts";
 import { roomTypeExtras } from "./roomTypeExtras.ts";
+import { groupRates } from "./groupRates.ts";
 
 /* The front door of the inventory and rates service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -18,4 +19,6 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", inventorySetup],
   ["/api/hotels", planSettings],
   ["/api/hotels", roomTypeExtras],
+  /* One price change across properties (D27-383 item 6): above any one hotel. */
+  ["/api", groupRates],
 ];

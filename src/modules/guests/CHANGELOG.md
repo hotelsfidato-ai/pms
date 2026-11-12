@@ -8,6 +8,33 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · Guest preferences and the feedback survey (D27-383 item 10, built under D27-396)
+
+**Asked for:** the other half of item 10 of the owner's approved list (`.local/hms-audit.html`, Step 2): preferences on the guest's record, typed by the desk or given by the guest on their own page, shown where they help (the booking and Arrivals, Assign room, housekeeping for an arriving guest, the restaurant's order for an in-house guest; an allergy in red, never hidden); and a feedback survey after check-out on the guest's page, per hotel, once a stay, with results by month, the comments and a low score to the GM, never review gating. Built by a build-all helper on branch `worktree-agent-af1e2742082ea43b7` (database `fidato_prefs`, API 8808, web 5188).
+
+**Shipped (this service):**
+- Migration **272** "a guest's preferences" (the master renumbers): `guests.preferences` jsonb, `{}` for none, checked by `app.guest_preferences_ok`; `app.hotel_offers_smoking`; `app.preferences_kept` (one rule for both doors: a save where the hotel has no smoking room keeps the record's smoking choice); the guest page's definers `app.guest_preferences` and `app.guest_preferences_save` (behind `app.guest_unlocked`, OCI-5).
+- `api/src/modules/guests/preferenceRules.ts` (the choices and lengths, `cleanPreferences`; imported by the website's form too, so they cannot drift) and `preferences.ts`: `GET /:code/guest-preferences` (every live stay here with a preference, its room, arriving / in house), `GET` and `PUT /:code/guests/:id/preferences`. roleGate: the PUT is `GUEST` (customer edit, as Edit guest); the reads `see("reservation", ..., ["pos", "bar"])`.
+- `components/Preferences.tsx` through the front door: `PreferenceMark` (red "Allergy", else "Preferences"), `GuestPreferences` (the stay panel; read only in Assign room), `RoomPreferences` (housekeeping: the arriving guest; the till: the in-house guest's food and allergy), `PreferenceFields` (the desk's dialog and the guest's page).
+- Placed in other services (one import and one line each): front desk `StayTable.tsx` (every stay list, table and cards), `StayDrawer.tsx`, `AssignRoomFlow.tsx`; housekeeping `Housekeeping.tsx`; pos `Till.tsx` (a room-service order; Charge to room) and `GuestOrders.tsx`; online check-in `PreferencesSection.tsx`.
+- The survey (online check-in's page, reputation's results, migration **273**) is described in reputation's and online check-in's CHANGELOGs.
+
+**Decided under D27-396** (the owner reviews later):
+- Preferences are a jsonb column on `guests`, not a table: a guest belongs to the group, so they are shared exactly where the record is and nowhere else (the brief's privacy rule), with no new table to class for test hotels.
+- The choices: floor low/high, bed double/twin, quiet, smoking, food veg/Jain, and free text for allergies (200), pillow (60), newspaper (60), other notes (300). A key is stored only when it says something.
+- "Smoking only where the hotel allows it" is read as "the hotel has an active room marked Smoking room" (043), the fact that already exists, rather than a new setting. Elsewhere the choice is neither offered nor shown, and a save there keeps it.
+- The guest's own choices go straight to their record (no desk confirmation): D21-8's rule is about the legal register, and preferences are not part of it. Their page shows and saves only the stay's own guest.
+- The mark is in StayTable's guest cell, so it shows on every stay list (Arrivals, In house, All bookings, Walk-ins, Folios), one place rather than a column per screen.
+- Housekeeping shows the guest ARRIVING in the room today (the brief's words); the till shows the guest IN the room, food and allergy only.
+- A CRM join: the kept record's preferences stand; an allergy on a record joined into it is still shown (`WITH_ALLERGIES`), so a join never hides one. A companion's preferences are not asked (only the lead guest's record is editable at the desk).
+
+**Proved:** API `api/test/modules/guests/guestCare.test.ts` (24): every refusal seen - another hotel's guest even for the owner (404 "No such guest here."), a clerk of another hotel, housekeeping (403, nothing written), the chef reading none, an impossible choice (409, nothing written), the database's own check, the link alone on the guest's page (404, nothing written); smoking offered and kept; an allergy across a join. DB `db/tests/modules/guests.sql` (+16 preferences assertions); web `preferences.test.tsx` (5).
+Runs (7 November, this copy): `npx tsc -b --force` exit 0, no output. `db/tests/run.sh` 1,923 assertions passed (guests 55, feedback 15, test hotels 89); `db/tests/rerun.sh` all 258 migrations re-runnable. API: guestCare, reputation, moduleSwitches, roleGate, notifications and the three guest-door files, 8 files 236/236, exit 0. Guards seen failing: the "has stayed here" scope taken out of the PUT, the survey's second answer let through, the survey link's module check taken out, the PUT's roleGate rule loosened - each turned exactly its test red (4 of 24), restored from the commit. Web `npx vitest run`: 1,547 of 1,550; the three red were `migrationNumbers` (the gap 256 to 272, the master renumbers) and two in pos's `guestOrders.test.tsx` - the line crashed on a mocked answer of another shape; fixed in the hook (never break the screen it sits on), the three files 10/10. The full API suite was stopped at 127 of 242 files when the database queue rule came (one failure, the Bar role's restaurant line, fixed: "guests' preferences" added to `restaurantRights.ts`); the other 115 files are **still to run**: the master paused full runs for a release's gates, so only this lane's own files (`barRole`, `roleGate`, `guestCare`) went through the queue: 3 files, 113/113, exit 0.
+
+**Left open:** Guest 360 does not show preferences (its guest may have no stay at the hotel in view, which the read's scope refuses); the KOT printed for the kitchen does not carry the allergy (the order screen does).
+
+---
+
 ## 2026-10-31 · Same as the guest (the owner's D27-386)
 
 **Shipped:** on Add an adult and Edit, for a foreigner, **Same as the guest** copies the lead's visit answers: on the check-in window the ones just typed, on the stay the saved ones (`leadVisit` on `GET /stays/:id/companions`). Never the phones or the document; only boxes the lead has answered; shown only when there is something to copy.

@@ -23,6 +23,7 @@
 const KULKARNI = "a551c684-aaa9-4b75-8f4b-011ca36af514";   // A4 Test Kulkarni, room 305 (made again 20 Oct for D27-344)
 const MORE = "b454d1c4-74d9-49f8-9ec4-38e7491315ac";       // A5 Test More, room 304
 const STAY = `/h/5EL/in-house?res=${KULKARNI}`;
+const MINIBAR_STAY = "a624d8c2-edc4-4249-bb48-025942b31bb4";  // room 206, its minibar recorded (A4-06m)
 const TOAST = "css:[role=region] [role=status]";
 const SLOW = 45000;
 /* A native select, chosen as a person would: React hears the change. */
@@ -338,6 +339,22 @@ export const SHOTS = [
       { n: 1, at: "text:Received - Cash", nth: 0, side: "left" },
       { n: 2, at: "text:Paid", side: "left" },
       { n: 3, at: "text:Balance due", side: "left" },
+    ],
+  },
+  /* The minibar on the bill (D27-383 item 10): a guest in the house whose
+     minibar housekeeping recorded (A6.12) - a soft drink at the restaurant's
+     GST and a beer at the VAT on alcohol, which needs the hotel switched on
+     for alcohol with a VAT rate, and a beer on the minibar list. Put that
+     stay's id in MINIBAR_STAY (made 7 Nov 2026 in a helper's copy: room 206). */
+  {
+    id: "A4-06m", title: "Minibar lines on the bill", as: "Reception",
+    path: `/h/5EL/in-house?res=${MINIBAR_STAY}`,
+    steps: [{ clickIf: "text:Got it" }, { click: "text:Settle and check out" },
+      { waitFor: "css:[data-bill-closing]", ms: SLOW }, { wait: 3000 }, { scroll: "text:BAR" }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Minibar - Beer 330ml x 2", side: "left" },
+      { n: 2, at: "text:VAT 10%", side: "left" },
+      { n: 3, at: "text:Minibar - Mineral water 1L", side: "left" },
     ],
   },
   /* The petty cash book (D27-370): a paid-out's category and the photo of its bill.

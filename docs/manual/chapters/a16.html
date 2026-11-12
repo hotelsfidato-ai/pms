@@ -3,7 +3,7 @@
   <div class="chapter-head">
     <span class="num">Chapter A16</span>
     <h1>Across properties</h1>
-    <p>For the owner, an Admin and the general manager. How to see every property on one page, read and edit a property's details, add a property, and run the people who work in each one: adding them, giving them a property and a role, setting their password, and switching them off.</p>
+    <p>For the owner, an Admin and the general manager. How to see every property on one page, read and edit a property's details, add a property, and run the people who work in each one: adding them, giving them a property and a role, setting their password, and switching them off. And, for whoever works at more than one property, the main reports for several properties at once and one price change across them.</p>
   </div>
 
   <!-- A16.1 -->
@@ -13,6 +13,8 @@
     <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who uses it</th><th>What it is for</th></tr></thead>
     <tbody>
       <tr><td>All properties</td><td>The owner, Admin</td><td>The group today: every property added up, what needs you at each one, and a row per property.</td></tr>
+      <tr><td>Group reports</td><td>The owner, and anybody who reads reports at more than one property</td><td>The main reports for several properties: a line per property and a total that adds only like with like (A16.9).</td></tr>
+      <tr><td>Group rate change</td><td>The owner, Admin, the GM and the revenue manager, at more than one property</td><td>One room type's price changed at several properties at once, every old and new price shown before saving (A16.10).</td></tr>
       <tr><td>Properties</td><td>The owner and Admin; the GM, hotel manager, revenue manager, Reception, accountant and viewer see their own</td><td>A card per property: its rooms and tax. For the owner also Edit, Close, adding a property, and each hotel's test hotel.</td></tr>
       <tr><td>People</td><td>The owner, Admin, the GM; the hotel manager can look</td><td>Everybody who can sign in, where they work and as what. Add somebody, give a property, set a password, switch somebody off.</td></tr>
     </tbody>
@@ -477,7 +479,119 @@
   </div>
 
   <!-- A16.9 -->
-  <h2 id="a16-9"><span class="n">A16.9</span>In short</h2>
+  <h2 id="a16-9"><span class="n">A16.9</span>Group reports: several properties in one report</h2>
+  <p>Open <span class="ui">Group reports</span>. It is for the owner, and for anybody who reads reports at more than one property, such as a revenue manager over two hotels. Somebody who works at one property does not see it: their reports are in All reports (A11).</p>
+  <ol class="steps">
+    <li>Choose the <span class="ui">Report</span>: Manager report, Monthly statistics, Room revenue and occupancy, Money owed by age, or Restaurant sales.</li>
+    <li>Choose the day it is <span class="ui">As on</span>, the <span class="ui">Month</span>, or <span class="ui">From</span> and <span class="ui">To</span>, whichever the report asks. It starts on the earliest business date of the properties ticked, so no property is shown past its own day.</li>
+    <li>Under <span class="ui">Properties</span>, every property you may read that report at is ticked. Untick the ones to leave out.</li>
+    <li>The report draws: a line for each property, then the <span class="ui">Total</span>. <span class="ui">PDF</span>, <span class="ui">Excel</span> and <span class="ui">CSV</span> at the top make the same report as a file; <span class="ui">Print</span> prints it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-18">
+    <img src="img/A16-18.png" alt="Group reports: Report Manager report, As on 7 Nov 2026, three properties ticked, and the Today section with a line for 5 Elements Akkalkot, Fidato Agra and Fidato Shimla and the Total">
+    <figcaption><b>Figure A16-18.</b> The Manager report for three properties.</figcaption>
+    <ol class="callouts">
+      <li>Report: which one</li>
+      <li>As on: the day</li>
+      <li>Properties: the ones in the report</li>
+      <li>A line per property: its own Manager report's figures</li>
+      <li>Total: the properties added up, like with like</li>
+      <li>PDF, Excel and CSV: the same report as a file</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:26%">Report</th><th>Each property's line</th></tr></thead>
+    <tbody>
+      <tr><td>Manager report</td><td>Today, PTD and YTD, each with available room nights, Sold Room, occupancy, ADR, RevPAR, room charges, extra charges, POS revenue, total revenue, tax and total payment: the property's own Manager report on that day (A11).</td></tr>
+      <tr><td>Monthly statistics</td><td>The Total line of the property's own Monthly statistics for the month.</td></tr>
+      <tr><td>Room revenue and occupancy</td><td>Available room nights, rooms sold, occupancy, ADR, RevPAR and room revenue over the days chosen, with a bar of each property's occupancy under it.</td></tr>
+      <tr><td>Money owed by age</td><td>The Total owed of the property's own Money owed by age: 0-30, 31-60, 61-90 and over 90 days, and paid ahead. For the owner, an Admin, the GM and the accountant, who read money owed; not the revenue manager.</td></tr>
+      <tr><td>Restaurant sales</td><td>Today, PTD and YTD: every outlet's revenue without tax, the tax, the revenue with tax, and what was paid, from the property's own Manager report.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>How the total is added up</h3>
+  <ul>
+    <li>Money is added only over properties in the same currency. Properties in two currencies get a total each, <span class="msg">“Total, INR”</span>.</li>
+    <li>Tax is added only over properties in the same GST state. Across states the total's <span class="ui">Tax</span> is a dash, and a note under the report says which: <span class="msg">“Tax is not added across GST states (MH, UP, HP): each state's GST is filed under its own GSTIN. Each property's line shows its own.”</span></li>
+    <li>Occupancy, ADR and RevPAR in a total are worked out from the total's own rooms and revenue, never averaged from each property's.</li>
+    <li>A figure a property does not have is a dash on its line. That figure's total is a dash too, the total reads <span class="msg">“Total - incomplete”</span>, and a note names who is missing what: <span class="msg">“Total - incomplete: Fidato Agra has no Tax.”</span></li>
+  </ul>
+
+  <figure class="shot" id="fig-A16-19">
+    <img src="img/A16-19.png" alt="Group reports, Restaurant sales for three properties: each Total line with a dash under Tax, and the notes under it, A total adds up only like with like and Tax is not added across GST states (MH, UP, HP)">
+    <figcaption><b>Figure A16-19.</b> The total adds like with like, and says what it did not add. (Restaurant sales; the demo's restaurant sold nothing on this day.)</figcaption>
+    <ol class="callouts">
+      <li>Tax: each property's own on its line</li>
+      <li>Total: the Tax is a dash, because the properties are in three GST states</li>
+      <li>The note that says so</li>
+      <li>How every total is added up</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Only the properties you may read the report at are offered, and the server asks again at every one. Asked for one you do not work at, it shows nothing and says so: <span class="msg">“SHI is not a property you work at, so its figures are not shown.”</span> At one where your role may not read the report, it names it: <span class="msg">“At Fidato Shimla: Reading reports is for …”</span></li>
+      <li>Where you may read a report at no property, it says <span class="msg">“You read this report at no property, so there is nothing to add up.”</span></li>
+      <li>A file asks the download as well: a viewer reads a group report but cannot download it.</li>
+      <li>Test hotels are never offered or counted.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Group reports and the rate change across properties: <span class="d">D27-383</span> item 6. A total of like with like, the earliest business date, and a property's line read off its own report, so the two can never disagree: decided under <span class="d">D27-396</span>, for the owner to review.</p>
+  </div>
+
+  <!-- A16.10 -->
+  <h2 id="a16-10"><span class="n">A16.10</span>Group rate change: one price at several properties</h2>
+  <p>Open <span class="ui">Group rate change</span>. It is for the owner, an Admin, the GM or the revenue manager who sets prices at more than one property. It changes a room type's <b>base</b>, as Set prices on Rates does (A15.3); the add-ons follow it. Nothing changes a price by itself: this is your change, at the properties you tick.</p>
+  <ol class="steps">
+    <li>Under <span class="ui">Properties</span>, tick the ones to change. Only those where you may set prices are offered.</li>
+    <li>Choose the <span class="ui">Room type</span>. The list has every room type at the properties ticked, with where each is: <span class="msg">“Deluxe (5EL, SHI)”</span>. It is matched by its name at each property, capitals and spaces aside.</li>
+    <li>Choose <span class="ui">From</span>, the first day, and <span class="ui">Through</span>, the last day. Both are changed.</li>
+    <li>Choose the <span class="ui">Change</span>: <span class="ui">New price</span> (the new base, one guest, room only), <span class="ui">By ₹</span> (plus or minus an amount), or <span class="ui">By %</span> (plus or minus a percent). Type the figure; a minus figure lowers it. A percent is rounded to the whole rupee.</li>
+    <li><span class="ui">What will change</span> lists every property: the room type it matched there, and for each run of days its price <span class="ui">Now</span> and <span class="ui">New</span>. A property that is left out says why.</li>
+    <li>Tap <span class="ui">Save at 2 properties</span>. Every property is saved together, or none is. The message says <span class="msg">“Prices saved at 2 properties”</span> and names them, and the figure is emptied so a second tap cannot add the change twice.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-20">
+    <img src="img/A16-20.png" alt="Group rate change: three properties ticked, Room type Deluxe, From and Through, By ₹ 500, and What will change: 5 Elements Akkalkot and Fidato Shimla with Now and New, Fidato Agra skipped, and Save at 2 properties">
+    <figcaption><b>Figure A16-20.</b> Every property's old and new price, before saving. (Left unsaved.)</figcaption>
+    <ol class="callouts">
+      <li>Properties: the ones to change</li>
+      <li>Room type: matched by its name at each property</li>
+      <li>From and Through: the days</li>
+      <li>The change: a new price, or plus or minus ₹ or %</li>
+      <li>The room type matched at this property, with its price now and new</li>
+      <li>A property without the room type: listed and skipped</li>
+      <li>Save: every property, or none</li>
+    </ol>
+  </figure>
+
+  <h3>A property that is left out</h3>
+  <ul>
+    <li><span class="msg">“No room type called Deluxe here: skipped.”</span> Nothing is guessed.</li>
+    <li><span class="msg">“Deluxe here is Superior plus a difference: change Superior's price, or the difference, on this property's own Rates.”</span> Where a property derives its room types from one base room type, only that one is typed (A15.4).</li>
+    <li><span class="msg">“No price on 30/11/2026 to change: set a new price instead, or price those days on this property's own Rates.”</span> Plus or minus needs a price to start from; a dash is never taken as 0.</li>
+    <li><span class="msg">“The new price would be 0 or less on …”</span>, <span class="msg">“Already at these prices: nothing to change.”</span>, and two room types of one name: <span class="msg">“2 room types here are called Deluxe: change it on this property's own Rates.”</span></li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Nothing is saved until you tap Save. If a price moved after you looked, nothing is saved: <span class="msg">“A price changed since you looked. Nothing was saved: look at the new prices and save again.”</span></li>
+      <li>If one property's price cannot be saved, no property's is: <span class="msg">“Nothing was saved, at any property. At Fidato Shimla: …”</span></li>
+      <li>A property you may not set prices at is never offered; asked anyway, the server refuses and names it: <span class="msg">“At Fidato Shimla: Setting a price is for the owner, an administrator, the general manager or the revenue manager. Ask one of them.”</span></li>
+      <li>Each property's new base is recorded as a price set on its own Rates, with your name, exactly as Set prices records one. Check it on that property's Rates.</li>
+    </ul>
+  </div>
+
+  <!-- A16.11 -->
+  <h2 id="a16-11"><span class="n">A16.11</span>In short</h2>
   <table>
     <thead><tr><th style="width:32%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
@@ -489,6 +603,8 @@
       <tr><td>Somebody forgot their password</td><td>People, Password, Set it. Tell them.</td><td>A16.8</td></tr>
       <tr><td>Somebody moves to another hotel</td><td>People: Give a property for the new one, ✕ on the old one.</td><td>A16.6, A16.7</td></tr>
       <tr><td>Somebody leaves</td><td>People, Deactivate.</td><td>A16.6</td></tr>
+      <tr><td>Several properties' figures in one report</td><td>Group reports: the report, the day, the properties.</td><td>A16.9</td></tr>
+      <tr><td>One price change at several properties</td><td>Group rate change: the properties, room type, days and change; read What will change; Save.</td><td>A16.10</td></tr>
     </tbody>
   </table>
 </section>

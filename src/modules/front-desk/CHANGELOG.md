@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-07 · Check-in refuses a booking brought in with no rate; a dash for a stay with none (D27-383 item 7, by the build-all helper)
+
+A booking brought in from an old system with no rate (admin's Bring in old data, migration 280) is refused at
+check-in in words (`operations.ts`: "This booking came in from the old system with no rate. Set its rate first:
+Change rate, on its bill."), behind the database's own `reservations_rate_by_arrival`. `stays.ts` sends
+`offeredTariff` null for it, and `StayTable`, `StayDrawer`, `StayView`, `CheckInFlow`, `AmendStayFlow` and
+`MoveRoomFlow` show a dash, never ₹0. The whole account: admin's `CHANGELOG.md`.
+
 ## 2026-11-06 · After check-in: the GM undoes, cancels, voids and changes; the front desk asks (the owner's D27-397)
 
 **Asked for.** The owner, 6 November: "After the check-in ... we can't cancel the booking or settle out ... we need an option where the GM doesn't have the lock, which is there for the reception and the front desk, but not for the GM. It's an option in the settings." And: "Remove the restriction on change and void for GM. But it needs to be there for front desk. If the front desk needs to do, they need to get approval ... from the GM." Their answers: both Undo check-in and Cancel/Void on a guest in house; the arrival date, Change rate from the guest's menu, the room type, "the rate or methods or things in general"; the switch on Front desk rules, on at every hotel. Brief: `.local/build-all/after-check-in.md`.
@@ -40,6 +48,10 @@ project, still goes in the root `CHANGELOG.md`.
 **Proved.** See the commits and the report: `api/test/modules/front-desk/afterCheckIn.test.ts` 35/35 (fails first on each refusal and right: without the code the routes do not exist), db `after check-in` 17/17 and the suite's amend test now naming who it refuses, web `afterCheckIn.test.tsx` 10/10 and finance `paymentMethod.test.tsx` 2/2. Screens opened in the browser pane at 1280: the GM's and reception's menus on a guest in house, Undo the check-in (done on a comp guest: confirmed, room 206 vacant and dirty), the refusal sent back at ask time, Change room type (Deluxe rooms only), the Bill tab's wallet button and its dialog, Ask the GM to change the rate then Approvals' card approved (₹3,200, both nights corrected), Front desk rules' card and switch (off: Undo, Cancel and Void grey with their reasons), Change dates' Arrival open for the GM.
 
 **Gates, this copy, each by its exit code.** `npx tsc -b --force` 0 (and the API's `tsc --noEmit` 0). `npx vitest run` 1552 passed, 1 failed, exit 1: `src/test/migrationNumbers.test.ts` only, because 257-265 are other helpers' and not in this copy. `cd api && npm test` 3077 passed, 2 failed, exit 1: `guards.test.ts`'s "refuses to void a stay that already happened" asked an in-house stay, which the owner may now void (D27-397) - it now asks a departed one - and `suAvailability.test.ts` timed out at 20 s under load; the two files alone, a scratch database: 57 passed, exit 0. `db/tests/run.sh`: all 1909 assertions passed, exit 0.
+
+## 2026-11-07 · The Calendar shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
+
+**Shipped.** `GET /:code/calendar-prices` (`api/src/modules/front-desk/stays.ts`) also answers each type's `held` that night (`app.allotment_held`, migration 267). `data/stayview.ts` takes it off the type's and the footer's free count (never off occupancy: held is not sold); `pages/StayView.tsx` shows it beside the free figure as "+3h", with "Rooms held for an allotment, not sold" in the key when any day has one. By floor, held is 0 (it is a room type's). `api/test/modules/front-desk/calendarPrices.test.ts`'s exact answer gains `held: 0` (5/5). **Proved:** seen on the local demo, Deluxe on 20 Nov "4 +3h", the footer 14 for 17 sellable. The rest: contracts' CHANGELOG, 7 November.
 
 ---
 

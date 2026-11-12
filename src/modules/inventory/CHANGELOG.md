@@ -11,6 +11,60 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-07 · One price change across properties (D27-383 item 6, by the build-all helper)
+
+Branch `worktree-agent-a06c4473ec734a6e0`, on cp6 at `9f4f1532`. The group reports, the same item's other half,
+are in the reports CHANGELOG.
+
+**Asked for.** The owner, or a revenue manager over several properties: choose properties, a room type (by its
+name, matched per property and shown before saving, never assumed), the days and the change (a new price, or
+plus or minus an amount or a percent); see every property's old and new price before saving; save all or none,
+recorded per property as the rate screens record a change. A property without the room type listed and
+skipped. The system never changes a price by itself.
+
+**Shipped.**
+- `api/src/modules/inventory/groupRates.ts`, mounted at `/api`: `GET /api/group/rate-change` (the room type
+  names at the properties chosen, and, once the question is whole, each property's plan: the room type matched,
+  runs of days with `old` and `new`, or `skipped` with its reason; writes nothing) and `POST` (the same question
+  with `seen`, the plans shown). The save recomputes every plan and refuses if any differs from `seen`; then
+  writes every property's runs with `app.set_base_price` - the Rates screen's own call, so each row carries
+  `created_by` as a tapped price does - in ONE transaction; a write that fails at one property throws and the
+  rollback takes every property's back ("Nothing was saved, at any property. At <property>: ...").
+- **Who:** at every property named, the role there must pass `PUT /:code/pricing/base`'s rule (roleGate
+  `PRICE`, read from `WRITE_RULES`). One that fails, one not worked at, or a test hotel: nothing shown or saved,
+  the refusal names it.
+- **Skipped, never guessed:** no active room type of that name ("No room type called Deluxe here: skipped."),
+  two of that name, a type that is the base room type plus a difference (the Rates screen's `offered` rule: it
+  follows its base), a plus or minus where a day has no price (a dash is never taken as 0), a new price of 0 or
+  less, or nothing to change.
+- `pages/GroupRates.tsx` at `/group-rates`, menu "Group rate change" under Across properties, for a role that
+  sets prices (`setsRates`) at more than one real property (reports' `hotelsWhere`). Save invalidates each
+  saved property's Rates and Calendar, and empties the figure so a second press cannot add the change twice.
+
+**Decided under D27-396:** the name matches with capitals and outer spaces aside, nothing looser; a percent
+rounds to the whole rupee (the base's differences are whole rupees, D27-188); at most 366 days at a time; a new
+price must be above 0 (a free room is ticked Free on the property's own Rates, D27-120); the base plan is the
+property's (`pricing_basis.meal_plan`, else EP), as `set_base_price` writes it; no label on the row, as the
+Rates dialog writes none.
+
+**Proved.** `api/test/modules/inventory/groupRates.test.ts`, 9 tests, on four properties of its own (April 2029), exit 0
+with the group reports and roleGate files (103 tests, 15:18, 7 Nov). It sees: a property not worked at refused with
+nothing written; a role that may not set prices at one of two (named); a property without the room type skipped and
+listed; one that is its base type plus a difference skipped; a plus where two days have no price skipped, naming them;
+a save after a price moved refused with nothing written; a save failing at the second property (a trigger made to
+refuse it) leaving the first as it was; a save of three writing two, skipping the third, every row `created_by` the
+person, the day after the run keeping its old price; a 0 change, a 0 price and no `seen` refused. A percent of -7.5 on
+₹3,000 is ₹2,775. **On screen:** as the Owner, Deluxe +₹500 on 20-25 Nov at 5EL, Shimla and Agra: 5EL ₹3,699 to ₹4,199,
+Shimla ₹4,200 to ₹4,700, Agra "No room type called Deluxe here: skipped."; saved, and 5EL's own pricing read 4199
+"typed" on exactly 20-25 Nov and 3699 on the 19th and 26th; -10% at 375 px (₹3,699 to ₹3,329); as the revenue
+manager over 5EL and Shimla only those two offered.
+
+## 2026-11-07 · Rooms left shows rooms an allotment holds (D27-383 item 8, by the build-all helper)
+
+**Shipped.** Migration 267 keeps `app.inventory_grid`'s columns and takes what allotments hold off `available` (`occupied` and `sold` unchanged), so New booking's "n left", the channel manager's push and a machine's refusal read held rooms as not for sale. `GET /:code/inventory` cells carry `held`; `pages/Rates.tsx` Rooms left shows "n held" under the day and says so in its key. The rest: contracts' CHANGELOG, 7 November.
+
+---
+
 ## 2026-10-15 · A loose Several rooms range, and Remove a room nothing has used (the owner's D27-336)
 
 Helper copy `.claude/worktrees/rooms-remove`, branch `inventory/rooms-remove`, from cp6 df577ec1. No migration: `pms_app` already has DELETE on `rooms`, and its row policy (`hotel_isolation`) covers every command - the API tests ran on a scratch database migrated from zero.

@@ -6,6 +6,7 @@ import { can, type Role } from "../permissions.ts";
 import { teamsFor } from "../modules/guest-services/index.ts";
 import { setupReminders, STEP_TITLES } from "../modules/admin/index.ts";
 import { expiryAlerts } from "../modules/stores/index.ts";
+import { FEEDBACK_ROLES, lowScore } from "../modules/reputation/index.ts";
 import { allows, WRITE_RULES } from "../roleGate.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
@@ -284,6 +285,25 @@ notifications.get("/:code/notifications", async (c) => {
           title: `${wake!.asked} wake-up call${wake!.asked === 1 ? "" : "s"} asked for by guests`,
           body: "Confirm it on Wake-up calls, or cancel it with a reason.",
           isRead: false, at, link: `/h/${code}/wake-up-calls`, actionRequired: true,
+        });
+      }
+    }
+
+    /* A LOW FEEDBACK SCORE (D27-383 item 10): 1 or 2, overall or any part,
+       answered on a guest's page in the last seven days - for the GM, the
+       owner and an administrator, who read Guest feedback. */
+    if (role !== null && FEEDBACK_ROLES.includes(role)) {
+      const { rows: low } = await client.query<{ id: string; overall: number; room: string }>(
+        `select f.id::text, f.overall, coalesce(app.stay_room(f.reservation_id), '-') as room
+           from guest_feedback f
+          where f.hotel_id = $1 and f.answered_at > now() - interval '7 days' and ${lowScore("f.")}
+          order by f.answered_at desc`, [hotelId]);
+      for (const f of low) {
+        out.push({
+          id: `low-feedback-${f.id}`, hotelId: code, category: "customer",
+          title: `A low feedback score: ${f.overall} of 5 overall - room ${f.room}`,
+          body: "From the survey on the guest's own page after check-out. Read it on Guest feedback.",
+          isRead: false, at, link: `/h/${code}/feedback`, actionRequired: true,
         });
       }
     }

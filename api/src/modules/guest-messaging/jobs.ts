@@ -274,7 +274,16 @@ export async function owedNow(
   client: Client, limits: Limits, hotelId: string | null = null,
 ): Promise<Due[]> {
   await client.query("select app.guest_messages_begin()");
-  return dueFromDatabase(client, limits, hotelId);
+  const due = await dueFromDatabase(client, limits, hotelId);
+  /* A BOOKING BROUGHT IN FROM AN OLD SYSTEM (D27-383 item 7) was confirmed
+     there: the sweep sends it no voucher unless its import ticked "Send each
+     guest our booking voucher" (the master, under D27-396). The desk's Send
+     voucher, which reads dueFromDatabase, still can. */
+  if (due.length === 0) return due;
+  const { rows } = await client.query<{ id: string }>(
+    "select app.quietly_imported($1::uuid[])::text as id", [due.map((d) => d.reservationId)]);
+  const quiet = new Set(rows.map((r) => r.id));
+  return quiet.size ? due.filter((d) => !quiet.has(d.reservationId)) : due;
 }
 
 /* ── The guest's own link, for this message ────────────────────────

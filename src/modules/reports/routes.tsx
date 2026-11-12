@@ -2,6 +2,7 @@ import { Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import DashboardPage from "@/modules/reports/pages/Dashboard";
 import AllPropertiesPage from "@/modules/reports/pages/AllProperties";
+import GroupReportsPage from "@/modules/reports/pages/GroupReports";
 import ManagerReportPage from "@/modules/reports/pages/ManagerReport";
 import NightAuditReportPage from "@/modules/reports/pages/NightAudit";
 import {
@@ -34,6 +35,7 @@ export const routes = (
     {/* Group level */}
     <Route path="/" element={<RequireAccess path="/" resource="dashboard"><DashboardPage /></RequireAccess>} />
     <Route path="/all-properties" element={<RequireAccess path="/all-properties" resource="report"><AllPropertiesPage /></RequireAccess>} />
+    <Route path="/group-reports" element={<RequireAccess path="/group-reports" resource="report"><GroupReportsPage /></RequireAccess>} />
     <Route path="/reports/manager" element={<RequireAccess path="/reports/manager" resource="report"><ManagerReportPage /></RequireAccess>} />
     <Route path="/reports/night-audit" element={<RequireAccess path="/reports/night-audit" resource="report"><NightAuditReportPage /></RequireAccess>} />
     <Route path="/reports/voids" element={<RequireAccess path="/reports/voids" resource="report"><VoidsPage /></RequireAccess>} />

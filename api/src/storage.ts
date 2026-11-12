@@ -39,9 +39,28 @@ const ALLOWED = new Map<string, string>([
   ["application/pdf", "pdf"],
 ]);
 
-/** A phone photograph of an invoice is 2–6 MB. Twenty is generous and
-    still small enough that a bad upload cannot fill the disk. */
-const MAX_BYTES = 20 * 1024 * 1024;
+/** A phone photograph of an invoice is 2–6 MB. Nine, because nginx stops
+    any request at 10 MB and the form around the file needs room (audit,
+    10 Nov, item 11: it was 20, so 10-20 MB met nginx's page, not this). */
+const MAX_BYTES = 9 * 1024 * 1024;
+
+/**
+ * What the file IS, from its first bytes, whatever the browser called it
+ * (audit, 10 Nov): a name ending .jpg says nothing about what is inside,
+ * and this store will one day hand files back from a bucket by their type.
+ */
+export function typeOf(bytes: Buffer): string | null {
+  const at = (offset: number, text: string) =>
+    bytes.subarray(offset, offset + text.length).toString("latin1") === text;
+  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (at(0, "\x89PNG\r\n\x1a\n")) return "image/png";
+  if (at(0, "RIFF") && at(8, "WEBP")) return "image/webp";
+  if (at(4, "ftyp") && ["heic", "heix", "hevc", "heim", "heis", "hevm", "hevs", "mif1", "msf1"]
+    .some((brand) => at(8, brand))) return "image/heic";
+  /* A PDF may carry a few bytes before its header; readers look in the first 1 KB. */
+  if (bytes.subarray(0, 1024).includes("%PDF-")) return "application/pdf";
+  return null;
+}
 
 export interface Stored {
   key: string;
@@ -62,7 +81,8 @@ const ROOT = resolve(
   process.env["UPLOAD_DIR"] || join(process.cwd(), ".uploads"),
 );
 
-export function checkAcceptable(contentType: string, byteSize: number): void {
+export function checkAcceptable(contentType: string, bytes: Buffer): void {
+  const byteSize = bytes.byteLength;
   if (!ALLOWED.has(contentType)) {
     throw new StorageRefused(
       `A bill is a photo or a PDF. ${contentType || "That file"} is not one - ` +
@@ -77,6 +97,12 @@ export function checkAcceptable(contentType: string, byteSize: number): void {
       `That file is ${(byteSize / 1024 / 1024).toFixed(1)} MB. ` +
       `The limit is ${MAX_BYTES / 1024 / 1024} MB - photograph the bill ` +
       `rather than scanning it at full resolution.`,
+    );
+  }
+  if (typeOf(bytes) !== contentType) {
+    throw new StorageRefused(
+      "That file is not the photo or PDF its name says. Open it on the phone or " +
+      "computer, save it again as a photo or PDF, and attach that.",
     );
   }
 }
@@ -95,7 +121,7 @@ export function checkAcceptable(contentType: string, byteSize: number): void {
 export async function put(
   hotelId: string, contentType: string, bytes: Buffer,
 ): Promise<Stored> {
-  checkAcceptable(contentType, bytes.byteLength);
+  checkAcceptable(contentType, bytes);
 
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   const ext = ALLOWED.get(contentType)!;

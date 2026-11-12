@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import { env } from "./env.ts";
 import { healthCheck, closePool, hotelInView, type Client } from "./db.ts";
 import { signInFor, Unauthenticated } from "./auth.ts";
@@ -141,6 +142,13 @@ app.use(
 /* Every request's time and result, by route PATTERN, for System health
    (D27-92). After CORS, so a preflight is not a request. See telemetry.ts. */
 app.use("*", telemetry);
+
+/* No request body over 10 MB (audit, 10 Nov, item 11): nginx stops at 10 MB
+   already; this holds if anything ever reaches the API without nginx. */
+app.use("/api/*", bodyLimit({
+  maxSize: 10 * 1024 * 1024,
+  onError: (c) => c.json({ ok: false, reason: "That is over 10 MB. Send a smaller file." }, 413),
+}));
 
 /* ── Health ──────────────────────────────────────────────────────
    Unauthenticated on purpose: a load balancer has no token, and a
@@ -430,7 +438,11 @@ if (process.argv[1]?.endsWith("server.ts")) {
      (D27-380). Asks nothing until a clear has left one on the list. */
   admin.ownerResetJobs.start();
 
-  const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
+  /* On the server, only nginx on the same machine may reach the API (audit,
+     10 Nov, item 5): the firewall is no longer the only thing keeping 8787 in. */
+  const server = serve({
+    fetch: app.fetch, port: env.port, ...(env.isProduction ? { hostname: "127.0.0.1" } : {}),
+  }, (info) => {
     console.log(
       `  Fidato PMS API  ·  http://localhost:${info.port}  ·  ${env.nodeEnv}` +
         `  ·  started ${STARTED_AT}`,

@@ -14,6 +14,7 @@ import { ownerReset } from "./ownerReset.ts";
 import { setup } from "./setup.ts";
 import { twoStep } from "./twoStep.ts";
 import { backfill } from "./backfill.ts";
+import { oldSystem } from "./oldSystem.ts";
 
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -52,4 +53,6 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", setup],
   /* D27-398: Backfill data - the days before a hotel's first day. */
   ["/api/hotels", backfill],
+  /* D27-383 item 7: an old system's guests and bookings brought in. */
+  ["/api/hotels", oldSystem],
 ];

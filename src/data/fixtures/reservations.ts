@@ -362,7 +362,7 @@ function generate(preplaced: Stay[]): Stay[] {
 function folioFor(s: Stay): Folio {
   const roomCharges = s.isComplimentary
     ? 0
-    : s.offeredTariff * Math.max(s.nights, 1);
+    : (s.offeredTariff ?? 0) * Math.max(s.nights, 1);
   const tax = Math.round(roomCharges * TAX_RATE * 100) / 100;
   const total = Math.round((roomCharges + tax) * 100) / 100;
   const payments = s.status === "checked-out" ? total : 0;
@@ -442,7 +442,7 @@ const inWindow = (s: Stay) =>
 const ledgerRoomCharge = (s: Stay): number => {
   const written = notableFolios.find((f) => f.stayId === s.id);
   if (written) return written.roomCharges;
-  return s.offeredTariff * Math.max(s.nights, 1);
+  return (s.offeredTariff ?? 0) * Math.max(s.nights, 1);
 };
 
 const revenueOf = (list: Stay[]) =>
@@ -466,7 +466,7 @@ const revenueOf = (list: Stay[]) =>
   }
 
   for (const stay of scalable) {
-    stay.offeredTariff = Math.round(stay.offeredTariff * factor * 100) / 100;
+    stay.offeredTariff = Math.round((stay.offeredTariff ?? 0) * factor * 100) / 100;
   }
 
   /* Rounding leaves a few paise. They go on the largest generated stay,
@@ -481,7 +481,7 @@ const revenueOf = (list: Stay[]) =>
     )[0];
     if (biggest) {
       biggest.offeredTariff =
-        Math.round((biggest.offeredTariff + residue / Math.max(biggest.nights, 1)) * 100) / 100;
+        Math.round(((biggest.offeredTariff ?? 0) + residue / Math.max(biggest.nights, 1)) * 100) / 100;
     }
   }
 }
@@ -608,7 +608,7 @@ function toReservation(s: Stay): Reservation {
     roomNumber: s.roomNumber,
     rateType: s.ratePlan,
     baseRate: s.rackTariff,
-    offeredRate: s.offeredTariff,
+    offeredRate: s.offeredTariff ?? 0,
     checkIn: s.arrival,
     checkOut: s.departure,
     adults: s.adults,

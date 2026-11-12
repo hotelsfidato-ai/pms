@@ -39,6 +39,7 @@ most export CSV.
 |---|---|---|---|
 | Dashboard | `/` | `pages/Dashboard.tsx` | Reception |
 | All reports | `/reports` | `pages/Index.tsx` | none |
+| Group reports | `/group-reports` | `pages/GroupReports.tsx` | Across properties, for a role reading reports at 2+ real hotels (`groupHotels.ts`). D27-383 item 6: `api/src/modules/reports/group.ts`, `GET /api/group/reports/:key` (and `.pdf .xlsx .csv`); each property's line is its own report's, the total like with like (one currency; tax within one GST state; rates from the totals); every property asked its own report's read rule |
 | Manager report | `/reports/manager` | `pages/ManagerReport.tsx` | none |
 | Night audit report | `/reports/night-audit` | `pages/NightAudit.tsx` | search only |
 | City ledger | `/reports/city-ledger` | `pages/Ledgers.tsx` (`CityLedgerPage`) | search only |

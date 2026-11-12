@@ -207,6 +207,9 @@ export async function createBooking(
     campaign?: string;
     /** D27-371: the guest's own company, for the tax invoice; the guest pays. */
     guestCompany?: { name: string; gstin: string; address: string };
+    /** D27-383 item 8: taken from this allotment (267); for this waitlist entry (268). */
+    allotmentId?: string;
+    waitlistId?: string;
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;

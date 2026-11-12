@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { businessDateFor } from "../../businessDate.ts";
+import { readAllotments } from "./allotments.ts";
 import {
   countProblem, dateProblem, emailProblem, gstinProblem, phoneProblem, priceProblem,
 } from "../../validate.ts";
@@ -233,7 +234,9 @@ contracts.get("/:code/companies/:id/contracts", async (c) => {
     const { rows: mealPlans } = await client.query(
       "select code, includes from meal_plans where code = any($1) order by array_position($1, code)",
       [PLANS_OFFERED]);
-    return { company: company[0], contracts: list, roomTypes, mealPlans,
+    /* The rooms held under each contract (267, D27-383 item 8). */
+    const held = await readAllotments(client, hotelId, "k.company_id = $2", [id]);
+    return { company: company[0], allotments: held, contracts: list, roomTypes, mealPlans,
              today: await businessDateFor(client, hotelId) };
   });
   return body ? c.json(body) : c.json({ error: "No such company." }, 404);
@@ -332,6 +335,22 @@ async function contractFrom(
     const o = overlap[0];
     return { reason: `${co[0].name} already has "${o.name}" here from ${day(o.valid_from)} to `
       + `${day(o.valid_to)}. One contract is in force at a time: change its dates first.` };
+  }
+
+  /* An allotment's nights are inside its contract (267): new dates may not
+     leave one outside. */
+  if (contractId) {
+    const { rows: outside } = await client.query<{ type: string; first: string; last: string }>(
+      `select rt.name as type, a.first_night::text as first, a.last_night::text as last
+         from allotments a join room_types rt on rt.id = a.room_type_id
+        where a.contract_id = $1 and a.is_active
+          and (a.first_night < $2::date or a.last_night > $3::date) limit 1`,
+      [contractId, validFrom, validTo]);
+    if (outside[0]) {
+      const o = outside[0];
+      return { reason: `The ${o.type} allotment from ${day(o.first)} to ${day(o.last)} would be outside `
+        + "those dates. Change or stop it first." };
+    }
   }
 
   return { name, validFrom, validTo, pricing, discountPercent, commissionPct, notes, rates };

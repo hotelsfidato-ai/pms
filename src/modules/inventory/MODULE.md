@@ -44,6 +44,7 @@ each booking.
 | Room types | `/h/:code/room-types` | `pages/RoomSetup.tsx` | none |
 | Cancellation terms | `/h/:code/cancellation-terms` | `pages/CancellationTerms.tsx` | none |
 | Rates | `/h/:code/rates` | `pages/Rates.tsx` | none |
+| Group rate change | `/group-rates` | `pages/GroupRates.tsx` | Across properties, for a rate setter at 2+ real hotels. D27-383 item 6: `groupRates.ts`, `GET`/`POST /api/group/rate-change`; the room type by name per property, old and new shown, saved all or none with `app.set_base_price`; PUT pricing/base's rule asked at every property |
 
 - **Rates (30 September, D27-188, D27-194)** replaces Pricing, Rate plans, the
   Rate calendar and Rate performance; `/h/:code/pricing`, `/rate-plans` and

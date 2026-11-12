@@ -494,4 +494,63 @@ export const SHOTS = [
       { n: 3, at: "text:Send to the GM", side: "bottom" },
     ],
   },
+
+  /* ── D27-383 item 8: the rooming list, an allotment's booking, the waitlist ──
+     ⚠ SET UP FIRST, made-up data on the demo's copy (the build-all run of
+     7 November made these): a group "Kulkarni Wedding" of four rooms; the
+     travel agent "Demo Travels" with a contract and an allotment holding
+     Deluxe rooms; on the Waitlist, one guest whose nights have a room free
+     and one still full. Nothing here is saved: the file is read, never
+     saved, and New booking is left unsaved. */
+  {
+    id: "A2-38", title: "A group's rooming list", as: "Reception",
+    path: "/h/5EL/groups",
+    steps: [{ waitFor: "text:Kulkarni Wedding", ms: 15000 }, { click: "text:Kulkarni Wedding" },
+      { waitFor: "text:Open the group", ms: 10000 }, { click: "text:Open the group" },
+      { waitFor: "text:Rooming list", ms: 10000 }, { click: "text:Rooming list" },
+      { waitFor: "text:Save rooming list", ms: 15000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Print or download", side: "bottom" },
+      { n: 2, at: "text:Read the group's file", side: "bottom" },
+      { n: 3, at: "css:tbody tr:first-child td:nth-child(6) input", side: "top" },
+      { n: 4, at: "text:Save rooming list", side: "right" },
+    ],
+  },
+  {
+    id: "A2-39", title: "A file with problems: nothing saved", as: "Reception",
+    steps: [
+      { eval: `(() => { const csv = "Guest name,Room type,Arrival,Departure\\nAnita Joshi,Deluxe,14/11/2026,16/11/2026\\n,Deluxe,14/11/2026,16/11/2026\\nRahul Desai,Deluxe,15/11/2026,16/11/2026\\n";
+        const dt = new DataTransfer(); dt.items.add(new File([csv], "kulkarni-rooming.csv", { type: "text/csv" }));
+        const i = document.querySelector("input[type=file]"); i.files = dt.files; i.dispatchEvent(new Event("change", { bubbles: true })); })()` },
+      { waitFor: "text:Nothing was saved", ms: 15000 }, { wait: 600 }, TOP,
+    ],
+    marks: [
+      { n: 1, at: "text:Nothing was saved", side: "left" },
+      { n: 2, at: "css:[data-rooming-problems] li", side: "left" },
+    ],
+  },
+  {
+    id: "A2-40", title: "A booking from an allotment", as: "Reception",
+    path: "/contracts",
+    steps: [{ waitFor: "text:Demo Travels", ms: 15000 }, { click: "text:Demo Travels" },
+      { waitFor: "text:Book from it", ms: 15000 }, { click: "text:Book from it" },
+      { waitFor: "css:[data-from-allotment]", ms: 20000 }, ...FORM,
+      { scroll: "text:Room" }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Room type", nth: 0, side: "top" },
+      { n: 2, at: "css:[data-left]", side: "bottom" },
+      { n: 3, at: "text:Contract: Demo Travels", side: "right" },
+    ],
+  },
+  {
+    id: "A2-41", title: "The waitlist", as: "Reception",
+    path: "/h/5EL/waitlist",
+    steps: [{ waitFor: "text:A room is free now", ms: 15000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Put a guest on the waitlist", side: "left" },
+      { n: 2, at: "text:A room is free now", side: "right" },
+      { n: 3, at: "text:Book", nth: 0, side: "bottom" },
+      { n: 4, at: "text:Still full", nth: 0, side: "right" },
+    ],
+  },
 ];
