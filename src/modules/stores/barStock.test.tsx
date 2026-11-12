@@ -6,7 +6,7 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import { useSession } from "@/lib/session";
 import { useToastStore } from "@/components/ui";
 import type { Role } from "@/lib/permissions";
-import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel } from "@/test/app";
+import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel, waitLong } from "@/test/app";
 import BarStockPage from "@/modules/stores/pages/BarStock";
 import StoresPage from "@/modules/stores/pages/Stores";
 import type { BarRequest, BarSheet, Place, SheetDrink } from "@/modules/stores/data/barSheet";
@@ -153,7 +153,7 @@ describe("today's sheet (D27-354)", () => {
     expect(within(sheet).getByText("-30 ml")).toBeTruthy();
     expect(within(sheet).getByText("-1")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Save the closing count (2)" }));
-    await vi.waitFor(() => expect(sent.counts).toEqual([[
+    await waitLong(() => expect(sent.counts).toEqual([[
       { itemId: "d-blue", book: 54.333, counted: 54.167 },
       { itemId: "d-kf", book: 29, counted: 28 },
     ]]));
@@ -174,7 +174,7 @@ describe("today's sheet (D27-354)", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Morning count" }));
     fireEvent.change(screen.getByLabelText("Counted, Imperial Blue 180 ml, NIPs"), { target: { value: "54" } });
     fireEvent.click(screen.getByRole("button", { name: "Save the morning count (1)" }));
-    await vi.waitFor(() => expect([sent.places, sent.moments]).toEqual([["store"], ["morning"]]));
+    await waitLong(() => expect([sent.places, sent.moments]).toEqual([["store"], ["morning"]]));
   });
 
   it("an open bottle's ml must be under its size: nothing is sent", async () => {
@@ -183,7 +183,7 @@ describe("today's sheet (D27-354)", () => {
     fireEvent.change(await screen.findByLabelText("Counted, Imperial Blue 180 ml, NIPs"), { target: { value: "54" } });
     fireEvent.change(screen.getByLabelText("Counted, Imperial Blue 180 ml, ml in the open one"), { target: { value: "200" } });
     fireEvent.click(screen.getByRole("button", { name: "Save the closing count (1)" }));
-    await vi.waitFor(() => expect(useToastStore.getState().toasts.map((t) => `${t.title}: ${t.description}`))
+    await waitLong(() => expect(useToastStore.getState().toasts.map((t) => `${t.title}: ${t.description}`))
       .toContain("Not saved: Imperial Blue 180 ml: whole NIPs, and the open one's ml under 180."));
     expect(sent.counts).toEqual([]);
   });
@@ -207,7 +207,7 @@ describe("set up (D27-354)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Use the 2 suggestions" }));
     expect((screen.getByLabelText("How much, Imperial Blue 60 ml") as HTMLInputElement).value).toBe("60");
     fireEvent.click(screen.getByRole("button", { name: "Save 2" }));
-    await vi.waitFor(() => expect(sent.pours).toEqual([[
+    await waitLong(() => expect(sent.pours).toEqual([[
       { itemId: "i-blue", variationId: "v-60", stockItemId: "d-blue", ml: 60, units: null },
       { itemId: "i-blue", variationId: "v-nip", stockItemId: "d-blue", ml: null, units: 1 },
     ]]));
@@ -235,7 +235,7 @@ describe("the Store's count of the bar (D27-354)", () => {
     fireEvent.change(within(sheet).getByLabelText("Open bottle, Imperial Blue 750 ml, in ml"), { target: { value: "600" } });
     expect(within(sheet).getByText("Book 5 bottles + 630 ml · 0 bottles + 30 ml fewer")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Save the count" }));
-    await vi.waitFor(() => expect(sent.storeCounts).toEqual([{
+    await waitLong(() => expect(sent.storeCounts).toEqual([{
       locationId: "bar", lines: [{ itemId: "d-750", empty: false, book: 5.84, counted: 5.8 }] }]));
   });
 });
@@ -254,12 +254,12 @@ describe("the counter asks the store (D27-361)", () => {
     fireEvent.change(await screen.findByLabelText("Drink, line 1"), { target: { value: "d-blue" } });
     fireEvent.change(screen.getByLabelText("How many, line 1"), { target: { value: "5" } });
     fireEvent.click(screen.getByRole("button", { name: "Ask the store" }));
-    await vi.waitFor(() => expect(sent.asks).toEqual([{ lines: [{ itemId: "d-blue", quantity: 5 }], note: "" }]));
+    await waitLong(() => expect(sent.asks).toEqual([{ lines: [{ itemId: "d-blue", quantity: 5 }], note: "" }]));
     expect(screen.getByText("Your own request: somebody else approves it.")).toBeTruthy();
     const buttons = screen.getAllByRole("button", { name: "Approve and move" });
     expect(buttons).toHaveLength(1);
     fireEvent.click(buttons[0]!);
-    await vi.waitFor(() => expect(sent.approved).toEqual(["r-1"]));
+    await waitLong(() => expect(sent.approved).toEqual(["r-1"]));
   });
 });
 
@@ -272,7 +272,7 @@ describe("the bar's drinks on Set up (D27-361)", () => {
     fireEvent.change(screen.getByLabelText("Counted as"), { target: { value: "packet" } });
     fireEvent.change(screen.getByLabelText(/^How many in a packet/), { target: { value: "20" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await vi.waitFor(() => expect(sent.drinks).toEqual([{ name: "Gold Flake", sizeMl: null, countAs: "packet", packSize: 20,
+    await waitLong(() => expect(sent.drinks).toEqual([{ name: "Gold Flake", sizeMl: null, countAs: "packet", packSize: 20,
       brand: null, liquor: null, imported: false }]));
   });
 });

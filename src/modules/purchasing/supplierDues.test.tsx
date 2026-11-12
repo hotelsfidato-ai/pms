@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { useSession } from "@/lib/session";
 import type { Role } from "@/lib/permissions";
-import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel } from "@/test/app";
+import { HOTEL, AGRA_HOTEL, startSignedIn, withDemoHotel, waitLong } from "@/test/app";
 import PurchasingPage from "@/modules/purchasing/pages/Purchasing";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -116,7 +116,7 @@ describe("Purchasing · Supplier dues (D27-370)", () => {
     fireEvent.change(within(dialog).getByLabelText("Rate, %"), { target: { value: "1" } });
     fireEvent.change(within(dialog).getByLabelText("TDS amount"), { target: { value: "31" } });
     pay();
-    await vi.waitFor(() => expect(paid.calls).toEqual([
+    await waitLong(() => expect(paid.calls).toEqual([
       { id: "s1", amount: 3069, method: "cheque", reference: "CHQ 004512", paidOn: "2026-10-27", handedOverBy: "Suresh",
         tds: { section: "194C", rate: 1, amount: 31 } }]));
   });
@@ -146,7 +146,7 @@ describe("Purchasing · Supplier dues (D27-370)", () => {
     fireEvent.click(within(dialog).getByRole("checkbox",
       { name: "I have seen these differences, and this bill is to be paid as it is" }));
     pay();
-    await vi.waitFor(() => expect(paid.calls).toEqual([{ id: "s2", amount: 500.5, method: "cash", reference: null,
+    await waitLong(() => expect(paid.calls).toEqual([{ id: "s2", amount: 500.5, method: "cash", reference: null,
       paidOn: "2026-10-27", handedOverBy: "Suresh", tds: null, differencesSeen: true }]));
   });
 
@@ -162,10 +162,10 @@ describe("Purchasing · Supplier dues (D27-370)", () => {
     fireEvent.change(within(dialog).getByLabelText("Amount"), { target: { value: "500" } });
     fireEvent.change(within(dialog).getByLabelText("What it is for"), { target: { value: "Short supply" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Record credit note" }));
-    await vi.waitFor(() => expect(paid.calls).toEqual([{ credit: { billId: "s3", supplierId: null, issuedBy: "supplier",
+    await waitLong(() => expect(paid.calls).toEqual([{ credit: { billId: "s3", supplierId: null, issuedBy: "supplier",
       noteNo: "BW-CN-10", noteDate: "2026-10-27", amount: 500, reason: "Short supply" } }]));
 
-    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitLong(() => expect(screen.queryByRole("dialog")).toBeNull());
     paid.calls.length = 0;
     const payment = screen.getByText(/Paid ₹400.00 on 22 Oct 2026/).closest("tr") as HTMLElement;
     fireEvent.click(within(payment).getByRole("button", { name: "Reverse" }));
@@ -174,7 +174,7 @@ describe("Purchasing · Supplier dues (D27-370)", () => {
     expect((await within(dialog).findByRole("alert")).textContent).toBe("Say why it is reversed.");
     fireEvent.change(within(dialog).getByLabelText("Why"), { target: { value: "Entered on the wrong bill" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Reverse" }));
-    await vi.waitFor(() => expect(paid.calls).toEqual([
+    await waitLong(() => expect(paid.calls).toEqual([
       { reverse: { kind: "payment", id: "p1", reason: "Entered on the wrong bill", correct: null } }]));
   });
 

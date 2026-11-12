@@ -11,7 +11,7 @@ import { closePool } from "../../../src/db.ts";
    a dine-in order, which has no room, carries none.
 
    On one of the demo's checked-in stays at 5EL; its guest's preferences
-   are put back afterwards and the orders abandoned.
+   are put back afterwards, and the orders and the chef removed.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -84,10 +84,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  for (const id of orders) await call(owner, "POST", `/till/orders/${id}/abandon`, { reason: "kot allergy test" });
+  /* Everything this file added to 5EL goes (MEMORY 476): its orders with
+     their lines and KOT claims, the chef, and the guest's preferences as
+     they were. */
+  await sql("delete from pos_kot_prints where order_id = any($1::uuid[])", [orders]);
+  await sql("delete from pos_order_lines where order_id = any($1::uuid[])", [orders]);
+  await sql("delete from pos_orders where id = any($1::uuid[])", [orders]);
   await sql("update guests set preferences = $2::jsonb where id = $1", [guestId, JSON.stringify(was)]);
   await sql("delete from staff_hotels where staff_id = $1", [chef]);
-  await sql("update staff set is_active = false where id = $1", [chef]);
+  await sql("delete from staff where id = $1", [chef]);
   await closePool();
 });
 

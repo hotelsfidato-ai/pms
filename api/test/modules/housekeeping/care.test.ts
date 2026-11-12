@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "node:crypto";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
@@ -202,6 +203,23 @@ describe("what was taken from a room", () => {
     const res = await call(keeper, "/minibar/records", "POST", { room: "103", lines: [{ itemId: water, quantity: 1 }] });
     expect(res.status).toBe(409);
     expect(res.body.reason).toMatch(/Nobody has stayed in room 103/);
+  });
+
+  it("records one take once: a double tap with the window's key is answered with the first (D27-396)", async () => {
+    const before = [await lines(), await moves(), await count("minibar_records")];
+    const key = randomUUID();
+    const tap = () => app.request(`/api/hotels/${CODE}/minibar/records`, {
+      method: "POST",
+      headers: { "x-dev-staff-id": keeper, "content-type": "application/json", "idempotency-key": key },
+      body: JSON.stringify({ room: "101", lines: [{ itemId: water, quantity: 1 }] }),
+    });
+    const answers = await Promise.all([tap(), tap()]);
+    const bodies = await Promise.all(answers.map((r) => r.json() as Promise<{ data?: { id: string; status: string } }>));
+    expect(answers.map((r) => r.status)).toEqual([200, 200]);
+    expect(bodies.map((b) => b.data?.id)).toEqual([key, key]);
+    expect(bodies.map((b) => b.data?.status)).toEqual(["charged", "charged"]);
+    expect([await lines(), await moves(), await count("minibar_records")], "the second tap charged or refilled again")
+      .toEqual([before[0]! + 1, before[1]! + 1, before[2]! + 1]);
   });
 });
 

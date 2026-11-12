@@ -4554,7 +4554,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>On the room's card, tap <span class="ui">Minibar</span>. (At the desk: Minibar, <span class="ui">Record for a room</span>, and type the room.)</li>
     <li>Tap <span class="ui">+</span> once for each one taken.</li>
     <li>Not sure it was this guest, or the guest says it was not theirs? Tick <span class="ui">Not sure, or the guest says not theirs - the desk confirms it</span>.</li>
-    <li>Tap <span class="ui">Record what was taken</span>. The message says <span class="msg">“On room 206's bill. The refill is out of the store.”</span></li>
+    <li>Tap <span class="ui">Record what was taken</span>. The message says <span class="msg">“On room 206's bill. The refill is out of the store.”</span> The button stays grey until the answer comes and the window closes, and a second tap of the same take is recorded once.</li>
   </ol>
 
   <figure class="shot phone" id="fig-A6-35">
@@ -5334,6 +5334,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <ul>
     <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
+    <li><b>The guest's allergy:</b> a room-service order whose guest in the room has an allergy recorded prints it boxed under the table, <span class="msg">“ALLERGY: Peanuts”</span>, on every slip of the KOT, the kitchen's and the bar's. No setting of the KOT's design hides it (A10.11).</li>
     <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
     <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
     <li><b>A lost or torn KOT:</b> the order's <span class="ui">KOTs sent</span> list one line for each KOT and kind (<span class="msg">“KOT 3 · Bar”</span>), each with <span class="ui">Reprint</span>: on Tables in the table's pad, and on the Till and the Terminal with the order open. Tap <span class="ui">Reprint</span>: it prints at the computer that printed that KOT, the kitchen's or the bar's, not on the device you are using, and the screen says where: <span class="msg">“KOT 3 · Bar sent to Bar PC”</span>. If that computer is off, the screen says <span class="msg">“Bar PC is offline”</span>: the reprint waits there and prints when it is back, or, if a manager moves that kind to another computer first (A8.10), it goes with the kind and prints there. If no computer prints that kind, it says so and nothing prints (a manager chooses one, A8.10). On the computer that printed it you can also open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. Either way the slip says <b>REPRINT</b>. Waiters and the bar reprint: <span class="d">D27-324</span>; at the station, and from the Till and the Terminal: <span class="d">D27-329</span>; a waiting reprint follows its kind: <span class="d">D27-330</span>.</li>
@@ -5376,6 +5377,7 @@ figure.shot.phone img { max-width: 72mm; }
   </ol>
   <ul>
     <li>A ticket's edge turns <b>yellow</b> after 5 minutes and <b>red</b> after 10. Under the wait, <span class="msg">“12 min est”</span> is how long the dish should take; <span class="msg">“- est”</span> means nobody has timed it.</li>
+    <li>A room-service dish whose guest has an allergy recorded says so in red on its ticket, <span class="msg">“ALLERGY: Peanuts”</span>, as on the order and the KOT.</li>
     <li>A dish taken off after it was sent turns into a red <b>CANCELLED</b> ticket with <span class="msg">“stop cooking this”</span> and the manager's reason.</li>
     <li><span class="ui">By table</span> shows one card per table, its dishes grouped by course, so you can see whether a whole table is ready.</li>
     <li><span class="ui">All</span> / <span class="ui">Kitchen</span> / <span class="ui">Bar</span> shows one kind's tickets. Each screen remembers its choice: set the bar's screen to Bar once.</li>
@@ -5985,7 +5987,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>A table sits down</td><td>Tables, tap the table, tap the dishes, Send.</td><td>A8.2</td></tr>
       <tr><td>Something extra</td><td>Customise: a number, or a Custom add-on.</td><td>A8.3</td></tr>
       <tr><td>A dish is ready</td><td>Carry it out; tap “ready” on the table's tile.</td><td>A8.5</td></tr>
-      <tr><td>The guest asks for the bill</td><td>The printer under the table: INTERIM BILL.</td><td>A8.6</td></tr>
+      <tr><td>The guest asks for the bill</td><td>The printer under the table: BILL.</td><td>A8.6</td></tr>
       <tr><td>The guest pays</td><td>The Till: Cash, Card, UPI, Charge to room, or two ways. Print the bill if asked.</td><td>A8.7</td></tr>
       <tr><td>The guests leave</td><td>Tables: Clear.</td><td>A8.2</td></tr>
       <tr><td>Money that was not a sale</td><td>Close restaurant day, Cash, Record.</td><td>A8.9</td></tr>
@@ -6019,7 +6021,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Inventory</td><td>The Inventory Manager; whoever sees the Store reads it</td><td><span class="ui">Bar</span>: the bar's day - today's sheet and its count, the bills, the set up; the same as Bar stock in the Restaurant menu (A9.11). <span class="ui">Restaurant</span>: the kitchen store's day - today's sheet and its count - and the recipes every KOT takes (A9.11).</td></tr>
     </tbody>
   </table>
-  <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
+  <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Inventory</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
 
   <h3>Who may do what in the Store</h3>
   <table>
@@ -7736,7 +7738,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><b>Assign a room</b> (A1): each booking waiting for a room carries the mark; choose one and its preferences show above the room list, before you pick the room.</li>
     <li><b>Housekeeping</b> (A6): the room of a guest arriving today reads <span class="msg">“Arriving guest:”</span> and what they like for the room - an allergy in red first, then the floor, bed, quiet, pillow and newspaper.</li>
-    <li><b>The restaurant</b> (A8): a room-service order, a guest's order from their own page, and the room typed for <span class="ui">Charge to room</span> read <span class="msg">“Guest in this room:”</span> with the guest's allergy in red and their food (vegetarian, Jain).</li>
+    <li><b>The restaurant</b> (A8): a room-service order, a guest's order from their own page, and the room typed for <span class="ui">Charge to room</span> read <span class="msg">“Guest in this room:”</span> with the guest's allergy in red and their food (vegetarian, Jain). The kitchen gets the allergy too: a room-service order's KOT prints <span class="msg">“ALLERGY: Peanuts”</span> and its tickets on the Kitchen screen say it in red (A8.4, A8.5).</li>
   </ul>
 
   <figure class="shot" id="fig-A10-33">
@@ -8872,7 +8874,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li><b>Approve and Refuse cannot be undone.</b> Read the card before you tap.</li>
       <li>A purchase request can also be decided on its own page, which has a third button, <span class="ui">Send back</span>, to ask for something to be cleared up. Approvals shows such a request as <span class="ui">Asked for more</span>.</li>
       <li>A request from the restaurant that can no longer be done (the dish struck meanwhile, the bill paid) is not approved: Approvals says why, and it stays waiting until it is refused.</li>
-      <li><b>The bell does not tell you a request is waiting.</b> Open Approvals to see what waits on you.</li>
+      <li><b>The bell counts only what you may decide.</b> A request you sent yourself is not on your bell, and is not yours to decide (A12.4).</li>
     </ul>
   </div>
 
@@ -8990,7 +8992,8 @@ figure.shot.phone img { max-width: 72mm; }
 
   <ul>
     <li>Click a notice to go to its screen (Arrivals, Folios, the Store…). It is then marked read.</li>
-    <li><b>A notice goes by itself</b> when the thing is done: check the guest in and the arrival notice is gone. Nothing needs clearing by hand.</li>
+    <li>Requests waiting for your decision are one notice with their count, <span class="msg">“3 requests waiting for your approval”</span>. Click it to open Approvals (A12.3).</li>
+    <li><b>A notice goes by itself</b> when the thing is done: check the guest in and the arrival notice is gone; decide the last request and the approvals notice is gone. Nothing needs clearing by hand.</li>
     <li>When every notice is read, the bell's list says <span class="msg">“You are all caught up”</span>.</li>
   </ul>
 
@@ -9014,7 +9017,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>reservation</td><td>Arrivals not yet checked in; table bookings guests asked for, waiting for an answer.</td></tr>
       <tr><td>payment</td><td>A balance outstanding on a room due out today; money to refund to a guest who paid more than their charges.</td></tr>
       <tr><td>customer</td><td>Guest messages and guest requests waiting; room-service orders waiting; wake-up calls due, or asked for by guests.</td></tr>
-      <tr><td>approval</td><td>Something for a manager to look at: a store's crockery and cutlery not counted for 30 days, or never; postings reversed today. It is <b>not</b> a request in Approvals.</td></tr>
+      <tr><td>approval</td><td>Something for a manager to look at: requests waiting in Approvals for you to decide, as one notice with their count; a store's crockery and cutlery not counted for 30 days, or never; postings reversed today.</td></tr>
       <tr><td>system</td><td>Rooms out of service. For the group owner: a hotel's bank details set, changed or removed.</td></tr>
     </tbody>
   </table>
@@ -9025,7 +9028,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li><b>You see what your role may see.</b> A guest's name only if you may read guests; an amount only if you may read bills. The Inventory Manager in Figure A12-09 reads <span class="msg">“A balance is outstanding on room 204”</span> where the owner reads <span class="msg">“₹5,715 outstanding on room 204”</span> and the guest's name.</li>
       <li><b>Mark all as read lasts until the page is reloaded.</b> It is kept in that browser window only; reload the page, or open the system on another computer, and the notices still standing are unread again.</li>
       <li>The time on a notice is not when it arose. Most say nine in the morning of the hotel's business day.</li>
-      <li>Requests waiting in Approvals are not on the bell (A12.3).</li>
+      <li>Requests waiting in Approvals are on the bell only for the people who may decide them (A12.3).</li>
     </ul>
   </div>
 
@@ -12456,7 +12459,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Kitchen stock (to read), Guest requests, Notifications <span class="d">D27-378</span>.</td></tr>
       <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
       <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests, as the waiter. Starts on Tables, with the waiter's Start here card; sees only the dishes on the menu's Bar tab <span class="d">D27-329</span>.</td></tr>
-      <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
+      <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Inventory, Equipment, Purchasing, Notifications.</td></tr>
     </tbody>
   </table>
   <ul>
@@ -12775,7 +12778,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Tax invoice</td><td>For one bill of a departed, settled stay: issued and printed at check-out, two copies (ORIGINAL FOR RECIPIENT, DUPLICATE FOR SUPPLIER), unless the hotel chose a button or Invoices' <span class="ui">Issue</span> (A5.9). Numbered from the hotel's series for the financial year: <code>5EL/2026-27/00001</code>. The year's series opens itself with its first invoice. A company's invoice carries its name and GSTIN.</td><td><span class="d">D24-22</span> <span class="d">D27-344</span></td></tr>
       <tr><td>VAT bill</td><td>For alcohol, issued in the same moment as the tax invoice (or the restaurant's settlement), from its own series restarting each 1 April: <code>VAT/5EL/2026-27/0001</code>. Each names the other.</td><td><span class="d">D22-44</span></td></tr>
       <tr><td>Credit note</td><td>The only way to correct an issued invoice: its own number from the same series, a reason, one per invoice. Then a corrected invoice can be issued. A VAT bill is cancelled the same way, from the VAT series.</td><td><span class="d">D22-33</span> <span class="d">D22-44</span></td></tr>
-      <tr><td>Restaurant bill</td><td>INTERIM BILL before payment, BILL after, BILL · DUPLICATE when printed again (A8.6). It carries the GST lines but says it is not a tax invoice; the GST invoice is issued against the guest's room bill.</td><td><span class="d">D27-292</span></td></tr>
+      <tr><td>Restaurant bill</td><td>BILL before payment and after, BILL · DUPLICATE when printed again (A8.6). It carries the GST lines; whether it should be headed Tax Invoice is with the owner's CA. The GST invoice is issued against the guest's room bill.</td><td><span class="d">D27-292</span> <span class="d">D27-334</span></td></tr>
       <tr><td>Booking voucher</td><td>The booking's confirmation, with its figures: each night's price, GST by the night's band, a dash where no GST rule is set, and the advance and balance <span class="d">D27-172</span> <span class="d">D27-215</span>.</td><td></td></tr>
     </tbody>
   </table>
@@ -13663,7 +13666,7 @@ figure.shot.phone img { max-width: 72mm; }
           <li><b>Add-ons</b>: a numbered list folded into the dish's one line (<span class="d">D27-289</span>); Customise found after every tap, "All N / Just 1" (<span class="d">D27-290</span>); custom add-ons typed with a price or Free, each its own line, also on a dish already sent (<span class="d">D27-291</span>).</li>
           <li><b>Food the kitchen already has</b> comes off only for the owner, an admin, the GM, the hotel manager or the kitchen manager, with a reason that prints on the KOT and shows in the day's figures (<span class="d">D27-119</span>, <span class="d">D27-128</span>, <span class="d">D27-130</span>, <span class="d">D27-131</span>). More of a sent dish is a new line (<span class="d">D27-148</span>).</li>
           <li><b>The kitchen has two buttons</b>, Start and Ready; the waiter's Taken marks a dish served (<span class="d">D27-221</span>, <span class="d">D27-222</span>).</li>
-          <li><b>KOTs</b> print through computers, one per kind, routed by menu section, one number and one slip per kind, each headed in big letters; bills INTERIM BILL, BILL, BILL · DUPLICATE (<span class="d">D27-292</span>; B7.6).</li>
+          <li><b>KOTs</b> print through computers, one per kind, routed by menu section, one number and one slip per kind, each headed in big letters; bills BILL before and after payment, BILL · DUPLICATE (<span class="d">D27-292</span>, <span class="d">D27-334</span>; B7.6).</li>
           <li><b>Charge to room</b> asks first, naming the guest; a room with two open bills offers one button each (<span class="d">D27-117</span>, <span class="d">D27-162</span>). The Till sends to the kitchen like the Terminal (<span class="d">D27-166</span>).</li>
           <li><b>The cash day</b> opens by itself on the last float kept (<span class="d">D27-200</span>); a bill paid wholly in cash is rounded to the rupee (<span class="d">D27-129</span>); Close unpaid frees its table with Clear (<span class="d">D27-288</span>).</li>
           <li><b>Restaurant setup without a developer</b> (<span class="d">D22-6</span>, <span class="d">D25-20</span> to <span class="d">D25-26</span>). Food can go on a banquet function's bill (<span class="d">D17-21</span>, <span class="d">D27-133</span>). In-room dining and table booking from the guest's page (<span class="d">D27-224</span>, <span class="d">D27-225</span>).</li>

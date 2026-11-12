@@ -3,7 +3,7 @@ import { render, screen, within, fireEvent } from "@testing-library/react";
 import * as apiModule from "@/lib/api";
 import App from "@/App";
 import { flatNavigationFor } from "@/components/app/navigation";
-import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
+import { go, startSignedIn, signedIn, AGRA_HOTEL, waitLong } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING — the owner's D18-2, D18-3 and D18-4
@@ -304,7 +304,7 @@ describe("purchasing", () => {
         .toBe("/h/PUA/purchasing/waiting");
 
       fireEvent.click(screen.getByRole("button", { name: "Approve" }));
-      await vi.waitFor(() =>
+      await waitLong(() =>
         expect(posted).toEqual(["POST /api/hotels/PUA/approvals/ap1/approved"]));
     } finally {
       vi.restoreAllMocks();
@@ -323,7 +323,7 @@ describe("purchasing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refuse" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Refuse it" }));
-    await vi.waitFor(() => expect(control.decided).toHaveLength(1));
+    await waitLong(() => expect(control.decided).toHaveLength(1));
     /* The server is the one that refuses an empty reason; the screen sends
        what was typed and shows the sentence it gets back. */
     expect(control.decided).toEqual([{ decision: "rejected", note: "" }]);
@@ -337,14 +337,14 @@ describe("purchasing", () => {
     const field = await screen.findByLabelText("Agreed price for Basmati rice");
     fireEvent.change(field, { target: { value: "62" } });
     fireEvent.blur(field);
-    await vi.waitFor(() => expect(control.priced).toHaveLength(1));
+    await waitLong(() => expect(control.priced).toHaveLength(1));
     expect(control.priced).toEqual([{ lineId: "l1", unitPrice: 62 }]);
 
     control.priced.splice(0);
     const second = screen.getByLabelText("Agreed price for Sunflower oil");
     fireEvent.change(second, { target: { value: "" } });
     fireEvent.blur(second);
-    await vi.waitFor(() => expect(control.priced).toHaveLength(1));
+    await waitLong(() => expect(control.priced).toHaveLength(1));
     /* NULL, not 0 — nobody has agreed a price, which is a different fact. */
     expect(control.priced).toEqual([{ lineId: "l2", unitPrice: null }]);
   });
@@ -407,7 +407,7 @@ describe("purchasing", () => {
     fireEvent.click(
       within(dialog).getAllByRole("button", { name: "Record the delivery" })[0]!);
 
-    await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
+    await waitLong(() => expect(control.delivered).toHaveLength(1));
     expect(control.delivered).toEqual([{
       note: undefined,
       lines: [{ lineId: "l1", receivedQuantity: 45, receivedUnitCost: 64 }],
@@ -432,7 +432,7 @@ describe("purchasing", () => {
 
     fireEvent.change(within(dialog).getByLabelText(/Can the GST on the Basmati rice be claimed/), { target: { value: "yes" } });
     fireEvent.click(record);
-    await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
+    await waitLong(() => expect(control.delivered).toHaveLength(1));
     expect(control.delivered[0]).toEqual({
       note: undefined,
       lines: [{ lineId: "l1", receivedQuantity: 50, receivedUnitCost: 60,
@@ -467,7 +467,7 @@ describe("purchasing", () => {
     expect(control.delivered).toHaveLength(0);
     fireEvent.change(billed, { target: { value: "52" } });
     fireEvent.click(record);
-    await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
+    await waitLong(() => expect(control.delivered).toHaveLength(1));
     expect(control.delivered[0]).toEqual({
       note: undefined,
       credit: { billNo: "AT-771", billDate: "2026-09-18", amount: 3100, dueOn: "2026-10-18" },
@@ -480,7 +480,7 @@ describe("purchasing", () => {
     go("/h/PU8/purchasing/flagged");
     render(<App />);
 
-    const card = await vi.waitFor(() => {
+    const card = await waitLong(() => {
       const found = document.querySelector("[data-differences]");
       if (!found) throw new Error("no differences card yet");
       return found;
@@ -518,7 +518,7 @@ describe("purchasing", () => {
       { target: { value: "The rice is down to two days" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Send for approval" }));
 
-    await vi.waitFor(() => expect(control.sent).toHaveLength(1));
+    await waitLong(() => expect(control.sent).toHaveLength(1));
     expect(control.sent).toEqual([{
       storeId: "main",
       reason: "The rice is down to two days",
@@ -526,7 +526,7 @@ describe("purchasing", () => {
     }]);
     /* The END of the act, not the request going out (MEMORY 291): the
        dialog is gone. */
-    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitLong(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("refuses a request with no reason, on the screen, before it is sent", async () => {

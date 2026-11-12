@@ -8,6 +8,16 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-12 · One minibar take, one record (D27-396)
+
+`MinibarFlow` mints a key when it opens and sends it with every tap; `minibar.ts` takes a turn on it and answers a
+repeat with the first record. Record stays disabled until the answer and the window closes first. Decided under
+D27-396: a repeat is answered as done, not refused, because a resend whose answer was lost must not invite a second
+take; the key is the record's id, so no migration. Tests in `care.test.ts` (two taps at once) and
+`housekeeping.test.tsx`, each seen failing without the fix.
+
+---
+
 ## 2026-11-07 · The minibar, and housekeeping checklists (D27-383 item 10, built under D27-396)
 
 **Asked for:** half of item 10 of the owner's Step 2 list (`.local/hms-audit.html`, D27-383): the minibar and housekeeping checklists. A build-all helper (`.local/build-all/RULES.md`); copy `.claude/worktrees/agent-a54fcd1af1b60cea4`, database `fidato_care`, migrations 270 and 271 (the master renumbers them; 276 not needed).

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { useUi } from "@/lib/ui";
 import { useSession } from "@/lib/session";
 
@@ -105,3 +106,8 @@ export const startSignedIn = () => {
   useUi.setState({ hotelId: HOTEL, sidebarCollapsed: false });
   signedIn();
 };
+
+/** vitest's waitFor with the 8 s a loaded disk needs (D27-396): its own default
+    is 1 s, and a whole screen rendering on a busy D: missed it in a release
+    gate run. screen.findBy and waitFor already wait 15 s (setup.ts). */
+export const waitLong = <T>(check: () => T | Promise<T>) => vi.waitFor(check, { timeout: 8000, interval: 50 });

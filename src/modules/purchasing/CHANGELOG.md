@@ -8,6 +8,15 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-11-12 · Supplier dues readable at 1280 and on a phone (D27-396)
+
+The columns ran together ("7 Nov 20267 Dec 2026", the amount touching Left). Each cell has its own padding, dates and
+figures never wrap, the bill takes the room left, and the table scrolls in its card on a phone, as Purchase request's
+does; the three buttons wrap under each other instead of pushing the figures off a 1280 screen. A9-46 retaken
+(A9-47 is the payment window, which did not change). The 6-7 November tests' `vi.waitFor` waits use `waitLong` (8 s, `src/test/app.ts`).
+
+---
+
 ## 2026-11-07 · The supplier's bill matched to the order (the owner's D27-383, item 11; built under D27-396)
 
 **Asked for:** item 11 of the owner's approved list, through the master's build-all helper: when a delivery against an order comes with the supplier's bill, compare quantity, price and GST per line with what the order agreed; flag each difference (more billed than received, a price above the agreed one, a GST rate other than the order's) on the delivery, the order and Supplier dues, before the bill is paid. Nothing refused automatically; paying a flagged bill asks the Accountant or GM to confirm, recorded with their name. A missing figure is a dash.

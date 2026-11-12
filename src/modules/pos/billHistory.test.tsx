@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn, withDemoHotel } from "@/test/app";
+import { HOTEL, startSignedIn, withDemoHotel, waitLong } from "@/test/app";
 import { mayReach } from "@/components/app/navigation";
 import type { Order } from "@/modules/pos/data/till";
 import BillHistoryPage from "@/modules/pos/pages/BillHistory";
@@ -78,7 +78,7 @@ const tableRows = () => Array.from(document.querySelectorAll("table tbody tr")) 
 describe("Bill history", () => {
   it("opens on today's business day and lists paid, VOID and NC bills with who, how and how much", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
+    await waitLong(() => expect(tableRows()).toHaveLength(4));
     expect(asked).toContain(`GET ${API}/till/bills?from=2026-08-25&to=2026-08-25`);
     const [paid, voided, nc, room] = tableRows() as [HTMLElement, HTMLElement, HTMLElement, HTMLElement];
     /* The time it was settled, so labelled (D27-372). */
@@ -98,7 +98,7 @@ describe("Bill history", () => {
 
   it("sends every filter it was given, and asks nothing when there is nothing to look for", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
+    await waitLong(() => expect(tableRows()).toHaveLength(4));
     const form = document.querySelector("[data-bill-filters]") as HTMLElement;
     const type = (label: string, value: string) =>
       fireEvent.change(within(form).getByLabelText(label), { target: { value } });
@@ -115,7 +115,7 @@ describe("Bill history", () => {
       from: "2026-08-01", to: "2026-08-20", no: "R-12", table: "T2", guest: "asha", mode: "card",
       waiter: "11111111-2222-3333-4444-555555555555", outlet: "BAR",
     }).toString();
-    await vi.waitFor(() => expect(asked).toContain(`GET ${API}/till/bills?${want}`));
+    await waitLong(() => expect(asked).toContain(`GET ${API}/till/bills?${want}`));
 
     const before = asked.length;
     fireEvent.click(within(form).getByRole("button", { name: "Clear" }));
@@ -132,7 +132,7 @@ describe("Bill history", () => {
   it("says so when the answer was cut at its cap", async () => {
     answer.capped = true;
     show();
-    const note = await vi.waitFor(() => {
+    const note = await waitLong(() => {
       const n = document.querySelector("[data-bill-count]");
       if (!n) throw new Error("no count yet");
       return n as HTMLElement;
@@ -142,13 +142,13 @@ describe("Bill history", () => {
 
   it("opens the whole bill on the bill's own paper and prints it again through the Till's reprint", async () => {
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
+    await waitLong(() => expect(tableRows()).toHaveLength(4));
     fireEvent.click(tableRows()[0]!);
     const dialog = await screen.findByRole("dialog");
-    await vi.waitFor(() => expect(within(dialog).getByText("Paneer Tikka")).toBeTruthy());
+    await waitLong(() => expect(within(dialog).getByText("Paneer Tikka")).toBeTruthy());
     expect(dialog.querySelector("[data-bill-heading]")?.getAttribute("data-bill-heading")).toBe("duplicate");
     fireEvent.click(within(dialog).getByRole("button", { name: /Print the bill/ }));
-    await vi.waitFor(() => expect(asked).toContain(`POST ${API}/till/orders/o-9/bill-print`));
+    await waitLong(() => expect(asked).toContain(`POST ${API}/till/orders/o-9/bill-print`));
   });
 
   it("downloads the list on screen as a file Excel opens: bare numbers, NC in its own column, the dates it covers in the name", async () => {
@@ -159,14 +159,14 @@ describe("Bill history", () => {
     const names: string[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
     show();
-    await vi.waitFor(() => expect(tableRows()).toHaveLength(4));
+    await waitLong(() => expect(tableRows()).toHaveLength(4));
     /* The file's link is freed 1 s later (csv.ts): run it while URL is still this
        test's stand-in, not after, in another test (release 14's gates). */
     vi.useFakeTimers({ toFake: ["setTimeout"] });
     fireEvent.click(screen.getByRole("button", { name: /Download to Excel/ }));
     vi.runAllTimers();
     vi.useRealTimers();
-    await vi.waitFor(() => expect(names).toHaveLength(1));
+    await waitLong(() => expect(names).toHaveLength(1));
     expect(names).toEqual(["5el-bill-history-2026-08-25-to-2026-08-25.csv"]);
     const lines = (await blobs[0]!.text()).replace(/^﻿/, "").split("\r\n");
     expect(lines[0]).toBe("Bill,Date,Settled at,Outlet,Table,Guest,Room,Phone,Waiter,Paid by,Total,Service charge,Tip,NC value,State");
