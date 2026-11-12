@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { CompanyDialog, listCompanyRecords, type CompanyRow } from "@/modules/contracts";
 import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). Service: guests. Unchanged. */
@@ -80,6 +81,19 @@ const GUEST_COLUMNS: Column<GuestRecord>[] = [
   },
 ];
 
+/* The list in a file (D27-383 item 1). A balance is signed: negative is owed to the guest. */
+const GUEST_EXPORT: ExportColumn<GuestRecord>[] = [
+  { label: "Guest", value: (g) => g.name },
+  { label: "Overlapping stays", value: (g) => (g.possibleDuplicate ? "Yes" : null) },
+  { label: "Stays", value: (g) => g.stays, kind: "count" },
+  { label: "Nights", value: (g) => g.nights, kind: "count" },
+  { label: "Last stay", value: (g) => g.lastStay, kind: "date" },
+  { label: "Next stay", value: (g) => g.nextStay, kind: "date" },
+  { label: "Booked via", value: (g) => g.sources.join(", ") },
+  { label: "Total spend", value: (g) => g.totalSpend, kind: "money" },
+  { label: "Balance", value: (g) => g.openBalance, kind: "money" },
+];
+
 export function GuestsPage() {
   const hotelId = useHotel();
   const { data, isLoading, error, refetch } = useQuery({
@@ -99,10 +113,12 @@ export function GuestsPage() {
         title="Guests"
         description={isLoading ? "Loading…" : "Grouped by name from every stay. Repeat guests rise to the top."}
         badge={data ? <StatusPill tone="neutral">{data.length} guests</StatusPill> : undefined}
-        actions={
+        actions={<>
           <Input aria-label="Find a guest by name" placeholder="Find a guest by name"
                  value={search} onChange={(e) => setSearch(e.target.value)} className="w-64 max-w-full" />
-        }
+          <ExportButtons screen="guests" rows={data ? shown : undefined} columns={GUEST_EXPORT}
+            facts={[["Search", search.trim()], ["Sorted", "repeat guests first"]]} />
+        </>}
       />
 
       {dupes.length > 0 && (
@@ -211,6 +227,18 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
   },
 ];
 
+/* In a file, grouped as on screen: agents, direct, companies. A company with
+   no booking yet has no revenue: a dash, never a zero. */
+const COMPANY_EXPORT: ExportColumn<CompanyRecord>[] = [
+  { label: "Source", value: (c) => c.name },
+  { label: "Kind", value: (c) => c.kind },
+  { label: "Bookings", value: (c) => c.bookings, kind: "count" },
+  { label: "Room nights", value: (c) => c.roomNights, kind: "count" },
+  { label: "Revenue", value: (c) => (c.bookings === 0 ? null : c.revenue), kind: "money" },
+  { label: "Commission", value: (c) => c.commissionPct, kind: "percent" },
+  { label: "Owed", value: (c) => c.openBalance, kind: "money" },
+];
+
 export function CompaniesPage() {
   const hotelId = useHotel();
   /* Add company (QA GU-6; D27-184, C-13): the Contracts dialog, here too. */
@@ -276,11 +304,15 @@ export function CompaniesPage() {
       <PageHeader
         title="Companies and agents"
         description="Where the business came from, and what each channel is worth."
-        actions={mayAdd && (
-          <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
-            Add company
-          </Button>
-        )}
+        actions={<>
+          <ExportButtons screen="companies" rows={data ? groups.flatMap((g) => g.rows) : undefined}
+            columns={COMPANY_EXPORT} facts={[["Grouped", "agents, direct, companies"]]} />
+          {mayAdd && (
+            <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
+              Add company
+            </Button>
+          )}
+        </>}
       />
       <CompanyDialog hotelId={hotelId} open={adding} onOpenChange={setAdding} />
       {editing && (

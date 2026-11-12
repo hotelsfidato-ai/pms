@@ -8,6 +8,7 @@ import {
 } from "@/components/ui";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
 import { PreferenceMark } from "@/modules/guests";
+import { ExportButtons, type ExportColumn, type ExportFacts } from "@/modules/reports";
 import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -57,6 +58,22 @@ const VIEW_KEY = "fidato-stay-view";
 export type StayColumn =
   | "room" | "guest" | "type" | "plan" | "source"
   | "arrival" | "departure" | "nights" | "status" | "rate" | "balance";
+
+/* The same columns in a file (D27-383 item 1): raw values, the reference its
+   own column, a balance signed (negative is owed to the guest). */
+const EXPORT: Record<StayColumn, Array<ExportColumn<StayRow>>> = {
+  room: [{ label: "Room", value: (s) => s.roomNumber }],
+  guest: [{ label: "Guest", value: (s) => s.guest }, { label: "Reference", value: (s) => s.reference }],
+  type: [{ label: "Type", value: (s) => s.roomType }],
+  plan: [{ label: "Plan", value: (s) => s.ratePlan }],
+  source: [{ label: "Source", value: (s) => s.source }],
+  arrival: [{ label: "Arrival", value: (s) => s.arrival, kind: "date" }],
+  departure: [{ label: "Departure", value: (s) => s.departure, kind: "date" }],
+  nights: [{ label: "Nights", value: (s) => (s.isDayUse ? "Day use" : s.nights), kind: "count" }],
+  status: [{ label: "Status", value: (s) => LABEL[s.status] ?? s.status }],
+  rate: [{ label: "Rate", value: (s) => (s.isComplimentary ? "Comp" : s.offeredTariff), kind: "money" }],
+  balance: [{ label: "Balance", value: (s) => s.balance, kind: "money" }],
+};
 
 const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
   room: {
@@ -259,6 +276,9 @@ export function StayTable({
   /** False where the page has its own search over the same rows (All
       bookings: the owner, 27 September, one search box, not two). */
   showFilter = true,
+  /** PDF and Excel of the rows as filtered here (D27-383 item 1), with the
+      page's own filters as words. */
+  exportAs,
 }: {
   hotelId: string;
   businessDate: string;
@@ -272,6 +292,7 @@ export function StayTable({
   defaultTab?: "stay" | "folio";
   onRetry?: () => void;
   showFilter?: boolean;
+  exportAs?: { screen: Parameters<typeof ExportButtons>[0]["screen"]; facts?: ExportFacts };
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -349,6 +370,12 @@ export function StayTable({
             <X className="size-3.5" />
             Clear
           </button>
+        )}
+        {exportAs && (
+          <ExportButtons screen={exportAs.screen}
+            rows={isLoading || error ? undefined : filtered}
+            columns={columns.flatMap((c) => EXPORT[c])}
+            facts={[...(exportAs.facts ?? []), ["Search", query.trim()]]} />
         )}
         <span className="ml-auto text-sm text-grey-500 tabular">
           {filtered.length} of {(rows ?? []).length}

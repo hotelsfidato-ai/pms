@@ -8,6 +8,24 @@ import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, StatusPill, Segmented,
 } from "@/components/ui";
 import { listGroups, getGroup, type StayGroup } from "@/modules/reservations/data/groups";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The list in a file (D27-383 item 1). The host's balance is null where
+   there is no host account: a dash, never a zero. */
+const GROUP_EXPORT: ExportColumn<StayGroup>[] = [
+  { label: "Group", value: (g) => g.name },
+  { label: "Reference", value: (g) => g.reference },
+  { label: "Company", value: (g) => g.company },
+  { label: "Arrival", value: (g) => g.arrival, kind: "date" },
+  { label: "Departure", value: (g) => g.departure, kind: "date" },
+  { label: "Rooms", value: (g) => g.rooms, kind: "count" },
+  { label: "Room nights", value: (g) => g.nights, kind: "count" },
+  { label: "In house", value: (g) => g.inHouse, kind: "count" },
+  { label: "Due in", value: (g) => g.dueIn, kind: "count" },
+  { label: "Departed", value: (g) => g.departed, kind: "count" },
+  { label: "Cancelled", value: (g) => g.cancelled, kind: "count" },
+  { label: "Host owes", value: (g) => g.masterBalance, kind: "money" },
+];
 
 /* The server sends no balances to a role that reads bookings but not
    bills (D27-143): null there is "not yours to see" - a dash, never ₹0. */
@@ -64,10 +82,12 @@ export default function GroupsPage() {
             : `${groups.length} group${groups.length === 1 ? "" : "s"} · `
               + `${groups.reduce((n, g) => n + g.rooms, 0)} rooms`
         }
-        actions={
-          /* A choice of view, so the view control. It was two buttons with
+        actions={<>
+          <ExportButtons screen="groups" rows={q.data} columns={GROUP_EXPORT}
+            facts={[["Showing", scope === "current" ? "here and coming" : "all"]]} />
+          {/* A choice of view, so the view control. It was two buttons with
              the selected one drawn PRIMARY — the colour that means "this is
-             the action to take", used to mean "this is selected". */
+             the action to take", used to mean "this is selected". */}
           <Segmented<"current" | "all">
             value={scope}
             onChange={setScope}
@@ -77,7 +97,7 @@ export default function GroupsPage() {
               { value: "all", label: "All" },
             ]}
           />
-        }
+        </>}
       />
 
       {q.isLoading ? (

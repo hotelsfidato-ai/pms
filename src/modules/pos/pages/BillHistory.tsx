@@ -11,6 +11,7 @@ import {
   StatusPill, Dialog, DialogContent, Skeleton, ReadFailed, toast, type Column,
 } from "@/components/ui";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
 import {
   listBillHistory, listWaiters, getOrder, nextBillHeading, type BillHistoryAsk, type BillHistoryRow,
@@ -47,6 +48,12 @@ const STATE: Record<string, { words: string; tone: "success" | "danger" | "neutr
 };
 
 type Draft = Required<BillHistoryAsk>;
+
+/* The filters as words, for the file (D27-383 item 1). */
+const FILTER_WORDS: Array<[keyof Draft, string]> = [
+  ["from", "From"], ["to", "To"], ["no", "Bill"], ["table", "Table"], ["guest", "Guest"],
+  ["mode", "Paid by"], ["waiter", "Waiter"], ["outlet", "Outlet"],
+];
 const EMPTY: Draft = { from: "", to: "", no: "", table: "", guest: "", mode: "", waiter: "", outlet: "" };
 
 export default function BillHistoryPage() {
@@ -110,6 +117,21 @@ export default function BillHistoryPage() {
     }
   };
 
+  /* The CSV's columns, as a real Excel and a PDF (D27-383 item 1). An NC
+     bill's value is its own column, so Total sums only what was paid. */
+  const exportColumns: ExportColumn<BillHistoryRow>[] = [
+    { label: "Bill", value: (b) => b.orderNo }, { label: "Date", value: (b) => b.businessDate, kind: "date" },
+    { label: "Settled at", value: (b) => b.settledAt }, { label: "Outlet", value: (b) => outletName(b.outlet) },
+    { label: "Table", value: (b) => b.table }, { label: "Guest", value: (b) => guestOf(b) },
+    { label: "Room", value: (b) => b.room }, { label: "Phone", value: (b) => b.phone },
+    { label: "Waiter", value: (b) => b.waiter }, { label: "Paid by", value: (b) => modesWords(b) },
+    { label: "Total", value: (b) => (b.status === "no_charge" ? null : b.payable), kind: "money" },
+    { label: "Service charge", value: (b) => b.serviceCharge || null, kind: "money" },
+    { label: "Tip", value: (b) => b.tip || null, kind: "money" },
+    { label: "NC value", value: (b) => (b.status === "no_charge" ? b.net : null), kind: "money" },
+    { label: "State", value: (b) => STATE[b.status]?.words ?? b.status },
+  ];
+
   const columns: Column<BillHistoryRow>[] = [
     { key: "no", header: "Bill", cell: (b) => <span className="font-medium tabular">{b.orderNo}</span> },
     { key: "when", header: "Date and time settled", cell: (b) => <span className="tabular">{dateShort(b.businessDate)} · {b.settledAt ?? "-"}</span> },
@@ -146,12 +168,18 @@ export default function BillHistoryPage() {
       <PageHeader
         title="Bill history"
         description="Every paid, voided and NC bill of any dates. Open one to see it and print it again."
-        actions={
-          <Button variant="secondary" onClick={download} disabled={bills.length === 0}>
+        actions={<>
+          <ExportButtons screen="bill-history" rows={history.data?.bills} columns={exportColumns}
+            facts={[
+              ...FILTER_WORDS.map(([k, label]): [string, string] => [label, k === "outlet" && applied?.outlet ? outletName(applied.outlet) : applied?.[k] ?? ""]),
+              ["Note", history.data?.capped ? `Only the first ${history.data.cap} bills: more matched` : ""],
+            ]} />
+          {/* A CSV, and named so: it was "Download to Excel" (D27-383 item 1). */}
+          <Button variant="secondary" size="sm" onClick={download} disabled={bills.length === 0}>
             <Download className="size-4" />
-            Download to Excel
+            CSV
           </Button>
-        }
+        </>}
       />
 
       <Card className="mb-4">

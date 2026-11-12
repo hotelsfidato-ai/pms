@@ -99,7 +99,9 @@ export function formatCell(value: Cell | undefined, kind: CellKind, timeZone: st
   if (value === null || value === undefined || value === "") return "-";
   switch (kind) {
     case "text": return String(value);
-    case "money": return typeof value === "number" ? inr(value) : value;
+    /* A list's rupees print as money: the PDF's own fonts cannot draw the ₹
+       (as on the voucher, "Currency INR" is a fact at the top); Excel's format carries it. */
+    case "money": case "rupees": return typeof value === "number" ? inr(value) : value;
     case "count": return typeof value === "number" ? String(Math.round(value)) : value;
     case "percent": return typeof value === "number" ? `${value.toFixed(2)}%` : value;
     case "ratio": return typeof value === "number" ? value.toFixed(2) : value;
@@ -370,7 +372,10 @@ function drawChart(
 const INR_FORMAT = '[>=10000000]##\\,##\\,##\\,##0.00;[>=100000]##\\,##\\,##0.00;##,##0.00';
 
 const NUMBER_FORMAT: Partial<Record<CellKind, string>> = {
-  money: INR_FORMAT, percent: "0.00%", count: "0", ratio: "0.00",
+  /* A list's rupees: the same grouping, with the ₹ the screens show. */
+  money: INR_FORMAT,
+  rupees: '[>=10000000]"₹"##\\,##\\,##\\,##0.00;[>=100000]"₹"##\\,##\\,##0.00;"₹"##,##0.00',
+  percent: "0.00%", count: "0", ratio: "0.00",
   date: "dd/mm/yyyy", datetime: "dd/mm/yyyy hh:mm:ss AM/PM",
 };
 

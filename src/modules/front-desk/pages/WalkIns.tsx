@@ -85,6 +85,7 @@ export default function WalkInsPage() {
         error={error}
         onRetry={() => refetch()}
         columns={COLUMNS}
+        exportAs={{ screen: "walk-ins", facts: [["Leaving from", dateLong(since)]] }}
         offerCheckIn
         emptyTitle="No walk-ins on record"
         emptyBody="One appears here the moment it is taken from an empty cell on the Calendar."

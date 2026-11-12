@@ -37,7 +37,7 @@ export function formatCell(value: Cell, kind: CellKind, timeZone = "Asia/Kolkata
     return value;
   }
   switch (kind) {
-    case "money": return moneyPrecise(value);
+    case "money": case "rupees": return moneyPrecise(value);
     case "percent": return percent(value, 2);
     case "count": return number(value);
     case "ratio": return number(Math.round(value * 100) / 100);

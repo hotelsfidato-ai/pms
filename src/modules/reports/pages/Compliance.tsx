@@ -10,6 +10,11 @@ import {
   getGuestLedger, getCashierShift, getGstSales, getCForm, type CFormRow,
 } from "@/modules/reports/data/reportData";
 import { PTD_FROM } from "@/modules/reports/data/statistics";
+import { ExportButtons } from "@/modules/reports/components/ExportButtons";
+
+/* PDF and Excel beside each CSV (D27-383 item 1): the same rows, the same
+   period, made on the server. */
+const PERIOD = (): [string, string] => ["Period", `${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`];
 import { BUSINESS_DATE } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -84,6 +89,14 @@ export function GuestLedgerPage() {
   return (
     <ReportShell
       title="Guest ledger"
+      files={<ExportButtons screen="guest-ledger" rows={data ? rows : undefined} facts={[PERIOD()]} columns={[
+        { label: "Reference", value: (r) => r.reference }, { label: "Guest", value: (r) => r.guest },
+        { label: "Room", value: (r) => r.room }, { label: "Status", value: (r) => r.status },
+        { label: "Opening", value: (r) => r.opening, kind: "money" },
+        { label: "Charges", value: (r) => r.charges, kind: "money" },
+        { label: "Received", value: (r) => r.payments, kind: "money" },
+        { label: "Closing", value: (r) => r.closing, kind: "money" },
+      ]} />}
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Folios that moved in the window`}
       csv={() => ({
@@ -188,6 +201,12 @@ export function CashierShiftPage() {
   return (
     <ReportShell
       title="Cashier shift"
+      files={<ExportButtons screen="cashier-shift" rows={data ? rows : undefined}
+        facts={[["Business date", dateShort(BUSINESS_DATE)]]} columns={[
+        { label: "Cashier", value: (r) => r.cashier }, { label: "Method", value: (r) => r.method },
+        { label: "Receipts", value: (r) => r.count, kind: "count" },
+        { label: "Amount", value: (r) => r.amount, kind: "money" },
+      ]} />}
       period={dateShort(BUSINESS_DATE)}
       meta={`Business date ${dateShort(BUSINESS_DATE)}   Receipts by cashier and method`}
       csv={() => ({
@@ -285,6 +304,16 @@ export function GstSalesPage() {
   return (
     <ReportShell
       title="GST sales register"
+      files={<ExportButtons screen="gst-sales" rows={data ? rows : undefined} facts={[PERIOD()]} columns={[
+        { label: "Invoice number", value: (r) => r.number }, { label: "Issued", value: (r) => r.issued, kind: "date" },
+        { label: "Recipient", value: (r) => r.recipient }, { label: "Recipient GSTIN", value: (r) => r.gstin },
+        { label: "Type", value: (r) => r.type }, { label: "Place of supply", value: (r) => r.placeOfSupply },
+        { label: "SAC", value: (r) => r.sac },
+        { label: "Taxable value", value: (r) => r.taxable, kind: "money" },
+        { label: "CGST", value: (r) => r.cgst, kind: "money" }, { label: "SGST", value: (r) => r.sgst, kind: "money" },
+        { label: "Total", value: (r) => r.total, kind: "money" },
+        { label: "Credits invoice", value: (r) => r.creditsInvoice },
+      ]} />}
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`GSTR-1 extract   Every document issued in the period, credit notes included`}
       csv={() => ({
@@ -413,6 +442,13 @@ export function CFormPage() {
   return (
     <ReportShell
       title="Form III register"
+      /* The files mask the passport and visa numbers to their last four (the
+         ID rule of D27-383 item 1); the CSV stays the full filing extract. */
+      files={<ExportButtons screen="c-form" rows={data ? rows : undefined} facts={[PERIOD()]}
+        columns={CFORM_CSV.map(([label, k]) => ({
+          label, value: (r: CFormRow) => r[k] as string | number | null,
+          ...(k === "passport" || k === "visaNumber" ? { kind: "id" as const } : {}),
+        }))} />}
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
       meta={`Arrivals in the period   ${unfiled} awaiting an FRRO number`}
       csv={() => ({

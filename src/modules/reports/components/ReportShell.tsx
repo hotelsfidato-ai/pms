@@ -54,6 +54,8 @@ export function ReportShell({
   download,
   /** Its Email button (D27-383 item 5), beside the files. */
   email,
+  /** PDF and Excel of a report drawn on the web (ExportButtons, D27-383 item 1). */
+  files,
   /** The page's heading where it is not the report's title (Group reports). */
   heading,
   /** Of several real hotels (a group report): never marked as a test hotel's. */
@@ -81,6 +83,7 @@ export function ReportShell({
   controls?: ReactNode;
   download?: { path: (kind: "pdf" | "xlsx" | "csv") => string; ready: boolean };
   email?: ReactNode;
+  files?: ReactNode;
 }) {
   const identity = useDocumentIdentity();
   const propertyName = property ?? identity.property ?? DASH;
@@ -120,6 +123,7 @@ export function ReportShell({
             )}
             {download && <Downloads download={download} />}
             {email}
+            {files}
             {csv && !download && (
               <Button
                 variant="secondary"

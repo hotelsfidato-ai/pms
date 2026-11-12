@@ -415,6 +415,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* D27-383 item 5: any report by email - whoever may open it (its own read rule,
      asked by the route) - and the reports on a schedule, set as the daily ones. */
   [`POST ${H}/reports/:key/email`]: own("reports/emails.ts: the report's own read rule (READ_RULES)"),
+  /* D27-383 item 1: a list screen as a PDF or Excel - the screen's own read rule,
+     and the reports' download right for money and guests (asked by the route). */
+  [`POST ${H}/exports/:file{[a-z0-9-]+\\.(?:pdf|xlsx)}`]: own("reports/listFiles.ts: the screen's read rule (READ_RULES), and REPORT_EXPORTERS for money and guests"),
   [`POST ${H}/report-schedules`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),
   [`PUT ${H}/report-schedules/:id`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),
   [`DELETE ${H}/report-schedules/:id`]: grant("room_config", "edit", "Choosing which reports go by email on a schedule"),

@@ -14,6 +14,21 @@ import {
 import { getInventory } from "@/modules/inventory";
 import { listWaitlist, removeFromWaitlist, type WaitlistEntry } from "@/modules/reservations/data/waitlist";
 import { WaitlistDialog } from "@/modules/reservations/flows/WaitlistDialog";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The list in a file (D27-383 item 1), its three parts in order. */
+const WAITLIST_EXPORT: ExportColumn<WaitlistEntry & { part: string }>[] = [
+  { label: "Part", value: (e) => e.part },
+  { label: "Guest", value: (e) => e.guestName },
+  { label: "Phone", value: (e) => e.phone },
+  { label: "Room type", value: (e) => e.roomType },
+  { label: "Arrival", value: (e) => e.arrival, kind: "date" },
+  { label: "Departure", value: (e) => e.departure, kind: "date" },
+  { label: "Rooms free now", value: (e) => e.free, kind: "count" },
+  { label: "Note", value: (e) => e.note },
+  { label: "Added", value: (e) => e.createdAt, kind: "datetime" },
+  { label: "Added by", value: (e) => e.addedBy },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    THE WAITLIST (D27-383 item 8, migration 268)
@@ -106,12 +121,21 @@ export default function WaitlistPage() {
       <PageHeader
         title="Waitlist"
         description="Guests waiting for a room type on nights that were full, oldest first. The desk decides; nobody is booked or told by the system."
-        actions={mayBook && (
-          <Button variant="primary" leadingIcon={<Plus />} disabled={types.length === 0}
-            onClick={() => setAdding(true)}>
-            Put a guest on the waitlist
-          </Button>
-        )}
+        actions={<>
+          <ExportButtons screen="waitlist" columns={WAITLIST_EXPORT}
+            rows={list.data ? [
+              ...free.map((e) => ({ ...e, part: "A room is free now" })),
+              ...full.map((e) => ({ ...e, part: "Still full" })),
+              ...passed.map((e) => ({ ...e, part: "Arrival has passed" })),
+            ] : undefined}
+            facts={[["Sorted", "oldest first"]]} />
+          {mayBook && (
+            <Button variant="primary" leadingIcon={<Plus />} disabled={types.length === 0}
+              onClick={() => setAdding(true)}>
+              Put a guest on the waitlist
+            </Button>
+          )}
+        </>}
       />
       {list.isLoading ? <Skeleton className="h-60" />
         : list.isError ? <ErrorState title="The waitlist could not be read." onRetry={() => void list.refetch()} />

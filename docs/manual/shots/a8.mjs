@@ -556,7 +556,7 @@ export const SHOTS = [
       { n: 1, at: "css:[data-bill-filters] input[type=date]", side: "top" },
       { n: 2, at: "css:[data-bill-filters] input:not([type=date])", side: "top" },
       { n: 3, at: "css:table tbody tr", side: "left" },
-      { n: 4, at: "text:Download to Excel", side: "bottom" },
+      { n: 4, at: "css:[data-export=bill-history]", side: "bottom" },
     ],
   },
   /* Table shifting (D27-370). Before A8-47 the master opens dine-in bills

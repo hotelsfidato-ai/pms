@@ -331,14 +331,16 @@ export function filenameFrom(disposition: string | null): string | null {
 }
 
 /** Fetches `path` with the sign-in and saves it. Resolves to the file's name. */
-export async function downloadFile(path: string): Promise<string> {
+export async function downloadFile(path: string, body?: unknown): Promise<string> {
   const base = await apiBase();
   let response: Response;
   try {
-    /* No content-type: a GET for a file carries no body. */
+    /* No content-type: a GET for a file carries no body. A list's export
+       (D27-383 item 1) POSTs what the screen shows, as JSON. */
     const headers = { ...((await authHeaders()) as Record<string, string>) };
-    delete headers["content-type"];
-    response = await fetch(`${base}${path}`, { headers });
+    if (body === undefined) delete headers["content-type"];
+    response = await fetch(`${base}${path}`,
+      body === undefined ? { headers } : { method: "POST", headers, body: JSON.stringify(body) });
   } catch {
     noteUnreachable();
     throw new ApiError(0, "Could not reach the server, so the file was not downloaded. Try again when the connection is back.");

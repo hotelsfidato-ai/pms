@@ -23,6 +23,26 @@ import {
 } from "@/modules/guests/components/ForeignGuestFields";
 import { peopleWords } from "@/modules/guests/components/StayCompanions";
 import { idNumberProblem } from "../../../../api/src/validate.ts";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The register in a file (D27-383 item 1). The passport number is masked to
+   its last four by the server: a file never carries an ID number whole. */
+const FORM_III_EXPORT: ExportColumn<FormCRow>[] = [
+  { label: "Guest", value: (r) => r.guest },
+  { label: "Nationality", value: (r) => r.nationality },
+  { label: "Room", value: (r) => r.room },
+  { label: "Passport number", value: (r) => r.passport, kind: "id" },
+  { label: "Adults", value: (r) => r.adults, kind: "count" },
+  { label: "Recorded", value: (r) => r.recorded, kind: "count" },
+  { label: "Children", value: (r) => r.children, kind: "count" },
+  { label: "Arrived", value: (r) => r.arrivedAt ?? r.arrived },
+  { label: "Arrival due by", value: (r) => r.dueBy },
+  { label: "Arrival portal numbers", value: (r) => r.arrivalNumbers.join(", ") },
+  { label: "Departed", value: (r) => (r.status === "checked_out" ? r.departedAt ?? r.checkOut : "In house") },
+  { label: "Departure due by", value: (r) => r.departureDueBy },
+  { label: "Departure portal numbers", value: (r) => r.departureNumbers.join(", ") },
+  { label: "Overdue", value: (r) => (r.overdue || r.departureOverdue ? "Yes" : null) },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    FORM III (Form C until the 2025 Act, D27-25)
@@ -198,6 +218,7 @@ export default function FormCPage() {
       <PageHeader
         title="Form III"
         description="Foreign guests reported to the FRRO: arrival and departure, each within 24 hours (Form III, earlier called Form C)."
+        actions={<ExportButtons screen="form-iii" rows={data?.rows} columns={FORM_III_EXPORT} />}
         badge={
           data ? (
             <StatusPill tone={data.overdue ? "danger" : data.due ? "warning" : "success"}>

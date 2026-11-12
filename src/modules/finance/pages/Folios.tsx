@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { ArrowDown, ArrowUp, ReceiptText, Scale } from "lucide-react";
-import { money } from "@/lib/format";
+import { money, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, FigureRow, FigureTile, StatusPill, Term } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk";
@@ -115,6 +115,7 @@ export default function FoliosPage() {
         error={folios.error}
         onRetry={() => folios.refetch()}
         columns={COLUMNS}
+        exportAs={{ screen: "folios", facts: [["Open on", dateLong(BUSINESS_DATE)], ["Sorted", "balance, overpaid first"]] }}
         defaultTab="folio"
         emptyTitle="Every folio is settled"
         emptyBody="Nothing outstanding, and nothing to refund."

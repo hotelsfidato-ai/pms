@@ -21,7 +21,9 @@ export const downloadGstr1 = (hotelId: string, month: string) =>
    ══════════════════════════════════════════════════════════════════ */
 
 export type CellKind =
-  | "text" | "money" | "count" | "ratio" | "percent" | "date" | "datetime";
+  | "text" | "money" | "count" | "ratio" | "percent" | "date" | "datetime"
+  /* Money with the ₹, as a list screen's file shows it (D27-383 item 1). */
+  | "rupees";
 
 export type Cell = string | number | null;
 
@@ -89,8 +91,8 @@ export interface ReportDoc {
      files insists. Widened by one word for purchasing (D18-3): a purchase
      order is drawn by the shared renderer rather than a second one, and it
      is NOT in REPORT_KEYS because it is not a report anybody runs.
-     A group's rooming list likewise (D27-383 item 8). */
-  report: ReportKey | "purchase-order" | "rooming-list" | `group-${string}`;
+     A group's rooming list likewise (D27-383 item 8). A list screen's file too (D27-383 item 1). */
+  report: ReportKey | "purchase-order" | "rooming-list" | `group-${string}` | "list";
   title: string;
   property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
   orientation: "portrait" | "landscape";
