@@ -50,6 +50,35 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-12 · Security fixes, upload checks, and release 22
+
+**Asked for:** what is fundamentally pending; the audit's items 5-11; input checks on document uploads and forms before
+the storage bucket is split; the critical security fixes; then "yes to both, go ahead with release 22" (two buckets,
+and the release) and "send me the steps when the checks pass".
+
+**Shipped**
+- The API listens on 127.0.0.1 in production - `api/src/server.ts`; a 10 MB body limit on `/api/*`, answered in words.
+- Uploads: at most 9 MB, and the file's real type read from its bytes, not its name - `api/src/storage.ts` and the
+  four bill routes; the screens check the size before sending - `billTooBig` in `src/lib/api.ts`.
+- nginx request limits on `/api/` and `/api/pos` - `deploy/nginx.conf`; the CSP enforced - `firebase.json`.
+- `npm audit fix` (lock files only); the 80 privileged database functions closed to PUBLIC - `db/ownership.sql`.
+- Two buckets in the backup instructions - `deploy/README.md`, `db/uploads-backup.sh`.
+- Release 22 merged (old data, security, the two-bucket docs) and cp6 fast-forwarded to it; steps in
+  `.local/release-22-steps.md`.
+
+**Found** - MEMORY 476 (a test leaving its room type at 5EL; the group-rates strip fault), 477 (the web test mock
+missing `billTooBig`). All fixed.
+
+**Proved** - the five new upload tests failed on the old code; full gates green on 19e02bd4: web 1,600, API 3,281,
+db 2,114, replay, PG16, restore, to minute.
+
+**Left open** - the owner's A1-A8 and Part B; item 8 (encrypted backups) skipped by the owner; an xlsx import's
+decompressed size is not capped (admin-only, minor).
+
+**Commits:** `cd0322e7 51dd45c9 5f432b09 24dc7cc3 703360e2 19e02bd4`
+
+---
+
 ## 2026-11-10 · Code and security audit, read-only (the main chat)
 
 **Asked for:** the owner, 10 November: audit what is in the codebase, say what can go wrong, and check whether any

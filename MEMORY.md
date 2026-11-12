@@ -6561,6 +6561,28 @@ copy will see of theirs.**
 
 ---
 
+### 477 · MINE: a new export from `src/lib/api.ts`, and I did not run the web tests (12 November)
+
+The security fixes added `billTooBig` to `src/lib/api.ts` and called it from four upload functions. `src/test/setup.ts`
+mocks `@/lib/api` by name, export by export; the new name was missing, so every bill photo upload in the petty cash
+tests stopped before sending (3 tests). I ran the API tests, the types and the database checks on the security copy,
+not the web tests; release 22's full gate run found it. **The rule:** a new export from `src/lib/api.ts` goes into
+the mock in `src/test/setup.ts` in the same commit, and a change to `src/` is not finished until the web tests ran.
+
+---
+
+### 476 · A helper's, and mine: a test that adds to 5EL and never takes it away (12 November)
+
+`api/test/modules/admin/oldSystem.test.ts` (Bring in old data) added an "Osi Suite" room type with one room at 5EL,
+and its bookings and advances, with no cleanup. Run alone, or in its lane, it passed; in the full run seven later
+files picked the Osi Suite as "a room type at 5EL" or counted its advances in the receipts (12 tests, all reading as
+faults in their own services). Two more of mine at the same merge: the group-rates file used a parameter property
+the server cannot load (strip gate), and I merged it without a full gate run. **The rule:** every row a test adds to
+a shared hotel goes in its `afterAll` (the ledger's guards off only around those deletes, as allotments does), and a
+lane's tests pass ALONE is not proof: the release's full run is.
+
+---
+
 ### 475 · MINE: helpers copied shared lists from old versions, and would have dropped later work (7 November)
 
 Four helpers each "added a line" to a function many migrations change (`app.test_hotel_classes`, `owner_reset.steps`,
