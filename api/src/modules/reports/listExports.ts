@@ -1,4 +1,4 @@
-import { can, type Action, type Resource, type Role } from "../../permissions.ts";
+import { ROLES, can, type Action, type Resource, type Role } from "../../permissions.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A LIST SCREEN AS A FILE - which screens, and who (D27-383 item 1)
@@ -36,7 +36,7 @@ export interface ListScreen {
   readonly holds?: "money" | "guests";
   /** A screen with an export right of its own asks it INSTEAD of the
       reports' (the Equipment register: `export` on `equipment`). */
-  readonly right?: { readonly action: Action; readonly resource: Resource; readonly who: string };
+  readonly right?: { readonly action: Action; readonly resource: Resource };
 }
 
 const H = "GET /api/hotels/:code";
@@ -105,6 +105,22 @@ export const LIST_SCREENS = {
   /* A dish's price is a price, as a room rate is. */
   "menu": { title: "Menu", read: `${H}/till/menu` },
   "room-charges": { title: "Charges to rooms", read: `${H}/pos/tickets`, holds: "money" },
+  /* A service whose screen carries its own costs or takings, and which has
+     an `export` right of its own in the matrix, asks that right instead of
+     the reports' (decided under D27-396, as the Equipment register). */
+  "store": { title: "Store", read: `${H}/stores`, right: { action: "export", resource: "stock" } },
+  /* Quantities only. */
+  "kitchen-stock": { title: "Kitchen stock", read: `${H}/kitchen-stock/sheet` },
+  "purchasing": { title: "Purchasing", read: `${H}/purchasing`, right: { action: "export", resource: "purchasing" } },
+  "laundry-dockets": { title: "Laundry dockets", read: `${H}/laundry/dockets`, right: { action: "export", resource: "laundry" } },
+  /* Prices, as a dish's and a room's. */
+  "laundry-prices": { title: "Laundry price list", read: `${H}/laundry/price-list` },
+  "spa-diary": { title: "Spa diary", read: `${H}/spa`, right: { action: "export", resource: "spa" } },
+  "spa-treatments": { title: "Spa treatments", read: `${H}/spa/treatments` },
+  /* A function's agreed price is its price, read by whoever reads bookings. */
+  "banquet": { title: "Banquet diary", read: `${H}/banquet` },
+  "night-audit-runs": { title: "Night audit: closed days", read: `${H}/night-audit/runs`, holds: "money" },
+  "equipment": { title: "Equipment register", read: `${H}/equipment`, right: { action: "export", resource: "equipment" } },
 } as const satisfies Record<string, ListScreen>;
 
 export type ListScreenKey = keyof typeof LIST_SCREENS;
@@ -117,12 +133,33 @@ export const MAX_EXPORT_ROWS = 20_000;
 const DOWNLOADERS = "the owner, an administrator, the general manager, the hotel manager, "
   + "the revenue manager or the accountant";
 
+/* Each role as a refusal names it: roleGate.ts's WHO, which this file may
+   not import (the website reads it). */
+const NAMED: Readonly<Record<Role, string>> = {
+  owner: "the owner", admin: "an administrator", gm: "the general manager",
+  hotel_manager: "the hotel manager", revenue_manager: "the revenue manager", front_desk: "reception",
+  housekeeping: "housekeeping", kitchen_manager: "the kitchen manager", chef: "a chef", pos: "a waiter",
+  bar: "a bar person", stores: "the Inventory Manager", finance: "the accountant", read_only: "a viewer",
+  automation: "an automation account",
+};
+
+/** These roles in words, in the matrix's order. */
+export function whoOf(roles: readonly string[]): string {
+  const names = ROLES.filter((r) => r !== "automation" && roles.includes(r)).map((r) => NAMED[r]);
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+}
+
+/** Who holds a right, in words, from the matrix itself. */
+const whoCan = (action: Action, resource: Resource): string =>
+  whoOf(ROLES.filter((r) => can(r, action, resource)));
+
 /** Why this role may not export this screen, or null when it may. Only the
     `holds` part: that the role may open the screen is the read rule's. */
 export function exportRefusal(role: Role, screen: ListScreen): string | null {
   if (screen.right) {
-    return can(role, screen.right.action, screen.right.resource) ? null
-      : `Exporting the ${screen.title.toLowerCase()} is for ${screen.right.who}. Ask one of them.`;
+    const { action, resource } = screen.right;
+    return can(role, action, resource) ? null
+      : `Exporting the ${screen.title.toLowerCase()} is for ${whoCan(action, resource)}. Ask one of them.`;
   }
   if (!screen.holds || can(role, "export", "report")) return null;
   return `A file of ${screen.holds === "money" ? "money" : "guests' details"} is for those who `

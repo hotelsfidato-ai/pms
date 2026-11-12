@@ -14,6 +14,16 @@ import {
   getTreatments, getTherapists, addTreatment, changeTreatment,
   addTherapist, changeTherapist, type SpaTreatment, type SpaTherapist,
 } from "@/modules/spa/data/spa";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The treatments in a file (D27-383 item 1). Unpriced is a dash. */
+const TREATMENT_EXPORT: ExportColumn<SpaTreatment>[] = [
+  { label: "Treatment", value: (t) => t.name },
+  { label: "Minutes", value: (t) => t.minutes, kind: "count" },
+  { label: "Price", value: (t) => t.price, kind: "money" },
+  { label: "Offered", value: (t) => (t.isActive ? "Yes" : "No") },
+  { label: "Notes", value: (t) => t.notes },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    TREATMENTS AND THERAPISTS
@@ -89,10 +99,13 @@ export default function SpaSetupPage() {
           <CardHeader
             className="items-center"
             actions={
-              <Button variant="primary"
-                      onClick={() => setAddingTreatment(true)}>
-                <Plus className="size-4" /> Add a treatment
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <ExportButtons screen="spa-treatments" rows={treatments.data} columns={TREATMENT_EXPORT} />
+                <Button variant="primary"
+                        onClick={() => setAddingTreatment(true)}>
+                  <Plus className="size-4" /> Add a treatment
+                </Button>
+              </div>
             }
           >
             {/* The card's note beside its heading, behind an (i) with the

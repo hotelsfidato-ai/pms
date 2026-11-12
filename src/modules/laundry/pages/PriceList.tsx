@@ -14,6 +14,15 @@ import {
   getPriceList, addPriceItem, setPriceItem,
   SERVICE_WORDS, type LaundryService, type PriceItem,
 } from "@/modules/laundry/data/laundry";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The price list in a file (D27-383 item 1). No price set is a dash; 0 is free. */
+const PRICE_EXPORT: ExportColumn<PriceItem>[] = [
+  { label: "Item", value: (i) => i.name },
+  { label: "Service", value: (i) => SERVICE_WORDS[i.service] },
+  { label: "Price", value: (i) => i.price, kind: "money" },
+  { label: "In use", value: (i) => (i.isActive ? "Yes" : "No") },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRICE LIST — and nothing on it is priced until somebody says so
@@ -158,11 +167,12 @@ export default function LaundryPriceListPage() {
           { label: "Dockets", to: `/h/${code}/laundry` },
           { label: "Price list" },
         ]}
-        actions={
+        actions={<>
+          <ExportButtons screen="laundry-prices" rows={q.data?.items} columns={PRICE_EXPORT} />
           <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
             Add an item
           </Button>
-        }
+        </>}
       />
 
       {/* SAID WHERE SOMEBODY WOULD LOOK, not discovered on a docket that

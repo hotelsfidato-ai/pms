@@ -17,6 +17,7 @@ import {
   clockDate, clockTime, shiftDay, TAKES_A_BOOKING, SETS_THE_LIST,
   type SpaAppointment, type SpaDiaryTherapist,
 } from "@/modules/spa/data/spa";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE SPA DIARY
@@ -60,6 +61,22 @@ const SETTLEMENT: Record<string, { label: string; tone: "success" | "info" }> = 
   room: { label: "On the room", tone: "info" },
   spa:  { label: "Paid at the spa", tone: "success" },
 };
+
+/* The day's treatments in a file (D27-383 item 1), therapist by therapist.
+   Unpriced is a dash. */
+type Booked = SpaAppointment & { therapist: string };
+const DIARY_EXPORT: ExportColumn<Booked>[] = [
+  { label: "Therapist", value: (a) => a.therapist },
+  { label: "Starts", value: (a) => clockTime(a.startsAt) },
+  { label: "Ends", value: (a) => clockTime(a.endsAt) },
+  { label: "Treatment", value: (a) => a.treatment },
+  { label: "Minutes", value: (a) => a.minutes, kind: "count" },
+  { label: "Guest", value: (a) => a.guestName },
+  { label: "Room", value: (a) => a.room },
+  { label: "Status", value: (a) => a.status.replace(/_/g, " ") },
+  { label: "Agreed", value: (a) => a.amount, kind: "money" },
+  { label: "Settled", value: (a) => (a.settlement ? SETTLEMENT[a.settlement]?.label ?? a.settlement : null) },
+];
 
 export default function SpaDiaryPage() {
   const code = useHotel();
@@ -118,6 +135,8 @@ export default function SpaDiaryPage() {
         }
         actions={
           <>
+            <ExportButtons screen="spa-diary" columns={DIARY_EXPORT} facts={[["Day", from]]}
+              rows={therapists.flatMap((t) => t.appointments.map((a) => ({ ...a, therapist: t.name })))} />
             {SETS_THE_LIST.includes(role) && (
               <Button variant="secondary"
                       onClick={() => void navigate(`/h/${code}/spa/setup`)}>

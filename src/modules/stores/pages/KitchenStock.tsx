@@ -11,6 +11,23 @@ import {
   getKitchenSheet, saveKitchenCount, markKitchenStore, getRecipes, saveRecipe,
   type KitchenSheet, type KitchenItem, type RecipeOwner, type Recipes,
 } from "@/modules/stores/data/kitchen";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The day's sheet in a file (D27-383 item 1). Quantities only, each in
+   its unit and never rounded; not counted is a dash. */
+const SHEET_EXPORT: ExportColumn<KitchenItem>[] = [
+  { label: "Item", value: (i) => i.name },
+  { label: "Unit", value: (i) => i.unit },
+  { label: "Opening", value: (i) => i.opening },
+  { label: "Received", value: (i) => i.received },
+  { label: "Moved in", value: (i) => i.movedIn },
+  { label: "Moved out", value: (i) => i.movedOut },
+  { label: "Used by KOTs", value: (i) => i.used },
+  { label: "Wasted", value: (i) => i.wasted },
+  { label: "Corrected", value: (i) => i.corrected },
+  { label: "Closing", value: (i) => i.closing },
+  { label: "Counted", value: (i) => i.counted },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN'S STOCK (the owner's D27-373, D27-374): Inventory's
@@ -157,6 +174,8 @@ function Sheet({ code }: { code: string }) {
                 onClick={() => setChanging(true)}>Change</button></>
             )}
           </p>
+          <ExportButtons screen="kitchen-stock" rows={s.items} columns={SHEET_EXPORT}
+            facts={[["Day", s.date], ["Store", s.store.name]]} />
           {s.mayCount && (
             <Button variant="primary" loading={saving} disabled={typed.length === 0} onClick={() => void save()}>
               Save the closing count{typed.length ? ` (${typed.length})` : ""}

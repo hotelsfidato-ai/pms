@@ -27,7 +27,7 @@ import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
 import { StoreTiles } from "@/modules/stores/components/StoreTiles";
 import { TILES, inTile, isTile, type Tile } from "@/modules/stores/lib/tiles";
-import { STOCK_REPORT_LINKS, mayReadStockReports } from "@/modules/reports";
+import { STOCK_REPORT_LINKS, mayReadStockReports, ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -266,6 +266,21 @@ export default function StoresPage() {
   const priced = items.filter((i) => shownValue(i) !== null);
   const total = priced.reduce((n, i) => n + (shownValue(i) ?? 0), 0);
 
+  /* The shelf in a file (D27-383 item 1): the place and tile picked, what
+     each holds there and its value. Nothing received is a dash, never 0. */
+  const itemExport: ExportColumn<StockItem>[] = [
+    { label: "Item", value: (i) => i.name },
+    { label: "Category", value: (i) => i.category },
+    { label: "Unit", value: (i) => i.unit },
+    /* A quantity may be 2.5 kg: a plain number, not a count, which rounds. */
+    { label: "On hand", value: (i) => shownOnHand(i) },
+    { label: "Below level in", value: (i) => i.lowIn.map((id) => places.find((p) => p.id === id)?.name ?? id).join(", ") },
+    { label: "Unit cost", value: (i) => i.unitCost, kind: "money" },
+    { label: "Value", value: (i) => shownValue(i), kind: "money" },
+    { label: "Last movement", value: (i) => i.lastMovement, kind: "date" },
+    { label: "In use", value: (i) => (i.isActive ? "Yes" : "No") },
+  ];
+
   const byCategory = new Map<string, StockItem[]>();
   for (const i of items) {
     const key = i.category ?? "Everything else";
@@ -395,6 +410,8 @@ export default function StoresPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
+            <ExportButtons screen="store" rows={q.data ? items : undefined} columns={itemExport}
+              facts={[["Place", picked?.name ?? "every place"], ["Showing", tile && TILES.find((t) => t.key === tile)?.label]]} />
             <StoreViews code={code} view="shelf" search={search} />
             {mayChange && (
               <>
