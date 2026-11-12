@@ -23,6 +23,7 @@
 export type CellKind =
   | "text"
   | "money"      // rupees and paise
+  | "rupees"     // the same, with the ₹ where the file can draw it: a list screen's (listFiles.ts)
   | "count"      // a whole number of rooms, nights, people
   | "ratio"      // a plain figure with decimals, e.g. guests per room
   | "percent"    // 29.41 means 29.41%
@@ -180,7 +181,7 @@ export interface ReportDoc {
 
      It is deliberately NOT in REPORT_KEYS: that list is what the Reports
      screen offers, and a purchase order is not a report anybody runs. */
-  report: ReportKey | "purchase-order";
+  report: ReportKey | "purchase-order" | "list";
   title: string;
   /** From the database, never a literal (MEMORY 256). */
   /** timezone: where "datetime" cells are printed, e.g. "Asia/Kolkata"; India when absent. */
