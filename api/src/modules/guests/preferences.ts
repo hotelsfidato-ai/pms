@@ -49,6 +49,25 @@ const WITH_ALLERGIES = `
       from guests x
      where (x.id = g.id or x.joined_into = g.id) and x.preferences ? 'allergies')))`;
 
+/** The allergy of whoever is in house in each of these rooms, as the order
+    screen shows it (RoomPreferences, "in-house"): for the KOT and the Kitchen
+    screen (D27-396). Room numbers in upper case; every stay in the room. */
+export async function inHouseAllergies(
+  client: Client, hotelId: string, rooms: string[],
+): Promise<Map<string, string>> {
+  if (rooms.length === 0) return new Map();
+  const { rows } = await client.query<{ room: string; allergies: string }>(
+    `select upper(app.stay_room(r.id)) as room,
+            string_agg(distinct (${WITH_ALLERGIES}) ->> 'allergies', '; ') as allergies
+       from reservations r
+       join guests g on g.id = r.guest_id
+      where r.hotel_id = $1 and r.status = 'checked_in'
+        and upper(app.stay_room(r.id)) = any($2::text[])
+      group by 1`,
+    [hotelId, rooms]);
+  return new Map(rows.filter((r) => r.allergies).map((r) => [r.room, r.allergies]));
+}
+
 preferences.get("/:code/guest-preferences", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));

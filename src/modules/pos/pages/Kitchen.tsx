@@ -194,6 +194,7 @@ export default function KitchenPage() {
     try { localStorage.setItem(KIND_KEY, v); } catch { /* this device keeps none */ }
   };
   const lines = (board.data ?? []).filter((l) => !kind || l.kindId === kind);
+  const working = board.data ? lines.filter((l) => !l.cancelled).length : null;
 
   /* POS-3. The one screen of 89 with no heading and no tab of its own:
      the board drew "The pass" in a paragraph, so a screen reader found no
@@ -220,7 +221,7 @@ export default function KitchenPage() {
           <p className="text-2xs text-grey-500 tabular flex items-center gap-2 whitespace-nowrap">
             {/* A dash until the board has loaded — "0 dishes working" over
                 a board that never arrived is the empty-list lie again. */}
-            {board.data ? lines.filter((l) => !l.cancelled).length : "-"} dishes working
+            {working ?? "-"} {working === 1 ? "dish" : "dishes"} working
             {/* NAMED, because the failure it describes is invisible.
                 A dropped stream leaves a screen that looks exactly
                 like a working one until somebody shouts about a dish
@@ -545,6 +546,13 @@ function Ticket({ line, action, busy, onMove }: {
               + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
             </p>
           ))}
+          {line.allergy && (
+            /* The room's guest's allergy (D27-396), in red, as the order
+               screen and the KOT show it. */
+            <p className="text-md font-semibold text-brand-red-700 mt-1" data-kitchen-allergy>
+              ALLERGY: {line.allergy}
+            </p>
+          )}
           {line.note && (
             /* A modifier the kitchen must not miss. Same weight as the
                dish, because "no chilli" sent back is a whole plate. */

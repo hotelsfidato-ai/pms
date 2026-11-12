@@ -261,6 +261,9 @@ export interface KitchenLine {
   kindId?: string | null;
   /** Why, in the manager's words (D27-119). */
   cancelReason?: string | null;
+  /** A room-service order's in-house guest's allergy (D27-396), as the order
+      screen shows it. */
+  allergy?: string | null;
 }
 
 export interface Order {
@@ -1785,6 +1788,9 @@ export interface Docket {
   /** For the KOT's design to print (D27-368). Absent on an older docket. */
   covers?: number | null;
   waiter?: string | null;
+  /** A room-service order's in-house guest's allergy (D27-396): printed on
+      every slip, whatever the design shows. */
+  allergy?: string | null;
   lines: {
     id: string;
     /** Set on a side, naming the dish it goes on. The paper indents. */
