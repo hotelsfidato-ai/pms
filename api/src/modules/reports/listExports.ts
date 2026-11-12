@@ -121,6 +121,18 @@ export const LIST_SCREENS = {
   "banquet": { title: "Banquet diary", read: `${H}/banquet` },
   "night-audit-runs": { title: "Night audit: closed days", read: `${H}/night-audit/runs`, holds: "money" },
   "equipment": { title: "Equipment register", read: `${H}/equipment`, right: { action: "export", resource: "equipment" } },
+  /* Prices and terms, as the rest. */
+  "rates": { title: "Rates", read: `${H}/pricing` },
+  "cancellation-terms": { title: "Cancellation terms", read: `${H}/cancellation-policies` },
+  "revenue-outlook": { title: "Revenue outlook", read: `${H}/statistics/daily` },
+  /* The staff's own emails and phones: `export` on `user`, the matrix's own. */
+  "people": { title: "People", read: "GET /api/admin/staff", right: { action: "export", resource: "user" } },
+  "users": { title: "Users", read: `${H}/staff`, right: { action: "export", resource: "user" } },
+  "sign-ins": { title: "Sign-ins and devices", read: "GET /api/admin/staff/:id/sign-ins", right: { action: "export", resource: "user" } },
+  /* Charges and payments with their amounts; a record's changes. */
+  "audit-log": { title: "Audit log", read: `${H}/audit-log`, holds: "money" },
+  "activity": { title: "Activity", read: `${H}/activity`, holds: "guests" },
+  "properties": { title: "Properties", read: H },
 } as const satisfies Record<string, ListScreen>;
 
 export type ListScreenKey = keyof typeof LIST_SCREENS;

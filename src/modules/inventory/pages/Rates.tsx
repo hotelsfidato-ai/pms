@@ -15,8 +15,9 @@ import {
 import { getInventory, setRestriction, type InventoryCell, type Restriction } from "@/modules/inventory/data/rates";
 import {
   getPricing, getBreakup, setBasis, setBasePrice, setAddon,
-  type Pricing, type Addons, type PricingCell, type BreakupDay,
+  type Pricing, type Addons, type PricingCell, type BreakupDay, type PricingRoomType,
 } from "@/modules/inventory/data/pricing";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { getRateDays, type RateDay } from "@/modules/inventory/data/rateGrid";
 import { removeRate, setRackRate } from "@/modules/inventory/data/rateSetup";
 
@@ -154,6 +155,18 @@ export default function RatesPage() {
     );
   }
 
+  /* The fortnight's base prices in a file (D27-383 item 1): a room type a
+     line, a day a column, one guest room only (EP) as the grid. A price is
+     a price, not money owed; none set is a dash. */
+  const cells = pricing.data?.cells ?? [];
+  const priceExport: ExportColumn<PricingRoomType>[] = [
+    { label: "Room type", value: (t) => t.name },
+    ...dates.map((d): ExportColumn<PricingRoomType> => ({
+      label: d, kind: "money",
+      value: (t) => cells.find((c) => c.roomTypeId === t.id && c.date === d && c.mealPlan === "EP")?.price ?? null,
+    })),
+  ];
+
   return (
     <Page>
       <PageHeader
@@ -161,6 +174,10 @@ export default function RatesPage() {
         description="Each day's price, and how the day sold. The add-ons follow the base."
         actions={
           <>
+          {view === "prices" && (
+            <ExportButtons screen="rates" rows={pricing.data?.roomTypes} columns={priceExport}
+              facts={[["Days", dates.length ? `${dates[0]} to ${dates[dates.length - 1]}` : null], ["Plan", "EP, one guest, room only"]]} />
+          )}
           <Segmented<"prices" | "rooms">
             value={view}
             onChange={setView}

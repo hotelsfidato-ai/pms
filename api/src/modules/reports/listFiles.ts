@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import { ROLES, type Role } from "../../permissions.ts";
+import { ROLES, can, type Role } from "../../permissions.ts";
+import { ADMIN_READ_ROLES } from "../admin/grants.ts";
 import { READ_RULES, allows, refusalFor } from "../../roleGate.ts";
 import { renderPdf, renderXlsx } from "../../reportRender.ts";
 import { heading, propertyFor } from "./figures.ts";
@@ -65,6 +66,12 @@ export const OWN_READERS: Partial<Record<ListScreenKey, readonly string[]>> = {
   "equipment": EQUIPMENT_GRANTS.view,
   /* A team sees its own requests; the desk every team's. */
   "requests": ROLES.filter((r) => teamsFor(r).length > 0),
+  "audit-log": ADMIN_READ_ROLES.audit_log,
+  "activity": ADMIN_READ_ROLES.audit_log,
+  /* Row security then shows each only the people they may manage. */
+  "people": ROLES.filter((r) => can(r, "view", "user")),
+  /* app.devices_of: the owner anybody's, an Admin their hotel's people. */
+  "sign-ins": ["owner", "admin"],
 };
 
 export const listFiles = new Hono<{ Variables: { subject: string } }>();

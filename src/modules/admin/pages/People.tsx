@@ -18,6 +18,7 @@ import { TestTag } from "@/components/app/TestHotel";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
 import { TwoStepOffDialog } from "@/modules/admin/components/TwoStep";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PEOPLE WHO WORK HERE
@@ -114,6 +115,17 @@ function testPlacesOf(rosterAt: RosterPlace[], hotels: ApiHotel[]): RosterPlace[
    somebody AT their hotel, in one act; "Add somebody" used to send no
    property at all and was refused "Only a group administrator may
    provision a property." */
+/* The people listed, in a file (D27-383 item 1): each with where they work and as what. */
+const PERSON_EXPORT: ExportColumn<AdminStaff>[] = [
+  { label: "Name", value: (s) => s.name },
+  { label: "Email", value: (s) => s.email },
+  { label: "Phone", value: (s) => s.phone },
+  { label: "Every property", value: (s) => (s.isGroupAdmin ? "Yes" : "No") },
+  { label: "Works at", value: (s) => s.access.map((a) => `${a.code} ${ROLE_LABELS[a.role as Role] ?? a.role}`).join(", ") },
+  { label: "Can sign in", value: (s) => (s.canSignIn ? "Yes" : "No") },
+  { label: "Active", value: (s) => (s.isActive ? "Yes" : "Switched off") },
+];
+
 export default function PeoplePage() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
@@ -166,12 +178,14 @@ export default function PeoplePage() {
             ? ". Adding somebody is for a group administrator, or a property's general manager or Admin."
             : "")
         }
-        actions={
+        actions={<>
+          <ExportButtons screen="people" rows={staff.data ? listed : undefined} columns={PERSON_EXPORT}
+            facts={[["Showing", showing === "off" ? "switched off" : "everybody"]]} />
           <Button variant="primary" disabled={!mayAdd}
                   onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add somebody
           </Button>
-        }
+        </>}
       />
 
       {stranded.length > 0 && (

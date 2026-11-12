@@ -4,7 +4,8 @@ import { Link } from "react-router";
 import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast } from "@/components/ui";
-import { listProperties } from "@/data/repositories";
+import { listProperties, type Property } from "@/data/repositories";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { useSession } from "@/lib/session";
 import {
   listAdminProperties, amendProperty, setPropertyOpen, PROPERTY_TYPES, ownerResetIsMine,
@@ -45,6 +46,19 @@ import { placeLine } from "@/modules/finance";
    gets the ordinary cards. One card component, two sources, and the
    sets they cover cannot overlap.
    ══════════════════════════════════════════════════════════════════ */
+/* The properties this person reaches, in a file (D27-383 item 1). */
+const PROPERTY_EXPORT: ExportColumn<Property>[] = [
+  { label: "Property", value: (p) => p.name },
+  { label: "Code", value: (p) => p.id },
+  { label: "Address", value: (p) => p.address },
+  { label: "Phone", value: (p) => p.phone },
+  { label: "Email", value: (p) => p.email },
+  { label: "GSTIN", value: (p) => p.gstin },
+  { label: "Rooms", value: (p) => p.rooms, kind: "count" },
+  { label: "Check-in", value: (p) => p.checkInTime },
+  { label: "Check-out", value: (p) => p.checkOutTime },
+];
+
 export function PropertiesPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<AdminProperty | null>(null);
@@ -120,6 +134,8 @@ export function PropertiesPage() {
             ? `${open.length} open${closed.length ? ` · ${closed.length} closed` : ""}`
             : "The properties you can reach."
         }
+        actions={<ExportButtons screen="properties" columns={PROPERTY_EXPORT}
+          rows={plain.data?.filter((p) => !testCodes.has(p.id))} />}
       />
 
       {plain.error && !isAdmin ? (

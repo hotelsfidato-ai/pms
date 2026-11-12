@@ -9,6 +9,7 @@ import {
   type Column,
 } from "@/components/ui";
 import { listActivity, type ActivityEntry } from "@/modules/admin/data/adminLists";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    ACTIVITY — every change, who made it, when (D27-243 5.1, D27-245)
@@ -20,6 +21,17 @@ import { listActivity, type ActivityEntry } from "@/modules/admin/data/adminList
    ══════════════════════════════════════════════════════════════════ */
 
 const PAGE = 50;
+
+/* The page of changes shown, in a file (D27-383 item 1). A guest's
+   detail reads "changed", never its value, as on the screen. */
+const ACTIVITY_EXPORT: ExportColumn<ActivityEntry>[] = [
+  { label: "When", value: (e) => e.at, kind: "datetime" },
+  { label: "Who", value: (e) => e.actor },
+  { label: "What", value: (e) => `${e.action} · ${e.kind}` },
+  { label: "Record", value: (e) => e.record },
+  { label: "What changed", value: (e) => e.changes
+      .map((c) => (c.masked ? `${c.field} changed` : `${c.field}: ${c.from ?? "-"} → ${c.to ?? "-"}`)).join("; ") },
+];
 
 const COLUMNS: Column<ActivityEntry>[] = [
   {
@@ -78,7 +90,13 @@ export default function ActivityPage() {
   return (
     <Page>
       <PageHeader title="Activity"
-        description="Every change made here: who, when, which record and what changed. A guest's details read 'changed'." />
+        description="Every change made here: who, when, which record and what changed. A guest's details read 'changed'."
+        actions={<ExportButtons screen="activity" rows={data ? rows : undefined} columns={ACTIVITY_EXPORT}
+          facts={[["Where", scope === "group" ? "across the group" : "this hotel"],
+            ["By", who && data?.people.find((p) => p.id === who)?.name],
+            ["Kind", kind && data?.kinds.find((k) => k.key === kind)?.label],
+            ["From", from], ["To", to],
+            ["Entries", rows.length ? `${page * PAGE + 1} to ${page * PAGE + rows.length}` : null]]} />} />
       <div className="mb-4 flex flex-wrap items-end gap-3">
         {mayGroup && (
           <Segmented value={scope} onChange={(v) => { reset(setScope)(v); setWho(""); setKind(""); }}

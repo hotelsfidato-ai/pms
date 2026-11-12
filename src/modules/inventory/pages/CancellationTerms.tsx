@@ -9,6 +9,7 @@ import {
   StatusPill, EmptyState, toast,
 } from "@/components/ui";
 import { listCancellationPolicies, addCancellationPolicy, retireCancellationPolicy, setDefaultCancellationPolicy, RETENTION_BASES, type CancellationPolicy } from "@/modules/inventory/data/rateSetup";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT A CANCELLATION COSTS
@@ -52,6 +53,16 @@ function describe(
   }
 }
 
+/* The terms in a file (D27-383 item 1), each in the screen's sentence. */
+const POLICY_EXPORT: ExportColumn<CancellationPolicy>[] = [
+  { label: "Policy", value: (p) => p.name },
+  { label: "Free until (hours before arrival)", value: (p) => p.freeUntilHours, kind: "count" },
+  { label: "Cancelled late", value: (p) => describe(p.cancelBasis, p.cancelPercent, p.cancelAmount) },
+  { label: "No show", value: (p) => describe(p.noShowBasis, p.noShowPercent, p.noShowAmount) },
+  { label: "New bookings get it", value: (p) => (p.appliesToNewBookings ? "Yes" : "No") },
+  { label: "Bookings on it", value: (p) => p.bookings, kind: "count" },
+];
+
 export default function CancellationTermsPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
@@ -93,12 +104,13 @@ export default function CancellationTermsPage() {
       <PageHeader
         title="Cancellation terms"
         description="What a cancellation or a no-show costs at this property."
-        actions={
+        actions={<>
+          <ExportButtons screen="cancellation-terms" rows={policies.data} columns={POLICY_EXPORT} />
           <Button variant="primary" onClick={() => setOpen((v) => !v)}>
             <Plus className="size-4" />
             New policy
           </Button>
-        }
+        </>}
       />
 
       {open && (
