@@ -14,6 +14,7 @@ import {
 import { moreLines } from "@/modules/online-checkin/formIII";
 import { KeptPhotos, WaitingPhoto } from "@/modules/online-checkin/pages/IdPhotosAtDesk";
 import { HotelCard } from "@/modules/online-checkin/HotelCard";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
@@ -39,6 +40,24 @@ const ID_LABEL: Record<string, string> = {
 };
 const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
 
+/* The details waiting for the desk, in a file (D27-383 item 1). An ID or
+   visa number keeps its last four characters only (the server masks it). */
+const WAITING_EXPORT: ExportColumn<WaitingDetails>[] = [
+  { label: "Guest", value: (w) => w.guest },
+  { label: "Booking", value: (w) => w.reference },
+  { label: "Sent", value: (w) => w.submittedAt, kind: "datetime" },
+  { label: "ID", value: (w) => ID_LABEL[w.idType] ?? w.idType },
+  { label: "ID number", value: (w) => w.idNumber, kind: "id" },
+  { label: "From DigiLocker", value: (w) => (w.fromDigilocker ? "Yes" : "No") },
+  { label: "Passport expires", value: (w) => w.passportExpiry, kind: "date" },
+  { label: "Visa number", value: (w) => w.visaNumber, kind: "id" },
+  { label: "Visa expires", value: (w) => w.visaExpiry, kind: "date" },
+  { label: "Address", value: (w) => w.addressLine },
+  { label: "City", value: (w) => w.city },
+  { label: "Country", value: (w) => w.country },
+  { label: "ID photo", value: (w) => (w.photo ? "Sent" : null) },
+];
+
 export default function DeskPage() {
   const code = useParams().code ?? "";
   const { property } = useDocumentIdentity();
@@ -54,6 +73,8 @@ export default function DeskPage() {
       <PageHeader
         title="Online check-in"
         description="What guests sent from their own page, waiting for the desk."
+        actions={<ExportButtons screen="online-checkin" rows={desk.data?.waiting} columns={WAITING_EXPORT}
+          facts={[["Showing", "details waiting for the desk"]]} />}
       />
       {desk.isLoading ? (
         <Skeleton className="h-64" />

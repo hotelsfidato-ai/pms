@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import { listCompanyRecords, KIND_LABEL, type CompanyRow } from "@/modules/contracts/data/contracts";
 import { CompanyDialog } from "@/modules/contracts/components/CompanyDialog";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    CONTRACTS (D27-178, D27-184): the group's companies and agents, each
@@ -41,6 +42,23 @@ const COLUMNS: Column<CompanyRow>[] = [
     : <span className="text-grey-500">-</span> },
 ];
 
+/* The list in a file (D27-383 item 1). Credit not set is a dash. */
+const CONTRACT_EXPORT: ExportColumn<CompanyRow>[] = [
+  { label: "Company", value: (c) => c.name },
+  { label: "Kind", value: (c) => KIND_LABEL[c.kind] ?? c.kind },
+  { label: "GSTIN", value: (c) => c.gstin },
+  { label: "Contact", value: (c) => c.contactName },
+  { label: "Phone", value: (c) => c.phone },
+  { label: "Email", value: (c) => c.email },
+  { label: "City", value: (c) => c.city },
+  { label: "State", value: (c) => c.state },
+  { label: "Credit", value: (c) => (c.creditAllowed ? "Yes" : "No") },
+  { label: "Credit days", value: (c) => c.creditDays, kind: "count" },
+  { label: "Credit limit", value: (c) => c.creditLimit, kind: "money" },
+  { label: "Contract here", value: (c) => c.contractName },
+  { label: "Contract until", value: (c) => c.contractTo, kind: "date" },
+];
+
 export default function ContractsPage() {
   const hotelId = useUi((s) => s.hotelId);
   const role = useRole();
@@ -57,11 +75,14 @@ export default function ContractsPage() {
       <PageHeader
         title="Contracts"
         description="Companies and agents, and the rates each has agreed with this hotel."
-        actions={can(role, "create", "company") && (
-          <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
-            Add company
-          </Button>
-        )}
+        actions={<>
+          <ExportButtons screen="contracts" rows={data} columns={CONTRACT_EXPORT} />
+          {can(role, "create", "company") && (
+            <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
+              Add company
+            </Button>
+          )}
+        </>}
       />
       <Card>
         <DataTable<CompanyRow>

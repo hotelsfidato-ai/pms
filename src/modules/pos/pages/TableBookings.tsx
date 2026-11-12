@@ -12,6 +12,7 @@ import {
   getTableBookings, confirmTableBooking, declineTableBooking, bookOutsideDiner,
   markArrived, seatBooking, markNoShow, cancelBooking, type TableBooking, type TableBookingList,
 } from "@/modules/pos/data/tableBookings";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    TABLE BOOKINGS (the owner's D27-221, D27-224; outside diners, D27-383
@@ -43,6 +44,25 @@ const STATUS: Record<TableBooking["status"], { words: string; tone: "warning" | 
 const dayWords = (date: string, today: string) =>
   date === today ? "Today"
     : new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+/* Every booking the screen lists, in a file (D27-383 item 1). */
+const BOOKING_EXPORT: ExportColumn<TableBooking>[] = [
+  { label: "Date", value: (b) => b.date, kind: "date" },
+  { label: "Time", value: (b) => b.time },
+  { label: "Party", value: (b) => b.party, kind: "count" },
+  { label: "Guest", value: (b) => b.guest },
+  { label: "Booking", value: (b) => b.reference },
+  { label: "Room", value: (b) => b.room },
+  { label: "Phone", value: (b) => b.phone },
+  { label: "Outlet", value: (b) => b.outlet },
+  { label: "Table or area", value: (b) => b.table?.label ?? b.section?.name },
+  { label: "Status", value: (b) => STATUS[b.status].words },
+  { label: "Answer", value: (b) => b.answer },
+  { label: "Answered by", value: (b) => b.answeredBy },
+  { label: "Arrived at", value: (b) => b.arrivedAt },
+  { label: "Bill", value: (b) => b.order?.orderNo },
+  { label: "Note", value: (b) => b.note },
+];
 
 type Tables = TableBookingList["tables"];
 type Sections = NonNullable<TableBookingList["sections"]>;
@@ -78,7 +98,11 @@ export default function TableBookingsPage() {
       <PageHeader
         title="Table bookings"
         description="Hotel guests ask for a table from their own page: confirm each one, or decline it with a reason they will read. Book anybody else here, and mark each booking on the night."
-        actions={mayAnswer ? <Button variant="primary" onClick={() => setBooking(true)}>New booking</Button> : undefined}
+        actions={<>
+          <ExportButtons screen="table-bookings" rows={q.data?.bookings} columns={BOOKING_EXPORT}
+            facts={[["From", shown]]} />
+          {mayAnswer && <Button variant="primary" onClick={() => setBooking(true)}>New booking</Button>}
+        </>}
       />
       <div className="flex flex-wrap items-end gap-3 mb-5">
         <Field label="Day">

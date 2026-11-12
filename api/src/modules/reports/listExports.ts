@@ -90,6 +90,21 @@ export const LIST_SCREENS = {
   "reviews": { title: "Reviews", read: `${H}/reviews`, holds: "guests" },
   /* What a named guest said of their stay. */
   "feedback": { title: "Guest feedback", read: `${H}/feedback`, holds: "guests" },
+  /* Members and their points, worth a rupee each. */
+  "loyalty": { title: "Loyalty", read: `${H}/loyalty`, holds: "guests" },
+  "leads": { title: "Leads and WhatsApp", read: `${H}/leads`, holds: "guests" },
+  "marketing-campaigns": { title: "Marketing: campaigns", read: `${H}/marketing/numbers`, holds: "money" },
+  "marketing-sources": { title: "Marketing: by booking source", read: `${H}/marketing/numbers`, holds: "money" },
+  /* ID numbers (masked in the file), addresses. */
+  "online-checkin": { title: "Online check-in", read: `${H}/online-checkin`, holds: "guests" },
+  "crs-bookings": { title: "CRS bookings", read: `${H}/crs/bookings` },
+  /* Each company's credit limit. */
+  "contracts": { title: "Contracts", read: `${H}/company-records`, holds: "money" },
+  /* An outside diner's phone. */
+  "table-bookings": { title: "Table bookings", read: `${H}/table-bookings`, holds: "guests" },
+  /* A dish's price is a price, as a room rate is. */
+  "menu": { title: "Menu", read: `${H}/till/menu` },
+  "room-charges": { title: "Charges to rooms", read: `${H}/pos/tickets`, holds: "money" },
 } as const satisfies Record<string, ListScreen>;
 
 export type ListScreenKey = keyof typeof LIST_SCREENS;

@@ -6,6 +6,7 @@ import {
   Page, PageHeader, Card, CardHeader, DataTable, EmptyState, Input, readError, type Column,
 } from "@/components/ui";
 import { getNumbers, type CampaignLine, type SourceLine } from "@/modules/marketing/data/numbers";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    MARKETING (D27-168, D27-170)
@@ -37,6 +38,22 @@ const SOURCE_COLUMNS: Column<SourceLine>[] = [
   { key: "name", header: "Booking source", cell: (r) => r.name ?? "No source recorded" },
   { key: "bookings", header: "Bookings", numeric: true, cell: (r) => r.bookings },
   { key: "revenue", header: "Revenue", numeric: true, cell: (r) => rupees(r.revenue) },
+];
+
+/* Both tables in files (D27-383 item 1). Revenue arrives as numeric text;
+   none is a dash. */
+const amount = (v: string | number | null) => (v === null ? null : Number(v));
+const CAMPAIGN_EXPORT: ExportColumn<CampaignLine>[] = [
+  { label: "Campaign", value: (r) => r.name ?? r.key },
+  { label: "Where", value: (r) => (r.platform ? PLATFORM[r.platform] ?? r.platform : null) },
+  { label: "Spend", value: (r) => r.spend, kind: "money" },
+  { label: "Bookings", value: (r) => r.bookings, kind: "count" },
+  { label: "Revenue", value: (r) => amount(r.revenue), kind: "money" },
+];
+const SOURCE_EXPORT: ExportColumn<SourceLine>[] = [
+  { label: "Booking source", value: (r) => r.name ?? "No source recorded" },
+  { label: "Bookings", value: (r) => r.bookings, kind: "count" },
+  { label: "Revenue", value: (r) => amount(r.revenue), kind: "money" },
 ];
 
 export default function MarketingPage() {
@@ -75,7 +92,9 @@ export default function MarketingPage() {
 
       <div className="flex flex-col gap-3">
         <Card>
-          <CardHeader title="Campaigns" description="A booking carries its campaign when it is made from a lead." />
+          <CardHeader title="Campaigns" description="A booking carries its campaign when it is made from a lead."
+            actions={<ExportButtons screen="marketing-campaigns" rows={d?.campaigns} columns={CAMPAIGN_EXPORT}
+              facts={[["Month", month], ["Spend", spendNote]]} />} />
           <DataTable
             columns={CAMPAIGN_COLUMNS}
             rows={d?.campaigns ?? []}
@@ -89,7 +108,9 @@ export default function MarketingPage() {
         </Card>
 
         <Card>
-          <CardHeader title="By booking source" description="Every stay arriving this month." />
+          <CardHeader title="By booking source" description="Every stay arriving this month."
+            actions={<ExportButtons screen="marketing-sources" rows={d?.sources} columns={SOURCE_EXPORT}
+              facts={[["Month", month]]} />} />
           <DataTable
             columns={SOURCE_COLUMNS}
             rows={d?.sources ?? []}
