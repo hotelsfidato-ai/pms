@@ -11,6 +11,79 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-12 · PDF and Excel on the list screens (D27-383 item 1)
+
+Branch `worktree-agent-ab4eb6e6859f2b2b3`, copy `.claude\worktrees\agent-ab4eb6e6859f2b2b3`, cp6 merged at `92a4b9fe`.
+
+**Asked for.** The owner's approved list (D27-383, `.local/hms-audit.html` Step 2), item 1, built under D27-396:
+"Excel and PDF on All bookings, Guests, Folios, Invoices, Payments, Arrivals, In house, Company accounts,
+Housekeeping and the rest. PDF and Excel for the GST register, Form III, Guest ledger and Cashier shift." One
+shared way; a list exports exactly what it shows (filters, search, sort, period, every row); the hotel, the
+screen, who and when on the file; the screen's own permission, plus the reports' download right for money and
+guests' details; an ID number never whole; never another hotel's rows; a dash never 0; numbers as numbers.
+
+**The plan: every list screen and report, and whether it exports** (on cp6 `92a4b9fe`, before this work).
+
+| Screen | Before | Now |
+|---|---|---|
+| Reports built on the server (Manager, Night audit, City ledger, No show, Monthly occupancy/statistics, Yearly statistics, Lodging tax, Voids, Petty cash, Store reports x9, Bar stock, FLR registers, Supplier dues/TDS/statement, Money owed by age, Statement of account, Commission, GSTR-1, Input tax credit, GST on advances, Group reports) | PDF, Excel, CSV | unchanged |
+| GST sales register, Form III register, Guest ledger, Cashier shift | CSV only | **PDF, Excel** + CSV |
+| Accounting export (day book, Tally) | CSV, Excel, XML | unchanged |
+| Backfilled records | CSV | unchanged |
+| Bill history | CSV labelled "Download to Excel" | **PDF, Excel**, CSV (renamed) |
+| Equipment register | CSV ("Export", its own right) | not added (left open) |
+| Arrivals, Upcoming arrivals, In house, Due out, Walk-ins, All bookings | none | **PDF, Excel** |
+| Groups, Waitlist | none | **PDF, Excel** |
+| Folios, Invoices (Issued), Payments, Company accounts | none | **PDF, Excel** |
+| Guests, Companies and agents, Form III | none | **PDF, Excel** |
+| Housekeeping | none | **PDF, Excel** |
+| Rooming list, Booking sources, Cashiering, Cash deposits, Work orders, Minibar, Checklists, Guest requests, Wake-up calls, Lost property, Guest messages, Guest 360, Possible same person, Reviews, Guest feedback, Loyalty, Leads, Marketing lists, Online check-in, CRS bookings, Contracts, Table bookings, Menu, Charges to rooms, Store, Inventory, Bar stock, Kitchen stock, Purchasing, Supplier dues, Laundry dockets and price list, Spa diary and treatments, Banquet diary, Night audit runs, Rates, Cancellation terms, Revenue outlook, People, Users, Audit log, Activity, Sign-ins, Properties | none | none yet (left open) |
+| Not lists: Dashboard, Rooms, Calendar, New booking, Tables, Till, Terminal, Kitchen, Close restaurant day, Settings, Setup, Console, System health, Integrations, Channel manager | - | - |
+
+**Shipped.**
+- `api/src/modules/reports/listExports.ts` (pure; the website imports it too): `LIST_SCREENS`, each screen's
+  title, the READ_RULES key of the route its rows come from, and `holds` ("money" or "guests");
+  `exportRefusal` (the one sentence the button and the server both say); `maskId`, `namesAnId`.
+- `api/src/modules/reports/listFiles.ts`: `POST /api/hotels/:code/exports/<screen>.(pdf|xlsx)`. The body is the
+  screen's columns, rows and filters as words; the hotel, the title, who and when are the server's. Not rostered
+  at the hotel: "No such property." (404). The screen's read rule (`allows`), then `holds` asks `export` on
+  `report` (REPORT_EXPORTERS). Drawn by `reportRender.ts` as one section; facts = the filters, Rows, Currency INR.
+- `reportRender.ts`: a cell kind `rupees` (both copies of the report contract): Excel's format carries the ₹ with
+  Indian grouping; the PDF prints it as money. `ReportDoc.report` widened by "list".
+- `src/lib/api.ts` `downloadFile(path, body?)`: a body POSTs it as JSON (no new export, so the mock is unchanged).
+- Web: `ExportButtons` (`src/modules/reports/components`, through `@/modules/reports`) and
+  `data/listExport.ts`; `StayTable` takes `exportAs` (its own search goes on the file); `ReportShell` takes `files`.
+- The screens in the table above marked **PDF, Excel**.
+
+**Decided under D27-396.**
+- Money = a list that carries balances, receipts, revenue or tax: In house and Due out (each guest's balance),
+  Groups (the host's balance), Folios, Invoices, Payments, Company accounts, Companies and agents, Bill history,
+  Guest ledger, Cashier shift, GST sales register. Guests' details = Guests, Form III, Waitlist (phones), Form III
+  register. Arrivals, Upcoming, Walk-ins, All bookings (a rate is a price, not money owed) and Housekeeping are
+  open to whoever opens them. The stricter reading, because a file leaves the system.
+- An ID number keeps its last four characters (XXXX4567), every type: stricter than the screens, which show a
+  passport whole. The server masks a column of kind "id" and any column whose heading names an ID number.
+- **The Form III register's CSV still carries passports whole**, as the FRRO filing needs; its new PDF and
+  Excel are masked. **For the owner:** keep the full CSV for filing, or mask it too?
+- The PDF prints amounts without ₹ and says "Currency INR" at the top, as the reports and vouchers do: its
+  built-in fonts cannot draw ₹ and a font file would be a new dependency. Excel shows ₹. Two decimals in files.
+- Not recorded: a report's download is not recorded either.
+- Bill history's CSV button was "Download to Excel" for a .csv: now "CSV", beside the real PDF and Excel.
+
+**Proved.** `api/test/listFiles.test.ts` 9/9 (front desk refused Guests, Folios, Form III register with the
+sentence; housekeeping refused Folios by its read rule; another hotel's GM 404; the file holds exactly the two
+rows sent, 1500.5 a number, "-" for none, the passport XXXX4567). `src/modules/reports/listExport.test.tsx`
+(a searched Arrivals sends only its rows and the search; reception's Folios buttons disabled with the reason).
+Seen in the browser: All bookings searched "an" sent 180 rows = "180 of 180", the PDF with hotel, title,
+filters, Rows 180, Currency INR, footer "Printed ... Test GM", 8 pages; Reception on In house and Guest ledger:
+buttons greyed with the sentence; Housekeeping enabled for reception.
+
+**Left open.** The ~45 lists marked "none yet" above (each is a column list and one `ExportButtons`, plus a
+LIST_SCREENS line); Equipment register (its own `export` on `equipment` differs from `holds`); the
+Guest ledger's and Cashier shift's client CSV are still open to anyone who may read them, unlike the new files.
+
+---
+
 ## 2026-11-07 · Group reports: several properties in one report (D27-383 item 6)
 
 Branch `worktree-agent-a06c4473ec734a6e0`, copy `.claude\worktrees\agent-a06c4473ec734a6e0`, on cp6 at `9f4f1532`.

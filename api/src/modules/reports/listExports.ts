@@ -47,13 +47,18 @@ export const LIST_SCREENS = {
   "due-out": { title: "Due out", read: `${H}/stays`, holds: "money" },
   "walk-ins": { title: "Walk-ins", read: `${H}/stays` },
   "all-bookings": { title: "All bookings", read: `${H}/stays` },
+  /* A group carries its host's balance (money); a waiting guest their phone. */
+  "groups": { title: "Groups", read: `${H}/groups`, holds: "money" },
+  "waitlist": { title: "Waitlist", read: `${H}/waitlist`, holds: "guests" },
   /* Money. */
   "folios": { title: "Folios", read: `${H}/folios`, holds: "money" },
   "invoices": { title: "Invoices", read: `${H}/invoices`, holds: "money" },
   "payments": { title: "Payments", read: `${H}/payments`, holds: "money" },
+  "bill-history": { title: "Bill history", read: `${H}/till/bills`, holds: "money" },
   "company-accounts": { title: "Company accounts", read: `${H}/reports/city-ledger`, holds: "money" },
   /* Guests, and where the business came from (revenue and what is owed: money). */
   "guests": { title: "Guests", read: `${H}/guests`, holds: "guests" },
+  "form-iii": { title: "Form III", read: `${H}/form-c`, holds: "guests" },
   "companies": { title: "Companies and agents", read: `${H}/companies`, holds: "money" },
   /* Housekeeping: the board's rooms, who is in them and who cleans them. */
   "housekeeping": { title: "Housekeeping", read: `${H}/housekeeping/assignments` },

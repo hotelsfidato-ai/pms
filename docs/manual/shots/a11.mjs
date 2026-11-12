@@ -489,4 +489,18 @@ export const SHOTS = [
       { n: 5, at: "text:Send", side: "top" },
     ],
   },
+  /* D27-383 item 1: PDF and Excel on a list, here All bookings searched.
+     NOT pressed: a file would be downloaded. */
+  {
+    id: "A11-40", title: "PDF and Excel on a list: All bookings, searched", as: "General Manager",
+    path: "/h/5EL/reservations",
+    steps: [{ waitFor: "css:[data-export] button", ms: 20000 }, { waitFor: "css:table tbody tr", ms: 30000 },
+      { type: ["label:Search bookings", "an"] }, { wait: 1500 }],
+    marks: [
+      { n: 1, at: "label:Search bookings", side: "bottom" },
+      { n: 2, at: "css:[aria-pressed=true]", nth: 0, side: "bottom" },
+      { n: 3, at: "css:[data-export] button", nth: 0, side: "bottom" },
+      { n: 4, at: "css:[data-export] button", nth: 1, side: "right" },
+    ],
+  },
 ];
