@@ -163,7 +163,7 @@ describe("Bill history", () => {
     /* The file's link is freed 1 s later (csv.ts): run it while URL is still this
        test's stand-in, not after, in another test (release 14's gates). */
     vi.useFakeTimers({ toFake: ["setTimeout"] });
-    fireEvent.click(screen.getByRole("button", { name: /Download to Excel/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^CSV$/ }));
     vi.runAllTimers();
     vi.useRealTimers();
     await vi.waitFor(() => expect(names).toHaveLength(1));
