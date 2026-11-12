@@ -6,6 +6,19 @@ import { READ_RULES } from "../src/roleGate.ts";
 import { REPORT_EXPORTERS } from "../src/routes/reportFiles.ts";
 import { LIST_SCREENS, exportRefusal, maskId } from "../src/modules/reports/listExports.ts";
 import { ROLES } from "../src/permissions.ts";
+import { OWN_READERS } from "../src/modules/reports/listFiles.ts";
+import { SEE as DEPOSIT_SEE } from "../src/modules/finance/deposits.ts";
+import { DESK, teamsFor } from "../src/modules/guest-services/requests.ts";
+import { LOST_LOGGERS } from "../src/modules/guest-services/wakeAndLost.ts";
+import { VIEW_ROLES as MESSAGE_VIEW } from "../src/modules/guest-messaging/messages.ts";
+import { VIEW_ROLES as REVIEW_VIEW } from "../src/modules/reputation/reputation.ts";
+import { FEEDBACK_ROLES } from "../src/modules/reputation/feedbackRoles.ts";
+import { DESK_ROLES } from "../src/routes/guestDoorKit.ts";
+import { STOCK_ROLES } from "../src/modules/stores/stockGrants.ts";
+import { VIEW_ROLES as PURCHASING_VIEW } from "../src/modules/purchasing/purchasingGrants.ts";
+import { SPA_READ_ROLES } from "../src/modules/spa/spa.ts";
+import { EQUIPMENT_GRANTS } from "../src/modules/equipment/grants.ts";
+import { ADMIN_READ_ROLES } from "../src/modules/admin/grants.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A LIST SCREEN AS A FILE (D27-383 item 1) - listFiles.ts
@@ -81,8 +94,42 @@ const sheetValues = async (res: Response) => {
 };
 
 describe("which screens, and who", () => {
-  it("names a real read rule for every screen", () => {
-    for (const [key, s] of Object.entries(LIST_SCREENS)) expect(READ_RULES[s.read], key).toBeDefined();
+  it("names a real read rule for every screen, and asks an `own` rule's own role list", () => {
+    for (const [key, s] of Object.entries(LIST_SCREENS)) {
+      const rule = READ_RULES[s.read];
+      expect(rule, key).toBeDefined();
+      if (rule!.kind === "own") {
+        const roles = OWN_READERS[key as keyof typeof LIST_SCREENS];
+        expect(roles?.length, `${key}: an own read rule needs its OWN_READERS line`).toBeGreaterThan(0);
+        for (const r of roles!) expect(ROLES, `${key}: ${r}`).toContain(r);
+      }
+    }
+  });
+
+  it("gives every screen a title Excel takes as a sheet's name", () => {
+    /* Excel refuses : \ / ? * [ ] in a sheet's name: a 500 on Marketing, seen 12 November. */
+    for (const [key, s] of Object.entries(LIST_SCREENS)) expect(s.title, key).toMatch(/^[^:\\/?*[\]]+$/);
+  });
+
+  it("holds each own screen's role list equal to the list its route asks", () => {
+    const same = (key: keyof typeof OWN_READERS, original: readonly string[]) =>
+      expect([...OWN_READERS[key]!].sort(), key).toEqual([...original].sort());
+    same("cash-deposits", DEPOSIT_SEE);
+    same("wake-up-calls", DESK);
+    same("lost-property", LOST_LOGGERS);
+    same("guest-messages", MESSAGE_VIEW);
+    same("reviews", REVIEW_VIEW);
+    same("feedback", FEEDBACK_ROLES);
+    same("online-checkin", DESK_ROLES);
+    same("store", STOCK_ROLES.view);
+    same("kitchen-stock", STOCK_ROLES.view);
+    same("purchasing", PURCHASING_VIEW);
+    same("spa-diary", SPA_READ_ROLES);
+    same("spa-treatments", SPA_READ_ROLES);
+    same("equipment", EQUIPMENT_GRANTS.view);
+    same("requests", ROLES.filter((r) => teamsFor(r).length > 0));
+    same("audit-log", ADMIN_READ_ROLES.audit_log);
+    same("activity", ADMIN_READ_ROLES.audit_log);
   });
 
   it("asks of money and guests exactly the reports' downloaders", () => {
@@ -134,6 +181,46 @@ describe("the refusals", () => {
   it("refuses a role the screen's own read rule refuses", async () => {
     const res = await post(uid.housekeeping, "folios.pdf", shown);
     expect(res.status).toBe(403);
+  });
+
+  /* The second part: a sample of the ~45 screens added on 12 November. */
+  it("refuses a role the new screens' read rules refuse, a grant's and an own one's", async () => {
+    for (const [who, file, words] of [
+      [uid.front_desk, "marketing-campaigns.pdf", "marketing numbers"],       // see("marketing")
+      [uid.housekeeping, "cash-deposits.xlsx", "the general manager"],         // own: deposits.ts SEE
+      [uid.housekeeping, "audit-log.pdf", "the general manager"],              // own: ADMIN_READ_ROLES
+      [uid.housekeeping, "guest-messages.pdf", "reception"],                   // own: VIEW_ROLES
+    ] as const) {
+      const res = await post(who, file, shown);
+      expect(res.status, file).toBe(403);
+      expect(((await res.json()) as { error: string }).error, file).toContain(words);
+    }
+  });
+
+  it("refuses a new list of money or guests to one without the download right", async () => {
+    for (const file of ["minibar.pdf", "guest-messages.xlsx", "night-audit-runs.pdf", "table-bookings.pdf"]) {
+      const res = await post(uid.front_desk, file, shown);
+      expect(res.status, file).toBe(403);
+      expect(((await res.json()) as { error: string }).error, file).toContain("download reports");
+    }
+  });
+
+  it("asks a screen's own export right instead: the Equipment register and the Store", async () => {
+    const eq = await post(uid.front_desk, "equipment.pdf", shown);
+    expect(eq.status).toBe(403);
+    expect(((await eq.json()) as { error: string }).error).toBe(
+      "Exporting the equipment register is for the owner, an administrator, the general manager "
+      + "or the accountant. Ask one of them.");
+    const store = await post(uid.housekeeping, "store.xlsx", shown);
+    expect(store.status).toBe(403);
+    expect(((await store.json()) as { error: string }).error).toContain("the Inventory Manager");
+    expect((await post(uid.gm, "equipment.xlsx", shown)).status).toBe(200);
+  });
+
+  it("gives an open new list to whoever opens it", async () => {
+    expect((await post(uid.front_desk, "wake-up-calls.pdf", shown)).status).toBe(200);
+    expect((await post(uid.housekeeping, "work-orders.xlsx", shown)).status).toBe(200);
+    expect((await post(uid.housekeeping, "lost-property.pdf", shown)).status).toBe(200);
   });
 
   it("refuses another hotel's rows: no such property", async () => {

@@ -13,6 +13,7 @@ import {
   getDockets, getPriceList, getStaysToChargeTo, createDocket,
   SERVICE_WORDS, type Docket, type DocketStatus, type PriceItem,
 } from "@/modules/laundry/data/laundry";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DOCKETS — a guest's bag and the hotel's own linen, one list
@@ -47,6 +48,24 @@ const STATUS_TONE: Record<DocketStatus, Tone> = {
 
 /** Open first: it is the only one anybody can still act on. */
 const RANK: Record<DocketStatus, number> = { open: 0, returned: 1, cancelled: 2 };
+
+/* The dockets in a file (D27-383 item 1). A total with a line unpriced is a dash. */
+const DOCKET_EXPORT: ExportColumn<Docket>[] = [
+  { label: "Docket", value: (d) => d.number },
+  { label: "Whose", value: (d) => (d.belongsTo === "guest" ? "Guest's" : "The hotel's") },
+  { label: "Guest", value: (d) => d.guestName },
+  { label: "Room", value: (d) => d.roomNumber },
+  { label: "Booking", value: (d) => d.stayReference },
+  { label: "Status", value: (d) => STATUS_WORDS[d.status] },
+  { label: "Day", value: (d) => d.businessDate, kind: "date" },
+  { label: "Collected", value: (d) => d.collectedAt, kind: "datetime" },
+  { label: "Returned", value: (d) => d.returnedAt, kind: "datetime" },
+  { label: "Pieces", value: (d) => d.pieces, kind: "count" },
+  { label: "Still out", value: (d) => d.stillOut, kind: "count" },
+  { label: "Total", value: (d) => d.total, kind: "money" },
+  { label: "On the guest's bill", value: (d) => (d.belongsTo === "guest" ? (d.charged ? "Yes" : "No") : null) },
+  { label: "Notes", value: (d) => d.notes },
+];
 
 const unreachable = (e: unknown) => e instanceof ApiError && e.status === 0;
 
@@ -216,6 +235,8 @@ export default function LaundryDocketsPage() {
         description="Every bag that has gone out - a guest's and the hotel's own - and what has come back."
         actions={
           <>
+            <ExportButtons screen="laundry-dockets" rows={q.data ? dockets : undefined} columns={DOCKET_EXPORT}
+              facts={[["Whose", whose === "all" ? "all" : whose === "guest" ? "guests'" : "the hotel's"]]} />
             <Button asChild variant="secondary" leadingIcon={<IndianRupee />}>
               <Link to={`/h/${code}/laundry/price-list`}>Price list</Link>
             </Button>

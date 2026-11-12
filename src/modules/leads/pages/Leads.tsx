@@ -12,6 +12,7 @@ import {
 import {
   bookingPathFor, getConversation, getLeads, CHANNEL_LABELS, STATUS_LABELS, type Lead,
 } from "@/modules/leads/data/leads";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    LEADS AND WHATSAPP (D27-100, D27-168, D27-170)
@@ -37,6 +38,21 @@ const TONE: Record<string, "neutral" | "info" | "success" | "warning" | "danger"
 
 const statusWord = (s: string) => STATUS_LABELS[s] ?? s;
 const channelWord = (c: string) => CHANNEL_LABELS[c] ?? c;
+
+/* The leads read so far, in a file (D27-383 item 1). */
+const LEAD_EXPORT: ExportColumn<Lead>[] = [
+  { label: "Lead", value: (l) => l.ref },
+  { label: "Name", value: (l) => l.name },
+  { label: "Phone", value: (l) => l.phone },
+  { label: "Status", value: (l) => statusWord(l.status) },
+  { label: "Category", value: (l) => l.category },
+  { label: "Came from", value: (l) => channelWord(l.channel) },
+  { label: "Received", value: (l) => l.receivedAt, kind: "datetime" },
+  { label: "Last message", value: (l) => l.lastMessageAt, kind: "datetime" },
+  { label: "Booking", value: (l) => l.bookingRef },
+  { label: "Booking value", value: (l) => l.bookingValue, kind: "money" },
+  { label: "Do not contact", value: (l) => (l.doNotContact ? "Yes" : "No") },
+];
 
 /** The server's own sentence for the cap or the app refusing, else null. */
 function sentenceOf(error: unknown): string | null {
@@ -75,6 +91,10 @@ export default function LeadsPage() {
     <PageHeader
       title="Leads and WhatsApp"
       description="Enquiries from the leads app, read as you open this page. Staff reply in the leads app."
+      actions={<ExportButtons screen="leads" columns={LEAD_EXPORT}
+        rows={first?.connected && first.inApp ? shown : undefined}
+        facts={[["Showing", filter === "all" ? "all read so far" : filter === "open" ? "open" : statusWord(filter)],
+          ["More in the leads app", q.hasNextPage && "yes: Show older enquiries first, for every one"]]} />}
     />
   );
 

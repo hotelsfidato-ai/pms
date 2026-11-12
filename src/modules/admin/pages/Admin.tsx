@@ -16,6 +16,7 @@ import {
 import { listStaff, listAuditLog, listIntegrations, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
 import { getMatrix } from "@/modules/admin/data/admin";
 import { RESTAURANT_BY_NAME } from "@/modules/admin/restaurantRights";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { getModules, setModule } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -84,6 +85,25 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
   },
 ];
 
+/* The lists in files (D27-383 item 1). */
+const STAFF_STATUS: Record<StaffRecord["status"], string> = { active: "Active", invited: "Invited", inactive: "Inactive" };
+const STAFF_EXPORT: ExportColumn<StaffRecord>[] = [
+  { label: "Name", value: (u) => u.name },
+  { label: "Email", value: (u) => u.email },
+  { label: "Role", value: (u) => u.roleLabel },
+  { label: "Properties", value: (u) => u.properties.join(", ") },
+  { label: "Status", value: (u) => STAFF_STATUS[u.status] },
+  { label: "Last seen", value: (u) => u.lastSeen, kind: "datetime" },
+];
+const AUDIT_EXPORT: ExportColumn<AuditEntry>[] = [
+  { label: "When", value: (e) => e.at, kind: "datetime" },
+  { label: "Business date", value: (e) => e.businessDate, kind: "date" },
+  { label: "Action", value: (e) => e.action },
+  { label: "Subject", value: (e) => e.subject },
+  { label: "Detail", value: (e) => e.detail },
+  { label: "By", value: (e) => e.actor },
+];
+
 export function UsersPage() {
   const hotelId = useHotel();
   const { data, isLoading, error, refetch } = useQuery({
@@ -108,6 +128,7 @@ export function UsersPage() {
       <PageHeader
         title="Users"
         description="Who can reach what. Access follows the role, and the role follows the permission matrix."
+        actions={<ExportButtons screen="users" rows={data} columns={STAFF_EXPORT} />}
       />
 
       <Card>
@@ -339,7 +360,10 @@ export function AuditLogPage() {
           To
           <Input type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(0); }} />
         </label>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          <ExportButtons screen="audit-log" rows={data ? rows : undefined} columns={AUDIT_EXPORT}
+            facts={[["By", who.trim()], ["From", from], ["To", to],
+              ["Entries", rows.length ? `${page * AUDIT_PAGE + 1} to ${page * AUDIT_PAGE + rows.length}` : null]]} />
           <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Newer</Button>
           <Button variant="secondary" disabled={!older} onClick={() => setPage((p) => p + 1)}>Older</Button>
         </div>

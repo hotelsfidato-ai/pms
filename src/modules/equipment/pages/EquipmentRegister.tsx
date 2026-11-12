@@ -15,6 +15,7 @@ import {
   type EquipmentItem, type EquipmentStatus,
 } from "@/modules/equipment/data/equipment";
 import { DecideButtons } from "@/modules/equipment/flows/Decide";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { EQUIPMENT_SPEC } from "@/modules/equipment/importSpec";
 import { AddEquipmentDialog } from "@/modules/equipment/flows/AddEquipmentDialog";
 import {
@@ -42,6 +43,24 @@ import {
    ══════════════════════════════════════════════════════════════════ */
 
 type StatusFilter = "all" | EquipmentStatus;
+
+/* The list in a file (D27-383 item 1), the CSV's columns. A figure nobody
+   typed is a dash, never 0. */
+const ITEM_EXPORT: ExportColumn<EquipmentItem>[] = [
+  { label: "Item", value: (i) => i.name },
+  { label: "Category", value: (i) => i.category },
+  { label: "Held as", value: (i) => (i.heldAs === "tagged" ? "Tag" : "Count") },
+  { label: "Tag", value: (i) => i.tag },
+  { label: "How many", value: (i) => i.quantity, kind: "count" },
+  { label: "Where", value: (i) => i.place },
+  { label: "Status", value: (i) => STATUS_LABEL[i.status] },
+  { label: "Supplier", value: (i) => i.supplier },
+  { label: "Bought on", value: (i) => i.purchaseDate, kind: "date" },
+  { label: "Cost per piece", value: (i) => i.unitCost, kind: "money" },
+  { label: "Total cost", value: (i) => i.totalCost, kind: "money" },
+  { label: "Warranty ends", value: (i) => i.warrantyEnds, kind: "date" },
+  { label: "Service contract ends", value: (i) => i.amcEnds, kind: "date" },
+];
 
 export default function EquipmentRegisterPage() {
   const { code = "" } = useParams<{ code: string }>();
@@ -190,9 +209,14 @@ export default function EquipmentRegisterPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" disabled={!mayExport || exporting || items.length === 0}
+            {/* PDF and Excel of what the list shows, the register's own
+                export right (D27-383 item 1); CSV is every line, for a sheet. */}
+            <ExportButtons screen="equipment" rows={q.data ? shown : undefined} columns={ITEM_EXPORT}
+              facts={[["Where", place !== "all" && places.find(([id]) => id === place)?.[1]],
+                ["Status", status !== "all" && STATUS_LABEL[status]]]} />
+            <Button variant="secondary" size="sm" disabled={!mayExport || exporting || items.length === 0}
                     onClick={() => void doExport()}>
-              <Download className="size-4" /> {exporting ? "Exporting…" : "Export"}
+              <Download className="size-4" /> {exporting ? "Saving…" : "CSV"}
             </Button>
             <Button variant="secondary" disabled={!mayCreate}
                     onClick={() => setImporting(true)}>
@@ -205,10 +229,10 @@ export default function EquipmentRegisterPage() {
           </div>
         }
       >
-        {(!mayCreate || !mayExport) && (
+        {/* Who may export is said beside PDF and Excel (ExportButtons), the same right as CSV. */}
+        {!mayCreate && (
           <p className="text-sm text-grey-600 leading-relaxed">
-            {!mayCreate && `Adding and changing equipment is for the ${whoMay("create")}. `}
-            {!mayExport && `Exporting it is for the ${whoMay("export")}.`}
+            {`Adding and changing equipment is for the ${whoMay("create")}.`}
           </p>
         )}
       </PageHeader>

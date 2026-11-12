@@ -19,6 +19,23 @@ import {
   type NightAuditResult, type ClosedDay,
 } from "@/modules/night-audit/data/nightAudit";
 import { CorrectDay } from "@/modules/night-audit/components/CorrectDay";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The closed days in a file (D27-383 item 1), newest first. Nothing
+   recorded is a dash, never 0. */
+const DAY_EXPORT: ExportColumn<ClosedDay>[] = [
+  { label: "Day", value: (d) => d.businessDate, kind: "date" },
+  { label: "Run by", value: (d) => d.ranBy },
+  { label: "Started", value: (d) => d.startedAt, kind: "datetime" },
+  { label: "Finished", value: (d) => d.completedAt, kind: "datetime" },
+  { label: "Rooms charged", value: (d) => d.roomsPosted, kind: "count" },
+  { label: "Room revenue posted", value: (d) => d.revenuePosted, kind: "money" },
+  { label: "No shows", value: (d) => d.noShows, kind: "count" },
+  { label: "Corrections", value: (d) => d.corrections, kind: "count" },
+  { label: "Room revenue corrected", value: (d) => d.correctedRevenue, kind: "money" },
+  { label: "Closed early because", value: (d) => d.earlyReason },
+  { label: "Closed early by", value: (d) => d.earlyBy },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT
@@ -433,6 +450,7 @@ export default function NightAuditPage() {
           description={canCorrect && firstCorrectable(data?.businessDate)
             ? `Every night audit run at this property, newest first. Days from ${dateLong(firstCorrectable(data?.businessDate))} on can be corrected; older ones stay as they are.`
             : "Every night audit run at this property, newest first."}
+          actions={<ExportButtons screen="night-audit-runs" rows={closedDays.data} columns={DAY_EXPORT} />}
         />
         <DataTable<ClosedDay>
           className="border-0 rounded-t-none"

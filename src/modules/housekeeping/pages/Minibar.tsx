@@ -13,6 +13,25 @@ import {
   type Minibar, type MinibarItem, type MinibarRecord,
 } from "@/modules/housekeeping/data/housekeeping";
 import { MinibarFlow } from "@/modules/housekeeping/flows/MinibarFlow";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The fortnight's records in a file (D27-383 item 1), waiting ones first,
+   as listed. Nothing on the bill is a dash, never 0. */
+const RECORD_EXPORT: ExportColumn<MinibarRecord>[] = [
+  { label: "Room", value: (r) => r.room },
+  { label: "Booking", value: (r) => r.reference },
+  { label: "Guest", value: (r) => r.guest },
+  { label: "Taken", value: (r) => r.lines.map((l) => `${l.name} x ${l.quantity}`).join(", ") },
+  { label: "Status", value: (r) => (r.reversed ? "Taken off the bill" : r.status === "charged" ? "On the bill"
+      : r.status === "waiting" ? (r.waitingWhy === "after_checkout" ? "Waiting: found after check-out" : "Waiting: not sure")
+      : "Not charged") },
+  { label: "Charged with tax", value: (r) => r.charged, kind: "money" },
+  { label: "Recorded by", value: (r) => r.recordedBy },
+  { label: "Recorded", value: (r) => r.recordedAt, kind: "datetime" },
+  { label: "Decided by", value: (r) => r.decidedBy },
+  { label: "Decided", value: (r) => r.decidedAt, kind: "datetime" },
+  { label: "Note", value: (r) => r.decidedNote },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    MINIBAR (D27-383 item 10, D27-396) - /h/:code/minibar
@@ -39,11 +58,15 @@ export default function MinibarPage() {
       <PageHeader
         title="Minibar"
         description="What each room's minibar holds, what was taken, and what waits for the desk."
-        actions={data?.mayRecord && data.items.some((i) => i.active) ? (
-          <Button variant="primary" onClick={() => setRecording(true)}>
-            <GlassWater className="size-4" /> Record for a room
-          </Button>
-        ) : undefined}
+        actions={<>
+          <ExportButtons screen="minibar" rows={data?.records} columns={RECORD_EXPORT}
+            facts={[["Period", "the last 14 days"]]} />
+          {data?.mayRecord && data.items.some((i) => i.active) && (
+            <Button variant="primary" onClick={() => setRecording(true)}>
+              <GlassWater className="size-4" /> Record for a room
+            </Button>
+          )}
+        </>}
       />
       {q.isLoading ? (
         <div className="space-y-3" aria-busy="true">

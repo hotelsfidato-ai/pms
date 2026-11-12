@@ -11,6 +11,8 @@ import {
 } from "@/modules/reports/data/reportData";
 import { PTD_FROM } from "@/modules/reports/data/statistics";
 import { ExportButtons } from "@/modules/reports/components/ExportButtons";
+import { LIST_SCREENS, exportRefusal } from "@/modules/reports/data/listExport";
+import { useRole } from "@/lib/session";
 
 /* PDF and Excel beside each CSV (D27-383 item 1): the same rows, the same
    period, made on the server. */
@@ -69,6 +71,7 @@ const GUEST_LEDGER_COLUMNS = [
 
 export function GuestLedgerPage() {
   const hotelId = useHotel();
+  const role = useRole();
 
   const { data, isLoading } = useQuery({
     queryKey: ["guest-ledger", hotelId, PTD_FROM, BUSINESS_DATE],
@@ -98,6 +101,7 @@ export function GuestLedgerPage() {
         { label: "Closing", value: (r) => r.closing, kind: "money" },
       ]} />}
       period={`${dateShort(PTD_FROM)} to ${dateShort(BUSINESS_DATE)}`}
+      csvRefusal={exportRefusal(role, LIST_SCREENS["guest-ledger"])}
       meta={`Date From ${dateShort(PTD_FROM)} To ${dateShort(BUSINESS_DATE)}   Folios that moved in the window`}
       csv={() => ({
         headers: ["Reference", "Guest", "Room", "Status",
@@ -188,6 +192,7 @@ const METHOD_LABEL: Record<string, string> = {
 
 export function CashierShiftPage() {
   const hotelId = useHotel();
+  const role = useRole();
 
   const { data, isLoading } = useQuery({
     queryKey: ["cashier-shift", hotelId, BUSINESS_DATE],
@@ -208,6 +213,7 @@ export function CashierShiftPage() {
         { label: "Amount", value: (r) => r.amount, kind: "money" },
       ]} />}
       period={dateShort(BUSINESS_DATE)}
+      csvRefusal={exportRefusal(role, LIST_SCREENS["cashier-shift"])}
       meta={`Business date ${dateShort(BUSINESS_DATE)}   Receipts by cashier and method`}
       csv={() => ({
         headers: ["Cashier", "Method", "Receipts", "Amount"],

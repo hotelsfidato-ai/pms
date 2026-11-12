@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import type { Role } from "../../permissions.ts";
+import { ROLES, can, type Role } from "../../permissions.ts";
 import { READ_RULES, allows, refusalFor } from "../../roleGate.ts";
 import { renderPdf, renderXlsx } from "../../reportRender.ts";
 import { heading, propertyFor } from "./figures.ts";
 import type { Cell, CellKind, ReportDoc } from "./document.ts";
 import {
-  EXPORT_KINDS, LIST_SCREENS, MAX_EXPORT_ROWS, exportRefusal, maskId, namesAnId,
-  type ExportKind, type ListScreen,
+  EXPORT_KINDS, LIST_SCREENS, MAX_EXPORT_ROWS, exportRefusal, maskId, namesAnId, forWhom,
+  type ExportKind, type ListScreen, type ListScreenKey,
 } from "./listExports.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -30,8 +30,47 @@ import {
    ponytail: the rows come from the screen, which read them through its own
    routes under row security and roleGate; this route cannot re-prove each
    row. A forged body makes a file that names its maker. An "own" read rule
-   passes here, as at the gate: its route decided who reads the rows.
+   is asked here through OWN_READERS, the role list its own route asks.
    ══════════════════════════════════════════════════════════════════ */
+
+/* A screen whose read rule is `own` - its route asks a list of its own -
+   is asked that same list here (D27-383 item 1, second part): an `own`
+   rule lets everybody past the gate, and the file must not.
+
+   ⚠ COPIES, because a service is reached only through its front door
+   (src/test/boundaries.test.ts): each is the list the screen's GET route
+   asks, named beside it. api/test/listFiles.test.ts holds every copy equal
+   to its original and fails when an `own` screen has none. */
+const DESK = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+const STOCK_VIEW = ["owner", "admin", "gm", "hotel_manager", "stores", "kitchen_manager",
+  "chef", "housekeeping", "finance", "read_only"];
+const SPA = ["owner", "admin", "gm", "hotel_manager", "front_desk", "housekeeping"];
+const MANAGERS = ["owner", "admin", "gm"];
+export const OWN_READERS: Partial<Record<ListScreenKey, readonly string[]>> = {
+  "cash-deposits": [...MANAGERS, "finance", "read_only"],                 // finance/deposits.ts SEE
+  "wake-up-calls": DESK,                                                  // guest-services/requests.ts DESK
+  "lost-property": [...DESK, "housekeeping"],                             // guest-services LOST_LOGGERS
+  "guest-messages": [...DESK, "finance", "read_only"],                    // guest-messaging VIEW_ROLES
+  "reviews": [...DESK, "finance", "read_only"],                           // reputation VIEW_ROLES
+  "feedback": MANAGERS,                                                   // reputation FEEDBACK_ROLES
+  "online-checkin": DESK,                                                 // routes/guestDoorKit.ts DESK_ROLES
+  "store": STOCK_VIEW,                                                    // stores STOCK_ROLES.view
+  "kitchen-stock": STOCK_VIEW,                                            // stores STOCK_ROLES.view
+  "purchasing": [...MANAGERS, "hotel_manager", "kitchen_manager", "stores",
+    "housekeeping", "finance", "read_only"],                              // purchasing VIEW_ROLES
+  "spa-diary": SPA,                                                       // spa SPA_READ_ROLES
+  "spa-treatments": SPA,                                                  // spa SPA_READ_ROLES
+  "equipment": [...MANAGERS, "hotel_manager", "kitchen_manager", "chef",
+    "front_desk", "stores", "housekeeping", "finance", "read_only"],      // equipment EQUIPMENT_GRANTS.view
+  /* A team sees its own requests; the desk every team's (requests.ts teamsFor). */
+  "requests": [...DESK, "housekeeping", "stores", "kitchen_manager", "chef", "pos", "bar"],
+  "audit-log": MANAGERS,                                                  // admin ADMIN_READ_ROLES.audit_log
+  "activity": MANAGERS,                                                   // admin ADMIN_READ_ROLES.audit_log
+  /* Row security then shows each only the people they may manage. */
+  "people": ROLES.filter((r) => can(r, "view", "user")),
+  /* app.devices_of: the owner anybody's, an Admin their hotel's people. */
+  "sign-ins": ["owner", "admin"],
+};
 
 export const listFiles = new Hono<{ Variables: { subject: string } }>();
 
@@ -129,6 +168,13 @@ listFiles.post("/:code/exports/:file{[a-z0-9-]+\\.(?:pdf|xlsx)}", async (c) => {
     const rule = READ_RULES[screen.read];
     if (!rule) throw new Error(`listExports.ts: ${screen.read} is not a READ_RULES key`);
     if (!allows(rule, role)) return { status: 403 as const, error: refusalFor(rule) };
+    if (rule.kind === "own") {
+      const roles = OWN_READERS[key as ListScreenKey];
+      if (!roles) throw new Error(`listFiles.ts: ${key} has an own read rule and no OWN_READERS line`);
+      if (!roles.includes(role)) {
+        return { status: 403 as const, error: `The ${screen.title.toLowerCase()} ${forWhom(roles)}` };
+      }
+    }
     const refused = exportRefusal(role, screen);
     if (refused) return { status: 403 as const, error: refused };
 

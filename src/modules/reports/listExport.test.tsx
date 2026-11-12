@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import App from "@/App";
 import * as apiModule from "@/lib/api";
 import { HOTEL, go, signedIn, startSignedIn, withDemoHotel } from "@/test/app";
-import { exportBody } from "@/modules/reports/data/listExport";
+import { LIST_SCREENS, exportBody, exportRefusal } from "@/modules/reports/data/listExport";
 
 /* ══════════════════════════════════════════════════════════════════
    A LIST SCREEN AS A FILE, on the screen (D27-383 item 1)
@@ -73,5 +73,29 @@ describe("a role without the reports' download right", () => {
     });
     for (const b of within(pair).getAllByRole("button")) expect((b as HTMLButtonElement).disabled).toBe(true);
     expect(pair.textContent).toContain("download reports");
+  });
+
+  it("takes no Guest ledger CSV either: the files' right, decided under D27-396", async () => {
+    withDemoHotel();
+    go("/reports/guest-ledger");
+    render(<App />);
+    const csv = await waitFor(() => {
+      const b = screen.getAllByRole("button").find((x) => x.textContent?.trim() === "CSV");
+      if (!b) throw new Error("no CSV button");
+      return b as HTMLButtonElement;
+    }, { timeout: 8000 });
+    expect(csv.disabled).toBe(true);
+    expect(csv.title).toContain("download reports");
+  });
+});
+
+describe("a screen with an export right of its own (second part)", () => {
+  it("names who holds it: the Equipment register asks `export` on `equipment`", () => {
+    expect(exportRefusal("front_desk", LIST_SCREENS["equipment"])).toBe(
+      "Exporting the equipment register is for the owner, an administrator, the general manager "
+      + "or the accountant. Ask one of them.");
+    expect(exportRefusal("finance", LIST_SCREENS["equipment"])).toBeNull();
+    /* Not the reports' right: the revenue manager downloads reports, not this. */
+    expect(exportRefusal("revenue_manager", LIST_SCREENS["equipment"])).not.toBeNull();
   });
 });

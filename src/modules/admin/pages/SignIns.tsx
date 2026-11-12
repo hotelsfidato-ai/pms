@@ -7,6 +7,7 @@ import {
   type Column,
 } from "@/components/ui";
 import { listPeople, listSignIns, signOutDevice, type SignIn } from "@/modules/admin/data/admin";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    SIGN-INS AND DEVICES (D27-243 5.4, D27-255)
@@ -29,6 +30,15 @@ export function deviceInWords(description: string | null): string | null {
     : /Windows/.test(d) ? "Windows" : /Mac OS X/.test(d) ? "Mac" : /Linux/.test(d) ? "Linux" : null;
   return browser && system ? `${browser} on ${system}` : browser ?? system;
 }
+
+/* One person's sign-ins in a file (D27-383 item 1). The network address
+   is never shown, nor sent. */
+const SIGN_IN_EXPORT: ExportColumn<SignIn>[] = [
+  { label: "Signed in", value: (r) => r.at, kind: "datetime" },
+  { label: "Device", value: (r) => deviceInWords(r.device) ?? r.device },
+  { label: "Signed out", value: (r) => r.signedOutAt, kind: "datetime" },
+  { label: "Signed out by", value: (r) => r.signedOutBy },
+];
 
 export default function SignInsPage() {
   const qc = useQueryClient();
@@ -78,7 +88,9 @@ export default function SignInsPage() {
   return (
     <Page>
       <PageHeader title="Sign-ins and devices"
-        description="When each person signed in, and on what device. Kept 90 days." />
+        description="When each person signed in, and on what device. Kept 90 days."
+        actions={<ExportButtons screen="sign-ins" rows={who ? history.data?.signIns : undefined} columns={SIGN_IN_EXPORT}
+          facts={[["Whose", people.data?.staff.find((p) => p.id === who)?.name]]} />} />
       <label className="mb-4 text-sm text-grey-600 flex flex-col gap-1 max-w-xs">
         Whose
         <NativeSelect value={who} onChange={(e) => setWho(e.target.value)}>

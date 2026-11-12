@@ -11,6 +11,7 @@ import {
   getOutlook, getPace, getPickup, WINDOW_NIGHTS,
 } from "@/modules/revenue-management/data/outlook";
 import { getNearby, nearbySummary, type CheckedNight } from "@/modules/market-rates";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import {
   aheadBy, softestFirst, suggest, temperOf, type DateAhead,
 } from "@/modules/revenue-management/logic/outlook";
@@ -124,6 +125,20 @@ export default function OutlookPage() {
       } },
   ];
 
+  /* The ninety nights in a file (D27-383 item 1), the table's columns. A
+     pickup nobody could read is a dash. */
+  const nightExport: ExportColumn<DateAhead>[] = [
+    { label: "Date", value: (d) => d.date, kind: "date" },
+    { label: "Days out", value: (d) => d.daysOut, kind: "count" },
+    { label: "Rooms left", value: (d) => d.left, kind: "count" },
+    { label: "Of", value: (d) => d.available, kind: "count" },
+    { label: "Sold", value: (d) => d.occupancyPct, kind: "percent" },
+    { label: "New 1 day", value: (d) => pickupOn(picked, d.date).last1, kind: "count" },
+    { label: "New 7 days", value: (d) => pickupOn(picked, d.date).last7, kind: "count" },
+    { label: "New 30 days", value: (d) => pickupOn(picked, d.date).last30, kind: "count" },
+    { label: "Reads", value: (d) => WORD[temperOf(d)] },
+  ];
+
   if (outlook.isError) {
     return (
       <Page className="max-w-5xl">
@@ -141,6 +156,8 @@ export default function OutlookPage() {
           "What the coming ninety nights look like, and what they suggest. "
           + "Nothing here changes a price - Rates does that."
         }
+        actions={<ExportButtons screen="revenue-outlook" rows={outlook.data ? days : undefined} columns={nightExport}
+          facts={[["From", today], ["Pickup", noPickup]]} />}
       />
 
       {/* Pace - this month, against the same month last year. */}

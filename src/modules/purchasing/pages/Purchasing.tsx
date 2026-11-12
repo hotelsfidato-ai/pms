@@ -13,6 +13,7 @@ import { useRole } from "@/lib/session";
 import { BarBills } from "@/modules/purchasing/components/BarBills";
 import { SupplierDues } from "@/modules/purchasing/components/SupplierDues";
 import { BAR_RECORDERS } from "@/modules/purchasing/data/barBills";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import {
   getPurchasing, raiseRequest, seesSupplierDues,
   type PurchaseRequest, type PurchaseState, type PurchasingList,
@@ -53,6 +54,29 @@ export const STATE_WORDS: Record<PurchaseState, string> = {
   received: "Delivered",
   cancelled: "Cancelled",
 };
+
+/* The requests in a file (D27-383 item 1). A total with a line unpriced is
+   a dash, as on the screen: some of the lines is not the bill. */
+const REQUEST_EXPORT: ExportColumn<PurchaseRequest>[] = [
+  { label: "Request", value: (r) => r.reference },
+  { label: "State", value: (r) => STATE_WORDS[r.state] },
+  { label: "What for", value: (r) => r.reason },
+  { label: "Store", value: (r) => r.store.name },
+  { label: "Supplier", value: (r) => r.supplier?.name },
+  { label: "Lines", value: (r) => r.lines, kind: "count" },
+  { label: "Unpriced lines", value: (r) => r.unpriced, kind: "count" },
+  { label: "Total", value: (r) => (r.total === null ? null : Number(r.total)), kind: "money" },
+  { label: "Asked by", value: (r) => r.requestedBy },
+  { label: "Asked", value: (r) => r.requestedAt, kind: "datetime" },
+  { label: "Decided by", value: (r) => r.decidedBy },
+  { label: "Decision note", value: (r) => r.decisionNote },
+  { label: "Ordered by", value: (r) => r.orderedBy },
+  { label: "Ordered", value: (r) => r.orderedAt, kind: "datetime" },
+  { label: "Received by", value: (r) => r.receivedBy },
+  { label: "Received", value: (r) => r.receivedAt, kind: "datetime" },
+  { label: "Delivery note", value: (r) => r.deliveryNote },
+  { label: "Why cancelled", value: (r) => r.cancelledReason },
+];
 
 const STATE_TONE: Record<PurchaseState, Tone> = {
   waiting: "warning",
@@ -229,7 +253,9 @@ export default function PurchasingPage() {
             </Button>
           )
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButtons screen="purchasing" rows={data?.requests} columns={REQUEST_EXPORT}
+              facts={[["Showing", "restaurant and hotel"]]} />
             {data?.me.maySetRequesters && (
               <Button asChild variant="secondary" leadingIcon={<ShieldCheck />}>
                 <Link to={`/h/${code}/purchasing/who-may-ask`}>Who may ask</Link>

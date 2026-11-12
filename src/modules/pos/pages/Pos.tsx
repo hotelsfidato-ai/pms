@@ -10,6 +10,7 @@ import {
 } from "@/components/ui";
 import { listPosOutlets, listPosTickets, type PosOutlet, type PosTicket } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    POINT OF SALE
@@ -138,6 +139,22 @@ const TICKET_COLUMNS: Column<PosTicket>[] = [
   },
 ];
 
+/* Every bill sent, in a file (D27-383 item 1). A refused bill reached no
+   guest: a dash. */
+const TICKET_EXPORT: ExportColumn<PosTicket>[] = [
+  { label: "Outlet", value: (t) => t.outletName },
+  { label: "Bill", value: (t) => t.ticketRef },
+  { label: "Guest", value: (t) => t.guest },
+  { label: "Room", value: (t) => t.room },
+  { label: "Day", value: (t) => t.businessDate, kind: "date" },
+  { label: "Received", value: (t) => t.receivedAt },
+  { label: "Before tax", value: (t) => t.amount, kind: "money" },
+  { label: "Tax", value: (t) => t.tax, kind: "money" },
+  { label: "Amount", value: (t) => t.amount + t.tax, kind: "money" },
+  { label: "Status", value: (t) => (t.status === "posted" ? "On the bill" : t.status === "voided" ? "Voided" : "Refused") },
+  { label: "Why refused", value: (t) => t.reason },
+];
+
 export default function PosPage() {
   const hotelId = useHotel();
 
@@ -169,6 +186,8 @@ export default function PosPage() {
             </StatusPill>
           ) : undefined
         }
+        actions={<ExportButtons screen="room-charges" rows={tickets.data?.rows} columns={TICKET_EXPORT}
+          facts={[["Period", tickets.data && `${tickets.data.from} to ${tickets.data.to}`]]} />}
       />
 
       <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3.5 mb-5">

@@ -16,6 +16,7 @@ import { useRole } from "@/lib/session";
 import { getModules } from "@/data/repositories";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setItemMrp, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
 import { ADDON_SPEC } from "@/modules/pos/lib/addonSpec";
@@ -44,6 +45,23 @@ function useHotel(): string {
   const fallback = useUi((s) => s.hotelId);
   return params.code ?? fallback;
 }
+
+/* The dishes in a file (D27-383 item 1), section by section. A price is a
+   price, as a room rate is: not money owed. No tax rate or MRP is a dash. */
+type DishRow = MenuItem & { section: string };
+const DISH_EXPORT: ExportColumn<DishRow>[] = [
+  { label: "Section", value: (d) => d.section },
+  { label: "Dish", value: (d) => d.name },
+  { label: "Short code", value: (d) => d.shortCode },
+  { label: "Price", value: (d) => (d.variations.length ? null : d.price), kind: "money" },
+  { label: "Choices", value: (d) => d.variations.map((v) => `${v.label} ${v.price}`).join(", ") },
+  { label: "MRP", value: (d) => d.mrp, kind: "money" },
+  { label: "Tax rate", value: (d) => d.taxRate, kind: "percent" },
+  { label: "Veg", value: (d) => (d.isVeg === null ? null : d.isVeg ? "Veg" : "Non-veg") },
+  { label: "Minutes", value: (d) => d.prepMinutes, kind: "count" },
+  { label: "Course", value: (d) => d.course, kind: "count" },
+  { label: "On sale", value: (d) => (!d.isActive ? "No" : d.offUntil ? `Off until ${d.offUntil}` : "Yes") },
+];
 
 export default function MenuPage() {
   const hotelId = useHotel();
@@ -122,6 +140,8 @@ export default function MenuPage() {
           /* Two files, the owner's D21-43: the add-ons first, because the
              menu file names their groups. Left to right in that order. */
           <>
+            <ExportButtons screen="menu" columns={DISH_EXPORT}
+              rows={menu.data?.flatMap((c) => c.items.map((i) => ({ ...i, section: c.name })))} />
             <Button variant="secondary" className="h-11"
                     onClick={() => setImporting("addons")}>
               <Upload className="size-4" /> Import sides

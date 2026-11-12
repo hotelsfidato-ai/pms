@@ -11,6 +11,22 @@ import {
   getGuestMessages, type SentMessage,
 } from "@/modules/guest-messaging/data/guestMessages";
 import { MessagesToTheDesk } from "@/modules/online-checkin";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* What was sent, in a file (D27-383 item 1): where each went, as it was then. */
+const MESSAGE_EXPORT: ExportColumn<SentMessage>[] = [
+  { label: "Sent", value: (m) => m.sentAt, kind: "datetime" },
+  { label: "Message", value: (m) => m.kindLabel },
+  { label: "By", value: (m) => (m.channel === "whatsapp" ? "WhatsApp" : m.channel === "email" ? "Email" : m.channel) },
+  { label: "To", value: (m) => m.to.name },
+  { label: "Phone", value: (m) => m.to.phone },
+  { label: "Email", value: (m) => m.to.email },
+  { label: "Booking", value: (m) => m.about?.reference },
+  { label: "Document", value: (m) => m.document?.name },
+  { label: "Status", value: (m) => (m.status === "sent" ? "Sent" : m.status === "failed" ? "Failed" : m.status) },
+  { label: "Detail", value: (m) => m.detail },
+  { label: "Sent by", value: (m) => (m.byAPerson ? m.sentBy : "The system") },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT WAS SENT TO THIS GUEST
@@ -191,6 +207,8 @@ export default function GuestMessagesPage() {
         description={reservation
           ? "What this system sent about this booking"
           : "What this system sent guests, and whether it arrived"}
+        actions={<ExportButtons screen="guest-messages" rows={data?.messages} columns={MESSAGE_EXPORT}
+          facts={[["Booking", reservation && (data?.messages.find((m) => m.about?.reference)?.about?.reference ?? "one booking")]]} />}
       />
 
       {/* What guests wrote to the desk from their own page (D23-14). It

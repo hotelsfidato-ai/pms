@@ -28,7 +28,7 @@ export const deposits = new Hono<{ Variables: { subject: string } }>();
 
 const RECORD = ["owner", "admin", "gm"];
 const VERIFY = ["owner", "finance"];
-const SEE = [...RECORD, "finance", "read_only"];
+export const SEE = [...RECORD, "finance", "read_only"];
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
 

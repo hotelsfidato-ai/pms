@@ -13,6 +13,7 @@ import {
 import { getBanquetDiary, getBanquetSetup, registerBanquetEvent, type BanquetEventSummary } from "@/modules/banquet/data/banquet";
 import { Checkbox, ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET DIARY
@@ -58,6 +59,22 @@ function whenLabel(startsAt: string, endsAt: string): string {
     ? `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${timeOnly(endsAt)}`
     : `${dateShort(startsAt)}, ${timeOnly(startsAt)} → ${dateShort(endsAt)}, ${timeOnly(endsAt)}`;
 }
+
+/* The window's functions in a file (D27-383 item 1), hall by hall. The
+   agreed price is the function's price, as a room rate is; unpriced is a dash. */
+type HallEvent = BanquetEventSummary & { hall: string };
+const EVENT_EXPORT: ExportColumn<HallEvent>[] = [
+  { label: "Hall", value: (e) => e.hall },
+  { label: "Function", value: (e) => e.title },
+  { label: "Reference", value: (e) => e.reference },
+  { label: "Status", value: (e) => STATUS[e.status]?.label ?? e.status },
+  { label: "Starts", value: (e) => e.startsAt, kind: "datetime" },
+  { label: "Ends", value: (e) => e.endsAt, kind: "datetime" },
+  { label: "Host", value: (e) => e.hostName },
+  { label: "Guests", value: (e) => e.pax, kind: "count" },
+  { label: "Agreed", value: (e) => e.agreedAmount, kind: "money" },
+  { label: "Registered by", value: (e) => e.registeredBy },
+];
 
 export default function BanquetPage() {
   const hotelId = useHotel();
@@ -115,6 +132,8 @@ export default function BanquetPage() {
         }
         actions={
           <>
+            <ExportButtons screen="banquet" columns={EVENT_EXPORT} facts={[["Period", `${from} to ${to}`]]}
+              rows={venues.flatMap((v) => v.events.map((e) => ({ ...e, hall: v.name })))} />
             <Button variant="secondary"
                     onClick={() => navigate(`/h/${hotelId}/banquet/setup`)}>
               <Settings2 className="size-4" /> Halls and packages

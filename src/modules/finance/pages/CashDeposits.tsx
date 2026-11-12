@@ -14,6 +14,22 @@ import {
   getCashDeposits, recordDeposit, reverseDeposit, verifyDeposit, explainDay, attachSlip,
   slipAddress, type DepositDay, type Deposit,
 } from "@/modules/finance/data/deposits";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The deposits in a file (D27-383 item 1), newest first as listed. */
+const DEPOSIT_EXPORT: ExportColumn<Deposit>[] = [
+  { label: "Day banked", value: (x) => x.businessDate, kind: "date" },
+  { label: "Amount", value: (x) => x.amount, kind: "money" },
+  { label: "Deposited on", value: (x) => x.depositedOn, kind: "date" },
+  { label: "Bank", value: (x) => x.bank },
+  { label: "Slip number", value: (x) => x.slipNo },
+  { label: "Recorded by", value: (x) => x.recordedBy },
+  { label: "Recorded", value: (x) => x.recordedAt, kind: "datetime" },
+  { label: "Verified by", value: (x) => x.verifiedBy },
+  { label: "Verified", value: (x) => x.verifiedAt, kind: "datetime" },
+  { label: "Line", value: (x) => (x.reversesId ? "Reversal" : x.reversed ? "Reversed" : "Deposit") },
+  { label: "Reason", value: (x) => x.reason },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    CASH DEPOSITS - the owner's D27-190 and D27-191
@@ -51,6 +67,7 @@ export default function CashDepositsPage() {
     <PageHeader
       title="Cash deposits"
       description="Each day's cash to deposit, what was banked, and who verified it."
+      actions={<ExportButtons screen="cash-deposits" rows={view.data?.deposits} columns={DEPOSIT_EXPORT} />}
     />
   );
   if (view.isLoading) return <Page>{header}<Skeleton className="h-64" /></Page>;

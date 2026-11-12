@@ -13,6 +13,17 @@ import {
   getLoyalty, saveRules, joinLoyalty, leaveLoyalty, spendPoints, getByHotel,
   type LoyaltyScreen, type LoyaltyStay,
 } from "@/modules/loyalty/data/loyalty";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* Who is in house, and their points, in a file (D27-383 item 1). */
+const STAY_EXPORT: ExportColumn<LoyaltyStay>[] = [
+  { label: "Room", value: (r) => r.room },
+  { label: "Guest", value: (r) => r.name },
+  { label: "Booking", value: (r) => r.reference },
+  { label: "Member", value: (r) => (r.member ? "Yes" : "No") },
+  { label: "Points", value: (r) => r.points, kind: "count" },
+  { label: "Points usable on it", value: (r) => (r.direct ? "Yes" : "No: a booking site's or an agent's") },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    LOYALTY — the desk's screen (D27-178, D27-179; MODULE.md L1-L18)
@@ -43,7 +54,8 @@ export default function LoyaltyPage() {
       <PageHeader title="Loyalty"
         description={`${s.name ?? "No programme name yet"} · ${s.pointsPer100 === null
           ? "no earn rate set: stays earn nothing"
-          : `${number(s.pointsPer100)} points per ₹100 before GST; 1 point is ₹1 off room charges`}`} />
+          : `${number(s.pointsPer100)} points per ₹100 before GST; 1 point is ₹1 off room charges`}`}
+        actions={<ExportButtons screen="loyalty" rows={s.stays} columns={STAY_EXPORT} facts={[["Showing", "in house"]]} />} />
       <div className="space-y-3">
         {!s.isOn && (
           <Card><CardBody>

@@ -10,6 +10,23 @@ import {
   StatusPill, Segmented, IconChip,
 } from "@/components/ui";
 import { actOnWakeUp, listWakeUps, setWakeUp, type InHouse, type WakeUpCall } from "@/modules/guest-services/data/wakeAndLost";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The list in a file (D27-383 item 1). The call's time is the hotel's clock. */
+const CALL_STATUS: Record<WakeUpCall["status"], string> = {
+  asked: "Asked by the guest", set: "Set", done: "Done", cancelled: "Cancelled",
+};
+const CALL_EXPORT: ExportColumn<WakeUpCall>[] = [
+  { label: "Call at", value: (w) => w.callAt, kind: "datetime" },
+  { label: "Room", value: (w) => w.room },
+  { label: "Guest", value: (w) => w.guest },
+  { label: "Status", value: (w) => CALL_STATUS[w.status] },
+  { label: "Note", value: (w) => w.note },
+  { label: "Set by", value: (w) => (w.fromGuest ? "The guest" : w.setBy) },
+  { label: "Handled by", value: (w) => w.handledBy },
+  { label: "Handled", value: (w) => w.handledAt, kind: "datetime" },
+  { label: "Why cancelled", value: (w) => w.cancelReason },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    WAKE-UP CALLS (D27-239; the owner's answers D27-241)
@@ -50,8 +67,12 @@ export default function WakeUpCallsPage() {
       <PageHeader
         title="Wake-up calls"
         description="Calls to make, on the hotel's clock. Due from fifteen minutes before."
-        actions={<Button variant="primary" className="h-11" onClick={() => setSetting(true)}>
-          <Plus className="size-4" /> Set a call</Button>}
+        actions={<>
+          <ExportButtons screen="wake-up-calls" rows={list.data?.calls} columns={CALL_EXPORT}
+            facts={[["Showing", view === "open" ? "to make" : "done, last 24 h"]]} />
+          <Button variant="primary" className="h-11" onClick={() => setSetting(true)}>
+            <Plus className="size-4" /> Set a call</Button>
+        </>}
       />
       <Segmented<View> className="mb-5" value={view} onChange={setView}
         options={[{ value: "open", label: "To make" }, { value: "done", label: "Done, last 24 h" }]} />

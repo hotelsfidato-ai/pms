@@ -8,6 +8,22 @@ import {
   StatusPill, Skeleton, ErrorState, EmptyState,
 } from "@/components/ui";
 import { getFeedback, type FeedbackAnswer, type FeedbackMonth } from "@/modules/reputation/data/feedback";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* Each answer in a file (D27-383 item 1). A part not scored is a dash. */
+const ANSWER_EXPORT: ExportColumn<FeedbackAnswer>[] = [
+  { label: "Answered", value: (a) => a.answeredAt, kind: "datetime" },
+  { label: "Guest", value: (a) => a.guest },
+  { label: "Booking", value: (a) => a.reference },
+  { label: "Room", value: (a) => a.roomNumber },
+  { label: "Overall", value: (a) => a.overall, kind: "count" },
+  { label: "Room score", value: (a) => a.room, kind: "count" },
+  { label: "Cleanliness", value: (a) => a.cleanliness, kind: "count" },
+  { label: "Food", value: (a) => a.food, kind: "count" },
+  { label: "Staff", value: (a) => a.staff, kind: "count" },
+  { label: "Low (1-2)", value: (a) => (a.low ? "Yes" : "No") },
+  { label: "Comment", value: (a) => a.comment },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    GUEST FEEDBACK (D27-383 item 10; built under D27-396)
@@ -123,7 +139,8 @@ export default function FeedbackPage() {
   return (
     <Page>
       <PageHeader title="Guest feedback"
-        description="What guests answered on their own page after check-out: scores out of 5 and their comments." />
+        description="What guests answered on their own page after check-out: scores out of 5 and their comments."
+        actions={<ExportButtons screen="feedback" rows={q.data?.answers} columns={ANSWER_EXPORT} />} />
       {body}
     </Page>
   );

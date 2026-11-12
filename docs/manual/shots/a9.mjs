@@ -751,7 +751,7 @@ export const SHOTS = [
       { n: 3, at: "text:Refuse", nth: 0, side: "right" },
       { n: 4, at: "text:Where", nth: 0, side: "left" },
       { n: 5, at: "text:Waiting to leave the store", nth: 0, side: "bottom" },
-      { n: 6, at: "text:Export", side: "bottom" },
+      { n: 6, at: "text:CSV", side: "bottom" },
     ],
   },
   { id: "A9-37b", title: "The Inventory Manager approves it", noShot: true, as: IM,

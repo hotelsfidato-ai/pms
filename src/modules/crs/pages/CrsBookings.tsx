@@ -14,6 +14,7 @@ import {
   getCrsBookings, getCrsSetup, markCrsNoteDone, saveCrsSetup,
   type CrsBooking, type CrsBookings, type CrsSetup,
 } from "@/modules/crs/data/crs";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    CRS BOOKINGS (D27-168, D27-171)
@@ -51,6 +52,23 @@ const STAY_WORDS: Record<string, string> = {
   void: "Void",
   no_show: "No show",
 };
+
+/* The list in a file (D27-383 item 1). */
+const CRS_EXPORT: ExportColumn<CrsBooking>[] = [
+  { label: "CRS booking", value: (b) => b.crsReference },
+  { label: "Guest", value: (b) => b.guestName },
+  { label: "Arrival", value: (b) => b.checkIn, kind: "date" },
+  { label: "Departure", value: (b) => b.checkOut, kind: "date" },
+  { label: "Sold by", value: (b) => b.salesperson },
+  { label: "Company", value: (b) => b.company },
+  { label: "Here", value: (b) => OUTCOME[b.outcome]?.words ?? b.outcome },
+  { label: "Bookings here", value: (b) => b.bookings.map((s) => `${s.reference} ${STAY_WORDS[s.status] ?? s.status}`).join(", ") },
+  { label: "Why", value: (b) => b.reason },
+  { label: "The CRS register", value: (b) => (b.answer ? ANSWER[b.answer] ?? b.answer : b.answerError && `Not told: ${b.answerError}`) },
+  { label: "Changed in the CRS", value: (b) => b.changeNote },
+  { label: "Change done", value: (b) => (b.changeNote ? (b.changeDone ? "Yes" : "No") : null) },
+  { label: "Arrived here", value: (b) => b.readAt, kind: "datetime" },
+];
 
 function Connection({ c }: { c: CrsBookings["connection"] }) {
   const why = !c.settingsPresent
@@ -303,7 +321,8 @@ export default function CrsBookingsPage() {
   return (
     <Page>
       <PageHeader title="CRS bookings"
-        description="Bookings the CRS sold for this hotel, and what became of each" />
+        description="Bookings the CRS sold for this hotel, and what became of each"
+        actions={<ExportButtons screen="crs-bookings" rows={q.data?.bookings} columns={CRS_EXPORT} />} />
       {(role === "owner" || role === "admin") && <Setup code={code} />}
       {q.data && <Connection c={q.data.connection} />}
       {body}

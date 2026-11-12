@@ -10,8 +10,18 @@ import {
 } from "@/components/ui";
 import {
   searchGuests, getGuest360, blacklistGuest, clearBlacklist, recordNoOffers,
-  clearNoOffers, getOffersYes, recordOffersYes, type Guest360,
+  clearNoOffers, getOffersYes, recordOffersYes, type Guest360, type GuestFound,
 } from "@/modules/crm/data/crm";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* The guests a search found, in a file (D27-383 item 1). */
+const FOUND_EXPORT: ExportColumn<GuestFound>[] = [
+  { label: "Guest", value: (g) => g.name },
+  { label: "Phone", value: (g) => g.phone },
+  { label: "Email", value: (g) => g.email },
+  { label: "Stays", value: (g) => g.visits, kind: "count" },
+  { label: "Blacklisted", value: (g) => (g.isBlacklisted ? "Yes" : "No") },
+];
 import { agreedToOffers, stayedWords, EditGuestFlow } from "@/modules/guests";
 import { MemberCard } from "@/modules/loyalty";
 
@@ -51,6 +61,8 @@ export function Guest360SearchPage() {
       <PageHeader
         title="Guest 360"
         description="Find a guest by name, phone or email, and see every stay at every hotel of the group."
+        actions={<ExportButtons screen="guest-360" rows={q.trim().length >= 2 ? found.data : undefined}
+          columns={FOUND_EXPORT} facts={[["Search", q.trim()]]} />}
       />
       <SearchInput value={q} onChange={(e) => setQ(e.target.value)}
         placeholder="Name, phone or email" aria-label="Find a guest" autoFocus

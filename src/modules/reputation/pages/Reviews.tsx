@@ -11,6 +11,22 @@ import {
   getReviews, setReviewLink, askForReview, type Departure,
 } from "@/modules/reputation/data/reputation";
 import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
+
+/* Who left and who was asked, in a file (D27-383 item 1). Nobody asked is a dash. */
+const DEPARTURE_EXPORT: ExportColumn<Departure>[] = [
+  { label: "Booking", value: (d) => d.reference },
+  { label: "Guest", value: (d) => d.guest },
+  { label: "Phone", value: (d) => d.phone },
+  { label: "Email", value: (d) => d.email },
+  { label: "Arrived", value: (d) => d.arrived, kind: "date" },
+  { label: "Left", value: (d) => d.departed, kind: "date" },
+  { label: "Group's lead", value: (d) => d.leadReference },
+  { label: "Asked", value: (d) => (d.askStatus === "sent" ? "Sent" : d.askStatus === "failed" ? "Failed" : null) },
+  { label: "By", value: (d) => (d.askChannel === "whatsapp" ? "WhatsApp" : d.askChannel === "email" ? "Email" : null) },
+  { label: "Asked at", value: (d) => d.askedAt, kind: "datetime" },
+  { label: "Detail", value: (d) => d.askDetail },
+];
 
 /* ══════════════════════════════════════════════════════════════════
    REVIEWS — who was asked, who has not been, and what came back
@@ -310,6 +326,8 @@ export default function ReviewsPage() {
       <PageHeader
         title="Reviews"
         description="Ask a guest for a review after they have left, and see who has been asked."
+        actions={<ExportButtons screen="reviews" rows={q.data?.departures} columns={DEPARTURE_EXPORT}
+          facts={[["Period", q.data && `left in the last ${q.data.daysBack} days`]]} />}
       />
       {body}
     </Page>

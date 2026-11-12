@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, StatusPill, Segmented, IconChip,
 } from "@/components/ui";
 import { clearLost, listLost, logLost, type LostItem } from "@/modules/guest-services/data/wakeAndLost";
+import { ExportButtons, type ExportColumn } from "@/modules/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    LOST PROPERTY (D27-239; the owner's answers D27-241)
@@ -20,6 +21,23 @@ import { clearLost, listLost, logLost, type LostItem } from "@/modules/guest-ser
    ══════════════════════════════════════════════════════════════════ */
 
 type View = "kept" | "cleared";
+
+/* The list in a file (D27-383 item 1). */
+const LOST_STATUS: Record<LostItem["status"], string> = { kept: "Kept", returned: "Returned", disposed: "Disposed of" };
+const LOST_EXPORT: ExportColumn<LostItem>[] = [
+  { label: "What", value: (i) => i.what },
+  { label: "Found where", value: (i) => i.foundWhere },
+  { label: "Room", value: (i) => i.room },
+  { label: "Found on", value: (i) => i.foundOn, kind: "date" },
+  { label: "Found by", value: (i) => i.foundBy },
+  { label: "Kept where", value: (i) => i.keptWhere },
+  { label: "Days kept", value: (i) => i.daysKept, kind: "count" },
+  { label: "Status", value: (i) => LOST_STATUS[i.status] },
+  { label: "Returned to", value: (i) => i.returnedTo },
+  { label: "Why disposed of", value: (i) => i.disposeReason },
+  { label: "Handled by", value: (i) => i.handledBy },
+  { label: "Handled on", value: (i) => i.handledOn, kind: "date" },
+];
 
 export default function LostPropertyPage() {
   const params = useParams();
@@ -39,8 +57,12 @@ export default function LostPropertyPage() {
       <PageHeader
         title="Lost property"
         description="What was found, kept until it goes back to its owner or is disposed of."
-        actions={<Button variant="primary" className="h-11" onClick={() => setLogging(true)}>
-          <Plus className="size-4" /> Log an item</Button>}
+        actions={<>
+          <ExportButtons screen="lost-property" rows={list.data?.items} columns={LOST_EXPORT}
+            facts={[["Showing", view === "kept" ? "kept" : "returned or disposed of"]]} />
+          <Button variant="primary" className="h-11" onClick={() => setLogging(true)}>
+            <Plus className="size-4" /> Log an item</Button>
+        </>}
       />
       <Segmented<View> className="mb-5" value={view} onChange={setView}
         options={[{ value: "kept", label: "Kept" }, { value: "cleared", label: "Returned or disposed" }]} />
