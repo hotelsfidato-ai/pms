@@ -226,6 +226,18 @@ export const SHOTS = [
       { click: "text:Print the bill" }, { waitFor: TOAST, ms: 10000 }, { wait: 4000 },
       { click: "text:Print the bill" }, { wait: 2000 },
     ] },
+  /* The UPI QR on an open bill (D27-396): needs a UPI ID in 5EL's bank
+     details (Settings > Bank details) and an open order; A8_UPI_ORDER is its
+     id (made 13 Nov 2026 in a helper's copy: table AC1). */
+  {
+    id: "A8-14u", title: "An open bill with its UPI QR code", as: "Reception",
+    path: `/pos/5EL/bill/${process.env.A8_UPI_ORDER ?? "cfcabb38-df10-47b6-8ad9-e326b6ace160"}`,
+    steps: [{ waitFor: "css:[data-upi-qr]", ms: 30000 }, { wait: 1500 }],
+    marks: [
+      { n: 1, at: "text:GRAND TOTAL", side: "left" },
+      { n: 2, at: "css:[data-upi-qr] svg", side: "left" },
+    ],
+  },
   {
     id: "A8-19", title: "BILL and BILL · DUPLICATE", path: PRINTERS,
     steps: [{ waitFor: "text:DUPLICATE", ms: 20000 }, { wait: 2500 }],

@@ -346,6 +346,18 @@ export const SHOTS = [
       { n: 3, at: "text:Balance due", side: "left" },
     ],
   },
+  /* The UPI QR on a proforma bill with a balance due (D27-396): needs a UPI
+     ID in 5EL's bank details. A4_UPI_STAY: a guest in the house who owes
+     (made 13 Nov 2026 in a helper's copy: Ganesh Patil). */
+  {
+    id: "A4-19u", title: "A proforma bill with a balance due, and its UPI QR code", as: "Reception",
+    path: `/h/5EL/stays/${process.env.A4_UPI_STAY ?? "9add8932-5c4e-4082-b2c8-200f749e6d37"}/bill`,
+    steps: [{ waitFor: "css:[data-upi-qr]", ms: SLOW }, { wait: 1500 }, { scroll: "text:Balance due" }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "text:Balance due", side: "left" },
+      { n: 2, at: "css:[data-upi-qr] svg", side: "left" },
+    ],
+  },
   /* The minibar on the bill (D27-383 item 10): a guest in the house whose
      minibar housekeeping recorded (A6.12) - a soft drink at the restaurant's
      GST and a beer at the VAT on alcohol, which needs the hotel switched on

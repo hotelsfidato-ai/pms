@@ -55,7 +55,7 @@ export function UpiQr({ upi, amount, note }: { upi?: Upi | null; amount: number;
       </svg>
       <div className="min-w-0">
         <p className="font-semibold">Scan with any UPI app to pay {moneyPrecise(amount)}</p>
-        <p className="mt-0.5 break-all">to <span className="tabular">{upi.id}</span> ({upi.payee}).</p>
+        <p className="mt-0.5">to <span className="tabular break-all">{upi.id}</span> ({upi.payee}).</p>
         <p className="mt-0.5">We record the payment when it reaches us.</p>
       </div>
     </div>

@@ -399,6 +399,16 @@
 
   <p>It is a plain restaurant bill. It shows the hotel and the restaurant, its GSTIN, FSSAI licence and HSN/SAC (the code of each kind its lines sell under, Settings › Taxes, A17; a dash until it is set: <span class="d">D27-344</span>), the bill number and date, the table, the covers and the steward, and every line with its quantity, rate and amount (add-ons under their dish). The same dish ordered in two rounds - a beer, food, then a second beer - is one line, 2× (<span class="d">D27-353</span>). Then the sub total, the discount, CGST and SGST for each rate (alcohol's VAT on its own line, and on its own VAT bill), any round off, and the <b>GRAND TOTAL</b>: the amount the Till asks for. A paid bill also says how it was paid. It ends <span class="msg">“Thank you. Visit again.”</span></p>
 
+  <h3>The UPI QR code on a bill not yet paid</h3>
+  <p>When the hotel has a UPI ID in its bank details (Settings › Bank details, A17.8), a bill printed before payment carries a QR code under the GRAND TOTAL: <span class="msg">“Scan with any UPI app to pay ₹1,743.00 to …”</span>, with the hotel's UPI ID and the account's name (Figure A8-14u). The guest scans it with any UPI app, which fills in the hotel's UPI ID and the GRAND TOTAL, and pays. The money goes straight to the hotel's account: the PMS takes and records nothing. When the payment shows on the hotel's UPI, take it on the Till with <span class="ui">UPI</span> as usual (A8.7).</p>
+  <p>A paid bill, a void bill, an NC bill, a test or sample bill, and any bill of a hotel with no UPI ID set print no QR code.</p>
+
+  <figure class="shot" id="fig-A8-14u">
+    <img src="img/A8-14u.png" alt="A BILL before payment with GRAND TOTAL ₹1,743.00 and under it the UPI QR code: Scan with any UPI app to pay ₹1,743.00 to the hotel's UPI ID">
+    <figcaption><b>Figure A8-14u.</b> A bill before payment, with its UPI QR code.</figcaption>
+    <ol class="callouts"><li>GRAND TOTAL</li><li>The UPI QR code, for that amount</li></ol>
+  </figure>
+
   <figure class="shot" id="fig-A8-19">
     <img src="img/A8-19.png" alt="A paid bill printed twice: BILL, then BILL · DUPLICATE">
     <figcaption><b>Figure A8-19.</b> After payment: BILL, and when printed again BILL · DUPLICATE (newest on top).</figcaption>
@@ -407,7 +417,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The bill printer, Print here, and the bill opening as before when no bill printer is chosen: <span class="d">D27-292</span>. A plain restaurant bill, BILL before payment, with the discount and the round off on it: <span class="d">D27-334</span>. Alcohol's VAT apart from GST: <span class="d">D21-91</span>.</p>
+    <p>The bill printer, Print here, and the bill opening as before when no bill printer is chosen: <span class="d">D27-292</span>. A plain restaurant bill, BILL before payment, with the discount and the round off on it: <span class="d">D27-334</span>. Alcohol's VAT apart from GST: <span class="d">D21-91</span>. The UPI QR code on a bill not yet paid: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A8.7 -->

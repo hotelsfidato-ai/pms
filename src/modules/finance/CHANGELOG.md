@@ -8,6 +8,33 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-11-13 · The UPI QR code on an unpaid bill (D27-396 wave 4, "build all")
+
+**Asked for.** The master, wave 4 of D27-396: a UPI QR code on the bill. The guest scans it with any UPI app and pays the amount due to the hotel's own UPI ID; nothing is charged, sent or recorded by the system, and the desk records the payment when it arrives. No money moves through Fidato and no service is called.
+
+**Shipped.**
+- Migration 275 (`app.hotel_upi(hotel)`): a definer that answers the hotel's UPI ID and payee name (the bank account's name), to its own staff only (`app.auth_hotel_ids`); null with no UPI ID, to anybody else, and with no session. `hotel_bank_details` (169) stays readable only by whoever manages the hotel: the clerk printing the bill never sees the account number.
+- `flows/UpiQr.tsx`: `upiLink()` and `<UpiQr>`, on the front door for the restaurant. The QR is drawn as one SVG path from `qrcode`'s matrix, black on white with a quiet zone; `qrcode` only by import() (D21-95), and `loadUpiQr()` before a print that renders and prints at once (the invoice printer, the bill printer).
+- The proforma bill (`BillPrint` → `InvoiceSheet`): under the totals, for `Balance due` as printed (tonight's night included). The tax invoice: for its `Balance` while it is owed. The API adds `upi` to `/stays/:id/bill` (`folios.ts`) and to `invoiceFacts` (`invoices.ts`).
+- The restaurant's slip (`pos/components/BillSlip.tsx`, pos's own file) for an open bill's GRAND TOTAL; `readOrder` (`pos/till.ts`) carries `upi`.
+
+**The link format followed:** NPCI's UPI deep link (the `upi://pay` URI of the NPCI "UPI Linking Specification", which BHIM and every UPI app read from a QR): `upi://pay?pa=<UPI ID>&pn=<payee>&am=<amount, 2 decimals>&cu=INR&tn=<note>`, each value `encodeURIComponent`-ed. The note is "Stay <booking ref>", "Invoice <number>" or "Bill <order no>".
+
+**Decided under D27-396:**
+- Where: the desk's proforma bill with a balance due, a tax invoice still owing, and an open restaurant bill. Never a settled or overpaid bill, a credit note, an invoice a credit note cancelled, a void or NC restaurant bill, nor a test hotel's or a Settings sample (NOT VALID paper must not invite real money), because a QR is only for money actually owed.
+- Not on the guest's own page on their phone: it has no session, so `app.hotel_upi` answers null; a phone cannot scan its own screen, and `app.guest_bill` stays as it is.
+- Amount: exactly the balance due as that bill prints it. Nothing due, or no UPI ID: no QR and no empty space.
+- Payee: the bank account's name. The UPI ID only exists on a bank row, whose account name is required (169), so "else the hotel's name" never arises.
+- Text: "Scan with any UPI app to pay ₹X / to <UPI ID> (<payee>). / We record the payment when it reaches us." One wording for the desk and the restaurant.
+- Settings: no switch. The bill options have no cheap, natural place for one; the QR shows whenever a UPI ID is set, and the book says so (A17.8).
+- The restaurant's 80 mm slip: it fits (a 26 mm QR beside the text), so it is on.
+
+**Proved.** `upiQr.test.tsx` 10/10: the link string exact with encoding; the QR present with the right amount on the proforma (and with tonight's night), an owed invoice, an open restaurant bill; absent with no UPI ID, nothing due, overpaid, a settled invoice, a credit note, a cancelled invoice, a paid, void, NC or sample restaurant bill. `db/tests/modules/finance.sql` "finance upi qr": the desk reads its own hotel's UPI ID and payee, not another hotel's, still not the bank row; null with no UPI ID and with no session. On the screen, signed in as Reception (no manager): Ganesh Patil's proforma, Balance due ₹5,715.15 with the QR under it; open bill DH-001, GRAND TOTAL ₹1,743.00 with the QR on the slip; Kapil Ganjoo's bill at ₹0 with none.
+
+**Left open.** The QR was not scanned with a phone here (no decoder on this PC): the matrix is `qrcode`'s own, the string is tested. The book's two new pictures (A4-19u, A8-14u) need a UPI ID in 5EL's bank details and the env ids in the shots files when retaken on another database.
+
+---
+
 ## 2026-11-06 · How a payment was taken, changed with a reason; Change rate in house from the guest's menu (the owner's D27-397)
 
 **Asked for.** The owner, 6 November: after check-in, change "the rate or methods or things in general" - the GM directly, the front desk with the GM's approval. **"Methods" is the payment method: the owner's own answer (D27-397, 6 November)**, as the coordinator confirmed - cash typed instead of UPI is the common mistake.

@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    490 pictures. Built from the chapters in docs/manual/chapters.
+    492 pictures. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -3153,9 +3153,22 @@ figure.shot.phone img { max-width: 72mm; }
     <ol class="callouts"><li>The payments received</li><li>Paid</li><li>Balance due</li></ol>
   </figure>
 
+  <h3>The UPI QR code: paying the balance by UPI</h3>
+  <p>When the hotel has a UPI ID in its bank details (Settings › Bank details, A17.8) and the bill has a <span class="ui">Balance due</span>, the proforma bill prints a QR code under it: <span class="msg">“Scan with any UPI app to pay ₹5,715.15 to …”</span>, with the hotel's UPI ID and the account's name (Figure A4-19u). The guest scans it with any UPI app (Google Pay, PhonePe, Paytm, BHIM, a bank's app) and the app fills in the hotel's UPI ID and exactly the balance due; the guest checks the name and pays.</p>
+  <ul>
+    <li><b>The PMS takes no payment and records none.</b> The money goes straight to the hotel's own account. When it reaches the account, take it on the Bill tab with Settle, as a UPI payment (A4.7).</li>
+    <li>There is no QR code when nothing is due or the bill is overpaid, when the hotel has set no UPI ID, on a test hotel's bill, and on the guest's own page on their phone. A tax invoice that still shows a <span class="ui">Balance</span> prints one too; a credit note, and an invoice a credit note has cancelled, never.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A4-19u">
+    <img src="img/A4-19u.png" alt="The proforma bill of a guest in the house: Total ₹5,715.15, Paid ₹0.00, Balance due ₹5,715.15, and under it the UPI QR code with Scan with any UPI app to pay ₹5,715.15 to the hotel's UPI ID">
+    <figcaption><b>Figure A4-19u.</b> A proforma bill with a balance due, and its UPI QR code.</figcaption>
+    <ol class="callouts"><li>Balance due</li><li>The UPI QR code, for that amount</li></ol>
+  </figure>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The desk's print never says “Tax Invoice”, before check-out or after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says what it opens: <span class="d">D24-25</span>. The interim bill became the proforma bill, laid out as the tax invoice: <span class="d">D27-344</span>.</p>
+    <p>The desk's print never says “Tax Invoice”, before check-out or after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says what it opens: <span class="d">D24-25</span>. The interim bill became the proforma bill, laid out as the tax invoice: <span class="d">D27-344</span>. The UPI QR code for the balance due, paid to the hotel's own UPI ID and recorded by the desk when it arrives: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A4.10 -->
@@ -3423,6 +3436,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>It says <span class="msg">“Proforma Bill”</span>, with the booking's reference and the stay's dates and room under it, and the line <span class="msg">“A proforma bill: what the stay comes to so far. It is not a tax invoice; the tax invoice is issued at check-out.”</span></li>
     <li>It is laid out as the tax invoice: the hotel's address, GSTIN and PAN, the stay in two columns, every line with its HSN/SAC, its taxable value and each tax (drinks with their <span class="ui">VAT</span>, never CGST and SGST), the payments and the tax by rate.</li>
     <li>At the foot: the totals and the <span class="ui">Total</span>, then <span class="ui">Paid</span>, any night <span class="ui">To be posted tonight</span>, and <span class="ui">Balance due</span> (or <span class="ui">Overpaid</span>).</li>
+    <li>With a balance due and a UPI ID set for the hotel, a UPI QR code for that amount: the guest can pay it with any UPI app. Take the payment on the Bill tab when it reaches the hotel's account (A4.9).</li>
     <li>The total is the exact figure, with no round-off.</li>
   </ul>
 
@@ -5435,6 +5449,16 @@ figure.shot.phone img { max-width: 72mm; }
 
   <p>It is a plain restaurant bill. It shows the hotel and the restaurant, its GSTIN, FSSAI licence and HSN/SAC (the code of each kind its lines sell under, Settings › Taxes, A17; a dash until it is set: <span class="d">D27-344</span>), the bill number and date, the table, the covers and the steward, and every line with its quantity, rate and amount (add-ons under their dish). The same dish ordered in two rounds - a beer, food, then a second beer - is one line, 2× (<span class="d">D27-353</span>). Then the sub total, the discount, CGST and SGST for each rate (alcohol's VAT on its own line, and on its own VAT bill), any round off, and the <b>GRAND TOTAL</b>: the amount the Till asks for. A paid bill also says how it was paid. It ends <span class="msg">“Thank you. Visit again.”</span></p>
 
+  <h3>The UPI QR code on a bill not yet paid</h3>
+  <p>When the hotel has a UPI ID in its bank details (Settings › Bank details, A17.8), a bill printed before payment carries a QR code under the GRAND TOTAL: <span class="msg">“Scan with any UPI app to pay ₹1,743.00 to …”</span>, with the hotel's UPI ID and the account's name (Figure A8-14u). The guest scans it with any UPI app, which fills in the hotel's UPI ID and the GRAND TOTAL, and pays. The money goes straight to the hotel's account: the PMS takes and records nothing. When the payment shows on the hotel's UPI, take it on the Till with <span class="ui">UPI</span> as usual (A8.7).</p>
+  <p>A paid bill, a void bill, an NC bill, a test or sample bill, and any bill of a hotel with no UPI ID set print no QR code.</p>
+
+  <figure class="shot" id="fig-A8-14u">
+    <img src="img/A8-14u.png" alt="A BILL before payment with GRAND TOTAL ₹1,743.00 and under it the UPI QR code: Scan with any UPI app to pay ₹1,743.00 to the hotel's UPI ID">
+    <figcaption><b>Figure A8-14u.</b> A bill before payment, with its UPI QR code.</figcaption>
+    <ol class="callouts"><li>GRAND TOTAL</li><li>The UPI QR code, for that amount</li></ol>
+  </figure>
+
   <figure class="shot" id="fig-A8-19">
     <img src="img/A8-19.png" alt="A paid bill printed twice: BILL, then BILL · DUPLICATE">
     <figcaption><b>Figure A8-19.</b> After payment: BILL, and when printed again BILL · DUPLICATE (newest on top).</figcaption>
@@ -5443,7 +5467,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The bill printer, Print here, and the bill opening as before when no bill printer is chosen: <span class="d">D27-292</span>. A plain restaurant bill, BILL before payment, with the discount and the round off on it: <span class="d">D27-334</span>. Alcohol's VAT apart from GST: <span class="d">D21-91</span>.</p>
+    <p>The bill printer, Print here, and the bill opening as before when no bill printer is chosen: <span class="d">D27-292</span>. A plain restaurant bill, BILL before payment, with the discount and the round off on it: <span class="d">D27-334</span>. Alcohol's VAT apart from GST: <span class="d">D21-91</span>. The UPI QR code on a bill not yet paid: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A8.7 -->
@@ -11700,7 +11724,7 @@ figure.shot.phone img { max-width: 72mm; }
   <!-- A17.8 -->
   <h2 id="a17-8"><span class="n">A17.8</span>Bank details and payment methods</h2>
   <h3>Bank details</h3>
-  <p>The hotel's bank details print on its booking voucher. With none set, the voucher prints no bank details. <b>The group's owner is told whenever they change.</b></p>
+  <p>The hotel's bank details print on its booking voucher. With none set, the voucher prints no bank details. Its <span class="ui">UPI ID</span>, when set, also puts a UPI QR code on every bill not yet paid: the proforma bill with a balance due (A4.9) and the restaurant's bill before payment (A8.6). Remove the UPI ID and the QR codes go; there is no other switch. <b>The group's owner is told whenever they change.</b></p>
   <ol class="steps">
     <li>Open <span class="ui">Bank details</span> and tap <span class="ui">Set bank details</span> (or <span class="ui">Change</span>).</li>
     <li>Type the <span class="ui">Account name</span>, the <span class="ui">Account number</span> (digits only, 9 to 18), the <span class="ui">Bank</span>, the <span class="ui">Branch</span> and the <span class="ui">IFSC</span> (eleven characters, the fifth a zero). Add a <span class="ui">UPI ID</span> if guests may pay to one.</li>

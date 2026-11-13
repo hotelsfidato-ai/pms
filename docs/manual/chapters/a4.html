@@ -463,9 +463,22 @@
     <ol class="callouts"><li>The payments received</li><li>Paid</li><li>Balance due</li></ol>
   </figure>
 
+  <h3>The UPI QR code: paying the balance by UPI</h3>
+  <p>When the hotel has a UPI ID in its bank details (Settings › Bank details, A17.8) and the bill has a <span class="ui">Balance due</span>, the proforma bill prints a QR code under it: <span class="msg">“Scan with any UPI app to pay ₹5,715.15 to …”</span>, with the hotel's UPI ID and the account's name (Figure A4-19u). The guest scans it with any UPI app (Google Pay, PhonePe, Paytm, BHIM, a bank's app) and the app fills in the hotel's UPI ID and exactly the balance due; the guest checks the name and pays.</p>
+  <ul>
+    <li><b>The PMS takes no payment and records none.</b> The money goes straight to the hotel's own account. When it reaches the account, take it on the Bill tab with Settle, as a UPI payment (A4.7).</li>
+    <li>There is no QR code when nothing is due or the bill is overpaid, when the hotel has set no UPI ID, on a test hotel's bill, and on the guest's own page on their phone. A tax invoice that still shows a <span class="ui">Balance</span> prints one too; a credit note, and an invoice a credit note has cancelled, never.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A4-19u">
+    <img src="img/A4-19u.png" alt="The proforma bill of a guest in the house: Total ₹5,715.15, Paid ₹0.00, Balance due ₹5,715.15, and under it the UPI QR code with Scan with any UPI app to pay ₹5,715.15 to the hotel's UPI ID">
+    <figcaption><b>Figure A4-19u.</b> A proforma bill with a balance due, and its UPI QR code.</figcaption>
+    <ol class="callouts"><li>Balance due</li><li>The UPI QR code, for that amount</li></ol>
+  </figure>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The desk's print never says “Tax Invoice”, before check-out or after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says what it opens: <span class="d">D24-25</span>. The interim bill became the proforma bill, laid out as the tax invoice: <span class="d">D27-344</span>.</p>
+    <p>The desk's print never says “Tax Invoice”, before check-out or after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says what it opens: <span class="d">D24-25</span>. The interim bill became the proforma bill, laid out as the tax invoice: <span class="d">D27-344</span>. The UPI QR code for the balance due, paid to the hotel's own UPI ID and recorded by the desk when it arrives: <span class="d">D27-396</span>.</p>
   </div>
 
   <!-- A4.10 -->

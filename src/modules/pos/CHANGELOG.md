@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-13 · The UPI QR code on an open bill (D27-396 wave 4)
+
+`BillSlip` prints finance's `UpiQr` under the GRAND TOTAL of an open bill when the hotel has a UPI ID: the guest pays
+the hotel's own UPI with any app, and the Till records it as UPI when it arrives. Never on a paid, void, NC, test or
+sample bill. `readOrder` carries `upi` (migration 275, `app.hotel_upi`); the bill printer (`KotStation`) loads `qrcode`
+before it prints. It fits the 80 mm slip. Decisions and tests: finance's `CHANGELOG.md`, same day.
+
+---
+
 ## 2026-11-12 · The allergy on the KOT, and "1 dish working" (D27-396)
 
 A room-service order's in-house guest's allergy prints boxed on every KOT slip (`DocketSlip`, no design setting hides
