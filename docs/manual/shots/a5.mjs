@@ -29,6 +29,9 @@
 // Taken by: node C:\videos\day\check.mjs run <this file> [ids]   (CDP_PORT=9385)
 
 const SLOW = 90000;
+/* The guest who pays twice what is posted (A5-S7, S8, A5-09, A5-10), and his room: a second run names another. */
+const OVER = process.env.A5_OVER ?? "A5 Test Pawar";
+const ROOM = process.env.A5_ROOM ?? "304";
 
 /* A form field by the words of its label, set as a person would (a2.mjs). */
 const FIND = `const find = (t, nth = 0) => { const l = [...document.querySelectorAll('label')]
@@ -113,9 +116,9 @@ export const SHOTS = [
   },
   /* ── A5.3 After the check-out time (A5-T1 must be taken after 11:00) ─ */
   {
-    id: "A5-T1", title: "Leaving after check-out time: the window (a guest leaving on the day, A4 Test Kulkarni)", as: "Reception",
+    id: "A5-T1", title: "Leaving after check-out time: the window (a guest leaving on the day: the demo's Ganesh Patil, paid by A5-05's run)", as: "Reception",
     path: "/h/5EL/in-house", steps: [
-      ...OPEN_BILL("A4 Test Kulkarni"), ...PAY_UPI, { wait: 2500 },
+      ...OPEN_BILL("Ganesh Patil"), { wait: 2500 },
       { click: "css:[data-checkout]" }, { waitFor: "text:Not yet", ms: 30000 }, { wait: 800 },
       DIALOG_BUTTON("Check out"), { waitFor: "text:Leaving after check-out time", ms: 30000 }, { wait: 800 },
       { type: ["css:[role=dialog] input", "Waiting for the airport taxi"] }, { wait: 600 },
@@ -301,6 +304,97 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "text:Allergy: Peanuts", side: "top" },
       { n: 2, at: "text:Change my preferences", side: "top" },
+    ],
+  },
+
+  /* ── D27-396 (13 Nov 2026): the book's own A5-05, A5-09, A5-10, A5-11, and A5-T1 again ──
+     Taken on a copy loaded for 11 Oct 2026, in this order (the file's order is the run's order):
+       A5-S10  the hotel's "Check-out by" put to 23:00, so no question comes first (the clock is later than 11:00)
+       A5-05   the demo's Ganesh Patil (due out 11 Oct): his bill paid by UPI, Check out clicked, "Not yet" left
+       A5-S11  "Not yet", and "Check-out by" put back to 11:00
+       A5-T1   the same guest after 11:00: the window that asks why
+       A5-S7   A5 Test Pawar: a walk-in into room 304, 1 night
+       A5-S8   he pays twice what is posted, by UPI: his bill is overpaid
+       (A4-01 of a4.mjs shows him on Folios, overpaid, before the refund)
+       A5-09   the GM sees the refund step; A5-10 the Refund window typed and left (Cancel)
+       A5-S9   the refund is given; A5-11 the refund receipt */
+  { id: "A5-S10", title: "set-up: Check-out by 23:00 (for A5-05 only; A5-S11 puts 11:00 back)", as: "Owner", noShot: true,
+    path: "/settings/front-desk/times-and-rules",
+    steps: [{ waitFor: "text:Check-out by", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
+      SET("Check-out by", "23:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
+  {
+    id: "A5-05", title: "Check out asks first", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, ...OPEN_BILL("Ganesh Patil"), ...PAY_UPI,
+      { click: "css:[data-checkout]" }, { waitFor: "text:Not yet", ms: 30000 }, { wait: 1000 },
+      TAG("Not yet", 0, "notyet", "[role=dialog] *, [role=alertdialog] *"),
+      { eval: "[...document.querySelectorAll('[role=dialog] button, [role=alertdialog] button')].filter((b) => b.textContent.trim() === 'Check out').pop().setAttribute('data-m', 'co')" },
+      { eval: "(() => { const t = [...document.querySelectorAll('[role=dialog] *, [role=alertdialog] *')].find((e) => e.children.length === 0 && /^Check .* out\\?$/.test(e.textContent.trim())); if (!t) throw new Error('No title'); t.setAttribute('data-m', 'title'); })()" },
+      { eval: "(() => { const t = [...document.querySelectorAll('[role=dialog] *, [role=alertdialog] *')].find((e) => e.children.length === 0 && e.textContent.trim().startsWith('The bill closes')); if (!t) throw new Error('No line'); t.setAttribute('data-m', 'line'); })()" }],
+    marks: [
+      { n: 1, at: "css:[data-m=title]", side: "right" },
+      { n: 2, at: "css:[data-m=line]", side: "right" },
+      { n: 3, at: "css:[data-m=notyet]", side: "top" },
+      { n: 4, at: "css:[data-m=co]", side: "top" },
+    ],
+  },
+  { id: "A5-S11", title: "set-up: Not yet; Check-out by put back to 11:00", as: "Owner", noShot: true,
+    path: "/settings/front-desk/times-and-rules",
+    steps: [{ waitFor: "text:Check-out by", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
+      SET("Check-out by", "11:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
+  { id: "A5-S7", title: "set-up: A5 Test Pawar, a walk-in into room 304, 1 night, checked in", as: "Reception", noShot: true,
+    path: "/h/5EL/stay",
+    steps: [
+      { waitFor: `css:[data-room-tile='${ROOM}']`, ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, { wait: 2500 },
+      { click: `css:[data-room-tile='${ROOM}']` }, { waitFor: `text:A walk-in into room ${ROOM}`, ms: 30000 }, { wait: 1500 },
+      { type: ["css:input[placeholder='Anil Sharma']", OVER] },
+      SET("Phone", process.env.A5_PHONE ?? "98765 00503"), { wait: 500 }, ...FORM,
+      SET("Document", "Aadhaar"), { wait: 300 }, SET("Number", process.env.A5_AADHAAR ?? "7890 1234 5674"), { wait: 2500 },
+      { click: "text:Check in now" }, { waitFor: "text:Open the booking", ms: SLOW }, { wait: 1500 },
+    ] },
+  { id: "A5-S8", title: "set-up: A5 Test Pawar pays twice what is posted, by UPI: the bill is overpaid", as: "Reception", noShot: true,
+    path: "/h/5EL/in-house", steps: [...OPEN_BILL(OVER),
+      { click: "text:Settle" }, { waitFor: "text:Take payment", ms: SLOW }, { wait: 1500 },
+      SET("Method", "UPI"), { wait: 800 },
+      { eval: `(() => { const i = document.querySelector('[role=dialog] input[inputmode=decimal]'); const v = Number(i.value.replace(/,/g, '')) * 2;
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, String(v)); i.dispatchEvent(new Event('input', { bubbles: true })); })()` },
+      { wait: 600 }, { click: "text:Hold it as the guest's credit" }, { wait: 400 }, { click: "text:Take payment" }, { waitFor: "text:Received - UPI", ms: 120000 }, { wait: 3000 }] },
+  {
+    id: "A5-09", title: "An overpaid bill: the refund step, and Check out waiting", as: "General Manager",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, ...OPEN_BILL(OVER),
+      { waitFor: "css:[data-refund-step]", ms: SLOW }, { wait: 2500 },
+      { eval: "document.querySelector('[data-checkout-reason]')?.scrollIntoView({ block: 'center' })" }, { wait: 600 },
+      { eval: "[...document.querySelectorAll('[data-refund-step] button')].find((b) => b.textContent.trim() === 'Refund').setAttribute('data-m', 'refund')" }],
+    marks: [
+      { n: 1, at: "text:is owed back to the guest.", side: "left" },
+      { n: 2, at: "css:[data-m=refund]", side: "top" },
+      { n: 3, at: "css:[data-checkout-reason]", side: "left" },
+    ],
+  },
+  {
+    id: "A5-10", title: "Refund: the way, the amount, the reference and the reason", as: "General Manager",
+    steps: [{ click: "css:[data-m=refund]" }, { waitFor: "text:is owed back on this bill", ms: 20000 }, { wait: 800 },
+      { type: ["css:[role=dialog] input:not([inputmode])", "UPI-REF-5503"] }, { wait: 300 },
+      { type: ["css:[role=dialog] textarea", "The guest paid for two nights and is staying one"] }, { wait: 600 },
+      { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Give refund').setAttribute('data-m', 'give')" }],
+    marks: [
+      { n: 1, at: "text:Back by", side: "left" },
+      { n: 2, at: "text:Amount", side: "left" },
+      { n: 3, at: "text:Reference", side: "left" },
+      { n: 4, at: "text:Why", side: "left" },
+      { n: 5, at: "css:[data-m=give]", side: "top" },
+    ],
+  },
+  { id: "A5-S9", title: "set-up: Give refund", as: "General Manager", noShot: true,
+    steps: [{ click: "css:[data-m=give]" }, { waitFor: "text:Print the refund receipt", ms: 60000 }, { wait: 2500 },
+      { eval: "window.__receipt = document.querySelector('a[href*=\"/refunds/\"]').getAttribute('href')" }] },
+  {
+    id: "A5-11", title: "The refund receipt", as: "General Manager",
+    steps: [{ eval: "location.assign(window.__receipt)" }, { waitFor: "text:Refund receipt", ms: SLOW }, { wait: 1500 }],
+    marks: [
+      { n: 1, at: "text:Refund receipt", side: "right" },
+      { n: 2, at: "text:Amount refunded", side: "left" },
+      { n: 3, at: "text:Back by", side: "left" },
+      { n: 4, at: "text:A plain refund receipt.", side: "right" },
     ],
   },
 ];
