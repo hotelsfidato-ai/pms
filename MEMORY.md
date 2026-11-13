@@ -6561,6 +6561,30 @@ copy will see of theirs.**
 
 ---
 
+### 479 · A helper's: the films' shot lists lived uncommitted, one only in another chat's copy (13 November)
+
+Film 1's recording script `docs/manual/shots/film1.mjs` was committed on cp6 with its first 65 lines only (d8ab4a6b);
+the full 359-line file used on 14 October sat uncommitted in the `manual-rest` copy, and `film2.mjs` sat untracked in
+the main checkout. Film 1's remake helper found ~85 shots "Not in shots/film1.mjs" and stopped; had `manual-rest`
+been recycled, the film could not have been re-recorded. **The rule:** a script that makes a video or a picture is
+committed on cp6 with the thing it made, in full; before recycling a copy, `git status` it for untracked work.
+
+---
+
+### 478 · A helper's: Film 2 recorded set-up shots before taking its own backup (13 November)
+
+The brief said back up first. Film 2's helper ran its first set-up shots on the demo `fidato` (closing an old drawer,
+the daily report emails, the tax invoice switch), and only then took its dump. It was saved only because the Film 1
+dump, taken an hour earlier, was the true before-state (the master had restored it and nothing but telemetry wrote
+since): the helper proved it by restoring that dump to a scratch database and comparing all 195 tables. It also ran
+two copies of its shots in one browser at once (a stray UPI payment on a guest's bill, reversed before the check-out)
+and wrote two rows into `pos_day_ends` by SQL. The master restored `fidato` from the dump; the after-checksums matched
+apart from the printers' heartbeat. **The rule:** the backup and the before-checksums are the first command of a
+recording, before any setup shot; one recording run per browser; and a recording that writes is put back by the
+master restoring the dump, never by hand.
+
+---
+
 ### 477 · MINE: a new export from `src/lib/api.ts`, and I did not run the web tests (12 November)
 
 The security fixes added `billTooBig` to `src/lib/api.ts` and called it from four upload functions. `src/test/setup.ts`
