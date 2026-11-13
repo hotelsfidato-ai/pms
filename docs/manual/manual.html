@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    484 pictures. Built from the chapters in docs/manual/chapters.
+    486 pictures. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -2715,7 +2715,7 @@ figure.shot.phone img { max-width: 72mm; }
   </table>
 
   <figure class="shot" id="fig-A4-01">
-    <img src="img/A4-01.png" alt="The Folios screen: Outstanding, Overpaid and Net position, the overpaid line, and the list of open bills">
+    <img src="img/A4-01.png" alt="The Folios screen: Outstanding, Overpaid and Net position, the line 2 guests overpaid, PDF and Excel, and the list of open bills with the overpaid guests first">
     <figcaption><b>Figure A4-01.</b> Folios: every open bill.</figcaption>
     <ol class="callouts">
       <li>Folios, under Finance in the menu</li>
@@ -2723,6 +2723,8 @@ figure.shot.phone img { max-width: 72mm; }
       <li>Overpaid: money owed back to guests</li>
       <li>Overpaid guests come first: <span class="msg">“Nobody chases these, so they sort first.”</span></li>
       <li>A guest. Click the row to open their bill</li>
+      <li>PDF: the list as it is, for those who download reports (A11.2)</li>
+      <li>Excel: the same, as a spreadsheet</li>
     </ol>
   </figure>
 
@@ -3182,6 +3184,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><span class="ui">Taken this shift</span> lists what you took, by method. Only cash reaches the drawer: a card payment, or a bill sent to a company, is not in the tin.</li>
     <li>Money that was not a payment: under <span class="ui">In and out of the drawer</span>, click <span class="ui">Record</span>. Choose <span class="ui">What happened</span> (<span class="ui">Paid out</span>, <span class="ui">Cash in</span>, <span class="ui">To the safe</span>), type <span class="ui">How much</span> and <span class="ui">What was it for</span>, and click <span class="ui">Record</span>.</li>
     <li>A <b>Paid out</b> also needs its <span class="ui">Category</span>: Kitchen, Housekeeping, Maintenance, Office or Other (<span class="ui">Record</span> stays grey until one is chosen). Add the <span class="ui">Photo of the bill</span> if you have it: the phone's camera, or a file. It can be added later with <span class="ui">Add photo</span> under the paid-out; <span class="ui">Photo of the bill</span> opens it. A paid-out from before 27 October 2026 shows a dash for its category.</li>
+    <li>The restaurant's till has the same list, but there the word is <span class="ui">Expense</span>, not <span class="ui">Paid out</span> (A8): its category and the photo of the bill work as here.</li>
     <li>A <b>Paid out</b> waits for the GM's or the owner's yes. Until then it reads <span class="msg">“Waiting for a yes - not taken off the drawer yet”</span>. Every paid-out is in the <span class="ui">Petty cash</span> report (A11.6).</li>
     <li><span class="ui">The drawer</span>, on the right, adds it up: <span class="ui">Opening float</span>, <span class="ui">Cash taken</span>, money in and out, <span class="ui">Expected</span>, and <span class="ui">Counted</span>.</li>
   </ul>
@@ -3248,8 +3251,28 @@ figure.shot.phone img { max-width: 72mm; }
   <ol class="steps">
     <li>Open the invoice from the list under <span class="ui">Issued</span>, and click <span class="ui">Cancel this invoice</span>.</li>
     <li>Type <span class="ui">Why the invoice was wrong</span>.</li>
-    <li>Click <span class="ui">Issue credit note</span>. The invoice is not edited and not deleted: a credit note with its own number is issued against it, and both stay on the record.</li>
+    <li>Click <span class="ui">Issue credit note</span>. The invoice is not edited and not deleted: a credit note with its own number is issued against it, and both stay on the record. <span class="ui">Keep it</span> closes the window and cancels nothing.</li>
   </ol>
+
+  <figure class="shot" id="fig-A4-25">
+    <img src="img/A4-25.png" alt="An issued tax invoice's page: Print, Send invoice and Cancel this invoice above the invoice itself">
+    <figcaption><b>Figure A4-25.</b> An issued invoice: Cancel this invoice.</figcaption>
+    <ol class="callouts">
+      <li>Print</li>
+      <li>Send invoice (greyed while sending is not set up on the server)</li>
+      <li>Cancel this invoice: opens the credit note window</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-26">
+    <img src="img/A4-26.png" alt="The window Cancel invoice 5EL/2026-27/00001: what a credit note does, Why the invoice was wrong with a reason typed, Keep it and Issue credit note">
+    <figcaption><b>Figure A4-26.</b> Cancel this invoice: why it was wrong, and Issue credit note (shown here, not issued: Keep it was clicked).</figcaption>
+    <ol class="callouts">
+      <li>What the credit note does: neither document is edited or deleted</li>
+      <li>Why the invoice was wrong: required, and kept on the record</li>
+      <li>Issue credit note: grey until a reason is typed</li>
+    </ol>
+  </figure>
 
   <div class="box watch">
     <h4>Watch out</h4>

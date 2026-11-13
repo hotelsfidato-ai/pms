@@ -20,7 +20,7 @@
 // for A4 Test Kulkarni. Nothing else is touched.
 // Taken by: CDP_PORT=9342 node docs/manual/tools/shoot.mjs a4 [ids...]
 
-const KULKARNI = "a551c684-aaa9-4b75-8f4b-011ca36af514";   // A4 Test Kulkarni, room 305 (made again 20 Oct for D27-344)
+const KULKARNI = process.env.A4_STAY ?? "a551c684-aaa9-4b75-8f4b-011ca36af514";   // A4 Test Kulkarni, room 305 (made again 20 Oct for D27-344)
 const MORE = "b454d1c4-74d9-49f8-9ec4-38e7491315ac";       // A5 Test More, room 304
 const STAY = `/h/5EL/in-house?res=${KULKARNI}`;
 const MINIBAR_STAY = "a624d8c2-edc4-4249-bb48-025942b31bb4";  // room 206, its minibar recorded (A4-06m)
@@ -32,7 +32,7 @@ const pick = (css, value) => `(() => { const s = document.querySelector(${JSON.s
   s.dispatchEvent(new Event('change', { bubbles: true })); })()`;
 /* The stay panel, open on its Bill tab. */
 const openBill = [
-  { waitFor: "text:FH-5EL-2610-5057", ms: SLOW }, { clickIf: "text:Got it" },
+  { waitFor: `text:${process.env.A4_REF ?? "FH-5EL-2610-5057"}`, ms: SLOW }, { clickIf: "text:Got it" },
   { click: "text:Settle and check out" }, { waitFor: "css:[data-bill-closing]", ms: SLOW }, { wait: 9000 },
 ];
 const DLG = "css:[role=dialog] [role=dialog], [role=alertdialog]";
@@ -47,8 +47,10 @@ export const SHOTS = [
       { n: 1, at: "css:a[href='/h/5EL/folios']", side: "right" },
       { n: 2, at: "text:Outstanding", side: "bottom" },
       { n: 3, at: "text:Overpaid", nth: 0, side: "bottom" },
-      { n: 4, at: "text:1 guest overpaid", side: "bottom" },
+      { n: 4, at: "text:guests overpaid", side: "bottom" },
       { n: 5, at: "text:A5 Test Pawar", side: "right" },
+      { n: 6, at: "text:PDF", side: "bottom" },
+      { n: 7, at: "text:Excel", side: "bottom" },
     ],
   },
   {
@@ -213,16 +215,19 @@ export const SHOTS = [
   },
   {
     id: "A4-11", title: "Change the rate (shown, not saved)", as: "General Manager",
-    steps: [
+    path: STAY, steps: [
+      ...openBill, { scroll: "text:Change rate" }, { wait: 500 },
       { click: "text:Change rate" }, { waitFor: "text:Change the rate", nth: 0 },
       { type: ["css:[role=dialog] input[inputmode=decimal]", "3500"] },
       { type: ["css:[role=dialog] textarea", "Corporate rate agreed by the GM"] },
+      /* D27-396: arrow 4 points at the window's own button, not at the window's corner. */
+      { eval: "[...document.querySelectorAll('[role=dialog] button')].filter((b) => b.textContent.trim() === 'Change the rate').pop().setAttribute('data-m', 'go')" },
     ],
     marks: [
       { n: 1, at: "css:[role=dialog] input[inputmode=decimal]", side: "left" },
       { n: 2, at: "text:Includes GST", side: "left" },
       { n: 3, at: "css:[role=dialog] textarea", side: "left" },
-      { n: 4, at: "css:[role=dialog] button:last-of-type", side: "top" },
+      { n: 4, at: "css:[data-m=go]", side: "top" },
     ],
   },
   { id: "A4-11b", title: "Keep it: the rate is not changed", as: "General Manager", noShot: true,
@@ -407,4 +412,30 @@ export const SHOTS = [
       { n: 3, at: "text:Record payment", side: "left" },
     ],
   },
+
+  /* D27-396 (13 Nov 2026): the credit note's own pictures, on the invoice of A5 Test Wagh (a5.mjs
+     A5-S6, A5-T6, A5-T7 make it: checked out, its tax invoice issued). Opened and left: Keep it. */
+  {
+    id: "A4-25", title: "An issued invoice: Cancel this invoice", as: "General Manager",
+    path: "/h/5EL/invoices", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:A5 Test Wagh", ms: SLOW }, { settle: true },
+      { eval: `[...document.querySelectorAll('tbody tr')].filter((r) => r.textContent.includes('A5 Test Wagh')).pop().querySelector('a').click()` },
+      { waitFor: "text:Cancel this invoice", ms: SLOW }, { wait: 1500 }],
+    marks: [
+      { n: 1, at: "text:Print", side: "left" },
+      { n: 2, at: "text:Send invoice", side: "left" },
+      { n: 3, at: "text:Cancel this invoice", side: "left" },
+    ],
+  },
+  {
+    id: "A4-26", title: "Cancel this invoice: why it was wrong, and Issue credit note", as: "General Manager",
+    steps: [{ click: "text:Cancel this invoice" }, { waitFor: "text:A credit note is issued against it.", ms: 20000 }, { wait: 600 },
+      { type: ["css:[role=dialog] textarea, [role=dialog] input", "Billed to the wrong name"] }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[role=dialog] p.text-grey-600", side: "right" },
+      { n: 2, at: "css:[role=dialog] textarea, [role=dialog] input", side: "right" },
+      { n: 3, at: "text:Issue credit note", side: "top" },
+    ],
+  },
+  { id: "A4-26b", title: "Keep it: nothing is cancelled", as: "General Manager", noShot: true,
+    steps: [{ click: "text:Keep it" }, { wait: 800 }] },
 ];
