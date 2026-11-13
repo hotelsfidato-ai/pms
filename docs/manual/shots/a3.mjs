@@ -332,7 +332,7 @@ export const SHOTS = [
       SET("Rooms ready from", "00:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
   {
     id: "A3-02", title: "The Check in window: the room and ID on the left, the stay on the right", as: "Reception",
-    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("Imran Shaikh"),
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("A3 Test Iyer"),
       { wait: 2500 }, TAGF("Document", "doc"), TAGF("Number", "num"),
       { eval: "(() => { const b = [...document.querySelectorAll('[role=dialog] button')].filter((x) => x.textContent.trim() === 'Check in').pop(); if (!b) throw new Error('No footer Check in'); b.parentElement.setAttribute('data-m', 'foot'); })()" }],
     marks: [
@@ -347,11 +347,15 @@ export const SHOTS = [
     path: "/settings/front-desk/times-and-rules",
     steps: [{ waitFor: "text:Rooms ready from", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
       SET("Rooms ready from", "14:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
+  { id: "A3-S3", title: "set-up: Rooms ready from 20:00 (so any hour of the day is early; A3-S9 puts 14:00 back)", as: "Owner", noShot: true,
+    path: "/settings/front-desk/times-and-rules",
+    steps: [{ waitFor: "text:Rooms ready from", ms: SLOW }, { settle: true }, { click: "text:Edit", nth: 0 }, { waitFor: "text:The front desk's hours" },
+      SET("Rooms ready from", "20:00"), { wait: 500 }, { eval: "[...document.querySelectorAll('[role=dialog] button')].find((b) => b.textContent.trim() === 'Save').click()" }, { wait: 3500 }] },
   {
     id: "A3-12", title: "Arriving before the hotel's check-in time", as: "General Manager",
-    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("Imran Shaikh"),
+    path: "/h/5EL/arrivals", steps: [{ clickIf: "text:Got it" }, ...OPEN_CHECK_IN("A3 Test Iyer"),
       { waitFor: "text:Rooms are ready from", ms: 60000 }, TAGF("Why the room is being given early", "why"),
-      TAGRE("/Rooms are ready from/", "box"),
+      TAGRE("/Rooms are ready from/", "box", "[role=dialog] *"),
       { eval: "(() => { const b = document.querySelector('[data-m=box]'); b.parentElement.setAttribute('data-m', 'box'); b.scrollIntoView({ block: 'center' }); })()" }, { wait: 600 }],
     marks: [
       { n: 1, at: "css:[data-m=box]", side: "left" },
