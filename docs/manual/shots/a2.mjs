@@ -74,12 +74,12 @@ export const SHOTS = [
 
   /* ── A phone booking ──────────────────────────────────────────────── */
   {
-    id: "A2-02", title: "New booking: the guest and the nights", as: "Reception",
+    id: "A2-02", title: "New booking: the guest and the nights", as: "Reception", size: "tall",
     path: "/h/5EL/book",
     steps: [
       { waitFor: "text:Save booking", ms: 15000 },
       { type: ["css:input[placeholder='Anil Sharma']", "A2 Test Sharma"] },
-      SET("Phone", "98765 00201"),
+      SET("Phone", "98765 00211"),
       { click: "text:Guest agreed to WhatsApp" },
       DAY("Arrival", 11), ...FORM, DAY("Departure", 13), ...FORM,
       SET("Booking source", "Fidato Hotels"),
@@ -247,6 +247,23 @@ export const SHOTS = [
       { n: 2, at: "text:The guests", side: "right" },
       { n: 3, at: "text:HOST PAYS", side: "top" },
       { n: 4, at: "text:LEAD GUEST", side: "top" },
+    ],
+  },
+
+  /* D27-396 (13 Nov): the host's account card, with a host account opened on the
+     group the run made. No night has been posted to it (the night audit is never
+     run for a picture), so the card says nothing has been charged yet and Issue
+     tax invoice is grey. */
+  {
+    id: "A2-42", title: "The host's account: who it is billed to, Settle, Issue tax invoice", as: "Reception",
+    steps: [{ clickIf: "text:Open a host account" }, { waitFor: "text:The host's account", ms: 15000 }, { wait: 7000 },
+      { scroll: "text:The host's account" }, { wait: 600 },
+      { eval: "(() => { const bs = [...document.querySelectorAll('button')]; bs.find((x) => x.textContent.trim() === 'Issue tax invoice').setAttribute('data-m', 'issue'); const s = bs.filter((x) => x.textContent.trim() === 'Settle').pop(); if (s) s.setAttribute('data-m', 'settle'); })()" }],
+    marks: [
+      { n: 1, at: "text:The host's account", side: "left" },
+      { n: 2, at: "text:Nothing has been charged to the host yet.", side: "right" },
+      { n: 3, at: "css:[data-m=settle]", side: "bottom" },
+      { n: 4, at: "css:[data-m=issue]", side: "bottom" },
     ],
   },
 
@@ -497,7 +514,7 @@ export const SHOTS = [
 
   /* ── D27-383 item 8: the rooming list, an allotment's booking, the waitlist ──
      ⚠ SET UP FIRST, made-up data on the demo's copy (the build-all run of
-     7 November made these): a group "Kulkarni Wedding" of four rooms; the
+     7 November made these): a group "A2 Test Mehta wedding" of four rooms; the
      travel agent "Demo Travels" with a contract and an allotment holding
      Deluxe rooms; on the Waitlist, one guest whose nights have a room free
      and one still full. Nothing here is saved: the file is read, never
@@ -505,7 +522,7 @@ export const SHOTS = [
   {
     id: "A2-38", title: "A group's rooming list", as: "Reception",
     path: "/h/5EL/groups",
-    steps: [{ waitFor: "text:Kulkarni Wedding", ms: 15000 }, { click: "text:Kulkarni Wedding" },
+    steps: [{ waitFor: "text:A2 Test Mehta wedding", ms: 15000 }, { click: "text:A2 Test Mehta wedding" },
       { waitFor: "text:Open the group", ms: 10000 }, { click: "text:Open the group" },
       { waitFor: "text:Rooming list", ms: 10000 }, { click: "text:Rooming list" },
       { waitFor: "text:Save rooming list", ms: 15000 }, { wait: 800 }],
@@ -519,7 +536,7 @@ export const SHOTS = [
   {
     id: "A2-39", title: "A file with problems: nothing saved", as: "Reception",
     steps: [
-      { eval: `(() => { const csv = "Guest name,Room type,Arrival,Departure\\nAnita Joshi,Deluxe,14/11/2026,16/11/2026\\n,Deluxe,14/11/2026,16/11/2026\\nRahul Desai,Deluxe,15/11/2026,16/11/2026\\n";
+      { eval: `(() => { const csv = "Guest name,Room type,Arrival,Departure\\nAnita Joshi,Deluxe,26/10/2026,28/10/2026\\n,Deluxe,26/10/2026,28/10/2026\\nRahul Desai,Deluxe,27/10/2026,28/10/2026\\n";
         const dt = new DataTransfer(); dt.items.add(new File([csv], "kulkarni-rooming.csv", { type: "text/csv" }));
         const i = document.querySelector("input[type=file]"); i.files = dt.files; i.dispatchEvent(new Event("change", { bubbles: true })); })()` },
       { waitFor: "text:Nothing was saved", ms: 15000 }, { wait: 600 }, TOP,
