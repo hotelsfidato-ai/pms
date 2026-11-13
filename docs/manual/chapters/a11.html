@@ -102,7 +102,7 @@
     <li><span class="ui">Print</span>: prints the report alone, without the menu or the buttons.</li>
     <li><span class="ui">PDF</span>, <span class="ui">Excel</span>, <span class="ui">CSV</span>: save the report as a file (Figure A11-04). The file is made on the server from the same figures as the screen. They wait until the report has loaded. The message <span class="msg">“PDF saved”</span> names the file; if it fails, <span class="msg">“The PDF was not made”</span> says why.</li>
     <li><span class="ui">Email</span>: sends the report, as it is on screen, as a PDF or an Excel file (below). It waits until the report has loaded.</li>
-    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span> and <span class="ui">CSV</span> only, and no <span class="ui">Email</span>.</li>
+    <li>Guest ledger, Cashier shift, GST sales register and the Form III register have <span class="ui">Print</span>, <span class="ui">PDF</span>, <span class="ui">Excel</span> and <span class="ui">CSV</span>, and no <span class="ui">Email</span>.</li>
   </ul>
 
   <h3>To email a report</h3>
@@ -202,13 +202,14 @@
   <p>Open <span class="ui">Manager report</span> in the menu (<code>/reports/manager</code>). It is the day in three columns: <b>Today</b>, <b>PTD</b> (period to date: from the 1st of this month) and <b>YTD</b> (year to date: from 1 April, the start of the financial year). It is read afresh each time it opens.</p>
 
   <figure class="shot" id="fig-A11-04">
-    <img src="img/A11-04.png" alt="The Manager report: Print, PDF, Excel and CSV, the facts line, the TODAY, PTD and YTD columns and the Room Charges band">
+    <img src="img/A11-04.png" alt="The Manager report: Print, PDF, Excel, CSV and Email, the facts line, the TODAY, PTD and YTD columns and the Room Charges band">
     <figcaption><b>Figure A11-04.</b> The Manager report: Today, PTD and YTD.</figcaption>
     <ol class="callouts">
       <li>Print</li>
       <li>PDF</li>
       <li>Excel</li>
       <li>CSV</li>
+      <li><span class="ui">Email</span>: sends the report as a PDF or an Excel file</li>
       <li>The facts: the date, where PTD and YTD start, the currency</li>
       <li>The three columns: Today, PTD, YTD</li>
       <li>A band: Room Charges</li>
@@ -449,10 +450,12 @@
   <p><span class="ui">Guest ledger</span> (<code>/reports/guest-ledger</code>) is every guest's bill that moved from the 1st of the month to the business date: <b>Opening</b>, <b>Charges</b>, <b>Received</b>, <b>Closing</b>.</p>
 
   <figure class="shot" id="fig-A11-12">
-    <img src="img/A11-12.png" alt="Guest ledger: Print and CSV, the window line, and one row per guest with Opening, Charges, Received and Closing, one closing in red">
+    <img src="img/A11-12.png" alt="Guest ledger: Print, PDF, Excel and CSV, the window line, and one row per guest with Opening, Charges, Received and Closing, one closing in red">
     <figcaption><b>Figure A11-12.</b> Guest ledger: every bill that moved this month.</figcaption>
     <ol class="callouts">
       <li>Print</li>
+      <li>PDF</li>
+      <li>Excel</li>
       <li>CSV</li>
       <li>The window: from the 1st of the month to the business date</li>
       <li>A closing below zero, in red: more was received than charged</li>
@@ -464,9 +467,13 @@
   <p><span class="ui">Cashier shift</span> (<code>/reports/cashier-shift</code>) is what each cashier took on the business date, by method: how many receipts, and how much.</p>
 
   <figure class="shot" id="fig-A11-13">
-    <img src="img/A11-13.png" alt="Cashier shift: Business date, one row with cashier not on record, method Cash, 1 receipt, and the note under the table">
+    <img src="img/A11-13.png" alt="Cashier shift: Print, PDF, Excel and CSV, Business date, rows by cashier and method with one cashier not on record, and the note under the table">
     <figcaption><b>Figure A11-13.</b> Cashier shift: what each cashier took today.</figcaption>
     <ol class="callouts">
+      <li>Print</li>
+      <li>PDF</li>
+      <li>Excel</li>
+      <li>CSV</li>
       <li>The business date: receipts by cashier and method</li>
       <li>“not on record”: a payment taken before the system recorded who took it</li>
       <li>How it was paid: here Cash</li>
@@ -561,10 +568,12 @@
   <p><span class="ui">GST sales register</span> (<code>/reports/gst-sales</code>) is every invoice and credit note issued from the 1st of the month to the business date, as GSTR-1 wants them: invoice, date, recipient, GSTIN, type (B2B or B2C), place, taxable value, CGST, SGST, total.</p>
 
   <figure class="shot" id="fig-A11-15">
-    <img src="img/A11-15.png" alt="GST sales register: Print and CSV, the GSTR-1 extract line, no invoices in this period, Total 0 documents and the note">
+    <img src="img/A11-15.png" alt="GST sales register: Print, PDF, Excel and CSV, the GSTR-1 extract line, the invoice of the period, Total 1 document and the note">
     <figcaption><b>Figure A11-15.</b> GST sales register.</figcaption>
     <ol class="callouts">
       <li>Print</li>
+      <li>PDF</li>
+      <li>Excel</li>
       <li>CSV: the columns a GSTR-1 upload wants</li>
       <li>GSTR-1 extract: every document issued in the period, credit notes included</li>
       <li>The total, and how many documents</li>
@@ -640,9 +649,13 @@
   <p><span class="ui">Form III register</span> (<code>/reports/c-form</code>) is every foreign guest who arrived from the 1st of the month to the business date, each foreign adult in a room on a row of their own: passport and visa, arrival, departure, and the FRRO portal's numbers.</p>
 
   <figure class="shot" id="fig-A11-16">
-    <img src="img/A11-16.png" alt="Form III register: how many arrivals await an FRRO number, the yellow note that this system does not file, and the Portal numbers column">
+    <img src="img/A11-16.png" alt="Form III register: Print, PDF, Excel and CSV, how many arrivals await an FRRO number, the yellow note that this system does not file, and the Portal numbers column">
     <figcaption><b>Figure A11-16.</b> Form III register.</figcaption>
     <ol class="callouts">
+      <li>Print</li>
+      <li>PDF</li>
+      <li>Excel</li>
+      <li>CSV</li>
       <li>How many arrivals still await an FRRO number</li>
       <li>This system does not file with the FRRO: filing is on the government portal</li>
       <li>Portal numbers: the numbers the portal gave, recorded on the Form III screen</li>
