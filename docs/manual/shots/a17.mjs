@@ -68,7 +68,7 @@ export const SHOTS = [
     path: "/settings/property/profile",
     steps: [{ waitFor: "text:A real GSTIN" }],
     marks: [
-      { n: 1, at: "text:8 of 10 settled", side: "right" },
+      { n: 1, at: "text:of 10 settled", side: "right" },
       { n: 2, at: "text:A real GSTIN", side: "left" },
       { n: 3, at: "text:Cancellation terms · not blocking", side: "left" },
       { n: 4, at: "text:Edit", side: "left" },
@@ -535,7 +535,7 @@ export const SHOTS = [
       { n: 2, at: "css:[role=tablist]", side: "bottom" },
       { n: 3, at: "text:Add a stay", side: "bottom" },
       { n: 4, at: "text:Export CSV", side: "right" },
-      { n: 5, at: "text:More options", side: "left" },
+      /* D27-396: the demo holds no backfilled stay, so no row (and no More options) is drawn; the book says so. */
     ],
   },
   /* The window's lower half: the dates, the figures and the send tick
@@ -560,8 +560,7 @@ export const SHOTS = [
             { waitFor: "text:Rooms sold count each night" }, { wait: 300 }],
     marks: [
       { n: 1, at: "text:Export CSV", side: "bottom" },
-      { n: 2, at: "css:table tbody tr", side: "left" },
-      { n: 3, at: "text:Total", side: "left" },
+      /* D27-396: nothing is backfilled on the demo, so there is no row and no Total to point at; the book says so. */
     ],
   },
 
@@ -598,6 +597,25 @@ export const SHOTS = [
       { n: 4, at: "text:Refused", nth: 0, side: "left" },
     ],
   },
+  /* D27-396 (13 Nov): A17-62 needs imports on the page. Two are made on the demo copy: the bookings file
+     (kept, so its booking with no rate shows) and the guests file (then undone, so "Undone" shows). */
+  { id: "A17-S1", title: "set-up: bring in the bookings file (kept)", as: "Owner", size: "tall", noShot: true,
+    path: "/settings/property/old-data",
+    steps: [{ waitFor: "text:Brought in here" }, LOADED, { click: "text:Bookings and past stays" },
+            { type: ["css:input[maxlength='60']", "IDS"] }, { eval: OLD_FILE("bookings") },
+            { waitFor: "text:Every row, before anything is saved" }, LOADED,
+            { eval: "[...document.querySelectorAll('button')].find((b) => /^Bring in \\d+ rows?$/.test(b.textContent.trim())).click()" },
+            { wait: 6000 }, LOADED] },
+  { id: "A17-S2", title: "set-up: bring in the guests file, then undo it", as: "Owner", size: "tall", noShot: true,
+    path: "/settings/property/old-data",
+    steps: [{ waitFor: "text:Brought in here" }, LOADED,
+            { type: ["css:input[maxlength='60']", "IDS"] }, { eval: OLD_FILE("guests") },
+            { waitFor: "text:Every row, before anything is saved" }, LOADED,
+            { eval: "[...document.querySelectorAll('button')].find((b) => /^Bring in \\d+ rows?$/.test(b.textContent.trim())).click()" },
+            { wait: 6000 }, LOADED,
+            { click: "text:Undo", nth: 0 }, { wait: 1500 },
+            { eval: "[...document.querySelectorAll('[role=dialog] button, [role=alertdialog] button')].filter((b) => /Undo/.test(b.textContent.trim())).pop()?.click()" },
+            { wait: 5000 }, LOADED] },
   {
     id: "A17-62", title: "Bring in old data: the bookings with no rate, and the imports", as: "Owner", size: "tall",
     path: "/settings/property/old-data",
@@ -693,13 +711,17 @@ export const SHOTS = [
 
   /* ── Modules and connections ─────────────────────────────────────── */
   {
-    id: "A17-47", title: "Modules", as: "Owner",
+    id: "A17-47", title: "Modules", as: "Owner", size: "tall",
     path: "/settings/connections/modules",
-    steps: [{ waitFor: "text:Reception can use the POS" }],
+    steps: [{ waitFor: "text:Reception can use the POS" }, LOADED, { wait: 600 }],
     marks: [
       { n: 1, at: "text:Point of sale", side: "right" },
       { n: 2, at: "css:main [role=switch]", side: "left" },
       { n: 3, at: "text:Reception can use the POS", side: "right" },
+      /* D27-396: the three modules added since (Loyalty, Bar stock, Feedback survey). */
+      { n: 4, at: "text:Loyalty", nth: 0, side: "right" },
+      { n: 5, at: "text:Bar stock", nth: 0, side: "right" },
+      { n: 6, at: "text:Feedback survey", nth: 0, side: "right" },
     ],
   },
   {
@@ -712,13 +734,52 @@ export const SHOTS = [
     ],
   },
   {
-    id: "A17-49", title: "Connection health", as: "Owner",
+    id: "A17-49", title: "Connection health", as: "Owner", size: "tall",
     path: "/settings/connections/connection-health",
-    steps: [{ waitFor: "text:Emails (n8n)" }],
+    steps: [{ waitFor: "text:Emails (n8n)" }, LOADED, { wait: 1500 }],
     marks: [
       { n: 1, at: "text:Emails (n8n)", side: "right" },
       { n: 2, at: "text:Not set up", side: "left" },
       { n: 3, at: "text:Last success: -", side: "right" },
+      /* D27-396: Backups and Disk in their own words; the demo has no nightly backup, so Backups reads Not set up. */
+      { n: 4, at: "text:No nightly backup runs on this server.", side: "right" },
+      { n: 5, at: "css:main li:nth-of-type(6) p", side: "right" },
+    ],
+  },
+
+  /* D27-396 (13 Nov): Scheduled reports (the page, and its Add a schedule window, never saved) and the
+     Optional group of Set up this hotel. The demo has no schedule, so the page shows its empty state. */
+  {
+    id: "A17-63", title: "Scheduled reports: the page", as: "Owner",
+    path: "/settings/messages/scheduled-reports",
+    steps: [{ waitFor: "text:Add a schedule" }, LOADED, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Add a schedule", side: "left" },
+      { n: 2, at: "text:Nothing is sent yet", side: "bottom" },
+      { n: 3, at: "text:No report goes on a schedule yet", side: "bottom" },
+    ],
+  },
+  {
+    id: "A17-64", title: "Scheduled reports: Add a schedule (not saved)", as: "Owner",
+    path: "/settings/messages/scheduled-reports",
+    steps: [{ waitFor: "text:Add a schedule" }, LOADED, { click: "text:Add a schedule" }, { waitFor: DIALOG }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Report", side: "left" },
+      { n: 2, at: "text:Days it covers", side: "left" },
+      { n: 3, at: "text:How often", side: "left" },
+      { n: 4, at: "text:File", side: "left" },
+      { n: 5, at: "text:Send to", side: "left" },
+      { n: 6, at: "text:Save", side: "top" },
+    ],
+  },
+  { id: "A17-64b", title: "Cancel", as: "Owner", noShot: true, steps: [{ click: "text:Cancel" }, { wait: 600 }] },
+  {
+    id: "A17-65", title: "Set up this hotel: the Optional group", as: "Owner", size: "tall",
+    path: "/settings/property/set-up-this-hotel",
+    steps: [{ waitFor: "text:Optional", ms: 60000 }, LOADED, { wait: 800 }, { scroll: "text:Optional" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:Optional", side: "top" },
+      { n: 2, at: "text:Worth doing, and nothing waits on them.", side: "right" },
     ],
   },
 

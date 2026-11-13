@@ -71,7 +71,7 @@
   <p><span class="ui">Profile</span> is the first page. It holds three things: the checklist of what the hotel still needs, the hotel's details that print on its invoices, and its registration numbers.</p>
 
   <figure class="shot" id="fig-A17-02">
-    <img src="img/A17-02.png" alt="Profile: the checklist Before 5 Elements Akkalkot can take a guest, 8 of 10 settled, A real GSTIN, Cancellation terms not blocking, and the Profile card with Edit">
+    <img src="img/A17-02.png" alt="Profile: the checklist Before 5 Elements Akkalkot can take a guest, 7 of 10 settled, A real GSTIN, Cancellation terms not blocking, and the Profile card with Edit">
     <figcaption><b>Figure A17-02.</b> The checklist, and the profile.</figcaption>
     <ol class="callouts">
       <li>How many of the ten checks are settled</li>
@@ -116,6 +116,15 @@
   </figure>
 
   <p>The steps come in three groups, each with a count such as <span class="msg">“2 of 5 done”</span>: <span class="ui">Must be done before the first booking</span>, steps 1 to 5 (<span class="msg">“These five are what the hotel needs before it can sell a room and bill it correctly.”</span>); <span class="ui">Before opening</span>, steps 6 to 13 (<span class="msg">“The hotel can take a booking without these, but should not open its doors until they are done.”</span>); and <span class="ui">Optional</span>, steps 14 to 17 (<span class="msg">“Worth doing, and nothing waits on them.”</span>). Step 18, <span class="ui">Ready to go live</span>, is the summary.</p>
+
+  <figure class="shot" id="fig-A17-65">
+    <img src="img/A17-65.png" alt="Set up this hotel scrolled to the Optional group: its line Worth doing, and nothing waits on them, steps 14 to 17 and step 18 Ready to go live">
+    <figcaption><b>Figure A17-65.</b> The Optional group, and Ready to go live below it.</figcaption>
+    <ol class="callouts">
+      <li>Optional: steps 14 to 17, with their own count</li>
+      <li>Worth doing, and nothing waits on them</li>
+    </ol>
+  </figure>
   <p>Each step is a row: its number (a tick once it is done), its name, one line on what it is, and its state: <span class="ui">Done</span>, <span class="ui">To do</span>, <span class="ui">Later</span> or <span class="ui">Remind me</span> with the day. Tap a row to open it. It says <span class="ui">What it is</span> and <span class="ui">Why it matters</span>, and, while the step is not done and the system can tell, <span class="ui">What is missing</span>: <span class="msg">“Still missing: the GSTIN, the phone.”</span> Under them is one button for each real screen the step needs (<span class="ui">Open Taxes</span>, <span class="ui">Open Room types</span>) and the choices. A screen your role cannot open is grey, and a line says so: <span class="msg">“Your role cannot open … Ask the owner or an Admin.”</span></p>
 
   <table>
@@ -191,13 +200,12 @@
 
   <figure class="shot" id="fig-A17-57">
     <img src="img/A17-57.png" alt="Backfill data: the first day, the four tabs Stays, Restaurant bills, Cash and Day by day, Add a stay and Export CSV, and the list of stays">
-    <figcaption><b>Figure A17-57.</b> Backfill data, the Stays tab.</figcaption>
+    <figcaption><b>Figure A17-57.</b> Backfill data, the Stays tab. The demo has no backfilled stay, so the list says so; once a stay is added, each row has More options: Correct and Remove.</figcaption>
     <ol class="callouts">
       <li>The hotel's first day in the system: only days before it are entered</li>
       <li>The four tabs</li>
       <li>Add a stay</li>
       <li>Export CSV: the tab as a spreadsheet</li>
-      <li>A stay, with More options: Correct and Remove</li>
     </ol>
   </figure>
 
@@ -260,11 +268,9 @@
 
   <figure class="shot" id="fig-A17-59">
     <img src="img/A17-59.png" alt="Day by day: one line a day with rooms sold, room charges, GST, restaurant sales, payments by method, cash in and out, and the Total line">
-    <figcaption><b>Figure A17-59.</b> Day by day, with its Export CSV.</figcaption>
+    <figcaption><b>Figure A17-59.</b> Day by day, with its Export CSV. Nothing is backfilled on the demo, so it says so; once stays, bills or cash are added it has one line a day and a Total line.</figcaption>
     <ol class="callouts">
       <li>Export CSV: the summary as a spreadsheet</li>
-      <li>One day</li>
-      <li>The Total line</li>
     </ol>
   </figure>
 
@@ -1121,6 +1127,29 @@
   <p>Right after the night audit closes the day, each address gets <b>one email</b> with every report switched on for it: the subject is the hotel's name, "daily reports" and the date ("5 Elements Akkalkot daily reports - 26 Oct 2026"); each report's key figures are in the email under its name, and each report is attached as its own PDF. If one of an address's reports cannot be made that night, its whole email waits and goes, complete, once every report is ready. An address typed under one report only gets that report. There are five: <b>Night audit report</b> (on to start), <b>Manager report</b>, <b>Money owed</b>, <b>Restaurant and stock</b> and <b>Bar stock</b> (off to start; <span class="d">D27-354</span>). Type the addresses, set the switches, and tap <span class="ui">Save</span> at the foot. <b>Nobody gets anything until an address is typed.</b></p>
   <p><span class="ui">Scheduled reports</span>, beside it, sends any other report by email after the night audit: every day, once a week on a chosen day or once a month on a chosen date, for yesterday, last week, last month or the month so far, as a PDF or an Excel file. It is described in A7.6; any report can also be emailed from its own screen (A11.2).</p>
 
+  <figure class="shot" id="fig-A17-63">
+    <img src="img/A17-63.png" alt="Scheduled reports: Add a schedule, the yellow line Nothing is sent yet, and the empty list No report goes on a schedule yet">
+    <figcaption><b>Figure A17-63.</b> Scheduled reports. The demo has no schedule, so the list is empty.</figcaption>
+    <ol class="callouts">
+      <li>Add a schedule</li>
+      <li>Nothing is sent yet: sending is not set up on this server</li>
+      <li>The list of schedules: empty until one is added</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A17-64">
+    <img src="img/A17-64.png" alt="The Add a schedule window: Report, Days it covers, How often with Every day, Every week and Every month, After the night audit of, File as PDF or Excel, Send to, Cancel and Save">
+    <figcaption><b>Figure A17-64.</b> Add a schedule (shown here, not saved: Cancel was clicked).</figcaption>
+    <ol class="callouts">
+      <li>Report: any report that can go on a schedule</li>
+      <li>Days it covers: yesterday, last week, last month or the month so far</li>
+      <li>How often: every day, every week or every month, and on which day</li>
+      <li>File: PDF or Excel</li>
+      <li>Send to: one email address a line</li>
+      <li>Save: grey until a report and an address are given</li>
+    </ol>
+  </figure>
+
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>. One email per address, a PDF for each report: <span class="d">D27-371</span>. Any report by email, and reports on a schedule: <span class="d">D27-383</span>, built under <span class="d">D27-396</span>.</p>
@@ -1208,12 +1237,15 @@
   <p><span class="ui">Channel manager</span> ↗ (A15), <span class="ui">CRS bookings</span> ↗ (A2) and <span class="ui">Integrations</span> ↗ (A12) open their Front office screens.</p>
 
   <figure class="shot" id="fig-A17-47">
-    <img src="img/A17-47.png" alt="Modules: Point of sale on, Banquet hall off, Reception can use the POS, Channel manager, Laundry, Spa, Serves alcohol">
+    <img src="img/A17-47.png" alt="Modules: Point of sale on, Banquet hall off, Reception can use the POS, Channel manager, Laundry, Spa, Serves alcohol, and below them Loyalty, Bar stock and Feedback survey">
     <figcaption><b>Figure A17-47.</b> What this property runs.</figcaption>
     <ol class="callouts">
       <li>A module: Point of sale</li>
       <li>Its switch</li>
       <li>Reception can use the POS</li>
+      <li>Loyalty: members earn and use points</li>
+      <li>Bar stock: the bar's store, counter and counts</li>
+      <li>Feedback survey: the guest's own page asks after check-out</li>
     </ol>
   </figure>
   <ul>
@@ -1236,12 +1268,14 @@
   <p>Switched on, each nearby hotel's lowest price on Google Hotels is checked for the next 30 nights, on Mondays and Thursdays from 06:00, the hotel's time (about 260 searches a month). What is found shows beside each suggestion on Revenue outlook (A15). <b>Nothing here changes a price.</b></p>
 
   <figure class="shot" id="fig-A17-49">
-    <img src="img/A17-49.png" alt="Connection health: Emails (n8n), WhatsApp (Meta), CRS bridge, Firebase sign-in, Backups and Rivals' prices, each Not set up, with Last success">
+    <img src="img/A17-49.png" alt="Connection health: Emails (n8n), WhatsApp (Meta), CRS bridge, Firebase sign-in, Backups, Disk and Rivals' prices, with Backups Not set up on this demo and Disk Working">
     <figcaption><b>Figure A17-49.</b> Connection health: read only.</figcaption>
     <ol class="callouts">
       <li>A connection: Emails (n8n)</li>
       <li>Its state: Working, Needs a look, Not working or Not set up</li>
       <li>Last success (and the last error, when there is one)</li>
+      <li>Backups: here Not set up, because no nightly backup runs on this demo; on the live server it reads Working with the time of the last one</li>
+      <li>Disk: how full the server's disk is, here Working</li>
     </ol>
   </figure>
   <p>Every outside connection, for the hotel in the top bar: <span class="ui">Emails (n8n)</span>, <span class="ui">WhatsApp (Meta)</span>, <span class="ui">CRS bridge</span>, <span class="ui">Firebase sign-in</span>, <span class="ui">Backups</span>, <span class="ui">Disk</span> and <span class="ui">Rivals' prices</span>. Backups, the disk and Firebase are the server's own. The line under the list says whether the owner is emailed when a connection turns red. Nothing is changed here: a connection is set up on the server.</p>
