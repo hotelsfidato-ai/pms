@@ -52,6 +52,8 @@ seam); a test enforces it.
 > are in `D:\fidato\final videos` (old ones in `.local\old-finals\`). 87 book pictures retaken or new; no picture
 > "to be taken" left. Full gates green (`.local/gates/videos-book-13nov.log`). The demo `fidato` is as before the
 > films (checksums). Release 22 is untouched: today's commits are book and videos only.
+> **Then the UPI QR on the bill (a0439965, migration 275; full gates green, `.local/gates/upi-qr-13nov.log`).** On
+> cp6 only, after release 22: it goes in the next release. Next free migration: **276**.
 
 > **12 November: RELEASE 22 READY, NOT LIVE (19e02bd4).** Release 21 (e77c41a8) is still what runs. Release 22 is on
 > cp6 and in the copy `.claude/worktrees/release-r22`; nothing pushed, nothing deployed. It holds migrations 267-274
@@ -839,7 +841,8 @@ npx vitest run          197 passed, 13 files
 ## 3 · What to do next, in order
 
 > **13 November, after the videos:** (1) the owner's release 22, A1-A8 (below); (2) Wave 4: the UPI QR on the bill
-> (build), payment links and payroll (plans only); (3) small: A4-06m retake, Film 2's end-card wording, the Cashiering
+> BUILT (a0439965, for release 23; the owner scans the picture A4-19u with a phone), payment links and payroll
+> (plans only); (3) small: A4-06m retake, Film 2's end-card wording, the Cashiering
 > "last shift closed" date beside an older business date (a screen question for the owner).
 
 > **12 November: RELEASE 22, READY FOR THE OWNER.** `release/r22` = **19e02bd4** (copy `.claude/worktrees/release-r22`,

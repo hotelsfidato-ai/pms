@@ -50,6 +50,30 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-13 · The UPI QR code on the bill (D27-396 wave 4)
+
+**Asked for:** "build all" (D27-396): wave 4's UPI QR on the bill; payment links and payroll stay plans (they cost money).
+
+**Shipped**
+- A UPI QR (NPCI `upi://pay` deep link, the balance due, the hotel's own UPI ID) on the proforma bill with a balance,
+  a tax invoice that still owes, and an open restaurant bill (80 mm slip). Never with nothing due, no UPI ID, settled,
+  void, NC, credit note, a test hotel or a Settings sample. Nothing charged, sent or recorded by the system.
+  `src/modules/finance/flows/UpiQr.tsx`, `BillPrint.tsx`, `pages/Invoice.tsx`, `pos/components/BillSlip.tsx`.
+- Migration 275 `app.hotel_upi(hotel)`: the UPI ID and payee name only, to the hotel's own staff; never the account
+  number. Decisions under D27-396 in `src/modules/finance/CHANGELOG.md`.
+- The book: A4.9 (Figure A4-19u), A5.3, A8.6 (Figure A8-14u), A17.8.
+
+**Proved**
+- `scripts/gates.sh upi-qr-13nov`, full, 3013 s, all exit 0: web 245 files / 1,621, API 258 / 3,299, database 275
+  migrations / 2,119 (finance upi qr 5/5), replay, PG16, restore 1, to minute. Both pictures looked at.
+
+**Left open**
+- No phone has scanned the code yet (no decoder on this PC). Not in release 22: it goes in the next release.
+
+**Commits:** `4a773896 … a0439965` (fast-forwarded)
+
+---
+
 ## 2026-11-12/13 · Every video remade, and the book brought up to the screens (D27-396)
 
 **Asked for:** "Yes, restart" (the video remakes, after the 12 November audit), then "carry on".
