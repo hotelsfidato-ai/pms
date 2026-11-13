@@ -702,7 +702,7 @@ end $$;
 -- them; never the account number. A hotel with none set, and anybody who does
 -- not work there, get null.
 do $$
-declare h uuid; other uuid; desk uuid; v jsonb;
+declare h uuid; other uuid; desk uuid; v jsonb; v_other jsonb; v_row boolean; v_none jsonb; v_anon jsonb;
 begin
   h := app.provision_property_unchecked('UPQ', 'UPI QR Test', 'Nowhere');
   other := app.provision_property_unchecked('UPX', 'UPI QR Other', 'Nowhere');
@@ -714,19 +714,24 @@ begin
   values (h, 'Fidato Hotels Pvt Ltd', '123456789012', 'Some Bank', 'SBIN0001234', 'fidato.upq@okaxis'),
          (other, 'Other Hotel', '123456789012', 'Some Bank', 'SBIN0001234', 'other@okaxis');
 
+  -- Read as the app in the desk's session; asserted after, as the suite's owner
+  -- (pms_app may not write test.results).
   perform set_config('app.user_id', desk::text, true);
   set local role pms_app;
   v := app.hotel_upi(h);
-  perform test.ok('finance upi qr', 'the desk reads its own hotel''s UPI ID and payee, and nothing else',
-    v = '{"id": "fidato.upq@okaxis", "payee": "Fidato Hotels Pvt Ltd"}'::jsonb, coalesce(v::text, 'null'));
-  perform test.ok('finance upi qr', 'but not another hotel''s', app.hotel_upi(other) is null);
-  perform test.ok('finance upi qr', 'and still cannot read the bank row itself',
-    not exists (select 1 from hotel_bank_details where hotel_id = h));
+  v_other := app.hotel_upi(other);
+  v_row := exists (select 1 from hotel_bank_details where hotel_id = h);
   reset role;
   update hotel_bank_details set upi_id = null where hotel_id = h;
   set local role pms_app;
-  perform test.ok('finance upi qr', 'no UPI ID set: null', app.hotel_upi(h) is null);
-  reset role;
+  v_none := app.hotel_upi(h);
   perform set_config('app.user_id', '', true);
-  perform test.ok('finance upi qr', 'no session (the guest''s page): null', app.hotel_upi(other) is null);
+  v_anon := app.hotel_upi(other);
+  reset role;
+  perform test.ok('finance upi qr', 'the desk reads its own hotel''s UPI ID and payee, and nothing else',
+    v = '{"id": "fidato.upq@okaxis", "payee": "Fidato Hotels Pvt Ltd"}'::jsonb, coalesce(v::text, 'null'));
+  perform test.ok('finance upi qr', 'but not another hotel''s', v_other is null, coalesce(v_other::text, 'null'));
+  perform test.ok('finance upi qr', 'and still cannot read the bank row itself', not v_row);
+  perform test.ok('finance upi qr', 'no UPI ID set: null', v_none is null, coalesce(v_none::text, 'null'));
+  perform test.ok('finance upi qr', 'no session (the guest''s page): null', v_anon is null, coalesce(v_anon::text, 'null'));
 end $$;

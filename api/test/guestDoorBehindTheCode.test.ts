@@ -759,9 +759,10 @@ describe("the guest's bill", () => {
     expect(desks.status).toBe(200);
     const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
     /* `nightsToCome` is the desk's Bill-tab count (FIN-24, 1 October), added
-       by the staff route beside the bill; it is not part of the bill. */
-    const { nightsToCome, tonight: _tonight, ...desksBill } =
-      (await desks.json()) as { nightsToCome?: number; tonight?: unknown };
+       by the staff route beside the bill; it is not part of the bill. So is
+       `upi`, the UPI QR's ID for staff (migration 275): the guest's page has none. */
+    const { nightsToCome, tonight: _tonight, upi: _upi, ...desksBill } =
+      (await desks.json()) as { nightsToCome?: number; tonight?: unknown; upi?: unknown };
     expect(typeof nightsToCome).toBe("number");
     expect(desksBill).toEqual(guestBill);
     expect(guestBill.stay.reference).toBeTruthy();
