@@ -50,6 +50,39 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-12/13 · Every video remade, and the book brought up to the screens (D27-396)
+
+**Asked for:** "Yes, restart" (the video remakes, after the 12 November audit), then "carry on".
+
+**Shipped**
+- Videos, all remade against today's book and copied to `D:\fidato\final videos` (old ones in `.local\old-finals\<chapter> 14 October`):
+  A11 (22 files), A2 (21), A4 (15), A5 (12), A10 (13), A16 (12), A17 (21), Film 1 (12, 21 min), Film 2 (16, 25 min).
+  Commits on `videos` in `C:\videos`: 19f15c01, da4570b2, dddc7a88, cfe1bcf8, 092c207f, 49823dde, c8bf02b4, 34dbac9f, e39d51c5.
+- The films' full recording scripts committed: `docs/manual/shots/film1.mjs` (practice hotel PHP), `film2.mjs`.
+- The book: 87 pictures retaken or new and the text fixed, chapter by chapter (A1, A2, A3, A4, A5, A7, A10, A11, A16,
+  A17): PDF and Excel on the lists, today's menus and dates, Cancel this invoice, Scheduled reports, the Optional step
+  group, Backups; the 8 pictures "to be taken" taken; A7.3 all seven audit blockers, A10.4, A16.5, A4.10, A11.2.
+
+**Found**
+- MEMORY 478: Film 2's helper recorded set-up shots before its own backup (saved by the Film 1 dump; proved).
+- MEMORY 479: the films' shot lists lived uncommitted, one only in another chat's copy.
+- Screen, not changed: Cashiering says "last shift closed 13 Nov" beside business date 11 Oct.
+
+**Proved**
+- Every chapter's contact sheets looked at before its copy. Films 1 and 2 changed the demo: `fidato` restored from
+  each dump by the master; after-checksums equal before on all 195 tables except `pos_kot_stations.seen_at`.
+- `scripts/gates.sh videos-book-13nov`, full, 3096 s, all exit 0: web 243 files / 1,611, API 258 / 3,299, database
+  2,114, replay, PG16, restore 1, to minute.
+
+**Left open**
+- A4-06m (needs a minibar beer and alcohol VAT in the demo). Film 2's end card reads "End of the A day at the hotel
+  series". Release 22 (19e02bd4) still waits for the owner's A1-A8; today's cp6 commits are book and videos only.
+- Wave 4 not built: the UPI QR on the bill; payment links and payroll are plans only.
+
+**Commits:** `3ce5cfeb`, `c81dee52 … 8aa68095` (book, fast-forwarded)
+
+---
+
 ## 2026-11-12 · The small faults of the build-all (D27-396)
 
 **Asked for:** the eight small faults found during the build-all, each the smallest fix that is right.

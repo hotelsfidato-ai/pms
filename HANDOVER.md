@@ -48,6 +48,11 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **13 November: EVERY VIDEO REMADE, THE BOOK UP TO THE SCREENS (cp6 8aa68095 + this note).** A0-A17 and Films 1-2
+> are in `D:\fidato\final videos` (old ones in `.local\old-finals\`). 87 book pictures retaken or new; no picture
+> "to be taken" left. Full gates green (`.local/gates/videos-book-13nov.log`). The demo `fidato` is as before the
+> films (checksums). Release 22 is untouched: today's commits are book and videos only.
+
 > **12 November: RELEASE 22 READY, NOT LIVE (19e02bd4).** Release 21 (e77c41a8) is still what runs. Release 22 is on
 > cp6 and in the copy `.claude/worktrees/release-r22`; nothing pushed, nothing deployed. It holds migrations 267-274
 > (groups, guest care, group-wide, Bring in old data) and the security fixes of the 10 November audit, items 5, 6, 7,
@@ -832,6 +837,10 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **13 November, after the videos:** (1) the owner's release 22, A1-A8 (below); (2) Wave 4: the UPI QR on the bill
+> (build), payment links and payroll (plans only); (3) small: A4-06m retake, Film 2's end-card wording, the Cashiering
+> "last shift closed" date beside an older business date (a screen question for the owner).
 
 > **12 November: RELEASE 22, READY FOR THE OWNER.** `release/r22` = **19e02bd4** (copy `.claude/worktrees/release-r22`,
 > api/node_modules a real install, web node_modules a junction). Website `index-BFhsxh4v.js` (release.mjs ran once).
