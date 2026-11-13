@@ -5,12 +5,10 @@ import { BillPrint, proformaOf } from "./flows/BillPrint";
 import { InvoiceSheet } from "./pages/Invoice";
 import { upiLink, loadUpiQr, type Upi } from "./flows/UpiQr";
 import type { StayBill } from "./data/bill";
-import { BillSlip } from "@/modules/pos/components/BillSlip";
-import type { Order } from "@/modules/pos/data/till";
 
 /* THE UPI QR ON AN UNPAID BILL (D27-396 wave 4): the NPCI link, exact; and
    no QR - and no empty space - with no UPI ID, nothing due, a paid bill, a
-   credit note, a cancelled invoice or a void restaurant bill. */
+   credit note or a cancelled invoice. The restaurant's slip: pos/upiQr.test.tsx. */
 
 const upi: Upi = { id: "fidato.5el@okaxis", payee: "Fidato Hotels & Resorts" };
 
@@ -83,38 +81,6 @@ describe("the tax invoice", () => {
     sheet(invoice({ creditsInvoiceId: "i-1", creditsNumber: "5EL/26-27/0000" }));
     expect(qr()).toBeNull();
     sheet(invoice({ creditedBy: "5EL/26-27/0002" }));
-    expect(qr()).toBeNull();
-  });
-});
-
-describe("the restaurant bill", () => {
-  const order = (over: Partial<Order> = {}) => ({
-    id: "o-1", orderNo: "20261015-7", outlet: "REST", outletName: "Restaurant",
-    hotelName: "5 Elements Akkalkot", hotelCity: "Akkalkot", hotelGstin: null, hotelFssai: null,
-    table: "T2", status: "open", businessDate: "2026-10-15", paymentMethod: null,
-    openedBy: "Owner", waiter: "Ravi", covers: 2, eventTitle: null, vatBill: null,
-    lines: [{ id: "l-1", name: "Paneer Tikka", qty: 1, unitPrice: 300, taxRate: 5, taxScheme: "gst",
-      note: null, voided: false, numberedAddons: null, extra: null }],
-    net: 300, discount: 0, taxable: 300, tax: 15, taxes: [{ scheme: "gst", rate: 5, tax: 15 }],
-    gross: 315, roundOff: 0, payable: 315, upi,
-    ...over,
-  }) as unknown as Order;
-
-  it("open: the QR for the GRAND TOTAL", () => {
-    render(<BillSlip order={order()} heading="bill" />);
-    expect(qr()?.textContent).toContain("₹315.00");
-  });
-
-  it("no UPI ID, paid, void, NC or a sample: no QR", () => {
-    render(<BillSlip order={order({ upi: null })} heading="bill" />);
-    expect(qr()).toBeNull();
-    render(<BillSlip order={order({ status: "settled", paymentMethod: "cash" })} heading="bill" />);
-    expect(qr()).toBeNull();
-    render(<BillSlip order={order({ status: "void", voidReason: "wrong table" })} heading="bill" />);
-    expect(qr()).toBeNull();
-    render(<BillSlip order={order({ status: "no_charge" })} heading="nc" />);
-    expect(qr()).toBeNull();
-    render(<BillSlip order={order()} heading="bill" sample="SAMPLE · NOT VALID" />);
     expect(qr()).toBeNull();
   });
 });
