@@ -22,7 +22,7 @@ const STAY1 = "45342d24-31b9-4b1a-91b8-3ad2fe849503";
 const STAY2 = "762d9f36-a67f-4982-bc30-494c37ea991b";
 const REKHA = "652bdeab-81de-4892-8695-8028e290ff4d";
 /* Lata Bhosale's booking (FH-2608-5005), arriving on the demo's 7 Nov 2026. */
-const LATA = "fc57ef15-ccbb-4635-8271-5cc6c764d2b2";
+const LATA = process.env.A10_LATA ?? "fc57ef15-ccbb-4635-8271-5cc6c764d2b2";   // the demo copy's own id when A10_LATA is set
 
 export const SHOTS = [
   /* ── Guests ───────────────────────────────────────────────────────── */
@@ -32,9 +32,11 @@ export const SHOTS = [
     steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Repeat guests rise to the top", ms: 30000 }, { settle: true }],
     marks: [
       { n: 1, at: "css:a[href='/guests']", side: "right" },
-      { n: 2, at: "css:input[aria-label='Find a guest by name']", side: "left" },
+      { n: 2, at: "css:input[aria-label='Find a guest by name']", side: "top" },
       { n: 3, at: "text:have stays that overlap", side: "top" },
       { n: 4, at: "text:overlapping stays", side: "right" },
+      { n: 5, at: "text:PDF", side: "top" },
+      { n: 6, at: "text:Excel", side: "top" },
     ],
   },
 
@@ -43,12 +45,14 @@ export const SHOTS = [
     id: "A10-04", title: "Companies and agents", as: "Owner",
     path: "/companies", steps: [{ waitFor: "text:Through an agent", ms: 20000 }, { settle: true }],
     marks: [
-      { n: 1, at: "text:Add company", side: "left" },
+      { n: 1, at: "text:Add company", side: "bottom" },
       { n: 2, at: "text:Through an agent", side: "right" },
-      { n: 3, at: "text:Owed to the property", side: "right" },
+      { n: 3, at: "text:Owed to the property", side: "left" },
       { n: 4, at: "text:Booked through a channel, and charged a commission for it.", side: "right" },
       /* D27-382: to be retaken, the first company on the list that has a record. */
       { n: 5, at: "css:button[aria-label^='Edit ']", side: "left" },
+      { n: 6, at: "text:PDF", side: "top" },
+      { n: 7, at: "text:Excel", side: "top" },
     ],
   },
   {
