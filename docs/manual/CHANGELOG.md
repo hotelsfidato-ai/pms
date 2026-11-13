@@ -10,3 +10,4 @@ One line per chapter and picture set, in the order they were committed; the deci
 - 13 Nov, A7 (D27-396): A7.3 lists the seven things that can stop the audit (a day not begun, the hour, due out, the front desk drawer, each outlet's till, the bar's closing count, no GST rule), taken from the server's own sentences.
 - 13 Nov, A10 (D27-396): A10-01 and A10-04 retaken with PDF and Excel; A10-33 retaken on the demo (Lata Bhosale's preferences on room 204, Ganesh Patil still in it); A10.4 says which rows have Edit.
 - 13 Nov, A11 (D27-396): A11-04 shows Email; A11-12, 13, 15, 16 show Print, PDF, Excel and CSV (A11.2 said Print and CSV only).
+- 13 Nov, A16 (D27-396): A16-21 new (PDF and Excel on Properties), A16-10 with PDF and Excel on People, A16-07 with the Cancel a night audit card, A16-17 taken for Practice Hotel Pune (PHP), the practice hotel of the films; A16.5 says who has the card.

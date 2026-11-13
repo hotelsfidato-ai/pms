@@ -89,15 +89,25 @@ export const SHOTS = [
     ],
   },
   {
+    /* D27-396 (13 Nov): PDF and Excel on Properties, at the top of the page, above the cards. */
+    id: "A16-21", title: "Properties: Add a property, PDF and Excel", as: "Owner",
+    path: "/properties", steps: [{ waitFor: "text:Add a property", ms: 15000 }, { waitFor: "text:GST on rooms", ms: 20000 }, { wait: 1000 },
+      { eval: "document.querySelector('main')?.scrollTo(0, 0); window.scrollTo(0, 0)" }, { wait: 400 }],
+    marks: [
+      { n: 1, at: "text:PDF", side: "bottom" },
+      { n: 2, at: "text:Excel", side: "bottom" },
+    ],
+  },
+  {
     /* D27-342, D27-379: the owner's full reset, opened and left unsaved. Only the account the server's
        RESET_OWNER_EMAIL names sees the button: taken with the local API started with it set to the demo
        owner (owner@fidato.in) and a reset login of its own; nothing is typed, nothing cleared. */
     id: "A16-17", title: "Clear this hotel and start today: what goes, what stays, the code to type", as: "Owner",
     path: "/properties", steps: [{ waitFor: "text:Clear this hotel and start today", ms: 20000 }, { wait: 800 },
-      { eval: `document.querySelector("[data-owner-reset=PHN] button").click()` },
-      { waitFor: "text:Clear Practice Hotel Nashik and start today", ms: 15000 }, { wait: 500 }],
+      { eval: `document.querySelector("[data-owner-reset=PHP] button").click()` },
+      { waitFor: "text:Clear Practice Hotel Pune and start today", ms: 15000 }, { wait: 500 }],
     marks: [
-      { n: 1, at: "text:Clear Practice Hotel Nashik and start today", side: "left" },
+      { n: 1, at: "text:Clear Practice Hotel Pune and start today", side: "left" },
       { n: 2, at: "text:Deleted:", side: "left" },
       { n: 3, at: "text:Kept:", side: "left" },
       { n: 4, at: "css:[role=dialog] input", side: "left" },
@@ -139,7 +149,7 @@ export const SHOTS = [
 
   /* ── One property and its team ───────────────────────────────────── */
   {
-    id: "A16-07", title: "One property: its figures and who works there", as: "Owner",
+    id: "A16-07", title: "One property: its figures and who works there", as: "Owner", size: "tall",
     path: "/properties/5EL", steps: [{ waitFor: "text:Who works here", ms: 15000 }, { eval: `new Promise((done) => {
       const ok = () => [...document.querySelectorAll("p")].find((p) => p.innerText.trim() === "Rooms sold today")
         ?.nextElementSibling?.innerText.trim() !== "-";
@@ -151,10 +161,12 @@ export const SHOTS = [
       { n: 2, at: "text:Rooms sold today", side: "left" },
       { n: 3, at: "text:Room revenue, month to date", side: "left" },
       { n: 4, at: "text:FSSAI licence number", side: "left" },
-      { n: 5, at: "text:Who works here", side: "right" },
-      { n: 6, at: "label:Agra Clerk starts on", side: "bottom" },
-      { n: 7, at: "text:Set a password for Agra Clerk", side: "bottom" },
-      { n: 8, at: "text:Remove", side: "bottom" },
+      /* D27-396: the Cancel a night audit card (the owner and an Admin) sits between the FSSAI card and the team. */
+      { n: 5, at: "text:Cancel a night audit", side: "left" },
+      { n: 6, at: "text:Who works here", side: "right" },
+      { n: 7, at: "label:Agra Clerk starts on", side: "bottom" },
+      { n: 8, at: "text:Set a password for Agra Clerk", side: "bottom" },
+      { n: 9, at: "text:Remove", side: "bottom" },
     ],
   },
   {
@@ -186,10 +198,12 @@ export const SHOTS = [
     id: "A16-10", title: "People: the top, and somebody who can see nothing", as: "Owner",
     path: "/people", steps: [PEOPLE, { wait: 1500 }, BLUR],
     marks: [
-      { n: 1, at: "text:Add somebody", side: "left" },
+      { n: 1, at: "text:Add somebody", side: "top" },
       { n: 2, at: "text:can sign in and see nothing", side: "bottom" },
       { n: 3, at: "text:Password", side: "bottom" },
       { n: 4, at: "text:Edit", side: "bottom" },
+      { n: 5, at: "text:PDF", side: "top" },
+      { n: 6, at: "text:Excel", side: "top" },
     ],
   },
   {
