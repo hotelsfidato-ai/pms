@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
@@ -19,6 +19,7 @@ import { placeAfter } from "@/modules/finance/place";
 import { SendInvoice } from "@/modules/guest-messaging";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
+import { UpiQr, loadUpiQr } from "@/modules/finance/flows/UpiQr";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED TAX INVOICE
@@ -265,6 +266,8 @@ export function useInvoicePrinter(hotelId: string) {
   const group = useGroupSettings(hotelId);
   const test = useIsTestHotel(hotelId);
   const copies = useInvoiceCopies(hotelId);
+  /* The UPI QR draws only once `qrcode` is here, and this prints at once. */
+  useEffect(() => { void loadUpiQr(); }, []);
 
   const print = (list: InvoiceDetail[]) => {
     if (list.length === 0) return;
@@ -296,6 +299,8 @@ export interface Proforma {
   vat: { rate: number; taxable: number; vat: number }[];
   /** Under the total: paid, anything still to be posted, the balance due. */
   after: Array<[ReactNode, string]>;
+  /** The balance due, as `after` prints it: the UPI QR's amount. */
+  due: number;
 }
 
 export function InvoiceSheet({ data, hotelId, test, group, copy, proforma }: {
@@ -333,6 +338,10 @@ export function InvoiceSheet({ data, hotelId, test, group, copy, proforma }: {
   /* Money received on this bill: not on a credit note, which pays nothing. */
   const payments = isCreditNote ? [] : data.payments ?? [];
   const received = Math.round(payments.reduce((n, p) => n + p.amount, 0) * 100) / 100;
+  /* THE UPI QR (D27-396): the balance due, as printed below; never on a credit
+     note, a cancelled invoice or a test hotel's (NOT VALID) paper. */
+  const owed = proforma ? proforma.due
+    : isCreditNote || data.creditedBy ? 0 : Math.round((data.total - received) * 100) / 100;
   const hasFood = data.lines.some((l) => FOOD.includes(l.category));
   /* The group's office at the foot (D27-215, the voucher's), where typed. */
   const office = group.office;
@@ -623,6 +632,7 @@ export function InvoiceSheet({ data, hotelId, test, group, copy, proforma }: {
               ["Balance", moneyPrecise(Math.round((data.total - received) * 100) / 100 || 0)],
             ]}
           />
+          {!test && <UpiQr upi={data.upi} amount={owed} note={`${proforma ? "Stay" : "Invoice"} ${data.number}`} />}
         </div>
       </section>
 

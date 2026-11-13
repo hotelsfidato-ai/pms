@@ -1,5 +1,6 @@
 import { api, ApiError } from "@/lib/api";
 import type { InvoiceDetail } from "./billing";
+import type { Upi } from "../flows/UpiQr";
 
 /* THE BILL AS IT STANDS (D21-10) — what the desk prints and the guest's page
    shows. ONE definition, on the server: `app.stay_bill` (migration 123). This
@@ -71,6 +72,8 @@ export interface StayBill {
       audit's own rule on the server (FIN-24, 1 October): not a night on the
       group's master, not a night somebody reversed. The desk's bill only. */
   nightsToCome?: number;
+  /** The hotel's UPI ID and payee for the QR on the desk's proforma (migration 275); null: none. */
+  upi?: Upi | null;
 }
 
 /** The stay's bill, or null for a stay this person may not see. */

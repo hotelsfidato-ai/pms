@@ -320,9 +320,11 @@ folios.get("/:code/stays/:id/bill", async (c) => {
        invoice shows it, the payments, the hotel's e-mail, website, PAN and
        FSSAI number, and each line's HSN/SAC. The guest's own page reads the
        same function through its door (D27-365 (5)). */
-    const { rows } = await client.query<{ bill: Record<string, unknown> | null; staying: boolean }>(
+    const { rows } = await client.query<{ bill: Record<string, unknown> | null; staying: boolean; upi: unknown }>(
       `select app.stay_proforma(r.id) as bill,
-              r.check_out > app.business_date(r.hotel_id) as staying
+              r.check_out > app.business_date(r.hotel_id) as staying,
+              -- The UPI QR on the desk's proforma (migration 275); null: none.
+              app.hotel_upi(r.hotel_id) as upi
          from reservations r
         where r.hotel_id = $1 and r.id = $2`,
       [hotelId, stayId],
@@ -331,7 +333,7 @@ folios.get("/:code/stays/:id/bill", async (c) => {
     if (!found) return null;
     /* The nights still to come on this bill, by the run's own rule - the Bill
        tab's box and its Due count nothing themselves (FIN-24, 1 October). */
-    const bill = { ...found, nightsToCome: await nightsToCome(client, hotelId, stayId) };
+    const bill = { ...found, nightsToCome: await nightsToCome(client, hotelId, stayId), upi: rows[0]!.upi };
     if (!rows[0]!.staying) return bill;
     const [night] = await roomNightsDue(client, hotelId, await businessDateFor(client, hotelId), stayId);
     if (!night || night.comp || night.gst === null) return bill;

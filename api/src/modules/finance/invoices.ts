@@ -484,7 +484,9 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
             h.phone as hotel_phone, h.email::text as hotel_email, h.website as hotel_website,
             h.pan as hotel_pan,
             i.fssai_number,
-            s.full_name as issued_by
+            s.full_name as issued_by,
+            -- The UPI QR while the invoice is owed (migration 275); null: none.
+            app.hotel_upi(i.hotel_id) as upi
        from invoices i
        join hotels h on h.id = i.hotel_id
        left join staff s on s.id = i.issued_by
@@ -602,6 +604,7 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
     /* A group's master bill's invoice: the screen offers no Send invoice,
        which reads a stay's bills only (D27-307 (4)). */
     masterBill: (i["master_bill"] as unknown) === true,
+    upi: i["upi"] as unknown as { id: string; payee: string } | null,
   };
 }
 

@@ -9,6 +9,8 @@ export { TaxRulesCard } from "./flows/TaxRulesCard";
    (app.stay_bill), one printed layout — the desk's and the guest's page's. */
 export { getStayBill, type StayBill, type StayBillLine } from "./data/bill";
 export { BillPrint } from "./flows/BillPrint";
+/* D27-396: the UPI QR on an unpaid bill - the restaurant's slip draws it too. */
+export { UpiQr, loadUpiQr, upiLink, type Upi } from "./flows/UpiQr";
 /* D27-348: Settings › Documents draws a sample tax invoice and proforma bill. */
 export { proformaOf } from "./flows/BillPrint";
 export { InvoiceSheet, useInvoiceCopies } from "./pages/Invoice";

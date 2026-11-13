@@ -313,6 +313,8 @@ export interface Order {
   tipMethod?: "cash" | "card" | "upi" | null;
   /** The coupon's code, when the discount came from one (261). */
   couponCode?: string | null;
+  /** The hotel's UPI ID and payee for the QR on an open bill (migration 275); null: none. */
+  upi?: { id: string; payee: string } | null;
   /** What was sent to the GM about this bill, and the answer (D27-363). */
   requests?: PosRequest[];
   /** Its payment mode changed before the night audit (D27-363). */

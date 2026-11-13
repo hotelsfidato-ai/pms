@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/lib/api";
+import type { Upi } from "../flows/UpiQr";
 import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -222,6 +223,8 @@ export interface InvoiceDetail {
   vatBill?: string | null;
   /** A group's master bill's invoice, which nothing sends (D27-307 (4)). */
   masterBill?: boolean;
+  /** The hotel's UPI ID and payee for the QR while it is owed (migration 275); null: none. */
+  upi?: Upi | null;
 }
 
 /* ── VAT bills for alcohol (D22-44) ─────────────────────────────────

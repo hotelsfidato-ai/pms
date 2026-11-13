@@ -64,10 +64,12 @@ export function proformaOf(bill: StayBill): { data: InvoiceDetail; proforma: Pro
       creditsInvoiceId: null, creditsNumber: null, reason: null, creditedBy: null, vatBill: null,
       stay: bill.details ?? null,
       payments: bill.payments ?? [],
+      upi: bill.upi ?? null,
     },
     proforma: {
       when: `${dateShort(stay.checkIn)} – ${dateShort(stay.checkOut)}${stay.room ? ` · room ${stay.room}` : ""}`,
       vat: bill.vat ?? [],
+      due,
       after: [
         ["Paid", moneyPrecise(bill.paid)],
         ...(tonight ? [[

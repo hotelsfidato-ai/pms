@@ -5,6 +5,7 @@ import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { BILL_TITLE, allowanceWords, type BillHeading, type Order } from "@/modules/pos/data/till";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
+import { UpiQr } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BILL ON PAPER — what the guest is handed
@@ -146,6 +147,10 @@ export function BillSlip({ order: o, heading, sample }: {
           <dt>GRAND TOTAL</dt><dd>{moneyPrecise(o.payable)}</dd>
         </div>
       </dl>}
+
+      {/* THE UPI QR (D27-396): an open bill only, for its GRAND TOTAL; never a
+          paid, void or NC bill, nor a test or sample one. */}
+      {o.status === "open" && !test && <UpiQr upi={o.upi} amount={o.payable} note={`Bill ${o.orderNo}`} />}
 
       <div className="mt-2 text-xs">
         {/* D27-324: a paid bill voided by the owner, an administrator or the

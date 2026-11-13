@@ -1769,6 +1769,7 @@ export async function readOrder(client: Client, orderId: string) {
     service_charge_pct: string | null; service_charge: string; offered_pct: string | null;
     tip: string | null; tip_method: string | null;
     promotion_code: string | null; is_coupon: boolean | null;
+    upi: { id: string; payee: string } | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -1815,7 +1816,10 @@ export async function readOrder(client: Client, orderId: string) {
                taken with the payment (260); the coupon's code (261). */
             o.service_charge_pct::text, app.pos_order_service_charge(o.id)::text as service_charge,
             ou.service_charge_pct::text as offered_pct,
-            o.tip::text, o.tip_method, pr.code as promotion_code, pr.is_coupon
+            o.tip::text, o.tip_method, pr.code as promotion_code, pr.is_coupon,
+            /* The UPI QR on an open bill (migration 275): the hotel's UPI ID
+               and payee, to its own staff; null with none set. */
+            app.hotel_upi(o.hotel_id) as upi
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -1958,6 +1962,8 @@ export async function readOrder(client: Client, orderId: string) {
     tipMethod: h.tip_method,
     /* The coupon's code when the discount came from one (261). */
     couponCode: h.is_coupon ? h.promotion_code : null,
+    /* The UPI QR on an open bill (migration 275); null: no QR. */
+    upi: h.upi,
     /* What was sent to the GM about it, and the answer (D27-363). */
     requests: (await client.query<{ id: string; kind: string; line_id: string | null; summary: string; status: string;
       decision_note: string | null; by: string | null }>(

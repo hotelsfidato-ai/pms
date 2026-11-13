@@ -696,3 +696,37 @@ begin
     format($q$insert into pos_cash_movements (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by, category)
               values (%L,%L,current_date,'due_collection',80,'room 101',%L,'Other')$q$, h, o, s), '23514');
 end $$;
+
+-- THE UPI QR ON THE BILL (migration 275, D27-396 wave 4): the clerk printing an
+-- unpaid bill reads the hotel's UPI ID and payee, which the bank row hides from
+-- them; never the account number. A hotel with none set, and anybody who does
+-- not work there, get null.
+do $$
+declare h uuid; other uuid; desk uuid; v jsonb;
+begin
+  h := app.provision_property_unchecked('UPQ', 'UPI QR Test', 'Nowhere');
+  other := app.provision_property_unchecked('UPX', 'UPI QR Other', 'Nowhere');
+  insert into staff (email, full_name) values ('upq-desk@fidato.in', 'UPI QR Desk')
+  on conflict (email) do update set is_active = true returning id into desk;
+  delete from staff_hotels where staff_id = desk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (desk, h, 'front_desk');
+  insert into hotel_bank_details (hotel_id, account_name, account_number, bank_name, ifsc, upi_id)
+  values (h, 'Fidato Hotels Pvt Ltd', '123456789012', 'Some Bank', 'SBIN0001234', 'fidato.upq@okaxis'),
+         (other, 'Other Hotel', '123456789012', 'Some Bank', 'SBIN0001234', 'other@okaxis');
+
+  perform set_config('app.user_id', desk::text, true);
+  set local role pms_app;
+  v := app.hotel_upi(h);
+  perform test.ok('finance upi qr', 'the desk reads its own hotel''s UPI ID and payee, and nothing else',
+    v = '{"id": "fidato.upq@okaxis", "payee": "Fidato Hotels Pvt Ltd"}'::jsonb, coalesce(v::text, 'null'));
+  perform test.ok('finance upi qr', 'but not another hotel''s', app.hotel_upi(other) is null);
+  perform test.ok('finance upi qr', 'and still cannot read the bank row itself',
+    not exists (select 1 from hotel_bank_details where hotel_id = h));
+  reset role;
+  update hotel_bank_details set upi_id = null where hotel_id = h;
+  set local role pms_app;
+  perform test.ok('finance upi qr', 'no UPI ID set: null', app.hotel_upi(h) is null);
+  reset role;
+  perform set_config('app.user_id', '', true);
+  perform test.ok('finance upi qr', 'no session (the guest''s page): null', app.hotel_upi(other) is null);
+end $$;
