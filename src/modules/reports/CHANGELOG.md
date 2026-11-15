@@ -38,7 +38,9 @@ paneer were listed among the bar's dishes. It now reads the bar counter's and st
 **Proved:** `api/test/modules/reports/ncAndItemSales.test.ts` (6): a waiter's asked NC with the GM's comment, a GM's
 own NC with none, Item sales up by exactly the paid Paneer Tikka and not the NC ones, a category's total equal to the
 Manager report's for the day, a waiter refused both (screen and file). `src/modules/reports/voids.test.tsx` (+3): the
-same readers as Voids, both in All reports. All three seen on the local demo (5EL, 1-11 Oct).
+same readers as Voids, both in All reports. All three seen on the local demo (5EL, 1-11 Oct). `api/test/modules/stores/barStock.test.ts` (+1): over a range,
+From and To, the range's figures, the day-by-day list; the day before holds none of it; one day has none.
+emailReports and reportFiles (28) still green.
 
 ---
 
