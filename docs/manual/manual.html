@@ -8052,15 +8052,15 @@ figure.shot.phone img { max-width: 72mm; }
   </ul>
 
   <h3>Which day a report is for</h3>
-  <p>Except Voids, NC bills and Item sales, which have a From and a To, and Bar stock, which has a Day, the reports have no date to choose. Each is for the hotel's <b>business date</b> (A1.1), or that date's month or year:</p>
+  <p>Except Voids, NC bills, Item sales and Bar stock, which have a From and a To, the reports have no date to choose. Each is for the hotel's <b>business date</b> (A1.1), or that date's month or year:</p>
   <table>
     <thead><tr><th style="width:40%">Covers</th><th>Reports</th></tr></thead>
     <tbody>
-      <tr><td>The business date</td><td>Manager report (with the month and the year so far), Night audit report, City ledger, No show, Cashier shift, Closing stock, Dead stock, Days of cover, Equipment report; Bar stock, until you choose another <span class="ui">Day</span></td></tr>
+      <tr><td>The business date</td><td>Manager report (with the month and the year so far), Night audit report, City ledger, No show, Cashier shift, Closing stock, Dead stock, Days of cover, Equipment report; Bar stock, until you choose other days</td></tr>
       <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend, Supplier dues (owed on the business date; paid in the month so far)</td></tr>
       <tr><td>The whole month</td><td>Monthly occupancy, Monthly statistics, Lodging tax</td></tr>
       <tr><td>The calendar year, January to December</td><td>Yearly statistics</td></tr>
-      <tr><td>Any days you choose</td><td>Voids, NC bills and Item sales (A11.4), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
+      <tr><td>Any days you choose</td><td>Voids, NC bills and Item sales (A11.4), Bar stock (A11.9), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
     </tbody>
   </table>
 
@@ -8272,7 +8272,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The NC bills over any days with the approval comment, the sale of each item, and Bar stock for any day: the owner, 16 November 2026.</p>
+    <p>The NC bills over any days with the approval comment, the sale of each item, and Bar stock over any days: the owner, 16 November 2026.</p>
   </div>
 
   <!-- A11.5 -->
@@ -8802,12 +8802,18 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <figure class="shot" id="fig-A11-23">
-    <img src="img/A11-23.png" alt="Bar stock for 11 Oct 2026, with the Day box at the top: the Bar counter's drinks with opening, from the store, sold, other moves, count corrections, closing, counted and the morning difference, in full bottles and ml; the Bar store's with purchased and to the counter; and the counter's asks of the store, decided">
+    <img src="img/A11-23.png" alt="Bar stock for 11 Oct 2026, with From and To at the top: the Bar counter's drinks with opening, from the store, sold, other moves, count corrections, closing, counted and the morning difference, in full bottles and ml; the Bar store's with purchased and to the counter; and the counter's asks of the store, decided">
     <figcaption><b>Figure A11-23.</b> Bar stock.</figcaption>
     <ol class="callouts"><li>A drink at the counter: opening, from the store, sold, closing</li><li>The store: purchased, and sent to the counter</li><li>The counter's asks of the store, and who decided</li></ol>
   </figure>
   <p>Below them: each dish sold and what it took, dishes sold with nothing set up, drinks struck after the bar had them, and the day's bar bills.</p>
-  <p>Bar stock opens on the business date. To see another day's, choose it in <span class="ui">Day</span> at the top: the whole report, and its PDF and Excel, are then of that day.</p>
+  <p>Bar stock opens on the business date alone, as above. To see other days, change <span class="ui">From</span> and <span class="ui">To</span> at the top: one day, or several. The PDF, Excel and an email are then of those days.</p>
+  <ul>
+    <li><b>Over several days</b>, Opening is what the bar held before the first day and Closing what it held at the end of the last; From the store, Purchased, Sold, Other moves and Count corrections add up every day between. <b>Counted</b> and <b>Morning difference</b> are the last day's counts.</li>
+    <li>A list <span class="ui">Sold at the counter, day by day</span> follows, with each day's drinks and how much of each was sold. It is not there for a single day, as the counter's own rows already say it.</li>
+    <li>The asks of the store, the dishes sold, the struck drinks and the bar bills are those of all the days chosen.</li>
+    <li>The bar stock email after the night audit is still the one day. A scheduled Bar stock (A11.2) can now be for last week or the month so far.</li>
+  </ul>
 
   <figure class="shot" id="fig-A11-24">
     <img src="img/A11-24.png" alt="FORM F.L.R.-1A / 2A / 3A for 11 Oct 2026: Whisky with A9 Imperial Blue and Beer (fermented, strong) with A9 Kingfisher Strong, the T.P. numbers, and Opening Balance, Receipts, Sales and Closing Balance with a column for each bottle size">

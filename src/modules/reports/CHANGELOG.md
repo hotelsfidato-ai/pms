@@ -11,7 +11,7 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-11-16 · NC bills, Item sales, and Bar stock for any day (the owner, 16 November)
+## 2026-11-16 · NC bills, Item sales, and Bar stock over any days (the owner, 16 November)
 
 **Asked for:** "Date wise NC order list, approval comment. Also date wise bar stock report. Also itemised sale report:
 currently we are getting sale as per category; we need the sale of each item sold."
@@ -23,13 +23,17 @@ currently we are getting sale as per category; we need the sale of each item sol
 - **Item sales** (`builders/itemSales.ts`, `/reports/item-sales`): each item sold over From-To, by outlet and menu
   category - a variation is its own line, "Paneer Tikka (Half)" - with quantity and amount. Paid bills only, price x
   quantity before discount and GST: exactly what the Manager report's "Category -" lines add, so they agree.
-- **Bar stock** has a **Day** box (`pages/Store.tsx`): any day's report, not only the business date's. The builder
-  already took any date; only the screen was fixed to today.
+- **Bar stock over From-To** (`builders/barStock.ts`, span `window`; the owner, asked again the same day: "make bar
+  stock a date range report"). Opening is before From, the moves are the range's, Closing is at To; Counted and Morning
+  difference are To's; the asks, dishes, struck drinks and bills are the range's; a range adds "Sold at the counter, day
+  by day". From = To is the one-day report exactly as before - the screen opens on the business date, the night audit's
+  email stays the one day (`p.from ?? p.asOn`, as City ledger), and a scheduled Bar stock may now be last week or the
+  month so far. A From after To reads as To alone.
 - Both new reports: the Voids report's rule (roleGate `REPORTS`; the file route's default downloaders); in All reports
   and Find a screen; `pages/Voids.tsx` is now the shared From-To page for the three. No migration.
 
-**Decided under D27-396 (the recommendation):** "date wise" for Bar stock read as choosing the day; a From-To bar
-report over several days was not built - say so if that is what was meant.
+**Found:** Bar stock's "Sold, by dish" read every stock movement made by a sent line, so a kitchen dish's butter and
+paneer were listed among the bar's dishes. It now reads the bar counter's and store's only.
 
 **Proved:** `api/test/modules/reports/ncAndItemSales.test.ts` (6): a waiter's asked NC with the GM's comment, a GM's
 own NC with none, Item sales up by exactly the paid Paneer Tikka and not the NC ones, a category's total equal to the

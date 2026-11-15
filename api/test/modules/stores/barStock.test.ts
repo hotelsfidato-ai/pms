@@ -268,6 +268,30 @@ describe("bar stock (D27-354)", () => {
     expect(line("bar-bills", `${TAG} Wines`)).toMatchObject({ bill: "S-1", drinks: 3 });
   });
 
+  it("over a range of days (16 November): From and To, the range's moves, and each drink sold day by day", async () => {
+    const d = new Date(`${businessDate}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    const before = d.toISOString().slice(0, 10);
+    const read = async (from: string, asOn: string) => {
+      const res = await call(gm, "GET", `/reports/bar-stock?from=${from}&asOn=${asOn}`);
+      expect(res.status, await res.clone().text()).toBe(200);
+      return (await res.json()) as ReportDoc;
+    };
+    const range = await read(before, businessDate);
+    expect(range.facts.map((f) => f.label)).toEqual(["From", "To"]);
+    const rows = (doc: ReportDoc, key: string) => doc.sections.find((s) => s.key === key)?.rows ?? [];
+    const blue = rows(range, "bar-counter").find((r) => r.cells["drink"] === `${TAG} Blue 750 ml`)!.cells;
+    expect(blue).toMatchObject({ opening: "0", received: "3", sold: "120 ml", closing: "2 + 630 ml" });
+    const byDay = rows(range, "bar-by-day");
+    const day = businessDate.split("-").reverse().join("/");
+    const at = byDay.findIndex((r) => r.kind === "band" && r.cells["drink"] === day);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(byDay.slice(at + 1).find((r) => r.cells["drink"] === `${TAG} Blue 750 ml`)?.cells["sold"]).toBe("120 ml");
+    /* The day before held none of it, and the one-day report has no day-by-day list. */
+    expect(rows(await read(before, before), "bar-counter").some((r) => r.cells["drink"] === `${TAG} Blue 750 ml`)).toBe(false);
+    expect(rows(await read(businessDate, businessDate), "bar-by-day")).toEqual([]);
+  });
+
   it("the counter's sheet: grouped by section, the sells split by size, the rate and what was billed - not for a waiter", async () => {
     expect((await call(waiter, "GET", "/bar/sheet")).status).toBe(403);
     const res = await call(barman, "GET", "/bar/sheet");

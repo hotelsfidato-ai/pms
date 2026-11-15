@@ -61,7 +61,8 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "supplier-spend": (c, h, p) => supplierSpend(c, h, from(p), p.asOn),
   equipment: (c, h, p) => equipmentReport(c, h, p.asOn),
   /* The bar's day: opened, bought, sold, counted (D27-354). */
-  "bar-stock": (c, h, p) => barStockReport(c, h, p.asOn),
+  /* Over any days since 16 November; one day unless a From is given. */
+  "bar-stock": (c, h, p) => barStockReport(c, h, p.from ?? p.asOn, p.asOn),
   /* The restaurant's voids over a window of days (D27-370). */
   voids: (c, h, p) => voidsReport(c, h, from(p), p.asOn),
   /* The restaurant's NC bills and each item sold over a window (16 November). */
@@ -113,7 +114,7 @@ export const ABOUT: Readonly<Record<ReportKey, { title: string; span: Span; pick
   "stock-cover": { title: "Days of cover", span: "day" },
   "supplier-spend": { title: "Supplier spend", span: "window" },
   equipment: { title: "Equipment report", span: "day" },
-  "bar-stock": { title: "Bar stock", span: "day" },
+  "bar-stock": { title: "Bar stock", span: "window" },
   voids: { title: "Voids", span: "window" },
   "nc-bills": { title: "NC bills", span: "window" },
   "item-sales": { title: "Item sales", span: "window" },
@@ -136,7 +137,7 @@ export function periodOf(key: ReportKey, p: ReportParams): { from: string; to: s
   const span = ABOUT[key].span;
   if (span === "month") return { from: `${month(p)}-01`, to: monthEnd(`${month(p)}-01`) };
   if (span === "year") return { from: `${year(p)}-01-01`, to: `${year(p)}-12-31` };
-  if (span === "window") return { from: key === "city-ledger" ? p.from ?? p.asOn : from(p), to: p.asOn };
+  if (span === "window") return { from: key === "city-ledger" || key === "bar-stock" ? p.from ?? p.asOn : from(p), to: p.asOn };
   return { from: p.asOn, to: p.asOn };
 }
 

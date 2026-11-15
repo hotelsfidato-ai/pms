@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { dateShort } from "@/lib/format";
-import { Input } from "@/components/ui";
+import { WindowReport } from "@/modules/reports/pages/Voids";
 import { DocumentReport } from "@/modules/reports/components/DocumentReport";
 import { monthOf } from "@/modules/reports/data/statistics";
 import type { ReportKey } from "@/modules/reports/data/document";
@@ -39,22 +38,11 @@ export const StockCoverPage = asOn("stock-cover", "Days of cover", "the days of 
 export const SupplierSpendPage = over("supplier-spend", "Supplier spend", "the supplier spend");
 export const EquipmentReportPage = asOn("equipment", "Equipment report", "the equipment report");
 /* The bar's day: opened, bought, sold, counted (D27-354). */
-/* Any day's, not only today's (the owner, 16 November: "date wise bar stock
-   report"): the business date unless another is picked. */
-export function BarStockPage() {
-  const [day, setDay] = useState(BUSINESS_DATE);
-  const on = day || BUSINESS_DATE;
-  return (
-    <DocumentReport report="bar-stock" title="Bar stock" what="the bar stock report"
-      period={dateShort(on)} query={{ asOn: on }}
-      controls={
-        <label className="text-sm text-grey-600 flex flex-col gap-1">
-          Day
-          <Input type="date" value={day} max={BUSINESS_DATE} onChange={(e) => setDay(e.target.value)} />
-        </label>
-      } />
-  );
-}
+/* Over any days (the owner, 16 November: "date wise bar stock report"): it
+   opens on the business date alone, as before; widen From and To for more. */
+export const BarStockPage = () => (
+  <WindowReport report="bar-stock" title="Bar stock" what="the bar stock report" start={BUSINESS_DATE} />
+);
 
 /* The excise registers (D27-361): FLR-1A/2A/3A for the business day, FLR-3
    for its month. An earlier day's or month's: Bar stock, Today's sheet, its day. */

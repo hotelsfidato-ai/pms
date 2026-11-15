@@ -1,5 +1,5 @@
 import type { Client } from "../../../db.ts";
-import { col, row, total, round2, type ReportDoc, type ReportSection } from "../document.ts";
+import { col, row, total, band, round2, reportDate, type ReportDoc, type ReportSection } from "../document.ts";
 import { heading, type Property } from "../figures.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -15,6 +15,12 @@ import { heading, type Property } from "../figures.ts";
    the bar dishes sold that nothing is set up for, the drinks struck after
    the bar had them, and the day's bar bills. Emailed after the night
    audit when switched on (reportEmails.ts).
+
+   OVER A RANGE OF DAYS (the owner, 16 November): From-To instead of one
+   day. Opening is before the first day, the moves are the range's, closing
+   is at the end of the last; Counted and Morning difference are the last
+   day's; each drink sold is listed day by day. From = To is the one day,
+   exactly as before.
    ══════════════════════════════════════════════════════════════════ */
 
 const LIVE = `m.reverses_id is null
@@ -40,22 +46,22 @@ type PlaceRow = {
 
 /** One bar place's day, by drink: the counter (sales, what came from the
     store) or the store (bills, what went to the counter) - D27-361. */
-async function placeDay(client: Client, hotelId: string, placeId: string, asOn: string): Promise<PlaceRow[]> {
+async function placeDay(client: Client, hotelId: string, placeId: string, from: string, asOn: string): Promise<PlaceRow[]> {
   const { rows } = await client.query<PlaceRow>(
     `with mv as (
        select m.item_id, m.business_date, m.kind, m.quantity, m.pos_line_id
          from stock_movements m
         where m.hotel_id = $1 and m.location_id = $2 and not m.empty and m.business_date <= $3::date and ${LIVE})
      select i.name as item, i.unit, i.size_ml,
-            coalesce(sum(mv.quantity) filter (where mv.business_date < $3::date), 0)::text as opening,
-            coalesce(sum(mv.quantity) filter (where mv.business_date = $3::date
+            coalesce(sum(mv.quantity) filter (where mv.business_date < $4::date), 0)::text as opening,
+            coalesce(sum(mv.quantity) filter (where mv.business_date between $4::date and $3::date
               and (mv.kind = 'receipt' or (mv.kind = 'transfer' and mv.quantity > 0))), 0)::text as received,
-            coalesce(-sum(mv.quantity) filter (where mv.business_date = $3::date
+            coalesce(-sum(mv.quantity) filter (where mv.business_date between $4::date and $3::date
               and mv.kind = 'transfer' and mv.quantity < 0), 0)::text as moved,
-            coalesce(-sum(mv.quantity) filter (where mv.business_date = $3::date and mv.pos_line_id is not null), 0)::text as sold,
-            coalesce(sum(mv.quantity) filter (where mv.business_date = $3::date
+            coalesce(-sum(mv.quantity) filter (where mv.business_date between $4::date and $3::date and mv.pos_line_id is not null), 0)::text as sold,
+            coalesce(sum(mv.quantity) filter (where mv.business_date between $4::date and $3::date
               and mv.kind not in ('receipt', 'adjustment', 'transfer') and mv.pos_line_id is null), 0)::text as other,
-            coalesce(sum(mv.quantity) filter (where mv.business_date = $3::date and mv.kind = 'adjustment'), 0)::text as corrected,
+            coalesce(sum(mv.quantity) filter (where mv.business_date between $4::date and $3::date and mv.kind = 'adjustment'), 0)::text as corrected,
             coalesce(sum(mv.quantity), 0)::text as closing,
             (select cl.counted::text from stock_count_lines cl
               where cl.item_id = i.id and cl.location_id = $2 and cl.business_date = $3::date and not cl.empty
@@ -72,16 +78,16 @@ async function placeDay(client: Client, hotelId: string, placeId: string, asOn: 
       where i.hotel_id = $1 and (i.category = 'Bar' or mv.item_id is not null)
       group by i.id, i.name, i.unit, i.size_ml, mo.counted, mo.book
      having coalesce(sum(mv.quantity), 0) <> 0
-         or count(*) filter (where mv.business_date = $3::date) > 0
+         or count(*) filter (where mv.business_date between $4::date and $3::date) > 0
          or mo.counted is not null
       order by i.name`,
-    [hotelId, placeId, asOn]);
+    [hotelId, placeId, asOn, from]);
   return rows;
 }
 
 /** A place's section: the counter shows what it got from the store and sold,
     the store what it bought and sent to the counter. */
-function placeSection(place: { name: string; counter: boolean }, rows: PlaceRow[]): ReportSection {
+function placeSection(place: { name: string; counter: boolean }, rows: PlaceRow[], when: string): ReportSection {
   const q = (v: string) => Number(v);
   return {
     key: place.counter ? "bar-counter" : "bar-stock",
@@ -102,16 +108,20 @@ function placeSection(place: { name: string; counter: boolean }, rows: PlaceRow[
       morning: d.morning === null || d.morning_book === null ? null
         : inBottles(Math.round((q(d.morning) - q(d.morning_book)) * 1000) / 1000, d.size_ml),
     })),
-    empty: `${place.name} held nothing and nothing moved on this day.`,
+    empty: `${place.name} held nothing and nothing moved ${when}.`,
   };
 }
 
-export async function barStockReport(client: Client, property: Property, asOn: string): Promise<ReportDoc> {
+export async function barStockReport(client: Client, property: Property, first: string, asOn: string): Promise<ReportDoc> {
+  /* A From after the To is read as the To day alone. */
+  const from = first > asOn ? asOn : first;
+  const range = from !== asOn;
+  const when = range ? "in these days" : "on this day";
   const { rows: places } = await client.query<{ id: string; name: string; counter: boolean }>(
     `select id::text, name, is_bar_counter as counter from locations
       where hotel_id = $1 and (is_bar_store or is_bar_counter)
       order by is_bar_counter desc`, [property.id]);
-  const byPlace = await Promise.all(places.map(async (p) => ({ place: p, rows: await placeDay(client, property.id, p.id, asOn) })));
+  const byPlace = await Promise.all(places.map(async (p) => ({ place: p, rows: await placeDay(client, property.id, p.id, from, asOn) })));
 
   const { rows: dishes } = places.length ? await client.query<{
     dish: string; qty: string; drink: string; size_ml: number | null; took: string;
@@ -120,10 +130,12 @@ export async function barStockReport(client: Client, property: Property, asOn: s
        from stock_movements m
        join pos_order_lines l on l.id = m.pos_line_id
        join stock_items i on i.id = m.item_id
-      where m.hotel_id = $1 and m.business_date = $2::date and ${LIVE}
+       /* The bar's own stock only: a kitchen dish's butter is not the bar's (found 16 November). */
+       join locations lo on lo.id = m.location_id and (lo.is_bar_counter or lo.is_bar_store)
+      where m.hotel_id = $1 and m.business_date between $3::date and $2::date and ${LIVE}
       group by l.name, i.name, i.size_ml
       order by l.name`,
-    [property.id, asOn]) : { rows: [] };
+    [property.id, asOn, from]) : { rows: [] };
 
   const { rows: notSet } = await client.query<{ dish: string; qty: string }>(
     `select l.name as dish, sum(l.qty)::text as qty
@@ -131,12 +143,12 @@ export async function barStockReport(client: Client, property: Property, asOn: s
        join pos_orders o on o.id = l.order_id
        join pos_menu_items i on i.id = l.item_id
        join pos_menu_categories c on c.id = i.category_id
-      where o.hotel_id = $1 and o.business_date = $2::date and c.tax_kind in ('bar', 'alcohol')
+      where o.hotel_id = $1 and o.business_date between $3::date and $2::date and c.tax_kind in ('bar', 'alcohol')
         and l.kot_status <> 'pending' and l.parent_line_id is null
         and not (l.voided and not l.was_sent_when_voided)
         and not exists (select 1 from stock_movements m where m.pos_line_id = l.id)
       group by l.name order by l.name`,
-    [property.id, asOn]);
+    [property.id, asOn, from]);
 
   const { rows: struck } = await client.query<{ dish: string; qty: string; reason: string | null }>(
     `select l.name as dish, l.qty::text, l.void_reason as reason
@@ -144,10 +156,10 @@ export async function barStockReport(client: Client, property: Property, asOn: s
        join pos_orders o on o.id = l.order_id
        join pos_menu_items i on i.id = l.item_id
        join pos_menu_categories c on c.id = i.category_id
-      where o.hotel_id = $1 and o.business_date = $2::date and c.tax_kind in ('bar', 'alcohol')
+      where o.hotel_id = $1 and o.business_date between $3::date and $2::date and c.tax_kind in ('bar', 'alcohol')
         and l.voided and l.was_sent_when_voided
       order by l.voided_at`,
-    [property.id, asOn]);
+    [property.id, asOn, from]);
 
   const { rows: bills } = await client.query<{ supplier: string; bill_no: string; drinks: number; total: string | null }>(
     `select p.supplier, p.bill_no,
@@ -155,9 +167,9 @@ export async function barStockReport(client: Client, property: Property, asOn: s
             /* The total printed on the bill (its lines, handling and TCS). */
             p.bill_total::text as total
        from bar_purchases p
-      where p.hotel_id = $1 and p.business_date = $2::date
+      where p.hotel_id = $1 and p.business_date between $3::date and $2::date
       order by p.recorded_at`,
-    [property.id, asOn]);
+    [property.id, asOn, from]);
 
   const { rows: asks } = await client.query<{
     drink: string; qty: string; status: string; note: string | null; asked_by: string | null; decided_by: string | null;
@@ -169,26 +181,47 @@ export async function barStockReport(client: Client, property: Property, asOn: s
        join stock_items i on i.id = l.item_id
        left join staff a on a.id = r.requested_by
        left join staff d on d.id = r.decided_by
-      where r.hotel_id = $1 and r.status <> 'pending' and r.business_date = $2::date
+      where r.hotel_id = $1 and r.status <> 'pending' and r.business_date between $3::date and $2::date
       order by r.decided_at, i.name`,
-    [property.id, asOn]);
+    [property.id, asOn, from]);
+
+  /* Day by day (a range only): what each drink sold at the counter, each day. */
+  const { rows: byDay } = range && places.length ? await client.query<{
+    day: string; drink: string; size_ml: number | null; sold: string;
+  }>(
+    `select to_char(m.business_date, 'YYYY-MM-DD') as day, i.name as drink, i.size_ml, (-sum(m.quantity))::text as sold
+       from stock_movements m
+       join stock_items i on i.id = m.item_id
+       join locations lo on lo.id = m.location_id and lo.is_bar_counter
+      where m.hotel_id = $1 and m.pos_line_id is not null and not m.empty
+        and m.business_date between $3::date and $2::date and ${LIVE}
+      group by m.business_date, i.name, i.size_ml
+      order by m.business_date, i.name`,
+    [property.id, asOn, from]) : { rows: [] };
 
   const q = (v: string) => Number(v);
   const sections: ReportSection[] = [
-    ...(byPlace.length ? byPlace.map(({ place, rows }) => placeSection(place, rows)) : [{
+    ...(byPlace.length ? byPlace.map(({ place, rows }) => placeSection(place, rows, when)) : [{
       key: "bar-stock", title: "The bar's stock", columns: [col("drink", "Drink", "text")], rows: [],
       empty: "This hotel has no bar store marked." } satisfies ReportSection]),
-    { key: "bar-asks", title: "The counter's asks of the store made on this day, decided",
+    { key: "bar-asks", title: `The counter's asks of the store made ${when}, decided`,
       columns: [col("drink", "Drink", "text"), col("qty", "Asked", "ratio"), col("status", "Decision", "text"),
                 col("by", "Asked by", "text"), col("decided", "Decided by", "text")],
       rows: asks.map((a) => row({ drink: a.drink, qty: q(a.qty), status: a.status === "approved" ? "Approved, moved" : `Rejected: ${a.note ?? ""}`,
         by: a.asked_by, decided: a.decided_by })),
-      empty: "No ask of the store made on this day was decided." },
+      empty: `No ask of the store made ${when} was decided.` },
     { key: "bar-sold", title: "Sold, by dish",
       columns: [col("dish", "Dish", "text"), col("qty", "Sold", "count"), col("drink", "Taken from", "text"),
                 col("took", "Took", "text")],
       rows: dishes.map((d) => row({ dish: d.dish, qty: q(d.qty), drink: d.drink, took: inBottles(q(d.took), d.size_ml) })),
-      empty: "No drink was taken off the bar's stock on this day." },
+      empty: `No drink was taken off the bar's stock ${when}.` },
+    ...(range ? [{ key: "bar-by-day", title: "Sold at the counter, day by day",
+      columns: [col("drink", "Drink", "text"), col("sold", "Sold", "text")],
+      rows: [...new Set(byDay.map((d) => d.day))].flatMap((day) => [
+        band("drink", reportDate(day)),
+        ...byDay.filter((d) => d.day === day).map((d) => row({ drink: d.drink, sold: inBottles(q(d.sold), d.size_ml) })),
+      ]),
+      empty: "Nothing was sold at the counter in these days." } satisfies ReportSection] : []),
     { key: "bar-not-set", title: "Sold, but nothing set up for the dish",
       columns: [col("dish", "Dish", "text"), col("qty", "Sold", "count")],
       rows: notSet.map((d) => row({ dish: d.dish, qty: q(d.qty) })),
@@ -207,17 +240,20 @@ export async function barStockReport(client: Client, property: Property, asOn: s
         total({ supplier: "Total", bill: null, drinks: bills.reduce((s, b) => s + b.drinks, 0),
           total: bills.every((b) => b.total !== null) ? round2(bills.reduce((s, b) => s + Number(b.total), 0)) : null }),
       ] : [],
-      empty: "No bar bill was recorded on this day." },
+      empty: `No bar bill was recorded ${when}.` },
   ];
 
   return {
     report: "bar-stock", title: "Bar stock", property: heading(property), orientation: "landscape",
-    facts: [{ label: "As On Date", value: asOn, kind: "date" }],
+    facts: range
+      ? [{ label: "From", value: from, kind: "date" }, { label: "To", value: asOn, kind: "date" }]
+      : [{ label: "As On Date", value: asOn, kind: "date" }],
     sections,
     footnotes: [
       "Sold is what the sending of each line took off the bar counter (Bar stock, Set up: what each dish takes).",
       "Morning difference: the bar manager's morning count against the book - after the night's closing count, nothing should have moved.",
       "Full bottles + ml: \"3 + 420 ml\" is three full bottles and 420 ml of the next.",
+      ...(range ? ["Over several days: Opening is before the first day, Closing at the end of the last; Counted and Morning difference are the last day's."] : []),
     ],
   };
 }

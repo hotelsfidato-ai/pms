@@ -23,17 +23,20 @@ export default function VoidsPage() {
 export const NcBillsPage = () => <WindowReport report="nc-bills" title="NC bills" what="the NC bills" />;
 export const ItemSalesPage = () => <WindowReport report="item-sales" title="Item sales" what="the item sales" />;
 
-function WindowReport({ report, title, what }: { report: ReportKey; title: string; what: string }) {
-  const [from, setFrom] = useState(monthOf(BUSINESS_DATE).from);
+/** A report over From-To; it opens on the month so far unless `start` says otherwise. */
+export function WindowReport({ report, title, what, start = monthOf(BUSINESS_DATE).from }: {
+  report: ReportKey; title: string; what: string; start?: string;
+}) {
+  const [from, setFrom] = useState(start);
   const [to, setTo] = useState(BUSINESS_DATE);
   /* A cleared box asks for nothing odd: it falls back to the default end of the range. */
-  const first = from || monthOf(BUSINESS_DATE).from;
+  const first = from || start;
   const last = to || BUSINESS_DATE;
   return (
     <DocumentReport
       report={report}
       title={title}
-      period={`${dateShort(first)} to ${dateShort(last)}`}
+      period={first === last ? dateShort(last) : `${dateShort(first)} to ${dateShort(last)}`}
       query={{ from: first, asOn: last }}
       what={what}
       controls={
