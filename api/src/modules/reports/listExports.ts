@@ -43,13 +43,14 @@ const H = "GET /api/hotels/:code";
 
 export const LIST_SCREENS = {
   /* Front desk: one stay list (StayTable), five screens. */
-  "arrivals": { title: "Arrivals", read: `${H}/stays` },
-  "upcoming-arrivals": { title: "Upcoming arrivals", read: `${H}/stays` },
+  /* Whole lists of guests: the reports' download right too (the owner, 16 November). */
+  "arrivals": { title: "Arrivals", read: `${H}/stays`, holds: "guests" },
+  "upcoming-arrivals": { title: "Upcoming arrivals", read: `${H}/stays`, holds: "guests" },
   /* These two carry each guest's balance: money (decided under D27-396). */
   "in-house": { title: "In house", read: `${H}/stays`, holds: "money" },
   "due-out": { title: "Due out", read: `${H}/stays`, holds: "money" },
   "walk-ins": { title: "Walk-ins", read: `${H}/stays` },
-  "all-bookings": { title: "All bookings", read: `${H}/stays` },
+  "all-bookings": { title: "All bookings", read: `${H}/stays`, holds: "guests" },
   /* A group carries its host's balance (money); a waiting guest their phone. */
   "groups": { title: "Groups", read: `${H}/groups`, holds: "money" },
   "waitlist": { title: "Waitlist", read: `${H}/waitlist`, holds: "guests" },

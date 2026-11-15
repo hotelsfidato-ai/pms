@@ -163,7 +163,7 @@ describe("the file", () => {
   });
 
   it("makes a PDF", async () => {
-    const res = await post(uid.front_desk, "arrivals.pdf", shown);
+    const res = await post(uid.gm, "arrivals.pdf", shown);
     expect(res.status, await res.clone().text()).toBe(200);
     expect(Buffer.from(await res.arrayBuffer()).subarray(0, 5).toString()).toBe("%PDF-");
   });
@@ -202,6 +202,15 @@ describe("the refusals", () => {
       const res = await post(uid.front_desk, file, shown);
       expect(res.status, file).toBe(403);
       expect(((await res.json()) as { error: string }).error, file).toContain("download reports");
+    }
+  });
+
+  it("refuses the front desk Arrivals and All bookings as files, and gives them to the GM (the owner, 16 November)", async () => {
+    for (const file of ["arrivals.pdf", "upcoming-arrivals.xlsx", "all-bookings.pdf"]) {
+      const res = await post(uid.front_desk, file, shown);
+      expect(res.status, file).toBe(403);
+      expect(((await res.json()) as { error: string }).error, file).toContain("download reports");
+      expect((await post(uid.gm, file, shown)).status, file).toBe(200);
     }
   });
 
