@@ -48,6 +48,10 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **16 November: THE OWNER'S FOUR RESTAURANT ASKS ON cp6 (9c1d52e0), full gates green, no migration.** The KOT's
+> section line, NC bills and Item sales reports, Bar stock over From-To (CHANGELOG, 16 November). For release 23
+> with the UPI QR. Release 22 still waits for the owner's A1-A8. Next free migration: **276**.
+
 > **13 November: EVERY VIDEO REMADE, THE BOOK UP TO THE SCREENS (cp6 8aa68095 + this note).** A0-A17 and Films 1-2
 > are in `D:\fidato\final videos` (old ones in `.local\old-finals\`). 87 book pictures retaken or new; no picture
 > "to be taken" left. Full gates green (`.local/gates/videos-book-13nov.log`). The demo `fidato` is as before the
@@ -839,6 +843,10 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **16 November:** (1) the owner's release 22, A1-A8; (2) release 23 = cp6 (UPI QR + the four restaurant asks)
+> once 22 is live; (3) retake Figure A8-09 with A8's printing run; (4) the owner's open question: should Arrivals and
+> All bookings downloads need the reports download right (recommended), housekeeping and requests stay open?
 
 > **13 November, after the videos:** (1) the owner's release 22, A1-A8 (below); (2) Wave 4: the UPI QR on the bill
 > BUILT (a0439965, for release 23; the owner scans the picture A4-19u with a phone), payment links and payroll

@@ -50,6 +50,33 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-16 · The KOT's section, NC bills, Item sales, Bar stock over any days (the owner, 16 November)
+
+**Asked for:** the section on the KOT (Restaurant and Bar share table numbers); a date-wise NC list with the approval
+comment; a date-wise bar stock report, then "make bar stock a date range report"; an itemised sale report.
+
+**Shipped** (no migration; details in `src/modules/pos/CHANGELOG.md` and `src/modules/reports/CHANGELOG.md`)
+- The KOT prints the outlet and the table's section, "RESTAURANT · A/C", under its number; no design setting hides it.
+- `/reports/nc-bills` and `/reports/item-sales`, From-To, the Voids report's readers; Item sales' categories equal the
+  Manager report's.
+- Bar stock over From-To with "Sold at the counter, day by day"; one day as before; schedules may be last week.
+- Manual A8.4, A11.2, A11.4, A11.9, A11.10; A8-44, A11-23 retaken, A11-41, A11-42 new; rebuilt.
+
+**Found**
+- Bar stock's "Sold, by dish" listed kitchen ingredients (a sent line's every stock movement); now the bar's places only.
+
+**Proved**
+- Full gates on 9c1d52e0 (`.local/gates-kot-reports.log`, 47 min): web 246 files / 1,627, API 260 / 3,308, db 2,119,
+  replay 275, PG16, restore 1, to minute - all exit 0. All four screens opened on the local demo.
+
+**Left open**
+- Figure A8-09 (two printed slips) predates the KOT's new line: it needs A8's printing run (virtual printers, 5199).
+- Release 22 is still not live; this goes in release 23 with the UPI QR.
+
+**Commits:** `62ec662c d5a1b480 9c1d52e0`
+
+---
+
 ## 2026-11-13 · The UPI QR code on the bill (D27-396 wave 4)
 
 **Asked for:** "build all" (D27-396): wave 4's UPI QR on the bill; payment links and payroll stay plans (they cost money).
