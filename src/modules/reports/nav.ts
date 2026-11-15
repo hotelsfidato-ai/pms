@@ -62,6 +62,14 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 55,
     label: "Voids", to: "/reports/voids", icon: Ban, resource: "report",
     keywords: ["voided bill", "struck dish", "closed unpaid", "restaurant", "cancelled"], listed: false },
+  /* The restaurant's NC bills and each item sold, over any days (16 November):
+     the server's rule is the voids report's (roleGate). */
+  { section: "reports", order: 56,
+    label: "NC bills", to: "/reports/nc-bills", icon: Ban, resource: "report",
+    keywords: ["no charge", "nc", "free bill", "complimentary", "approval", "restaurant"], listed: false },
+  { section: "reports", order: 57,
+    label: "Item sales", to: "/reports/item-sales", icon: BarChart3, resource: "report",
+    keywords: ["item wise", "itemised", "dish sales", "sold", "menu", "restaurant", "bar"], listed: false },
   { section: "reports", order: 50,
     label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report", listed: false },
   { section: "reports", order: 60,

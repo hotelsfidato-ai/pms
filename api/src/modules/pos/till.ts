@@ -6482,11 +6482,11 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
 
     const { rows: head } = await client.query<{
       order_no: string; table_ref: string | null; order_type: string;
-      outlet_name: string; hotel_name: string; sent_at: string | null;
+      outlet_name: string; section_name: string | null; hotel_name: string; sent_at: string | null;
       covers: number | null; waiter: string | null;
     }>(
       `select o.order_no, o.table_ref, o.order_type,
-              ou.name as outlet_name, h.name as hotel_name,
+              ou.name as outlet_name, sec.name as section_name, h.name as hotel_name,
               app.hotel_clock($2::uuid, min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at,
               /* The KOT's design may print them (D27-368). */
               o.covers, w.full_name as waiter
@@ -6494,9 +6494,13 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
          join pos_outlets ou on ou.id = o.outlet_id
          join hotels h on h.id = o.hotel_id
          left join staff w on w.id = o.waiter_id
+         /* The table's section (the owner, 16 November): Restaurant and Bar
+            number their tables alike, so the slip says which. */
+         left join pos_tables t on t.id = o.table_id
+         left join pos_sections sec on sec.id = t.section_id
          join pos_order_lines l on l.order_id = o.id and l.kot_no = $3 and not l.packing
         where o.id = $1 and o.hotel_id = $2
-        group by o.order_no, o.table_ref, o.order_type, ou.name, h.name, o.covers, w.full_name`,
+        group by o.order_no, o.table_ref, o.order_type, ou.name, sec.name, h.name, o.covers, w.full_name`,
       [orderId, hotelId, kotNo],
     );
     if (!head[0]) return null;
@@ -6569,6 +6573,7 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
       table: head[0].table_ref,
       orderType: head[0].order_type,
       outlet: head[0].outlet_name,
+      section: head[0].section_name,
       hotel: head[0].hotel_name,
       sentAt: head[0].sent_at,
       covers: head[0].covers,

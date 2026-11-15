@@ -61,3 +61,21 @@ describe("the Voids report", () => {
     expect(screen.queryByText("Voids")).toBeNull();
   });
 });
+
+/* NC bills and Item sales (the owner, 16 November): the voids report's
+   readers, on the server's rule and in the list. */
+describe("NC bills and Item sales", () => {
+  for (const path of ["/reports/nc-bills", "/reports/item-sales"]) {
+    it(`${path} is reachable by exactly the Voids report's readers`, () => {
+      expect(ROLES.filter((r) => mayReach(r, path))).toEqual(ROLES.filter((r) => mayReach(r, "/reports/voids")));
+    });
+  }
+
+  it("both show in All reports for the GM", async () => {
+    as("gm");
+    renderIndex();
+    expect(await screen.findByText("NC bills")).toBeDefined();
+    expect(screen.getByText("Item sales")).toBeDefined();
+    cleanup();
+  });
+});

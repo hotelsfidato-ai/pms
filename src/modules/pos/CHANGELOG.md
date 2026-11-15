@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-16 · The KOT says where the table is (the owner, 16 November)
+
+**Asked for:** "Section must get printed on KOT ... only table numbers are getting printed; it's creating confusion
+whether the order is for Restaurant or Bar, as in both sections table numbers are the same."
+
+**Shipped:** the docket route (`till.ts`, `GET /till/orders/:id/kot/:no`) carries `section`, the name of the order's
+table's section (`pos_tables` → `pos_sections`, 047); `DocketSlip` prints the outlet and the section under the KOT
+number, bold, 16 px at Normal - "RESTAURANT · A/C", "RESTAURANT · BAR" - and the outlet alone for an order on no table
+of the floor (a room, a parcel, a free-text table). Like the allergy, no design setting hides it (recorded as the
+recommendation, under D27-396). The KOT design's preview shows it. No migration.
+
+**Proved:** `api/test/modules/pos/kotWhere.test.ts` (an A/C table's docket says A/C, a Bar table's Bar, a free-text
+table none; 2 tests) and `src/modules/pos/kotWhere.test.tsx` (3); the real-hotel KOT snapshot
+(`testHotel.real-kot.html`) taken again with the one new line. Seen in Restaurant setup's KOT preview on the local demo.
+
+**Left open:** the manual's Figure A8-09 (two printed slips) predates the line; it needs the chapter's printing run
+(virtual printers on 5199) to be taken again.
+
+---
+
 ## 2026-11-13 · The UPI QR code on an open bill (D27-396 wave 4)
 
 `BillSlip` prints finance's `UpiQr` under the GRAND TOTAL of an open bill when the hotel has a UPI ID: the guest pays

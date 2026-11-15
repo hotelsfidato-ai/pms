@@ -1785,6 +1785,9 @@ export interface Docket {
   table: string | null;
   orderType: string;
   outlet: string;
+  /** The table's section - "A/C", "Bar" - printed beside the outlet (16 Nov).
+      Null for an order on no table of the floor. Absent on an older answer. */
+  section?: string | null;
   hotel: string;
   sentAt: string | null;
   /** For the KOT's design to print (D27-368). Absent on an older docket. */

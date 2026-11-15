@@ -450,6 +450,26 @@ export const SHOTS = [
       { n: 4, at: "text:REFUND REFERENCE", nth: 0, side: "top" },
     ],
   },
+  /* NC bills and Item sales over any days (the owner, 16 November). Read only. */
+  {
+    id: "A11-41", title: "NC bills", as: "General Manager", size: "wall",
+    path: "/reports/nc-bills", steps: [LOADED("Every NC bill, by outlet and day")],
+    marks: [
+      { n: 1, at: "text:From", nth: 0, side: "right" },
+      { n: 2, at: "text:Totals, by outlet and day", side: "left" },
+      { n: 3, at: "text:Every NC bill, by outlet and day", side: "left" },
+      { n: 4, at: "text:APPROVAL COMMENT", nth: 0, side: "top" },
+    ],
+  },
+  {
+    id: "A11-42", title: "Item sales", as: "General Manager", size: "wall",
+    path: "/reports/item-sales", steps: [LOADED("Every item sold, by outlet and category")],
+    marks: [
+      { n: 1, at: "text:From", nth: 0, side: "right" },
+      { n: 2, at: "text:By outlet and category", side: "left" },
+      { n: 3, at: "text:Every item sold, by outlet and category", side: "left" },
+    ],
+  },
   /* The excise department's daily register, like the paper (D27-361). */
   {
     id: "A11-24", title: "FLR-1A/2A/3A register", as: "General Manager", size: "wall",

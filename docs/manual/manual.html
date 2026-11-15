@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    492 pictures. Built from the chapters in docs/manual/chapters.
+    494 pictures. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -5343,7 +5343,8 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <ul>
-    <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
+    <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), where it is for, dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
+    <li><b>Where it is for:</b> under the KOT number, in big letters, the outlet and the table's section, <b>RESTAURANT · A/C</b> or <b>RESTAURANT · BAR</b>, so table 4 in the bar is never cooked for table 4 in the restaurant. An order on no table of the floor (a room, a parcel) prints the outlet alone. No setting of the KOT's design hides it. The owner, 16 November 2026.</li>
     <li><b>The guest's allergy:</b> a room-service order whose guest in the room has an allergy recorded prints it boxed under the table, <span class="msg">“ALLERGY: Peanuts”</span>, on every slip of the KOT, the kitchen's and the bar's. No setting of the KOT's design hides it (A10.11).</li>
     <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
     <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
@@ -5937,7 +5938,7 @@ figure.shot.phone img { max-width: 72mm; }
   </ol>
 
   <figure class="shot" id="fig-A8-44">
-    <img src="img/A8-44.png" alt="The KOT's design: the dishes Large, the KOT number and table, the paper 80 mm, What it prints with Waiter ticked, the heading Fidato Kitchen, Save the design, and the preview KOT beside it">
+    <img src="img/A8-44.png" alt="The KOT's design: the dishes Large, the KOT number and table, the paper 80 mm, What it prints with Waiter ticked, the heading Fidato Kitchen, Save the design, and the preview KOT beside it, reading RESTAURANT · A/C under the KOT number">
     <figcaption><b>Figure A8-44.</b> The KOT's design.</figcaption>
     <ol class="callouts"><li>The sizes, and the paper</li><li>What it prints</li><li>A heading line</li><li>The preview, as it will print</li></ol>
   </figure>
@@ -7908,7 +7909,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:20%">Group</th><th style="width:36%">Reports</th><th>Who opens them</th></tr></thead>
     <tbody>
-      <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Voids, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
+      <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Voids, NC bills, Item sales, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
       <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift, Supplier dues, Petty cash (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger, Cashier shift or Petty cash; Supplier dues only the Owner, Admin, General Manager and Accountant</td></tr>
       <tr><td>Statutory</td><td>Lodging tax, GST sales register, Form III register (A11.7)</td><td>The same as The day; the Form III register only for the Owner, Admin, General Manager, Hotel Manager and Reception</td></tr>
       <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report, Bar stock, FLR-1A/2A/3A register, FLR-3 register (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
@@ -8051,15 +8052,15 @@ figure.shot.phone img { max-width: 72mm; }
   </ul>
 
   <h3>Which day a report is for</h3>
-  <p>Except Voids, which has a From and a To, the reports have no date to choose. Each is for the hotel's <b>business date</b> (A1.1), or that date's month or year:</p>
+  <p>Except Voids, NC bills and Item sales, which have a From and a To, and Bar stock, which has a Day, the reports have no date to choose. Each is for the hotel's <b>business date</b> (A1.1), or that date's month or year:</p>
   <table>
     <thead><tr><th style="width:40%">Covers</th><th>Reports</th></tr></thead>
     <tbody>
-      <tr><td>The business date</td><td>Manager report (with the month and the year so far), Night audit report, City ledger, No show, Cashier shift, Closing stock, Dead stock, Days of cover, Equipment report</td></tr>
+      <tr><td>The business date</td><td>Manager report (with the month and the year so far), Night audit report, City ledger, No show, Cashier shift, Closing stock, Dead stock, Days of cover, Equipment report; Bar stock, until you choose another <span class="ui">Day</span></td></tr>
       <tr><td>The 1st of the month to the business date</td><td>Guest ledger, GST sales register, Form III register, Stock movement by day, Consumption, Wastage and breakage, Count differences, Supplier spend, Supplier dues (owed on the business date; paid in the month so far)</td></tr>
       <tr><td>The whole month</td><td>Monthly occupancy, Monthly statistics, Lodging tax</td></tr>
       <tr><td>The calendar year, January to December</td><td>Yearly statistics</td></tr>
-      <tr><td>Any days you choose</td><td>Voids (A11.4), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
+      <tr><td>Any days you choose</td><td>Voids, NC bills and Item sales (A11.4), Accounting export (A11.8); Petty cash, which opens on the 1st of the month to the business date (A11.6)</td></tr>
     </tbody>
   </table>
 
@@ -8229,6 +8230,49 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>The restaurant's voids as one report, on screen and as a PDF: <span class="d">D27-370</span>. Voiding a paid bill: <span class="d">D27-324</span>. Striking a dish the kitchen has: <span class="d">D27-119</span>.</p>
+  </div>
+
+  <h3>NC bills: every bill given free, and who approved it</h3>
+  <p><span class="ui">NC bills</span> (<code>/reports/nc-bills</code>) lists every restaurant bill given free (NC) for the days you choose, by outlet and day. It opens on the month so far; change <span class="ui">From</span> and <span class="ui">To</span> to look at other days. Close restaurant day shows one day's NC bills; this is the same list over any days.</p>
+
+  <figure class="shot" id="fig-A11-41">
+    <img src="img/A11-41.png" alt="NC bills: From and To, Totals by outlet and day, and every NC bill with its table, section, value, reason, who asked, who gave or approved it, when, and the approval comment">
+    <figcaption><b>Figure A11-41.</b> NC bills.</figcaption>
+    <ol class="callouts">
+      <li>From and To: the days the report covers</li>
+      <li>Totals, by outlet and day: how many bills and their value at menu prices</li>
+      <li>Every NC bill: the bill, table and section, its value, the reason, who asked, who gave or approved it, and when</li>
+      <li>Approval comment: what the GM wrote when saying yes</li>
+    </ol>
+  </figure>
+  <ul>
+    <li><b>Value</b> is the bill at menu prices before GST: what it would have been had it been charged. It is in no sales or tax figure.</li>
+    <li><b>Asked by</b> names the waiter or cashier who asked the GM (A8.7, Giving a bill free). It shows “-” when the owner, an administrator or the GM gave the bill free at the till themselves.</li>
+    <li><b>Approval comment</b> is the note typed on the yes in Approvals. It shows “-” when none was typed.</li>
+  </ul>
+
+  <h3>Item sales: each dish and drink sold</h3>
+  <p><span class="ui">Item sales</span> (<code>/reports/item-sales</code>) lists each item sold for the days you choose, by outlet and menu category: how many, and for how much. A dish's sizes are lines of their own, “Paneer Tikka (Half)” and “Paneer Tikka (Full)”. It opens on the month so far; change <span class="ui">From</span> and <span class="ui">To</span> to look at other days.</p>
+
+  <figure class="shot" id="fig-A11-42">
+    <img src="img/A11-42.png" alt="Item sales: From and To, the totals by outlet and category, and every item sold under its outlet and category with its quantity and amount">
+    <figcaption><b>Figure A11-42.</b> Item sales.</figcaption>
+    <ol class="callouts">
+      <li>From and To: the days the report covers</li>
+      <li>By outlet and category: each category's quantity and amount</li>
+      <li>Every item sold, under its outlet and category, with the category's total</li>
+    </ol>
+  </figure>
+  <ul>
+    <li><b>Paid bills only.</b> A bill given free (NC), a voided bill, an order closed unpaid and a struck dish are not sales and are not here.</li>
+    <li><b>Amount</b> is the price times the quantity, before the bill's discount, service charge and GST. It is what the Manager report's <span class="ui">Category -</span> lines add up, so a category's total here is its total there for the same days.</li>
+    <li>An add-on charged as a line of its own is an item of its own. An item typed in at the till, or no longer on the menu, is under <b>Other</b>.</li>
+    <li>Both reports are opened by the people who open Voids. A waiter, the bar, the kitchen manager and the chef cannot.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The NC bills over any days with the approval comment, the sale of each item, and Bar stock for any day: the owner, 16 November 2026.</p>
   </div>
 
   <!-- A11.5 -->
@@ -8758,11 +8802,12 @@ figure.shot.phone img { max-width: 72mm; }
   </figure>
 
   <figure class="shot" id="fig-A11-23">
-    <img src="img/A11-23.png" alt="Bar stock for 11 Oct 2026: the Bar counter's drinks with opening, from the store, sold, other moves, count corrections, closing, counted and the morning difference, in full bottles and ml; the Bar store's with purchased and to the counter; and the counter's asks of the store, decided">
+    <img src="img/A11-23.png" alt="Bar stock for 11 Oct 2026, with the Day box at the top: the Bar counter's drinks with opening, from the store, sold, other moves, count corrections, closing, counted and the morning difference, in full bottles and ml; the Bar store's with purchased and to the counter; and the counter's asks of the store, decided">
     <figcaption><b>Figure A11-23.</b> Bar stock.</figcaption>
     <ol class="callouts"><li>A drink at the counter: opening, from the store, sold, closing</li><li>The store: purchased, and sent to the counter</li><li>The counter's asks of the store, and who decided</li></ol>
   </figure>
   <p>Below them: each dish sold and what it took, dishes sold with nothing set up, drinks struck after the bar had them, and the day's bar bills.</p>
+  <p>Bar stock opens on the business date. To see another day's, choose it in <span class="ui">Day</span> at the top: the whole report, and its PDF and Excel, are then of that day.</p>
 
   <figure class="shot" id="fig-A11-24">
     <img src="img/A11-24.png" alt="FORM F.L.R.-1A / 2A / 3A for 11 Oct 2026: Whisky with A9 Imperial Blue and Beer (fermented, strong) with A9 Kingfisher Strong, the T.P. numbers, and Opening Balance, Receipts, Sales and Closing Balance with a column for each bottle size">
@@ -8804,6 +8849,8 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>How did today go, against the month and the year?</td><td>Manager report</td><td>A11.3</td></tr>
       <tr><td>Every room, receipt and restaurant bill of one day</td><td>Night audit report</td><td>A11.4</td></tr>
       <tr><td>Which restaurant bills were voided, orders closed unpaid and dishes struck, by whom and why?</td><td>Voids</td><td>A11.4</td></tr>
+      <tr><td>Which bills were given free, who asked, who approved and what did they write?</td><td>NC bills</td><td>A11.4</td></tr>
+      <tr><td>How many of each dish and drink did we sell, and for how much?</td><td>Item sales</td><td>A11.4</td></tr>
       <tr><td>How full were we, day by day?</td><td>Monthly occupancy; Monthly statistics</td><td>A11.5</td></tr>
       <tr><td>The year, month by month</td><td>Yearly statistics</td><td>A11.5</td></tr>
       <tr><td>What do companies and booking sites owe?</td><td>City ledger</td><td>A11.6</td></tr>

@@ -19,6 +19,8 @@ import { barStockReport } from "./builders/barStock.ts";
 import { flrDaily, flrMonthly } from "./builders/flr.ts";
 import { supplierDuesReport, tdsReport, supplierStatement } from "./builders/supplierDues.ts";
 import { voidsReport } from "./builders/voids.ts";
+import { ncBillsReport } from "./builders/ncBills.ts";
+import { itemSalesReport } from "./builders/itemSales.ts";
 import { pettyCashReport } from "./builders/pettyCash.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -62,6 +64,9 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "bar-stock": (c, h, p) => barStockReport(c, h, p.asOn),
   /* The restaurant's voids over a window of days (D27-370). */
   voids: (c, h, p) => voidsReport(c, h, from(p), p.asOn),
+  /* The restaurant's NC bills and each item sold over a window (16 November). */
+  "nc-bills": (c, h, p) => ncBillsReport(c, h, from(p), p.asOn),
+  "item-sales": (c, h, p) => itemSalesReport(c, h, from(p), p.asOn),
   /* FORM F.L.R.-1A/2A/3A for a day, F.L.R.-3 for a month (D27-361). */
   "flr-daily": (c, h, p) => flrDaily(c, h, p.asOn),
   "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
@@ -110,6 +115,8 @@ export const ABOUT: Readonly<Record<ReportKey, { title: string; span: Span; pick
   equipment: { title: "Equipment report", span: "day" },
   "bar-stock": { title: "Bar stock", span: "day" },
   voids: { title: "Voids", span: "window" },
+  "nc-bills": { title: "NC bills", span: "window" },
+  "item-sales": { title: "Item sales", span: "window" },
   "flr-daily": { title: "FORM F.L.R.-1A / 2A / 3A", span: "day" },
   "flr-monthly": { title: "FORM F.L.R.-3", span: "month" },
   "supplier-dues": { title: "Supplier dues", span: "window" },

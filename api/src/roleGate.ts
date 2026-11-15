@@ -1038,6 +1038,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/yearly-statistics`]: REPORTS,
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
   [`GET ${H}/reports/voids`]: REPORTS,  // D27-370: the night audit report's rule, which prints the same voids
+  /* 16 November: the restaurant's NC bills (the night audit report prints them
+     too) and each item sold (the Manager report's categories, item by item). */
+  [`GET ${H}/reports/nc-bills`]: REPORTS,
+  [`GET ${H}/reports/item-sales`]: REPORTS,
   [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
   [`GET ${H}/reports/bar-stock`]: STORE_REPORTS,  // D27-354
   [`GET ${H}/reports/flr-daily`]: STORE_REPORTS,  // D27-361

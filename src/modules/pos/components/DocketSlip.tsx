@@ -58,6 +58,15 @@ export function DocketSlip({ d, design = KOT_TODAY }: { d: Docket; design?: KotD
       {d.reprint && (
         <p className="text-center font-bold tracking-wide mt-0.5">REPRINT</p>
       )}
+      {/* WHERE IT IS FOR (the owner, 16 November): the outlet and the table's
+          section, big - Restaurant and Bar number their tables alike, and
+          "Table No: 4" alone sent the kitchen to the wrong one. No design
+          setting hides it. */}
+      <p className="text-center font-bold mt-1"
+         style={{ fontSize: design.numberSize === "normal" ? 16 : TABLE_PX[design.numberSize] }} data-kot-where>
+        {[d.outlet, d.section && d.section !== d.outlet ? d.section : null]
+          .filter(Boolean).join(" · ").toUpperCase()}
+      </p>
       {/* A parcel (D27-359) is "Parcel · <customer>", big, in place of a table. */}
       {d.orderType === "takeaway" ? (
         <p className="text-center font-bold mt-1"

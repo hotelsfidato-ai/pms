@@ -69,6 +69,18 @@ const GROUPS: Group[] = [
         description: "Every voided bill, order closed unpaid and struck dish in the restaurant, by outlet and day: what, how much, who, when and why.",
       },
       {
+        title: "NC bills",
+        icon: Ban,
+        path: "/reports/nc-bills",
+        description: "Every bill given free, by outlet and day: its value, the reason, who asked, who approved and their comment.",
+      },
+      {
+        title: "Item sales",
+        icon: ChartColumn,
+        path: "/reports/item-sales",
+        description: "Each dish and drink sold over any days, by outlet and category: how many and for how much.",
+      },
+      {
         title: "Monthly occupancy",
         icon: CalendarDays,
         path: "/reports/monthly-occupancy",

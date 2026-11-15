@@ -100,6 +100,8 @@ export type ReportKey =
   | "bar-stock"
   /* The restaurant's voids: bills, orders closed unpaid, dishes struck (D27-370). */
   | "voids"
+  /* The restaurant's NC bills and each item sold, over any days (16 November). */
+  | "nc-bills" | "item-sales"
   /* The excise registers, as the bar keeps them on paper (D27-361). */
   | "flr-daily"
   | "flr-monthly"
@@ -134,6 +136,8 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "equipment",
   "bar-stock",
   "voids",
+  "nc-bills",
+  "item-sales",
   "flr-daily",
   "flr-monthly",
   "supplier-dues",

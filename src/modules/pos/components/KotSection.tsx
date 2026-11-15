@@ -301,7 +301,7 @@ const LINE_LABEL: Record<keyof KotDesign["show"], string> = {
 };
 const PREVIEW_KOT: Docket = {
   kotNo: 14, kind: { id: "p", name: "Kitchen" }, orderNo: "20261027-12", table: "4", orderType: "dine_in",
-  outlet: "Restaurant", hotel: "Hotel", sentAt: "27/10/26 13:05", covers: 3, waiter: "Ramesh",
+  outlet: "Restaurant", section: "A/C", hotel: "Hotel", sentAt: "27/10/26 13:05", covers: 3, waiter: "Ramesh",
   lines: [
     { id: "p1", parentId: null, name: "Paneer Tikka", qty: 2, note: "Less spicy", isAddon: false },
     { id: "p2", parentId: null, name: "Butter Roti", qty: 4, note: null, isAddon: false },

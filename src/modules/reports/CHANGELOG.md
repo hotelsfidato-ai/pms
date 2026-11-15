@@ -11,6 +11,33 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-16 · NC bills, Item sales, and Bar stock for any day (the owner, 16 November)
+
+**Asked for:** "Date wise NC order list, approval comment. Also date wise bar stock report. Also itemised sale report:
+currently we are getting sale as per category; we need the sale of each item sold."
+
+**Shipped:**
+- **NC bills** (`builders/ncBills.ts`, `/reports/nc-bills`): every bill given free over From-To, by outlet and day -
+  bill, table, section, value at menu prices (D27-394), reason, who asked (the `pos_requests` row), who gave or
+  approved it, when, and the approval comment (the approval's `decision_note`, 076). Totals by outlet and day.
+- **Item sales** (`builders/itemSales.ts`, `/reports/item-sales`): each item sold over From-To, by outlet and menu
+  category - a variation is its own line, "Paneer Tikka (Half)" - with quantity and amount. Paid bills only, price x
+  quantity before discount and GST: exactly what the Manager report's "Category -" lines add, so they agree.
+- **Bar stock** has a **Day** box (`pages/Store.tsx`): any day's report, not only the business date's. The builder
+  already took any date; only the screen was fixed to today.
+- Both new reports: the Voids report's rule (roleGate `REPORTS`; the file route's default downloaders); in All reports
+  and Find a screen; `pages/Voids.tsx` is now the shared From-To page for the three. No migration.
+
+**Decided under D27-396 (the recommendation):** "date wise" for Bar stock read as choosing the day; a From-To bar
+report over several days was not built - say so if that is what was meant.
+
+**Proved:** `api/test/modules/reports/ncAndItemSales.test.ts` (6): a waiter's asked NC with the GM's comment, a GM's
+own NC with none, Item sales up by exactly the paid Paneer Tikka and not the NC ones, a category's total equal to the
+Manager report's for the day, a waiter refused both (screen and file). `src/modules/reports/voids.test.tsx` (+3): the
+same readers as Voids, both in All reports. All three seen on the local demo (5EL, 1-11 Oct).
+
+---
+
 ## 2026-11-12 · PDF and Excel on the remaining lists (D27-383 item 1, second part)
 
 Branch `worktree-agent-a838d2e3d1d5f61a7`, copy `.claude\worktrees\agent-a838d2e3d1d5f61a7`, on cp6 at `8129a130`. No migration.

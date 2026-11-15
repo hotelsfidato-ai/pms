@@ -73,6 +73,8 @@ export type ReportKey =
   | "stock-count-differences" | "stock-dead" | "stock-cover" | "supplier-spend" | "equipment"
   | "bar-stock"
   | "voids"
+  /* The restaurant's NC bills and each item sold, over any days (16 November). */
+  | "nc-bills" | "item-sales"
   /* The excise registers, as the bar keeps them on paper (D27-361). */
   | "flr-daily" | "flr-monthly"
   /* What we owe suppliers, and what was paid (D27-370). */
