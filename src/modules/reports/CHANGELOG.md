@@ -11,16 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-11-16 · Arrivals and All bookings as files need the download right (the owner, 16 November)
+## 2026-11-16 · Arrivals, All bookings and Walk-ins as files need the download right (the owner, 16 November)
 
 **Asked for:** "yes to arrivals and bookings needing download right" (the recommendation: whole guest lists as files
 are for those who download reports; Housekeeping and Guest requests stay open).
 
 **Shipped:** `listExports.ts` marks `arrivals`, `upcoming-arrivals` and `all-bookings` `holds: "guests"`; the front
 desk still sees and searches them, but PDF and Excel are greyed with the sentence the other guest lists give. Manual
-A1.3, A2 (All bookings) and A11.2. Walk-ins was not asked about and stays open.
+A1.3, A2 (All bookings) and A11.2. Then Walk-ins, asked the same day ("yes walk-ins too"): `walk-ins` too, and manual A2.
 
-**Proved:** `api/test/listFiles.test.ts` (16): the front desk refused all three, the GM given them; "makes a PDF" now
+**Proved:** `api/test/listFiles.test.ts` (16): the front desk refused all four, the GM given them; "makes a PDF" now
 as the GM.
 
 ---

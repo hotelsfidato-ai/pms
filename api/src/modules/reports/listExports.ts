@@ -49,7 +49,7 @@ export const LIST_SCREENS = {
   /* These two carry each guest's balance: money (decided under D27-396). */
   "in-house": { title: "In house", read: `${H}/stays`, holds: "money" },
   "due-out": { title: "Due out", read: `${H}/stays`, holds: "money" },
-  "walk-ins": { title: "Walk-ins", read: `${H}/stays` },
+  "walk-ins": { title: "Walk-ins", read: `${H}/stays`, holds: "guests" },
   "all-bookings": { title: "All bookings", read: `${H}/stays`, holds: "guests" },
   /* A group carries its host's balance (money); a waiting guest their phone. */
   "groups": { title: "Groups", read: `${H}/groups`, holds: "money" },

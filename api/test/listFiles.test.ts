@@ -205,8 +205,8 @@ describe("the refusals", () => {
     }
   });
 
-  it("refuses the front desk Arrivals and All bookings as files, and gives them to the GM (the owner, 16 November)", async () => {
-    for (const file of ["arrivals.pdf", "upcoming-arrivals.xlsx", "all-bookings.pdf"]) {
+  it("refuses the front desk Arrivals, All bookings and Walk-ins as files, and gives them to the GM (the owner, 16 November)", async () => {
+    for (const file of ["arrivals.pdf", "upcoming-arrivals.xlsx", "all-bookings.pdf", "walk-ins.xlsx"]) {
       const res = await post(uid.front_desk, file, shown);
       expect(res.status, file).toBe(403);
       expect(((await res.json()) as { error: string }).error, file).toContain("download reports");
