@@ -50,6 +50,29 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-16 · Guest-list downloads need the reports right; release 23 ready (the owner, 16 November)
+
+**Asked for:** "yes to arrivals and bookings needing download right", "yes walk-ins too"; then "send me the release 23
+steps when checks pass".
+
+**Shipped**
+- Arrivals, Upcoming arrivals, All bookings and Walk-ins as PDF or Excel need `export report` (`holds: "guests"` in
+  `api/src/modules/reports/listExports.ts`); front desk is refused, the GM is not (`api/test/listFiles.test.ts`).
+  Manual A1, A2, A11.2 say so.
+- Release 23 = c9394cb6 (`release/r23`): release 22 + 275 + the restaurant asks + the above. Website built once,
+  `index-BWlXb-_q.js`; steps `.local/release-23-steps.md` (A1-A8, Part B unchanged). Nothing pushed or deployed.
+
+**Proved**
+- Full gates in the clean copy `.claude/worktrees/release-r23` (`.local/gates-release-r23.log`, 63 min): web 246 /
+  1,627, API 260 / 3,309, db 2,119, replay 275, PG16, restore 1 (42 checks), to minute - all exit 0.
+
+**Left open**
+- The owner's A1-A8. Release 22 never went live (live bundle `index-CCfjHX6L.js`); 23 replaces it.
+
+**Commits:** `81a0911d c9394cb6`
+
+---
+
 ## 2026-11-16 · The KOT's section, NC bills, Item sales, Bar stock over any days (the owner, 16 November)
 
 **Asked for:** the section on the KOT (Restaurant and Bar share table numbers); a date-wise NC list with the approval

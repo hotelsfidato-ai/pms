@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **16 November, later: RELEASE 23 READY AT c9394cb6 (`release/r23`, copy `.claude/worktrees/release-r23`).** It
+> holds release 22 + the UPI QR (275) + the four restaurant asks + the owner's yes on Arrivals, Upcoming arrivals,
+> All bookings and Walk-ins downloads needing the reports right (81a0911d, c9394cb6). Full gates green in the clean
+> copy (`.local/gates-release-r23.log`, 63 min: web 246/1,627, API 260/3,309, db 2,119, replay 275, PG16, restore,
+> to minute). Website built once: `index-BWlXb-_q.js`. Steps sent: `.local/release-23-steps.md`. Release 22 never
+> went live (the site still loads `index-CCfjHX6L.js`), so 23 replaces it: migrations 267-275.
+
 > **16 November: THE OWNER'S FOUR RESTAURANT ASKS ON cp6 (9c1d52e0), full gates green, no migration.** The KOT's
 > section line, NC bills and Item sales reports, Bar stock over From-To (CHANGELOG, 16 November). For release 23
 > with the UPI QR. Release 22 still waits for the owner's A1-A8. Next free migration: **276**.
@@ -843,6 +850,11 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **16 November, later:** (1) the owner's release 23, A1-A8 (`.local/release-23-steps.md`; replaces 22); (2) after
+> it, the read-only check (site bundle, server at c9394cb6, DB at 275, API on 127.0.0.1, no errors), then recycle the
+> release-r22 and release-r23 copies, junctions out; (3) retake Figure A8-09 with A8's printing run. The downloads
+> question in the note below is answered: yes, Walk-ins too.
 
 > **16 November:** (1) the owner's release 22, A1-A8; (2) release 23 = cp6 (UPI QR + the four restaurant asks)
 > once 22 is live; (3) retake Figure A8-09 with A8's printing run; (4) the owner's open question: should Arrivals and
