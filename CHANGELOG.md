@@ -50,6 +50,24 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-20 · Shimla's full reset added to release 23 (the owner, 20 November)
+
+**Asked for:** "delete Shimla's data and start it from today ... a full reset, and I have to backfill data"; "include
+this with release 23".
+
+**Shipped**
+- Step A5c in `.local/release-23-steps.md`: one psql transaction for the owner. It lifts Shimla's D27-381 lock, marks
+  the 4 checked-in out, runs the owner reset's own `owner_reset.clear`, and locks again. No code change.
+- Read from the live server: 10 bookings (1-3 Nov), 8 guests, 4 GST invoices (00001-4), no night audit ever run.
+
+**Proved**
+- The exact text, on local 5EL locked with 10 checked in: cleared, today's date, locked again; rolled back.
+
+**Left open**
+- The owner's A1-A8 with A5c. The Itemised sale report they re-sent is Item sales, already in release 23.
+
+---
+
 ## 2026-11-16 · Guest-list downloads need the reports right; release 23 ready (the owner, 16 November)
 
 **Asked for:** "yes to arrivals and bookings needing download right", "yes walk-ins too"; then "send me the release 23

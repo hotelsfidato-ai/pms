@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **20 November: SHIMLA'S SECOND FULL RESET, IN RELEASE 23 AS STEP A5c (the owner's own words: "delete Shimla's data
+> and start it from today ... full reset, and I have to backfill data").** It overrides D27-381 once, for Shimla only.
+> One transaction the owner types: lift the lock, mark the 4 checked-in out, `owner_reset.clear('SHI', true, ...)`, lock
+> again. It removes 74 records, including 4 GST invoices SHI/2026-27/00001-4 of 3 Nov; the series carries on at 00005.
+> Shimla never ran a night audit (business date stuck at 1 Nov). Tested on local 5EL, locked with 10 checked in, and
+> rolled back. Older data goes in Settings, Backfill data (266). Release 23 is not yet done by the owner.
+
 > **16 November, later: RELEASE 23 READY AT c9394cb6 (`release/r23`, copy `.claude/worktrees/release-r23`).** It
 > holds release 22 + the UPI QR (275) + the four restaurant asks + the owner's yes on Arrivals, Upcoming arrivals,
 > All bookings and Walk-ins downloads needing the reports right (81a0911d, c9394cb6). Full gates green in the clean
