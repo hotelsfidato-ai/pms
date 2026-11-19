@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **20 November: RELEASE 23 IS LIVE, checked read-only.** Site loads `index-BWlXb-_q.js`; health ok; server at
+> c9394cb6; migration 275 in (`app.hotel_upi`); API on 127.0.0.1:8787, active, no errors since the restart.
+> **Shimla's reset ran** (A5c; OWNER_RESET 74 removed, 19 Nov 21:43 UTC): no bookings, business date 20 Nov, locked
+> again; Amrapali untouched. Copies release-r22 and release-r23 recycled. KOT at Amrapali: one outlet "Peshwa", tables
+> 1-15 in both "Peshwa" and "Chakkna & Cheers": the bar's KOT reads PESHWA · CHAKKNA & CHEERS, the restaurant's PESHWA.
+> No KOT printed there since the release yet.
+
 > **20 November: SHIMLA'S SECOND FULL RESET, IN RELEASE 23 AS STEP A5c (the owner's own words: "delete Shimla's data
 > and start it from today ... full reset, and I have to backfill data").** It overrides D27-381 once, for Shimla only.
 > One transaction the owner types: lift the lock, mark the 4 checked-in out, `owner_reset.clear('SHI', true, ...)`, lock
@@ -857,6 +864,9 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **20 November:** (1) the owner's next ask (they said one more is coming); (2) the owner's call on the KOT words at
+> Amrapali (rename sections in Settings, no code, recommended); (3) Shimla's backfill is the owner's; (4) Figure A8-09.
 
 > **16 November, later:** (1) the owner's release 23, A1-A8 (`.local/release-23-steps.md`; replaces 22); (2) after
 > it, the read-only check (site bundle, server at c9394cb6, DB at 275, API on 127.0.0.1, no errors), then recycle the
