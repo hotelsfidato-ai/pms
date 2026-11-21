@@ -2,6 +2,8 @@
 
 One line per chapter and picture set, in the order they were committed; the decision numbers are the owner's.
 
+- 21 Nov, A4 (D27-399, book retakes 2): A4-06m retaken with the chapter's guest, A4 Test Kulkarni (room 305), not another hotel's Kapil Ganjoo on 7 Nov: the minibar's water and beer were recorded through the Minibar record for his room, with the alcohol switched on, a 10% VAT rule and a beer on the minibar list in the demo; the arrows and their list are unchanged; a4.mjs has a set-up step for his walk-in (A4-S6m).
+
 - 21 Nov, A5 (D27-399, book retakes 2): A5-T3 (Figure A5-04) retaken tall, so its three arrows meet the heading, the Print button and Balance due (two floated at the top before); A5-T6 (Figure A5-03) retaken with arrow 2 below the Check out button, off the Proforma bill button; the callout lists are unchanged.
 
 - 21 Nov, A12 (D27-399, book retakes 2): A12-02, 03, 04 and 05 retaken on the demo of 11 Oct with Approvals at the top of the menu after the Dashboard, where they showed it under System; arrows unchanged (the two purchase requests are the run's, the GM's cash expense of ₹200 from the restaurant tin is made through the till's own paid-out).

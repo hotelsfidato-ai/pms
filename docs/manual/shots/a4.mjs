@@ -23,7 +23,6 @@
 const KULKARNI = process.env.A4_STAY ?? "a551c684-aaa9-4b75-8f4b-011ca36af514";   // A4 Test Kulkarni, room 305 (made again 20 Oct for D27-344)
 const MORE = "b454d1c4-74d9-49f8-9ec4-38e7491315ac";       // A5 Test More, room 304
 const STAY = `/h/5EL/in-house?res=${KULKARNI}`;
-const MINIBAR_STAY = "a624d8c2-edc4-4249-bb48-025942b31bb4";  // room 206, its minibar recorded (A4-06m)
 const TOAST = "css:[role=region] [role=status]";
 const SLOW = 45000;
 /* A native select, chosen as a person would: React hears the change. */
@@ -37,7 +36,40 @@ const openBill = [
 ];
 const DLG = "css:[role=dialog] [role=dialog], [role=alertdialog]";
 
+/* The walk-in set-up of A4-06m (21 Nov, D27-399): the form's fields set as a person would (a5.mjs). */
+const FINDF = `const find = (t, nth = 0) => { const l = [...document.querySelectorAll('label')]
+  .filter((l) => l.firstChild && l.firstChild.textContent.trim() === t)[nth];
+  if (!l) throw new Error('No field ' + t); return document.getElementById(l.htmlFor); };
+  const put = (el, v) => {
+    if (el instanceof HTMLSelectElement) {
+      const o = [...el.options].find((o) => o.textContent.trim() === v);
+      if (!o) throw new Error('No choice ' + v); v = o.value;
+    }
+    const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype
+      : el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v);
+    el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+  };`;
+const SETF = (label, value) =>
+  ({ eval: `(() => { ${FINDF} put(find(${JSON.stringify(label)}), ${JSON.stringify(value)}); })()` });
+const DAYF = (label, days) => ({ eval: `(() => { ${FINDF}
+  window.__bd ??= find('Arrival').value;
+  const d = new Date(window.__bd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + ${days});
+  put(find(${JSON.stringify(label)}), d.toISOString().slice(0, 10)); })()` });
+
 export const SHOTS = [
+  /* A4 Test Kulkarni in room 305 for 2 nights (the guest of the chapter's other pictures), made through
+     the Rooms screen's walk-in form on the demo of 11 Oct; run by name: shoot.mjs a4 A4-S6m. */
+  { id: "A4-S6m", title: "set-up: A4 Test Kulkarni, a walk-in into room 305, 2 nights, checked in", as: "Reception", noShot: true,
+    path: "/h/5EL/stay",
+    steps: [
+      { waitFor: "css:[data-room-tile='305']", ms: SLOW }, { waitFor: "css:[data-tile-guest]", ms: SLOW }, { wait: 2500 },
+      { click: "css:[data-room-tile='305']" }, { waitFor: "text:A walk-in into room 305", ms: 30000 }, { wait: 1500 },
+      { type: ["css:input[placeholder='Anil Sharma']", "A4 Test Kulkarni"] },
+      SETF("Phone", "98200 00405"), DAYF("Departure", 2), { wait: 500 }, { waitFor: "text:Save booking", ms: 30000 }, { wait: 300 },
+      SETF("Document", "Aadhaar"), { wait: 300 }, SETF("Number", "4567 8901 2341"), { wait: 800 },
+      { click: "text:Check in now" }, { waitFor: "text:Open the booking", ms: SLOW }, { wait: 1500 },
+    ] },
   /* ── Finance: where the screens are ─────────────────────────────── */
   {
     id: "A4-01", title: "Folios: every open bill", as: "General Manager",
@@ -362,11 +394,12 @@ export const SHOTS = [
      minibar housekeeping recorded (A6.12) - a soft drink at the restaurant's
      GST and a beer at the VAT on alcohol, which needs the hotel switched on
      for alcohol with a VAT rate, and a beer on the minibar list. Put that
-     stay's id in MINIBAR_STAY (made 7 Nov 2026 in a helper's copy: room 206). */
+     stay's id in MINIBAR_STAY (21 Nov 2026: A4 Test Kulkarni, room 305, with the water and the beer recorded through the Minibar screen's own record). */
   {
     id: "A4-06m", title: "Minibar lines on the bill", as: "Reception",
-    path: `/h/5EL/in-house?res=${MINIBAR_STAY}`,
-    steps: [{ clickIf: "text:Got it" }, { click: "text:Settle and check out" },
+    path: "/h/5EL/in-house",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:A4 Test Kulkarni", ms: SLOW }, { wait: 2500 }, { click: "text:A4 Test Kulkarni" },
+      { waitFor: "text:Settle and check out", ms: SLOW }, { wait: 1000 }, { click: "text:Settle and check out" },
       { waitFor: "css:[data-bill-closing]", ms: SLOW }, { wait: 3000 }, { scroll: "text:BAR" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:Minibar - Beer 330ml x 2", side: "left" },
