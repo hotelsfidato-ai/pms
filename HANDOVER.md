@@ -865,6 +865,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 November, the owner: D27-399.** "Make me the remaining videos, and a video for the Backfill data feature."
+> Also: the films are for the team only, so Film 1's People clip showing the owner's email stays as it is.
+> In hand: Film 3 "Backfill data" (new, recorded on the demo, restored by the master after). Then the chapters whose
+> book changed after their video: A8, A11, A1, A4, A5, A17 (UPI QR, 16 Nov reports, KOT sections, export rights),
+> A7 and A2; the rest are checked for smaller changes.
+
 > **20 November:** (1) the owner's next ask (they said one more is coming); (2) the owner's call on the KOT words at
 > Amrapali (rename sections in Settings, no code, recommended); (3) Shimla's backfill is the owner's; (4) Figure A8-09.
 
