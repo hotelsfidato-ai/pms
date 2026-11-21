@@ -531,11 +531,13 @@ export const SHOTS = [
     path: "/settings/property/backfill-data",
     steps: [{ waitFor: "text:First day in the system" }, LOADED, { wait: 400 }],
     marks: [
-      { n: 1, at: "text:First day in the system", side: "bottom" },
+      { n: 1, at: "text:First day in the system", side: "top", dx: 70 },
       { n: 2, at: "css:[role=tablist]", side: "bottom" },
-      { n: 3, at: "text:Add a stay", side: "bottom" },
+      { n: 3, at: "text:Add a stay", side: "left", dx: 15 },
       { n: 4, at: "text:Export CSV", side: "right" },
-      /* D27-396: the demo holds no backfilled stay, so no row (and no More options) is drawn; the book says so. */
+      /* One stay was added through Add a stay: Rahul Deshmukh, 9-11 October, room 201, the hotel's own bill OLD-1042. */
+      { n: 5, at: "text:Room 201", side: "left" },
+      { n: 6, at: "text:More options", side: "bottom" },
     ],
   },
   /* The window's lower half: the dates, the figures and the send tick
@@ -554,13 +556,14 @@ export const SHOTS = [
     ],
   },
   {
-    id: "A17-59", title: "Backfill data: Day by day", as: "Owner", size: "wall",
+    id: "A17-59", title: "Backfill data: Day by day", as: "Owner", size: "wider",
     path: "/settings/property/backfill-data",
     steps: [{ waitFor: "text:First day in the system" }, LOADED, { click: "css:[role=tab]:nth-child(4)" },
             { waitFor: "text:Rooms sold count each night" }, { wait: 300 }],
     marks: [
-      { n: 1, at: "text:Export CSV", side: "bottom" },
-      /* D27-396: nothing is backfilled on the demo, so there is no row and no Total to point at; the book says so. */
+      { n: 1, at: "text:Export CSV", side: "left", dx: 15 },
+      { n: 2, at: "text:10 Oct 2026", side: "left" },
+      { n: 3, at: "text:Total", side: "left" },
     ],
   },
 
