@@ -452,17 +452,17 @@ export const SHOTS = [
   },
   /* NC bills and Item sales over any days (the owner, 16 November). Read only. */
   {
-    id: "A11-41", title: "NC bills", as: "General Manager", size: "wall",
+    id: "A11-41", title: "NC bills", as: "General Manager", size: "walltall",
     path: "/reports/nc-bills", steps: [LOADED("Every NC bill, by outlet and day")],
     marks: [
       { n: 1, at: "text:From", nth: 0, side: "right" },
       { n: 2, at: "text:Totals, by outlet and day", side: "left" },
       { n: 3, at: "text:Every NC bill, by outlet and day", side: "left" },
-      { n: 4, at: "text:APPROVAL COMMENT", nth: 0, side: "top" },
+      { n: 4, at: "text:APPROVAL COMMENT", nth: 0, side: "bottom" },
     ],
   },
   {
-    id: "A11-42", title: "Item sales", as: "General Manager", size: "wall",
+    id: "A11-42", title: "Item sales", as: "General Manager", size: "walltall",
     path: "/reports/item-sales", steps: [LOADED("Every item sold, by outlet and category")],
     marks: [
       { n: 1, at: "text:From", nth: 0, side: "right" },
