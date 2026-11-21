@@ -2,6 +2,8 @@
 
 One line per chapter and picture set, in the order they were committed; the decision numbers are the owner's.
 
+- 21 Nov, A16 (D27-399, book retakes 2): A16.11 (In short) has a row for cancelling a night audit by mistake (the owner or an Admin, A16.5 and A7.5); the Figure A16-17 caption and A16.3 agree, both read against the window's own code: the card is for a real hotel, a hotel with nothing in it says nothing is deleted, one that has traded lists numbers. The picture is unchanged.
+
 - 21 Nov, A4 (D27-399, book retakes 2): A4-06m retaken with the chapter's guest, A4 Test Kulkarni (room 305), not another hotel's Kapil Ganjoo on 7 Nov: the minibar's water and beer were recorded through the Minibar record for his room, with the alcohol switched on, a 10% VAT rule and a beer on the minibar list in the demo; the arrows and their list are unchanged; a4.mjs has a set-up step for his walk-in (A4-S6m).
 
 - 21 Nov, A5 (D27-399, book retakes 2): A5-T3 (Figure A5-04) retaken tall, so its three arrows meet the heading, the Print button and Balance due (two floated at the top before); A5-T6 (Figure A5-03) retaken with arrow 2 below the Check out button, off the Proforma bill button; the callout lists are unchanged.
