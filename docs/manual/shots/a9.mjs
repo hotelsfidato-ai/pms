@@ -15,6 +15,8 @@
 
 const TOAST = "css:[role=region] [role=status]";
 const IM = "Inventory Manager";
+/* Tag the PDF and Excel pair, so one outline and one arrow can show both. */
+const TAG_EXP = { eval: `[...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "PDF")?.parentElement.setAttribute("data-exp", "1")` };
 /* The open dialog's main button: the last in its footer. */
 const MAIN = "css:[role=dialog] > div:last-child > button:last-child";
 
@@ -169,7 +171,7 @@ export const SHOTS = [
   /* ── The Store, with something on its shelves ─────────────────────── */
   {
     id: "A9-06", title: "The Store: Shelf, the store picker and the tiles", as: IM,
-    path: "/h/5EL/stores", steps: [{ waitFor: "text:A9 Test Basmati rice" }],
+    path: "/h/5EL/stores", steps: [{ waitFor: "text:A9 Test Basmati rice" }, TAG_EXP],
     marks: [
       { n: 1, at: "text:Shelf", side: "bottom" },
       { n: 2, at: "text:Reports", side: "bottom" },
@@ -177,6 +179,7 @@ export const SHOTS = [
       { n: 4, at: "text:Add an item", side: "bottom" },
       { n: 5, at: "css:#store-picker", side: "right" },
       { n: 6, at: "css:[aria-label='Filter the store']", side: "bottom", outline: false },
+      { n: 7, at: "css:[data-exp]", side: "left" },
     ],
   },
   {
@@ -438,12 +441,13 @@ export const SHOTS = [
   { id: "A9-21b", title: "Send it for approval", noShot: true, as: IM,
     steps: [{ click: MAIN }, { waitFor: TOAST, ms: 10000 }, { wait: 1500 }] },
   {
-    id: "A9-22", title: "Purchasing: the list", as: IM,
-    path: "/h/5EL/purchasing", steps: [{ waitFor: "text:A9 Test: the rice is down to two days" }],
+    id: "A9-22", title: "Purchasing: the list", as: "General Manager",
+    path: "/h/5EL/purchasing", steps: [{ waitFor: "text:A9 Test: the rice is down to two days" }, TAG_EXP],
     marks: [
-      { n: 1, at: "text:Ask to buy", side: "left" },
+      { n: 1, at: "text:Ask to buy", side: "bottom" },
       { n: 2, at: "text:Waiting for approval", nth: 0, side: "bottom" },
       { n: 3, at: "text:A9 Test: the rice is down to two days", nth: 0, side: "bottom" },
+      { n: 4, at: "css:[data-exp]", side: "bottom" },
     ],
   },
   {
@@ -743,8 +747,8 @@ export const SHOTS = [
   { id: "A9-36b", title: "Ask", noShot: true, as: "Reception",
     steps: [{ click: MAIN }, { waitFor: TOAST, ms: 10000 }, { wait: 1200 }] },
   {
-    id: "A9-37", title: "The register: one request waits", as: IM,
-    path: "/h/5EL/equipment", steps: [{ waitFor: "text:in the approvals inbox", ms: 10000 }, { wait: 600 }],
+    id: "A9-37", title: "The register: one request waits", as: "General Manager",
+    path: "/h/5EL/equipment", steps: [{ waitFor: "text:in the approvals inbox", ms: 10000 }, TAG_EXP, { wait: 600 }],
     marks: [
       { n: 1, at: "text:in the approvals inbox", side: "right" },
       { n: 2, at: "text:Approve", nth: 0, side: "left" },
@@ -752,9 +756,11 @@ export const SHOTS = [
       { n: 4, at: "text:Where", nth: 0, side: "left" },
       { n: 5, at: "text:Waiting to leave the store", nth: 0, side: "bottom" },
       { n: 6, at: "text:CSV", side: "bottom" },
+      { n: 7, at: "css:[data-exp]", side: "bottom" },
     ],
   },
   { id: "A9-37b", title: "The Inventory Manager approves it", noShot: true, as: IM,
+    path: "/h/5EL/equipment",
     steps: [{ click: "text:Approve", nth: 0 }, { waitFor: TOAST, ms: 10000 }, { wait: 1200 }] },
   {
     id: "A9-38", title: "Approved: in room 205, and its history", as: IM,
