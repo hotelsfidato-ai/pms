@@ -28,7 +28,7 @@ const CHROME = process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application
 const APP = process.env.APP ?? "http://localhost:5173";
 const PORT = Number(process.env.CDP_PORT ?? 9333);
 const PROFILE = join(ROOT, ".local", `manual-chrome-${PORT}`);
-const SIZES = { tall: [1280, 1150], long: [1280, 1450], desk: [1280, 800], phone: [375, 812], wall: [1440, 900] };
+const SIZES = { tall: [1280, 1150], long: [1280, 1450], desk: [1280, 800], phone: [375, 812], wall: [1440, 900], walltall: [1440, 1500], wider: [1700, 800] };
 
 const [chapter, ...only] = process.argv.slice(2);
 if (!chapter) {
@@ -188,6 +188,8 @@ window.__draw = (marks) => {
       : s === "top" ? [r.left + r.width / 2, r.top - gap, r.left + r.width / 2, r.top - pad - 2]
       : [r.left + r.width / 2, r.bottom + gap, r.left + r.width / 2, r.bottom + pad + 2];
     let [cx, cy, tx, ty] = pos(side);
+    /* dx / dy (optional): slide the numbered circle, to keep it off some text. */
+    cx += m.dx ?? 0; cy += m.dy ?? 0;
     cx = Math.max(18, Math.min(W - 18, cx)); cy = Math.max(18, Math.min(H - 18, cy));
     if (m.outline !== false) {
       const o = document.createElementNS(NS, "rect");
