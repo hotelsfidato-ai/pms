@@ -2,6 +2,8 @@
 
 One line per chapter and picture set, in the order they were committed; the decision numbers are the owner's.
 
+- 21 Nov, A5 (D27-399, book retakes 2): A5-T3 (Figure A5-04) retaken tall, so its three arrows meet the heading, the Print button and Balance due (two floated at the top before); A5-T6 (Figure A5-03) retaken with arrow 2 below the Check out button, off the Proforma bill button; the callout lists are unchanged.
+
 - 21 Nov, A12 (D27-399, book retakes 2): A12-02, 03, 04 and 05 retaken on the demo of 11 Oct with Approvals at the top of the menu after the Dashboard, where they showed it under System; arrows unchanged (the two purchase requests are the run's, the GM's cash expense of ₹200 from the restaurant tin is made through the till's own paid-out).
 
 - 21 Nov, A1 (D27-399, book retakes 2): A1-1, 2, 3, 5, 8, 9, 18 retaken as the GM on the demo of 11 Oct, so the Front desk menu shows its eleven screens (Minibar, Checklists) and the lists show PDF and Excel; each gains an arrow and a list line for them (A1-5 arrow 8, A1-8 arrow 4, A1-9 arrow 4, A1-18 arrow 5); A1-18 is taller (the GM also sees ID photos kept, now named in A1.10); the PDF and Excel paragraph of A1.10 moved inside its section.

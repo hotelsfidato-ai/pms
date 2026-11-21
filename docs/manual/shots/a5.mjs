@@ -92,10 +92,10 @@ export const SHOTS = [
 
   /* ── A5.3 The proforma bill (D27-344; the interim bill until then) ─── */
   {
-    id: "A5-T3", title: "The proforma bill: the preview with its Proforma Bill heading, the totals and Print", as: "Reception",
+    id: "A5-T3", title: "The proforma bill: the preview with its Proforma Bill heading, the totals and Print", as: "Reception", size: "tall",
     path: "/h/5EL/in-house", steps: [...OPEN_BILL("A5 Test Rane"),
       { click: "text:Proforma bill" }, { waitFor: "css:[role=dialog] [data-invoice-sheet]", ms: SLOW }, { wait: 1500 },
-      { eval: "document.querySelector('[role=dialog] [data-invoice-totals]')?.scrollIntoView({ block: 'center' })" }, { wait: 600 }],
+      { eval: "document.querySelector('[role=dialog] .overflow-y-auto')?.scrollTo(0, 0)" }, { wait: 600 }],
     marks: [
       { n: 1, at: "css:[role=dialog] header .border-l-4", side: "left" },
       { n: 2, at: "text:Print", side: "left" },
@@ -151,7 +151,7 @@ export const SHOTS = [
       { eval: "document.querySelector('[data-checkout]')?.scrollIntoView({ block: 'center' })" }, { wait: 600 }],
     marks: [
       { n: 1, at: "text:Received - UPI", side: "left" },
-      { n: 2, at: "css:[data-checkout]", side: "top" },
+      { n: 2, at: "css:[data-checkout]", side: "bottom" },
     ],
   },
 
