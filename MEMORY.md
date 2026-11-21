@@ -6561,6 +6561,16 @@ copy will see of theirs.**
 
 ---
 
+### 481 · Helpers': `C:\videos\RESUME.md` damaged by shell writes (12-21 November)
+
+Since 12 November, sections written through a shell turned the `\a` of `out\a11\` into a bell and the `\f` of
+`D:\fidato\final videos` into a form feed; on 21 November the A11 update's PowerShell write put a backtick before every
+one of 733 older lines. Found by the Film 3 helper. Mended by script (a node file; `sed`, `perl -pi` and `node -e`
+in Git Bash each mangled the backslashes again). **The rule:** text with Windows paths is written with the Edit or
+Write tool, never through PowerShell strings, `echo -e` or an inline `node -e` in Git Bash.
+
+---
+
 ### 480 · A helper's: two recorders in one browser again, through a killed warm-up (21 November)
 
 The A8 update's helper started its recording in a shell line that began with `curl` warming Vite; the curl hung, the
