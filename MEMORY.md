@@ -6561,6 +6561,16 @@ copy will see of theirs.**
 
 ---
 
+### 480 · A helper's: two recorders in one browser again, through a killed warm-up (21 November)
+
+The A8 update's helper started its recording in a shell line that began with `curl` warming Vite; the curl hung, the
+helper killed it, and the same line went on into `record.mjs` while the helper had also started one by hand. Two runs
+shared Chrome on 9383 for a minute: A8-04 to A8-06 failed and one order with its KOTs was saved on the demo. The dump
+was taken first (478's rule held), so the master restored. **The rule:** a recorder is started alone, in its own
+command, never chained after a step that may be killed; before starting one, check no `record.mjs` is running.
+
+---
+
 ### 479 · A helper's: the films' shot lists lived uncommitted, one only in another chat's copy (13 November)
 
 Film 1's recording script `docs/manual/shots/film1.mjs` was committed on cp6 with its first 65 lines only (d8ab4a6b);
