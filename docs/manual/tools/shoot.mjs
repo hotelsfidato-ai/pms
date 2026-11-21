@@ -28,7 +28,7 @@ const CHROME = process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application
 const APP = process.env.APP ?? "http://localhost:5173";
 const PORT = Number(process.env.CDP_PORT ?? 9333);
 const PROFILE = join(ROOT, ".local", `manual-chrome-${PORT}`);
-const SIZES = { tall: [1280, 1150], desk: [1280, 800], phone: [375, 812], wall: [1440, 900] };
+const SIZES = { tall: [1280, 1150], long: [1280, 1450], desk: [1280, 800], phone: [375, 812], wall: [1440, 900] };
 
 const [chapter, ...only] = process.argv.slice(2);
 if (!chapter) {
