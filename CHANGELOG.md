@@ -50,6 +50,33 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-21, later · Book retakes 2 and the videos after them (the owner, D27-399)
+
+**Asked for:** "Do the recommended thing and do all the changes and finish the videos."
+
+**Shipped**
+- **Book** (two helpers, merged 377251f4, 4b13d633): A1-2 eleven screens; A1-5/8/9 and Online check-in with PDF and
+  Excel; A4-06m the chapter's guest; A5-T6, A5-T3 arrows; A12-02..05 Approvals at the top; A16.11 a cancel line,
+  A16-17 caption; A8-34 and A8-51 with PDF/Excel; A9-06/22/37 the real buttons; A11-41/42 tall; A17-57/59 Backfill
+  data with one stay, More options and Total (demo anchored on 11 Oct by a faked clock for the load only).
+- **Videos** after the retakes: A1, A4, A5, A8, A9, A11, A12, A16, A17 re-marked and re-rendered where the pictures
+  changed; the PDF/Excel lines now sit on the buttons. End cards: a title starting "A"/"The" or holding a colon now
+  reads *End of "The guest's bill"*, no "the ... series" (A1, A4, Film 2, Film 3). All in `D:\fidato\final videos`; the previous ones in
+  `.local\old-finals\<chapter> 21 November before retakes` / `<film> 21 November end card`.
+- The local virtual printer's open bill prints the UPI QR, as finance's UpiQr draws it (git-ignored tool).
+
+**Found:** MEMORY 482 (render race, now a lock at `C:\videos\.render-lock`).
+
+**Proved:** each helper ran words, tsc, eslint, stills, audiocheck (ok, peak 0.71-0.74); I read every changed
+chapter's contact sheets before copying it. The book builds. No app code changed, so no app gates.
+
+**Left open** (small book faults): every retaken picture's banner says "41 days behind today (21 Nov)" and A8-51's
+Day box and A9's "use by" dates follow the real clock (screens read the PC's date); A8-34 arrows 1-2 sit on "These
+prices are yours"; A11-41/42 lists do not name the Print/PDF/Excel/CSV/Email buttons; A9-07/08 show 7 Nov; A4's
+sentence on the Balance header has no picture now. Nothing pushed, nothing deployed.
+
+**Commits:** PMS `377251f4 … 4b13d633` and this one; videos `0fcb20f1 … 62bf2746`.
+
 ## 2026-11-21 · The remaining videos and a Backfill data film (the owner, D27-399)
 
 **Asked for:** "make me the remaining videos and also the backfilling feature for data, I need a video for that";

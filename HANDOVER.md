@@ -48,6 +48,10 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **21 November, later: BOOK RETAKES 2 DONE, VIDEOS REDONE AFTER THEM (D27-399).** The book faults found by the video
+> round are retaken (CHANGELOG 21 Nov, later); A1, A4, A5, A8, A9, A11, A12, A16, A17, Film 2 and Film 3 are re-made
+> and in `D:\fidato\final videos`. Nothing pushed or deployed; release 23 is live (below).
+
 > **21 November: EVERY VIDEO IS UP TO TODAY'S BOOK (D27-399).** Film 3 Backfill data is new (11 videos); A1, A4, A5,
 > A7, A8, A9, A11, A12, A16 and A17 are updated in `D:\fidato\final videos`. Videos branch at the RESUME fix after
 > 1eb5f340. Nothing pushed or deployed; release 23 is live (below).
@@ -868,6 +872,9 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **21 November, later: retakes 2 DONE.** What is left is small and listed in CHANGELOG 21 Nov, later, "Left open"
+> (real-clock dates in retaken pictures, A8-34 arrows 1-2, A11-41/42 button lines). Then the owner's next ask.
 
 > **21 November, the owner: D27-399. DONE.** Film 3 "Backfill data" and the ten chapters whose book changed (A1, A4,
 > A5, A7, A8, A9, A11, A12, A16, A17) are re-made and in `D:\fidato\final videos`; old ones in `.local\old-finals`.
