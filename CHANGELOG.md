@@ -50,6 +50,43 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-11-21 · The remaining videos and a Backfill data film (the owner, D27-399)
+
+**Asked for:** "make me the remaining videos and also the backfilling feature for data, I need a video for that";
+then "don't ask any permissions ... just give me the final edits", and a big Backfill video on priority: first day,
+how to enter the data, how to leave it, a whole month. Film 1's clip with the owner's email: "Team only, keep it".
+
+**Shipped** (videos branch in `C:\videos`; finals in `D:\fidato\final videos`, old ones in `.local\old-finals\<chapter> 21 November before update`)
+- **Film 3 Backfill data** (11 videos, 99 scenes): a month entered on 5EL before its first day, recorded on the demo,
+  the master restored it after (checksums equal). Shot list `docs/manual/shots/film3.mjs` (ad034848).
+- **Ten chapters brought up to today's book:** A11 (NC bills, Item sales, Bar stock range), A8 (KOT outlet line, UPI
+  QR, PDF/Excel/CSV; A8-08/09 retaken), A7 (seven audit stops), A4 (Folios PDF/Excel, UPI QR, Cancel this invoice),
+  A16 (Cancel a night audit, PDF/Excel), A5 (real Check out window, refund picture tour, UPI QR), A9 (Export on
+  Equipment), A12 (the bell counts approvals), A1 (eleven Front desk screens, PDF/Excel), A17 (Scheduled reports, UPI
+  ID's QR, Optional group, Loyalty and Disk arrows). Only changed lines re-voiced.
+- `docs/manual/chapters/a11.html` A11.9: where an NC bill is valued (36c1676c). The local virtual printer's KOT now
+  prints the outlet line like the real one (git-ignored tool).
+- MINOR chapters (a0, a2, a3, a6, a10, a13-a15) only gained PDF/Excel or retaken pictures their videos never name: left.
+
+**Found** (MEMORY 480-482)
+- 480: two recorders in one browser through a killed warm-up; the demo restored from the dump.
+- 481: RESUME.md damaged by shell writes; mended by a node script and the Edit tool.
+- 482: the one-render queue raced: A1 and A12 started together when A9's ended.
+- Book faults, not fixed: A1-2 shows nine Front desk screens; In house/Due out pictures and A9-06/22 show no PDF or
+  Excel; A9-37 one Export button; A8-34 stale banner, A8-34/51 no PDF/Excel; A11-41/42 cut at 900 px; A16.11 no line
+  on cancelling an audit, A16-17 caption against A16.3; A5-T6 "Pro...rma" under an arrow, A5-T3 arrows float;
+  A17-57/59 show an empty demo, A17-57 "1 Nov 2026"; A4-06m not retaken; Film 2's end card "End of the A day ...".
+  The virtual printer's bill has no UPI QR.
+
+**Proved:** each helper ran words, tsc, eslint, stills and audiocheck (all ok, peak 0.70-0.74); I looked at every
+changed chapter's contact sheets before copying it to final.
+
+**Left open:** the book faults above (retakes); nothing pushed, nothing deployed.
+
+**Commits:** PMS `1a96a72c … 845bccd1` and this one; videos `f28c3c66 … 1eb5f340`.
+
+---
+
 ## 2026-11-20 · Shimla's full reset added to release 23 (the owner, 20 November)
 
 **Asked for:** "delete Shimla's data and start it from today ... a full reset, and I have to backfill data"; "include

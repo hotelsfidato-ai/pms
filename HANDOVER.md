@@ -48,6 +48,10 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **21 November: EVERY VIDEO IS UP TO TODAY'S BOOK (D27-399).** Film 3 Backfill data is new (11 videos); A1, A4, A5,
+> A7, A8, A9, A11, A12, A16 and A17 are updated in `D:\fidato\final videos`. Videos branch at the RESUME fix after
+> 1eb5f340. Nothing pushed or deployed; release 23 is live (below).
+
 > **20 November: RELEASE 23 IS LIVE, checked read-only.** Site loads `index-BWlXb-_q.js`; health ok; server at
 > c9394cb6; migration 275 in (`app.hotel_upi`); API on 127.0.0.1:8787, active, no errors since the restart.
 > **Shimla's reset ran** (A5c; OWNER_RESET 74 removed, 19 Nov 21:43 UTC): no bookings, business date 20 Nov, locked
@@ -865,11 +869,10 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **21 November, the owner: D27-399.** "Make me the remaining videos, and a video for the Backfill data feature."
-> Also: the films are for the team only, so Film 1's People clip showing the owner's email stays as it is.
-> In hand: Film 3 "Backfill data" (new, recorded on the demo, restored by the master after). Then the chapters whose
-> book changed after their video: A8, A11, A1, A4, A5, A17 (UPI QR, 16 Nov reports, KOT sections, export rights),
-> A7 and A2; the rest are checked for smaller changes.
+> **21 November, the owner: D27-399. DONE.** Film 3 "Backfill data" and the ten chapters whose book changed (A1, A4,
+> A5, A7, A8, A9, A11, A12, A16, A17) are re-made and in `D:\fidato\final videos`; old ones in `.local\old-finals`.
+> Films are team only (Film 1's email clip stays). Next, small: the book faults in CHANGELOG 21 Nov (retakes), then
+> those chapters' videos again where a retake shows a button the video now names only in words. Render lock: MEMORY 482.
 
 > **20 November:** (1) the owner's next ask (they said one more is coming); (2) the owner's call on the KOT words at
 > Amrapali (rename sections in Settings, no code, recommended); (3) Shimla's backfill is the owner's; (4) Figure A8-09.

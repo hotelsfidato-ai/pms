@@ -6561,6 +6561,17 @@ copy will see of theirs.**
 
 ---
 
+### 482 · Helpers': the one-render queue raced (21 November)
+
+Four helpers each waited for "no render running" by their own check. When A9's render ended, A1's and A12's
+waiters both saw the gap and started together (12:45); earlier the A12 and A17 helpers each started a render during
+another's bundling (`wmic` is not installed here, so one check always said "none") and killed it. No output was
+harmed, each writes its own folder, but the rule was broken three times. **The rule:** one render queue means one
+lock: a helper takes `C:\videos\.render-lock` (create it, fail if it exists) before rendering and removes it after,
+instead of looking at processes.
+
+---
+
 ### 481 · Helpers': `C:\videos\RESUME.md` damaged by shell writes (12-21 November)
 
 Since 12 November, sections written through a shell turned the `\a` of `out\a11\` into a bell and the `\f` of
