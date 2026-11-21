@@ -399,7 +399,7 @@ export const SHOTS = [
   },
   {
     id: "A8-34", title: "The Menu: dishes and sections", as: "Owner",
-    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:PDF" }, { eval: `[...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "PDF")?.parentElement.setAttribute("data-exp", "1")` }],
+    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:PDF" }, { wait: 1500 }, { eval: `[...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "PDF")?.parentElement.setAttribute("data-exp", "1")` }],
     marks: [
       { n: 1, at: "text:Dishes", nth: 0, side: "bottom" },
       { n: 2, at: "text:Add-ons", nth: 0, side: "bottom" },

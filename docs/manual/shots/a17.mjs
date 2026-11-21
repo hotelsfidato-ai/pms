@@ -562,7 +562,7 @@ export const SHOTS = [
             { waitFor: "text:Rooms sold count each night" }, { wait: 300 }],
     marks: [
       { n: 1, at: "text:Export CSV", side: "left", dx: 15 },
-      { n: 2, at: "text:10 Oct 2026", side: "left" },
+      { n: 2, at: "text:9 Oct 2026", side: "left" },
       { n: 3, at: "text:Total", side: "left" },
     ],
   },
