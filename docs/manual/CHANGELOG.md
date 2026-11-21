@@ -3,6 +3,16 @@
 One line per chapter and picture set, in the order they were committed; the decision numbers are the owner's.
 
 - 21 Nov, A11 (D27-399): A11.9 Consumption no longer says it is "the only place an NC bill has a value": it is the only place its dishes are valued at MRP; NC bills (A11.4) shows each bill at menu prices. Found by the A11 video update.
+- 21 Nov, A16 (D27-399, book retakes 2): A16.11 (In short) has a row for cancelling a night audit by mistake (the owner or an Admin, A16.5 and A7.5); the Figure A16-17 caption and A16.3 agree, both read against the window's own code: the card is for a real hotel, a hotel with nothing in it says nothing is deleted, one that has traded lists numbers. The picture is unchanged.
+
+- 21 Nov, A4 (D27-399, book retakes 2): A4-06m retaken with the chapter's guest, A4 Test Kulkarni (room 305), not another hotel's Kapil Ganjoo on 7 Nov: the minibar's water and beer were recorded through the Minibar record for his room, with the alcohol switched on, a 10% VAT rule and a beer on the minibar list in the demo; the arrows and their list are unchanged; a4.mjs has a set-up step for his walk-in (A4-S6m).
+
+- 21 Nov, A5 (D27-399, book retakes 2): A5-T3 (Figure A5-04) retaken tall, so its three arrows meet the heading, the Print button and Balance due (two floated at the top before); A5-T6 (Figure A5-03) retaken with arrow 2 below the Check out button, off the Proforma bill button; the callout lists are unchanged.
+
+- 21 Nov, A12 (D27-399, book retakes 2): A12-02, 03, 04 and 05 retaken on the demo of 11 Oct with Approvals at the top of the menu after the Dashboard, where they showed it under System; arrows unchanged (the two purchase requests are the run's, the GM's cash expense of ₹200 from the restaurant tin is made through the till's own paid-out).
+
+- 21 Nov, A1 (D27-399, book retakes 2): A1-1, 2, 3, 5, 8, 9, 18 retaken as the GM on the demo of 11 Oct, so the Front desk menu shows its eleven screens (Minibar, Checklists) and the lists show PDF and Excel; each gains an arrow and a list line for them (A1-5 arrow 8, A1-8 arrow 4, A1-9 arrow 4, A1-18 arrow 5); A1-18 is taller (the GM also sees ID photos kept, now named in A1.10); the PDF and Excel paragraph of A1.10 moved inside its section.
+
 - 16 Nov, A8 and A11 (the owner, 16 November): A8.4 says where a KOT is for (RESTAURANT · A/C), A8-44 retaken with it in the preview; A11.4 gains NC bills (A11-41) and Item sales (A11-42); A11-23 retaken with Bar stock's From and To; A11.9 says how a range of days reads; A11.2's table of which day each report is for, and A11.10, say so. A8-09 (the two printed slips) still shows the KOT before the line: it needs A8's printing run.
 - 13 Nov, A2 (D27-396): pictures retaken on the demo of 11 Oct (A2-01 to A2-41; A2-02 tall, so the dates show); A2-42 new: the host's account, the second Figure A2-31 renumbered; the rooming list uses the group the run makes (A2 Test Mehta wedding), the allotment (Demo Travels) and the waitlist are made-up demo data; the file's rows follow the group's own dates.
 - 13 Nov, A3 (D27-396): A3-02 and A3-12 taken (A3 Test Iyer, room 209), the two 'to be taken' boxes are pictures; A3-12 with Rooms ready from put to 20:00 for the picture and back to 14:00 (the clock was past 14:00).
