@@ -399,7 +399,7 @@ export const SHOTS = [
   },
   {
     id: "A8-34", title: "The Menu: dishes and sections", as: "Owner",
-    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }],
+    path: "/pos/5EL/menu", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:PDF" }, { eval: `[...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "PDF")?.parentElement.setAttribute("data-exp", "1")` }],
     marks: [
       { n: 1, at: "text:Dishes", nth: 0, side: "bottom" },
       { n: 2, at: "text:Add-ons", nth: 0, side: "bottom" },
@@ -407,6 +407,7 @@ export const SHOTS = [
       { n: 4, at: "css:input[placeholder='Starters']", side: "bottom" },
       { n: 5, at: "text:Change variations", nth: 0, side: "bottom" },
       { n: 6, at: "text:Take off", nth: 0, side: "bottom" },
+      { n: 7, at: "css:[data-exp]", side: "bottom" },
     ],
   },
   {
@@ -638,12 +639,13 @@ export const SHOTS = [
   {
     id: "A8-51", title: "The day's bookings, on the night", as: "General Manager",
     path: "/pos/5EL/table-bookings",
-    steps: [{ waitFor: "text:Meera Iyer", ms: 20000 }, { wait: 600 }],
+    steps: [{ waitFor: "text:Meera Iyer", ms: 20000 }, { eval: `[...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "PDF")?.parentElement.setAttribute("data-exp", "1")` }, { wait: 600 }],
     marks: [
       { n: 1, at: "css:input[type=date]", side: "right" },
       { n: 2, at: "text:not staying", nth: 0, side: "top" },
-      { n: 3, at: "text:Seat", nth: 0, side: "bottom" },
+      { n: 3, at: "text:Seat", nth: 0, side: "left" },
       { n: 4, at: "text:No-show", nth: 0, side: "bottom" },
+      { n: 5, at: "css:[data-exp]", side: "bottom" },
     ],
   },
   {
