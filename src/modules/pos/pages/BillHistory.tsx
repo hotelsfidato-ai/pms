@@ -10,7 +10,7 @@ import {
   Page, PageHeader, Card, CardBody, Button, Field, fieldProps, Input, NativeSelect, DataTable,
   StatusPill, Dialog, DialogContent, Skeleton, ReadFailed, toast, type Column,
 } from "@/components/ui";
-import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { BillPaper } from "@/modules/pos/components/BillSlip";
 import { ExportButtons, type ExportColumn } from "@/modules/reports";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
 import {
@@ -293,7 +293,7 @@ function OpenedBill({ hotelId, id, onClose }: { hotelId: string; id: string | nu
           }
         >
           {order.isLoading ? <Skeleton className="h-64 w-full" />
-            : order.data ? <BillSlip order={order.data} heading={nextBillHeading(order.data)} />
+            : order.data ? <BillPaper order={order.data} heading={nextBillHeading(order.data)} />
             : <ReadFailed error={order.error} what="this bill" onRetry={() => void order.refetch()} />}
         </DialogContent>
       </Dialog>

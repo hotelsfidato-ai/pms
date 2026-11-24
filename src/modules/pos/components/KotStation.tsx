@@ -15,7 +15,7 @@ import {
   type KotKind, type KotSlipRef, type OrderLine,
 } from "@/modules/pos/data/till";
 import { DocketSlip } from "@/modules/pos/components/DocketSlip";
-import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { BillPaper } from "@/modules/pos/components/BillSlip";
 import { loadUpiQr } from "@/modules/finance";
 import { DEFAULT_SLIP_MM, printRoll } from "@/modules/pos/lib/printRoll";
 
@@ -156,7 +156,7 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
           if (o && await claimBill(hotelId, bill.id, kotDevice())) {
             /* The UPI QR draws once `qrcode` is here (finance's UpiQr). */
             if (o.upi) await loadUpiQr();
-            await print(<BillSlip order={o} heading={bill.heading} />);
+            await print(<BillPaper order={o} heading={bill.heading} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         }

@@ -2,6 +2,7 @@
 
 One line per chapter and picture set, in the order they were committed; the decision numbers are the owner's.
 
+- 25 Nov, A8 (the owner, 25 November): A8.7 has Food and liquor on separate bills (the button in the Till's list and the Terminal's, the two slips, and that they add up to one payment). No picture yet: the bill's figure A8-14 still shows one bill.
 - 21 Nov, A11 (D27-399): A11.9 Consumption no longer says it is "the only place an NC bill has a value": it is the only place its dishes are valued at MRP; NC bills (A11.4) shows each bill at menu prices. Found by the A11 video update.
 - 21 Nov, A16 (D27-399, book retakes 2): A16.11 (In short) has a row for cancelling a night audit by mistake (the owner or an Admin, A16.5 and A7.5); the Figure A16-17 caption and A16.3 agree, both read against the window's own code: the card is for a real hotel, a hotel with nothing in it says nothing is deleted, one that has traded lists numbers. The picture is unchanged.
 

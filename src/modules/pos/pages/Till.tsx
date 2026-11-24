@@ -15,6 +15,7 @@ import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { RoomPreferences } from "@/modules/guests";
 import { cn } from "@/lib/cn";
+import { hasFoodAndLiquor } from "@/modules/pos/components/BillSlip";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
@@ -25,7 +26,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setServiceCharge, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, sendToGm, changePaymentMode, STRIKES_SENT, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setServiceCharge, setSeparateBills, setOrderHeader, getOwnerAllowance, getAllowancePlan, settleToAllowance, allowanceWords, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -1266,6 +1267,16 @@ function OrderPanel({
     onChanged();
   };
 
+  /* Food and liquor on separate bills (the owner, 25 November): how the
+     bill prints, one sale and one payment. */
+  const separateBills = async () => {
+    setBusy(true);
+    const res = await setSeparateBills(hotelId, order.id, !order.separateBills);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    onChanged();
+  };
+
   /* A dialog, not window.prompt(), which the app's window refuses (POS-2). */
   const abandon = () => setAsk({
     title: "Close this bill unpaid?",
@@ -1692,6 +1703,15 @@ function OrderPanel({
                 {serviceOn
                   ? `Take off the service charge (${order.serviceChargePct}%)`
                   : `Service charge ${order.serviceChargeOffered}%, if the guest agrees`}
+              </Button>
+            )}
+
+            {/* Food and liquor on separate bills (the owner, 25 November). */}
+            {hasFoodAndLiquor(order) && (
+              <Button variant="secondary" size="lg" className="w-full"
+                loading={busy} onClick={() => void separateBills()}
+                aria-pressed={Boolean(order.separateBills)} data-separate-bills>
+                {order.separateBills ? "Food and liquor on separate bills ✓" : "Separate bills for food and liquor"}
               </Button>
             )}
 

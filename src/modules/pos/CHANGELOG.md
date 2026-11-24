@@ -11,6 +11,37 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-11-25 · Food and liquor on separate bills (the owner, 25 November)
+
+**Asked for:** "Few guests want separate bill for liquor & food. So need such option at the time of billing."
+
+**Shipped** (migration 276 `separate food and liquor bills`)
+- `pos_orders.separate_bills`; `POST /till/orders/:id/separate-bills {on}`, the till's people (TILL), open bills only.
+- The order carries `separateBills` and `schemes`: each tax scheme's net, discount share, service charge share,
+  taxable and tax, summed from `app.pos_order_by_tax` - the split every bill already reads.
+- `BillPaper` prints one slip, or Bill · Food (GST lines, CGST/SGST, the round off) and Bill · Liquor (VAT lines, one
+  VAT line, its VAT bill once paid) on one roll with a tear line. The Liquor total is its VAT bill's to the paisa; the
+  Food bill takes the round off, so the two GRAND TOTALs add up to `payable`. The bill page, the bill printer and Bill
+  history all print it. One sale, one payment, one bill number, unchanged tax and reports.
+- The button on the Till and the Terminal, only on a bill with both food and VAT lines: "Separate bills for food and
+  liquor", then "Food and liquor on separate bills ✓".
+- Recorded recommendations (D27-396, build all): one order and one payment, not two orders; the choice is made on an
+  open bill and a duplicate after payment keeps it; the two slips on one roll with a tear line, not a cut.
+
+**Proved**
+- `api/test/modules/pos/separateBills.test.ts` (2): the parts add up with a 10% discount; refused: "yes", a
+  housekeeper (403), a paid bill; the paid bill keeps it and the Liquor total equals its VAT bill's.
+- `src/modules/pos/separateBills.test.tsx` (2), `billVat.test.tsx` still green.
+- Opened on the copy (8790/5180), test hotel 5ELT with alcohol on and a Bar section: Till and Terminal button on and
+  off; the bill page printed ₹604.80 food + ₹594.00 liquor = ₹1,198.80; paid by card, the Liquor bill names
+  VAT/5ELT/2026-27/0001. Picture: `.local/screens/separate-bills-food-liquor.jpg`.
+
+**Left open**
+- 5ELT (local test hotel) keeps alcohol on, a Bar section with Whisky 30 ml and two practice bills.
+- Release: migration 276 rides the next release.
+
+---
+
 ## 2026-11-16 · The KOT says where the table is (the owner, 16 November)
 
 **Asked for:** "Section must get printed on KOT ... only table numbers are getting printed; it's creating confusion

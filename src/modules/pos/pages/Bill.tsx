@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Printer } from "lucide-react";
 import { getOrder, nextBillHeading, printBillHere, type BillHeading } from "@/modules/pos/data/till";
-import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { BillPaper } from "@/modules/pos/components/BillSlip";
 import { printRoll } from "@/modules/pos/lib/printRoll";
 import { ReadFailed, Button, toast } from "@/components/ui";
 
@@ -95,7 +95,7 @@ export default function BillPage() {
         </Button>
       </div>
 
-      <div ref={slipRef}><BillSlip order={o} heading={heading} /></div>
+      <div ref={slipRef}><BillPaper order={o} heading={heading} /></div>
     </div>
   );
 }

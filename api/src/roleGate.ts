@@ -511,6 +511,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/round-off`]: TILL,
   /* The voluntary service charge, ticked with the guest's agreement (260). */
   [`POST ${H}/till/orders/:id/service-charge`]: TILL,
+  [`POST ${H}/till/orders/:id/separate-bills`]: TILL,  // the owner, 25 Nov
   [`POST ${H}/till/outlet/:outlet/closed`]: TILL,
   [`POST ${H}/till/orders/:id/printed`]: TILL,
   [`POST ${H}/till/orders/:id/clear`]: TILL,

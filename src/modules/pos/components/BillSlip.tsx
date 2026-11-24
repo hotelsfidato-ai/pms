@@ -29,16 +29,53 @@ import { UpiQr } from "@/modules/finance";
    dishes with their menu prices and amounts and the Bill total (net, before
    any discount), then "NC - No charge: ₹0.00 to pay". No tax lines: nothing
    was sold, so nothing was taxed. The reason and who approved it at the foot.
+
+   FOOD AND LIQUOR APART (the owner, 25 November): with Separate bills ticked,
+   BillPaper prints two slips on the one roll, a tear line between - the Food
+   bill (the GST lines) and the Liquor bill (the VAT lines). Each takes its
+   scheme's own Sub total, discount share, service charge and tax from the
+   database's split (`schemes`). The Liquor bill's total is exactly its VAT
+   bill's (taxable + VAT); the Food bill carries the round off, so the two
+   GRAND TOTALs add up to `payable`, what the guest pays once.
    ══════════════════════════════════════════════════════════════════ */
 
 /** A figure in a column: paise, no rupee sign, as a restaurant bill prints. */
 const fig = (v: number) => moneyPrecise(v).replace("₹", "");
 
-export function BillSlip({ order: o, heading, sample }: {
+type Part = "food" | "liquor";
+const schemeOf = (p: Part) => (p === "liquor" ? "vat" : "gst");
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Both kinds of line on a live bill: what Separate bills can split. */
+export const hasFoodAndLiquor = (o: Pick<Order, "lines">) => {
+  const live = o.lines.filter((l) => !l.voided);
+  return live.some((l) => l.taxScheme === "vat") && live.some((l) => l.taxScheme !== "vat");
+};
+
+/** The bill as it prints: one slip, or Food and Liquor apart when the
+    cashier ticked Separate bills on an open or paid bill with both. */
+export function BillPaper({ order: o, heading }: { order: Order; heading: BillHeading }) {
+  const apart = Boolean(o.separateBills) && (o.status === "open" || o.status === "settled")
+    && hasFoodAndLiquor(o) && Boolean(o.schemes?.length);
+  if (!apart) return <BillSlip order={o} heading={heading} />;
+  return (
+    <>
+      <BillSlip order={o} heading={heading} part="food" />
+      <p className="mx-auto bg-white py-2 text-center text-xs tracking-[0.3em] text-ink-700"
+         style={{ maxWidth: "80mm" }} data-bill-tear>- - - - - tear here - - - - -</p>
+      <BillSlip order={o} heading={heading} part="liquor" />
+    </>
+  );
+}
+
+export function BillSlip({ order: whole, heading, sample, part }: {
   order: Order; heading: BillHeading;
   /** Settings › Documents' made-up bill: SAMPLE · NOT VALID, no GSTIN (D27-348). */
   sample?: string;
+  /** One of the two papers of Separate bills (the owner, 25 November). */
+  part?: Part;
 }) {
+  const o = part ? partOf(whole, part) : whole;
   /* The same dish of two rounds is one line (D27-353). */
   const live = oneLinePerDish(o.lines.filter((l) => !l.voided));
   const nc = o.status === "no_charge";
@@ -87,8 +124,9 @@ export function BillSlip({ order: o, heading, sample }: {
         </p>
       </header>
 
-      <p className={cn(rule, "mt-3 border-b py-1.5 text-center font-extrabold uppercase tracking-[0.2em]")}>
-        {BILL_TITLE[heading]}
+      <p className={cn(rule, "mt-3 border-b py-1.5 text-center font-extrabold uppercase tracking-[0.2em]")}
+         data-bill-part={part}>
+        {BILL_TITLE[heading]}{part === "food" ? " · Food" : part === "liquor" ? " · Liquor" : ""}
       </p>
 
       <div className="mt-2 text-xs tabular">
@@ -179,14 +217,17 @@ export function BillSlip({ order: o, heading, sample }: {
           </p>
         )}
         {/* A tip for the staff (260), taken with the payment: not part of the bill. */}
-        {o.tip ? (
+        {o.tip && part !== "liquor" ? (
           <p className="mt-0.5 tabular" data-bill-tip>
             Tip for the staff {fig(o.tip)} by {o.tipMethod === "upi" ? "UPI" : o.tipMethod} - not part of the bill
           </p>
         ) : null}
         {/* D22-44: the alcohol's own VAT bill, issued when this was paid,
             and it names this bill back. */}
-        {o.vatBill && (
+        {part === "food" && (
+          <p className="mt-0.5" data-bill-other-part>Liquor on its own bill, the same bill number</p>
+        )}
+        {o.vatBill && part !== "food" && (
           <p className="mt-0.5" data-bill-vat-bill>
             Alcohol billed under VAT: VAT bill <span className="tabular">{o.vatBill}</span>
             {o.status === "void" && " - cancelled with this bill"}
@@ -198,4 +239,30 @@ export function BillSlip({ order: o, heading, sample }: {
       {test && <TestDocumentMark slip {...(sample ? { label: sample } : {})} />}
     </article>
   );
+}
+
+/* One part of the bill as an Order of its own: its lines and its scheme's
+   figures; the Food bill takes the round off so the two add up to the whole
+   (the owner, 25 November). */
+function partOf(o: Order, part: Part): Order {
+  const scheme = schemeOf(part);
+  const mine = (x: string | undefined) => (x === "vat" ? "vat" : "gst") === scheme;
+  const f = o.schemes?.find((t) => t.scheme === scheme)
+    ?? { net: 0, discount: 0, service: 0, taxable: 0, tax: 0 };
+  const vat = o.schemes?.find((t) => t.scheme === "vat");
+  const liquorTotal = vat ? r2(vat.taxable + vat.tax) : 0;
+  const payable = part === "liquor" ? liquorTotal : r2(o.payable - liquorTotal);
+  return {
+    ...o,
+    lines: o.lines.filter((l) => mine(l.taxScheme)),
+    taxes: o.taxes.filter((t) => t.scheme === scheme),
+    net: f.net,
+    discount: f.discount,
+    serviceCharge: f.service,
+    taxable: f.taxable,
+    tax: f.tax,
+    roundOff: part === "liquor" ? 0 : r2(payable - f.taxable - f.tax),
+    gross: r2(f.taxable + f.tax),
+    payable,
+  };
 }

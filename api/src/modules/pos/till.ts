@@ -1761,6 +1761,7 @@ export async function readOrder(client: Client, orderId: string) {
     abandoned_reason: string | null; ticket_id: string | null;
     event_id: string | null; event_title: string | null;
     vat_bill: string | null;
+    separate_bills: boolean;
     bills_printed: number;
     room: string | null;
     voided_by_name: string | null; voided_at: string | null;
@@ -1800,6 +1801,7 @@ export async function readOrder(client: Client, orderId: string) {
             o.abandoned_reason, o.ticket_id::text,
             o.event_id::text, e.title as event_title,
             (select v.number from vat_bills v where v.pos_order_id = o.id) as vat_bill,
+            o.separate_bills,
             (select count(*)::int from pos_bill_prints b
               where b.order_id = o.id and b.heading in ('bill', 'duplicate')) as bills_printed,
             /* The room a bill charged to a room went to (D27-324: a void
@@ -1890,6 +1892,19 @@ export async function readOrder(client: Client, orderId: string) {
        from app.pos_order_by_tax($1) t
       where t.tax <> 0
       order by t.tax_scheme, t.tax_rate`,
+    [orderId]);
+
+  /* Food and liquor on separate bills (the owner, 25 November): each
+     scheme's own figures, from the same split, so the two papers add up. */
+  const { rows: schemes } = await client.query<{
+    tax_scheme: "gst" | "vat"; net: string; discount: string; service: string; taxable: string; tax: string;
+  }>(
+    `select t.tax_scheme, sum(t.rate_net)::text as net, sum(t.discount)::text as discount,
+            sum(t.taxable - t.rate_net + t.discount)::text as service,
+            sum(t.taxable)::text as taxable, sum(t.tax)::text as tax
+       from app.pos_order_by_tax($1) t
+      group by t.tax_scheme
+      order by t.tax_scheme`,
     [orderId]);
 
   /* What was actually taken, and how. One row for an ordinary bill,
@@ -2056,6 +2071,11 @@ export async function readOrder(client: Client, orderId: string) {
     taxable: Number(total[0]!.taxable),
     tax: Number(total[0]!.tax),
     taxes: taxes.map((t) => ({ scheme: t.tax_scheme, rate: Number(t.tax_rate), tax: Number(t.tax) })),
+    separateBills: h.separate_bills,
+    schemes: schemes.map((t) => ({
+      scheme: t.tax_scheme, net: Number(t.net), discount: Number(t.discount),
+      service: Number(t.service), taxable: Number(t.taxable), tax: Number(t.tax),
+    })),
     gross: Number(total[0]!.gross),
     roundOff: Number(total[0]!.round_off),
     payable: Number(total[0]!.payable),
@@ -3728,6 +3748,35 @@ till.post("/:code/till/orders/:id/service-charge", async (c) => {
     await client.query(
       "update pos_orders set service_charge_pct = $2, updated_at = now() where id = $1",
       [orderId, input.on ? o.pct : null]);
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+
+/* ── Food and liquor on separate bills (the owner, 25 November) ────
+   How an open bill prints, ticked on the till: two papers, one sale. Only
+   while it is open, as the guest asks for it before paying; a bill printed
+   after payment (a duplicate) keeps what was chosen. */
+till.post("/:code/till/orders/:id/separate-bills", async (c) => {
+  type Body = { on?: unknown };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  if (typeof input.on !== "boolean") return c.json(refuse("On or off?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const { rows: [o] } = await client.query<{ status: string }>(
+      "select status from pos_orders where id = $1 and hotel_id = $2 for update",
+      [orderId, hotelId]);
+    if (!o) return refuse("No such order.");
+    if (o.status !== "open") return refuse(`This order is ${o.status} and cannot be changed.`);
+    await client.query(
+      "update pos_orders set separate_bills = $2, updated_at = now() where id = $1",
+      [orderId, input.on]);
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 

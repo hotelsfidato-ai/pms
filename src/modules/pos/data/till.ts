@@ -336,6 +336,11 @@ export interface Order {
   /** The VAT bill issued for the alcohol when it was paid here (D22-44).
       Optional: an answer from before it existed has no such key. */
   vatBill?: string | null;
+  /** Printed as two bills, food (GST) and liquor (VAT) - the owner, 25 Nov. */
+  separateBills?: boolean;
+  /** Each tax scheme's own figures, from the same split as `taxes`: what the
+      two papers print. `service` is the voluntary charge's share (GST only). */
+  schemes?: { scheme: "gst" | "vat"; net: number; discount: number; service: number; taxable: number; tax: number }[];
   /** Bills printed after payment (D27-292): the next one is BILL · DUPLICATE. */
   billsPrinted?: number;
   lines: OrderLine[];
@@ -943,6 +948,11 @@ export async function addPromotion(
 
 /** The voluntary service charge on an open bill (260): on only with the
     guest's agreement, which the cashier confirms. */
+/** Food and liquor on separate bills (the owner, 25 November): an open bill. */
+export function setSeparateBills(hotelId: string, orderId: string, on: boolean): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/separate-bills`, { on });
+}
+
 export function setServiceCharge(
   hotelId: string, orderId: string, on: boolean,
 ): Promise<TillResult> {

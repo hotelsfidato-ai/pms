@@ -7,12 +7,13 @@ import {
   CalendarHeart, ChevronRight, SlidersHorizontal, Gift,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { hasFoodAndLiquor } from "@/modules/pos/components/BillSlip";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, sendToGm, STRIKES_SENT, setOrderHeader, setServiceCharge, applyPromotion, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, sendToGm, STRIKES_SENT, setOrderHeader, setServiceCharge, setSeparateBills, applyPromotion, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -439,6 +440,17 @@ export default function TerminalPage() {
         refresh();
         return undefined;
       },
+    });
+  };
+
+  /* Food and liquor on separate bills (the owner, 25 November): how the
+     bill prints, one sale and one payment. */
+  const separateBills = () => {
+    const o = current.data;
+    if (!orderId || !o) return;
+    void setSeparateBills(hotelId, orderId, !o.separateBills).then((res) => {
+      if (!res.ok) return toast.error("Not changed", res.reason);
+      refresh();
     });
   };
 
@@ -1205,6 +1217,14 @@ export default function TerminalPage() {
                     </div>
                     {!mayNc && (
                       <p className="text-2xs text-grey-600">A coupon is applied by the GM, the owner or an Admin.</p>
+                    )}
+                    {/* Food and liquor on separate bills (the owner, 25 November). */}
+                    {hasFoodAndLiquor(order) && (
+                      <button type="button" disabled={busy} onClick={separateBills}
+                        aria-pressed={Boolean(order.separateBills)} data-separate-bills
+                        className={cn(OUTLINE, "h-12 w-full px-2 text-sm font-medium disabled:opacity-40")}>
+                        {order.separateBills ? "Food and liquor on separate bills ✓" : "Separate bills for food and liquor"}
+                      </button>
                     )}
                     <div className="grid grid-cols-3 gap-2">
                       {METHODS.map((m) => (
